@@ -21,26 +21,26 @@ CampusPilot is a comprehensive school management system designed to streamline a
 
 ### Installation
 1. Clone the repository:
-   ```bash
-   $ git clone git@github.com:ModestNerds-Co/campus-pilot-apis.git
-   $ cd campus-pilot-apis
-   ```
+```bash
+$ git clone git@github.com:ModestNerds-Co/campus-pilot-apis.git
+$ cd campus-pilot-apis
+```
    
 2. Install the required dependencies:
-   ```bash
-   $ poetry install
-   ```
+```bash
+$ poetry install
+```
 
 3. Run the migrations to create the database schema:
-    ```bash
-   $ python manage.py makemigrations
-   $ python manage.py migrate
-   ```
+ ```bash
+$ python manage.py makemigrations
+$ python manage.py migrate
+```
    
-4Start the development server:
-   ```bash
-   $ python manage.py runserver
-   ```
+4. Start the development server:
+```bash
+$ python manage.py runserver
+```
 
 ## Usage
 Navigate to `http://127.0.0.1:8000/` in your web browser to access the CampusPilot application. Use the admin interface at `http://127.0.0.1:8000/admin` to manage the system.
