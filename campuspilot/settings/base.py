@@ -125,7 +125,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 4,
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "services.authentication.is_authenticated.IsAPIAuthenticated"
+        "services.auth.is_authenticated.IsAPIAuthenticated"
     ],
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
     "DEFAULT_PERMISSION_CLASSES": [

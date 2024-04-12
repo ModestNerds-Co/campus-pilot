@@ -19,7 +19,7 @@ def generate_jwt_payload(user: User, remember_me: bool = False) -> dict:
             "type": "access",
             "uid": str(user.id),
             "name": user.get_full_name(),
-            "role": user.role,
+            "role": user.user_role,
             "is_active": user.is_active,
             "iat": timezone.now(),
             "exp": timezone.now() + datetime.timedelta(hours=24 if remember_me else 48),

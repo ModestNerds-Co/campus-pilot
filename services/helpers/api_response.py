@@ -44,7 +44,7 @@ class ApiResponse(HttpResponse):
             "data": data,
             "issues": issues,
             "version": 1.0,
-            "versioned_by": "Taste Of Spirits",
+            "api_owner": "Codecraft Solutions",
         }
 
         response_data = json.dumps(response, cls=DjangoJSONEncoder, **{})
