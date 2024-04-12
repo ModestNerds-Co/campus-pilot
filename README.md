@@ -22,24 +22,24 @@ CampusPilot is a comprehensive school management system designed to streamline a
 ### Installation
 1. Clone the repository:
 ```bash
-$ git clone git@github.com:ModestNerds-Co/campus-pilot-apis.git
-$ cd campus-pilot-apis
+git clone git@github.com:ModestNerds-Co/campus-pilot-apis.git
+cd campus-pilot-apis
 ```
    
 2. Install the required dependencies:
 ```bash
-$ poetry install
+poetry install
 ```
 
 3. Run the migrations to create the database schema:
  ```bash
-$ python manage.py makemigrations
-$ python manage.py migrate
+python manage.py makemigrations
+python manage.py migrate
 ```
    
 4. Start the development server:
 ```bash
-$ python manage.py runserver
+python manage.py runserver
 ```
 
 ## Usage
