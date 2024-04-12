@@ -6,55 +6,25 @@
 #  Copyright (c) 2024 Codecraft Solutions. All rights reserved.
 
 
-import json
-
-from rest_framework.views import APIView
-from loguru import logger
-from django.contrib.auth import authenticate
 import jwt
-from jwt.exceptions import ExpiredSignatureError
 from decouple import config
+from django.contrib.auth import authenticate
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
-from django.db import transaction
-import requests
-from oauthlib.oauth2 import WebApplicationClient
-from django.shortcuts import redirect
+from loguru import logger
+from rest_framework.views import APIView
 
 from api.views.auth.serializers.model import UserModelSerializer
 from api.views.auth.serializers.payload import (
     SignInSerializer,
-    SignUpSerializer,
-    EmailVerificationByCodeSerializer,
-    ForgotPasswordSerializer,
-    ResetPasswordSerializer,
-    RefreshTokenSerializer,
 )
-from auth0.models import AccessToken
-from services.exceptions.passwords import PasswordUsedException
-from services.helpers.api_response import ApiResponse
-from services.helpers.create_username import create_username
-from services.helpers.generate_jwt_payload import generate_jwt_payload
-from services.helpers.get_client_details import get_client_details
 from api.views.auth.tasks import (
     send_login_activity_notification,
     save_login_log,
     send_email_verification_otp,
-    send_password_reset_otp,
-    send_existing_email_verification_otp,
 )
-from services.helpers.html_response import HtmlResponse
-from services.helpers.redis_client import redis_client
-from system.models import Language
-from users.models import (
-    User,
-    Roles,
-    Member,
-    MemberPrivacySettings,
-    MemberRankHistory,
-    Points,
-    AuthProvider,
-)
+from services.helpers.api_response import ApiResponse
+from services.helpers.generate_jwt_payload import generate_jwt_payload
+from services.helpers.get_client_details import get_client_details
 
 
 class SignInView(APIView):
