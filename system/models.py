@@ -66,9 +66,10 @@ class Language(SoftDeleteModel):
         return cls.objects.filter(language_code=code).first()
 
 
-class Sex(EnumModel):
+class Gender(EnumModel):
     male = "male", _("male")
     female = "female", _("female")
+    unknown = "unknown", _("unknown")
     diverse = "diverse", _("diverse")
 
 
@@ -155,3 +156,51 @@ class OrganizationDetails(SoftDeleteModel):
 
     def __str__(self):
         return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
+
+
+class Department(SoftDeleteModel):
+    name = models.CharField(max_length=255, blank=False, null=False)
+    notes = models.TextField(blank=True, null=True)
+    department_code = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Department"
+        verbose_name_plural = "Departments"
+        table_prefix = "dept"
+
+    def __str__(self):
+        return f"{self.name} - {self.department_code}"
+
+
+class DepartmentSection(SoftDeleteModel):
+    name = models.CharField(max_length=255, blank=False, null=False)
+    department = models.ForeignKey(
+        "system.Department", on_delete=models.CASCADE, blank=False, null=False
+    )
+
+    class Meta:
+        verbose_name = "Department Section"
+        verbose_name_plural = "Department Sections"
+        table_prefix = "deptsec"
+
+    def __str__(self):
+        return f"{self.name} - {self.department}"
+
+
+class BankingDetails(SoftDeleteModel):
+    bank_name = models.CharField(max_length=255, blank=False, null=False)
+    account_name = models.CharField(max_length=255, blank=False, null=False)
+    account_number = models.CharField(max_length=255, blank=False, null=False)
+    branch_name = models.CharField(max_length=255, blank=False, null=False)
+    branch_code = models.CharField(max_length=255, blank=False, null=False)
+    swift_code = models.CharField(max_length=255, blank=True, null=True)
+    iban = models.CharField(max_length=255, blank=True, null=True)
+    enabled = models.BooleanField(default=True, blank=False, null=False)
+
+    class Meta:
+        verbose_name = "Banking Detail"
+        verbose_name_plural = "Banking Details"
+        table_prefix = "bank"
+
+    def __str__(self):
+        return f"{self.bank_name} - {'Enabled' if self.enabled else 'Disabled'}"

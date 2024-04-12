@@ -14,6 +14,7 @@ from services.exceptions.passwords import PasswordUsedException
 from services.helpers.generate_otp import random_otp
 from services.helpers.generate_random_text import generate_random_text
 from campuspilot.model import EnumModel, SoftDeleteModel
+from system.models import Gender
 from users.manager import CustomUserManager
 
 
@@ -155,3 +156,38 @@ class LoginLog(SoftDeleteModel):
         verbose_name = "Login Log"
         verbose_name_plural = "Login Logs"
         table_prefix = "llog"
+
+
+class Employee(SoftDeleteModel):
+    user = models.OneToOneField(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="employee",
+        blank=False,
+        null=False,
+    )
+    employee_code = models.CharField(max_length=50, blank=False, null=False)
+    department_section = models.ForeignKey(
+        "system.DepartmentSection",
+        on_delete=models.CASCADE,
+        related_name="employees",
+        blank=False,
+        null=False,
+    )
+    position = models.CharField(max_length=100, blank=False, null=False)
+    date_of_employment = models.DateField(blank=False, null=False)
+    date_of_birth = models.DateField(blank=False, null=False)
+    phone_number = models.CharField(max_length=50, blank=True, null=True)
+    email_address = LowercaseEmailField(blank=True, null=True)
+    gender = models.CharField(
+        max_length=50,
+        choices=Gender.choices,
+        default=Gender.unknown,
+        blank=False,
+        null=False,
+    )
+
+    class Meta:
+        verbose_name = "Employee"
+        verbose_name_plural = "Employees"
+        table_prefix = "emp"
