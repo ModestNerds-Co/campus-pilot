@@ -55,7 +55,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_user_agents.middleware.UserAgentMiddleware",
-    "services.middleware.response.RequestLoggerMiddleware",
+    "services.middleware.request.RequestLoggerMiddleware",
 ]
 
 ROOT_URLCONF = "campuspilot.urls"
