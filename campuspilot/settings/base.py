@@ -19,6 +19,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 USER_APPS = [
+    "api",
     "system",
     "users",
 ]

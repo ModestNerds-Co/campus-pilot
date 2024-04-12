@@ -127,3 +127,31 @@ class APIClient(SoftDeleteModel):
     @classmethod
     def get_client_by_key(cls, key):
         return cls.objects.filter(api_key=key).first()
+
+
+class OrganizationDetails(SoftDeleteModel):
+    name = models.CharField(max_length=255, blank=False, null=False)
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=255, blank=True, null=True)
+    state = models.ForeignKey(
+        "system.State", on_delete=models.CASCADE, blank=True, null=True
+    )
+    country = models.ForeignKey(
+        "system.Country", on_delete=models.CASCADE, blank=True, null=True
+    )
+    zip_code = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=255, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
+    logo = models.ImageField(upload_to="organization_logo", blank=True, null=True)
+    vat_number = models.CharField(max_length=255, blank=True, null=True)
+    enabled = models.BooleanField(default=True, blank=False, null=False)
+    license_token = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Organization Detail"
+        verbose_name_plural = "Organization Details"
+        table_prefix = "org"
+
+    def __str__(self):
+        return f"{self.name} - {'Enabled' if self.enabled else 'Disabled'}"
