@@ -36,14 +36,21 @@ poetry install
 python manage.py makemigrations
 python manage.py migrate
 ```
+
+4. Run essential data migrations:
+```bash
+python manage.py create_superuser
+python manage.py migrate_countries
+python manage.py migrate_languages
+```
    
-4. Start the development server:
+5. Start the development server:
 ```bash
 python manage.py runserver
 ```
 
 ## Usage
-Navigate to `http://127.0.0.1:8000/` in your web browser to access the CampusPilot application. Use the admin interface at `http://127.0.0.1:8000/admin` to manage the system.
+Navigate to `http://127.0.0.1:9000/` in your web browser to access the CampusPilot application. Use the admin interface at `http://127.0.0.1:8000/admin` to manage the system.
 
 ## Contributing
 We welcome contributions to CampusPilot! If you have suggestions or improvements, please fork the repo and submit a pull request.
