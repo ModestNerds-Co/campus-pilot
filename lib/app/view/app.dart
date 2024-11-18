@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:campus_pilot/counter/counter.dart';
+import 'package:campus_pilot/dashboard/views/pages/campus_pilot_dashboard.dart';
 import 'package:campus_pilot/l10n/l10n.dart';
+import 'package:flutter/material.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -16,7 +16,7 @@ class App extends StatelessWidget {
       ),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const CounterPage(),
+      home: const CampusPilotDashboardPage(),
     );
   }
 }
