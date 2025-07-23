@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  hulu-payments:
+    build: .
+    ports:
+      - "9010:9010"
+    env_file:
+      - .env.docker
+    # Enable access to host services
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on: []
+    restart: unless-stopped

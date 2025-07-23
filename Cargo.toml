@@ -1,10 +1,42 @@
 [package]
-name = "campus-pilot"
-version = "0.1.0"
+name = "hulu-payments"
+version = "1.0.0"
 edition = "2021"
 
-[dependencies]
+[[bin]]
+name = "hulu-payments"
+path = "src/main.rs"
 
-[lints.rust]
+[lib]
+name = "hulu_payments"
+path = "src/lib.rs"
+
+[dependencies]
+sqlx = { version = "0.8.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "macros", "uuid", "bigdecimal"] }
+dotenv = "0.15"
+log = "0.4"
+env_logger = "0.11.8"
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0.97"
+regex = "1.11.1"
+nanoid = "0.4"
+futures = "0.3.31"
+actix-web = "4.11.0"
+serde_json = "1.0.140"
+async-stripe = { version = "0.41.0", features = ["runtime-tokio-hyper"] }
+tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+async-trait = "0.1.88"
+reqwest = { version = "0.12.20", features = ["json"] }
+actix-governor = "0.3"
+rust_decimal = "1.33"
+actix-cors = "0.7.1"
+lettre = "0.11.17"
+base64 = "0.21"
 
 [dev-dependencies]
+tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
