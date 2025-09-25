@@ -1,0 +1,48 @@
+#
+#  campus-pilot
+#  traefik.yml
+#
+#  Created by Ngonidzashe Mangudya on 21/08/2025.
+#  Copyright (c) 2025 Codecraft Solutions
+#
+
+# Static configuration
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+
+# Metrics for Prometheus
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+
+# Access logs with custom format
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  fields:
+    defaultMode: keep
+    names:
+      StartUTC: drop
+    headers:
+      defaultMode: keep
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      httpChallenge:
+        entryPoint: web
+      email: ngoni.mangudya@toppansecurity.com
+      storage: /letsencrypt/acme.json
