@@ -8,7 +8,7 @@
 
 use crate::models::ApiResponse;
 use actix_web::http::StatusCode;
-use actix_web::{get, web::ServiceConfig, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, get, web::ServiceConfig};
 use serde_json::json;
 use sqlx::types::chrono::Utc;
 

@@ -10,7 +10,6 @@ use sqlx::PgPool;
 
 use crate::config::Config;
 use crate::db::DatabaseOperations;
-use crate::models::{Order, PaymentOption};
 
 use std::sync::Arc;
 

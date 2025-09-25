@@ -11,7 +11,7 @@ use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::web::JsonConfig;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{App, HttpResponse, HttpServer, web};
 use dotenv::dotenv;
 use log::info;
 use sqlx::postgres::PgPoolOptions;

@@ -8,9 +8,4 @@
 
 mod utils;
 
-pub use utils::load_email_template;
-pub use utils::render_email_template;
-pub use utils::send_email;
-pub use utils::send_email_with_attachments;
 pub use utils::status_meaning;
-pub use utils::verify_turnstile;
