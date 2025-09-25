@@ -42,10 +42,10 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     info!("Configuration loaded successfully 📦");
 
     // Initialize Sentry first for error tracking
-    let _guard = if let Ok(sentry_dsn) = config.app.sentry_dsn {
+    let _guard = if !config.app.sentry_dsn.is_empty() {
         info!("Initializing Sentry monitoring 📊");
         let guard = sentry::init((
-            sentry_dsn,
+            config.app.sentry_dsn.clone(),
             sentry::ClientOptions {
                 release: sentry::release_name!(),
                 enable_logs: true,
