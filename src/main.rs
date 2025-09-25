@@ -12,8 +12,11 @@ use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::web::JsonConfig;
 use actix_web::{App, HttpResponse, HttpServer, web};
+use campus_pilot::db::DatabaseOperations;
 use dotenv::dotenv;
 use log::info;
+use sentry::integrations::log::LogFilter;
+use sentry_actix::Sentry;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 
