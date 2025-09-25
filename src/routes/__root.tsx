@@ -17,6 +17,8 @@ import { useVersionCheck } from "../hooks/useVersionCheck";
 import { ChangelogModal } from "../components/ChangelogModal";
 import { Loader2, Info, Database, BarChart3, Calendar } from "lucide-react";
 import { APP_VERSION } from "../lib/version";
+import { useEffect, useState } from "react";
+import { bootstrapService } from "../modules/configs";
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -32,7 +34,73 @@ function RootComponent() {
   } = useVersionCheck();
   const navigate = useNavigate();
 
-  // Show connecting splash screen
+  const [bootstrapStatus, setBootstrapStatus] = useState<string | null>(null);
+  const [isCheckingBootstrap, setIsCheckingBootstrap] = useState(true);
+
+  // Check bootstrap status on app load
+  useEffect(() => {
+    const checkBootstrap = async () => {
+      try {
+        const response = await bootstrapService.checkStatus();
+        if (response.success && response.data) {
+          setBootstrapStatus(response.data.state);
+
+          // Route to boot screen if not ready and not already on bootstrap routes
+          const currentPath = window.location.pathname;
+          const isBootstrapRoute =
+            currentPath.startsWith("/setup/") ||
+            currentPath === "/login" ||
+            currentPath === "/boot";
+
+          if (response.data.state !== "Ready" && !isBootstrapRoute) {
+            navigate({ to: "/boot" });
+          }
+        }
+      } catch (err) {
+        console.error("Bootstrap check failed:", err);
+        // On bootstrap check failure, assume we need to go through setup
+        navigate({ to: "/boot" });
+      } finally {
+        setIsCheckingBootstrap(false);
+      }
+    };
+
+    checkBootstrap();
+  }, [navigate]);
+
+  // Show initial loading while checking bootstrap status
+  if (isCheckingBootstrap) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-blue-600" />
+          <h1 className="text-2xl font-semibold text-gray-900">CampusPilot</h1>
+          <p className="text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not ready, let the bootstrap routes handle the UI
+  const currentPath = window.location.pathname;
+  const isBootstrapRoute =
+    currentPath.startsWith("/setup/") ||
+    currentPath === "/login" ||
+    currentPath === "/boot";
+
+  if (bootstrapStatus !== "Ready" && isBootstrapRoute) {
+    return (
+      <>
+        <Outlet />
+        {/* Dev tools in development */}
+        {process.env.NODE_ENV === "development" && (
+          <TanStackRouterDevtools position="bottom-left" />
+        )}
+      </>
+    );
+  }
+
+  // Show connecting splash screen for main app
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">

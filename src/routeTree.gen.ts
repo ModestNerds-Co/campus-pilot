@@ -9,25 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as StatsRouteImport } from './routes/stats'
-import { Route as AppointmentsRouteImport } from './routes/appointments'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as BootRouteImport } from './routes/boot'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CaseApplicationIdRouteImport } from './routes/case/$applicationId'
+import { Route as SetupSchoolRouteImport } from './routes/setup.school'
+import { Route as SetupAdminRouteImport } from './routes/setup.admin'
 
-const StatsRoute = StatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppointmentsRoute = AppointmentsRouteImport.update({
-  id: '/appointments',
-  path: '/appointments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const BootRoute = BootRouteImport.update({
+  id: '/boot',
+  path: '/boot',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -35,82 +30,69 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CaseApplicationIdRoute = CaseApplicationIdRouteImport.update({
-  id: '/case/$applicationId',
-  path: '/case/$applicationId',
+const SetupSchoolRoute = SetupSchoolRouteImport.update({
+  id: '/setup/school',
+  path: '/setup/school',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupAdminRoute = SetupAdminRouteImport.update({
+  id: '/setup/admin',
+  path: '/setup/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/appointments': typeof AppointmentsRoute
-  '/stats': typeof StatsRoute
-  '/case/$applicationId': typeof CaseApplicationIdRoute
+  '/boot': typeof BootRoute
+  '/login': typeof LoginRoute
+  '/setup/admin': typeof SetupAdminRoute
+  '/setup/school': typeof SetupSchoolRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/appointments': typeof AppointmentsRoute
-  '/stats': typeof StatsRoute
-  '/case/$applicationId': typeof CaseApplicationIdRoute
+  '/boot': typeof BootRoute
+  '/login': typeof LoginRoute
+  '/setup/admin': typeof SetupAdminRoute
+  '/setup/school': typeof SetupSchoolRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/appointments': typeof AppointmentsRoute
-  '/stats': typeof StatsRoute
-  '/case/$applicationId': typeof CaseApplicationIdRoute
+  '/boot': typeof BootRoute
+  '/login': typeof LoginRoute
+  '/setup/admin': typeof SetupAdminRoute
+  '/setup/school': typeof SetupSchoolRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/admin'
-    | '/appointments'
-    | '/stats'
-    | '/case/$applicationId'
+  fullPaths: '/' | '/boot' | '/login' | '/setup/admin' | '/setup/school'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/appointments' | '/stats' | '/case/$applicationId'
-  id:
-    | '__root__'
-    | '/'
-    | '/admin'
-    | '/appointments'
-    | '/stats'
-    | '/case/$applicationId'
+  to: '/' | '/boot' | '/login' | '/setup/admin' | '/setup/school'
+  id: '__root__' | '/' | '/boot' | '/login' | '/setup/admin' | '/setup/school'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
-  AppointmentsRoute: typeof AppointmentsRoute
-  StatsRoute: typeof StatsRoute
-  CaseApplicationIdRoute: typeof CaseApplicationIdRoute
+  BootRoute: typeof BootRoute
+  LoginRoute: typeof LoginRoute
+  SetupAdminRoute: typeof SetupAdminRoute
+  SetupSchoolRoute: typeof SetupSchoolRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/stats': {
-      id: '/stats'
-      path: '/stats'
-      fullPath: '/stats'
-      preLoaderRoute: typeof StatsRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/appointments': {
-      id: '/appointments'
-      path: '/appointments'
-      fullPath: '/appointments'
-      preLoaderRoute: typeof AppointmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/boot': {
+      id: '/boot'
+      path: '/boot'
+      fullPath: '/boot'
+      preLoaderRoute: typeof BootRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -120,11 +102,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/case/$applicationId': {
-      id: '/case/$applicationId'
-      path: '/case/$applicationId'
-      fullPath: '/case/$applicationId'
-      preLoaderRoute: typeof CaseApplicationIdRouteImport
+    '/setup/school': {
+      id: '/setup/school'
+      path: '/setup/school'
+      fullPath: '/setup/school'
+      preLoaderRoute: typeof SetupSchoolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup/admin': {
+      id: '/setup/admin'
+      path: '/setup/admin'
+      fullPath: '/setup/admin'
+      preLoaderRoute: typeof SetupAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -132,10 +121,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
-  AppointmentsRoute: AppointmentsRoute,
-  StatsRoute: StatsRoute,
-  CaseApplicationIdRoute: CaseApplicationIdRoute,
+  BootRoute: BootRoute,
+  LoginRoute: LoginRoute,
+  SetupAdminRoute: SetupAdminRoute,
+  SetupSchoolRoute: SetupSchoolRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
