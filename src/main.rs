@@ -80,8 +80,6 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
         .connect(&config.database.url)
         .await?;
 
-    let db_ops = DatabaseOperations::new(db_pool.clone());
-
     let app_state = Arc::new(AppState::init(db_pool, config.clone()));
 
     let addr = format!("0.0.0.0:{}", config.app.port);
