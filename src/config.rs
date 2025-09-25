@@ -8,19 +8,18 @@
 
 use anyhow::{Context, Result};
 use std::env;
+use urlencoding::encode;
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub app: AppConfig,
     pub database: DatabaseConfig,
-    pub email: EmailConfig,
-    pub turnstile: TurnstileConfig,
 }
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub port: u16,
-    pub frontend_base_url: String,
+    pub sentry_dsn: String,
 }
 
 #[derive(Debug, Clone)]
@@ -28,32 +27,12 @@ pub struct DatabaseConfig {
     pub url: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct EmailConfig {
-    pub user: String,
-    pub password: String,
-    pub host: String,
-    pub port: u16,
-}
-
-#[derive(Debug, Clone)]
-pub struct TurnstileConfig {
-    pub secret: String,
-}
-
 impl Config {
     pub fn from_env() -> Result<Self> {
         let app = AppConfig::from_env()?;
         let database = DatabaseConfig::from_env()?;
-        let email = EmailConfig::from_env()?;
-        let turnstile = TurnstileConfig::from_env()?;
 
-        Ok(Config {
-            app,
-            database,
-            email,
-            turnstile,
-        })
+        Ok(Config { app, database })
     }
 }
 
@@ -63,47 +42,32 @@ impl AppConfig {
             .context("APP_PORT must be set")?
             .parse::<u16>()
             .context("APP_PORT must be a valid port number")?;
-        let frontend_base_url =
-            env::var("FRONTEND_BASE_URL").context("FRONTEND_BASE_URL must be set")?;
+        let sentry_dsn = env::var("SENTRY_DSN")
+            .context("SENTRY_DSN must be set")?
+            .parse::<String>()
+            .context("SENTRY_DSN must be a valid port number")?;
 
-        Ok(AppConfig {
-            port,
-            frontend_base_url,
-        })
+        Ok(AppConfig { port, sentry_dsn })
     }
 }
 
 impl DatabaseConfig {
     fn from_env() -> Result<Self> {
-        let url = env::var("DATABASE_URL").context("DATABASE_URL must be set")?;
+        let user = std::env::var("DB_USER")?;
+        let pass = std::env::var("DB_PASS")?;
+        let host = std::env::var("DB_HOST")?;
+        let port = std::env::var("DB_PORT")?;
+        let db = std::env::var("DB_NAME")?;
 
-        Ok(DatabaseConfig { url })
-    }
-}
-
-impl EmailConfig {
-    fn from_env() -> Result<Self> {
-        let user = env::var("EMAIL_USER").context("EMAIL_USER must be set")?;
-        let password = env::var("EMAIL_PASSWORD").context("EMAIL_PASSWORD must be set")?;
-        let host = env::var("EMAIL_HOST").context("EMAIL_HOST must be set")?;
-        let port = env::var("EMAIL_PORT")
-            .context("EMAIL_PORT must be set")?
-            .parse::<u16>()
-            .context("EMAIL_PORT must be a valid port number")?;
-
-        Ok(EmailConfig {
-            user,
-            password,
+        let url = format!(
+            "postgresql://{}:{}@{}:{}/{}",
+            encode(&user),
+            encode(&pass),
             host,
             port,
-        })
-    }
-}
+            db
+        );
 
-impl TurnstileConfig {
-    fn from_env() -> Result<Self> {
-        let secret = env::var("TURNSTILE_SECRET").context("TURNSTILE_SECRET must be set")?;
-
-        Ok(TurnstileConfig { secret })
+        Ok(DatabaseConfig { url })
     }
 }

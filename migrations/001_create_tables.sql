@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS system_state (
   id             TEXT PRIMARY KEY DEFAULT 'singleton',
   state          APP_STATE NOT NULL DEFAULT 'Uninitialized',
   bootstrap_lock BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_at     TIMESTAMP WITH TIME ZONE,
   created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -26,8 +27,9 @@ CREATE TABLE IF NOT EXISTS school_profile (
   locale         TEXT DEFAULT 'en-ZW',
   logo_light_key TEXT,
   logo_dark_key  TEXT,
-  created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+  deleted_at     TIMESTAMP WITH TIME ZONE,
+  created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- Enforce single-row
@@ -41,16 +43,20 @@ CREATE TABLE IF NOT EXISTS users(
   phone         TEXT,
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   roles         TEXT[] NOT NULL DEFAULT '{}'::TEXT[],
+  deleted_at    TIMESTAMP WITH TIME ZONE,
   created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 CREATE INDEX ON users((LOWER(email)));
 
-create table event_log(
-  id          uuid primary key default gen_random_uuid(),
-  table_name  text not null,
-  op          text not null check (op in ('insert','update','delete')),
-  record_id   text not null,
-  payload     jsonb,
-  occurred_at timestamptz not null default now()
+CREATE TABLE IF NOT EXISTS event_log(
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_name  TEXT NOT NULL,
+  op          TEXT NOT NULL CHECK (op IN ('insert','update','delete')),
+  record_id   TEXT NOT NULL,
+  payload     JSONB,
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  deleted_at  TIMESTAMP WITH TIME ZONE,
+  created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );

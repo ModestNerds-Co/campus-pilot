@@ -16,7 +16,7 @@ use sqlx::types::chrono::Utc;
 async fn health_check() -> impl Responder {
     let health_data = json!({
         "status": "healthy",
-        "service": "hulu-payments",
+        "service": "campus-pilot",
         "version": "1.0.0",
         "timestamp": Utc::now().to_rfc3339()
     });
@@ -25,21 +25,6 @@ async fn health_check() -> impl Responder {
     HttpResponse::Ok().json(response)
 }
 
-#[get("/readiness-check")]
-async fn readiness_check() -> impl Responder {
-    let ready_data = json!({
-        "status": "ready",
-        "service": "hullu-payments",
-        "checks": {
-            "database": "ok",
-            "payment_services": "ok"
-        }
-    });
-
-    let response = ApiResponse::from_status(StatusCode::OK, Some(ready_data), None);
-    HttpResponse::Ok().json(response)
-}
-
 pub fn init(cfg: &mut ServiceConfig) {
-    cfg.service(health_check).service(readiness_check);
+    cfg.service(health_check);
 }

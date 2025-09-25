@@ -26,6 +26,12 @@
 - API responses: Wrap in `ApiResponse<T>` struct for consistency
 
 ## SQL Style (PostgreSQL)
-- All SQL statements should use normal UPPERCASE
+- All SQL keywords should use UPPERCASE (CREATE, SELECT, INSERT, UPDATE, DELETE, etc.)
+- All PostgreSQL data types should be UPPERCASE (TEXT, INTEGER, BOOLEAN, UUID, etc.)
+- All built-in functions should be UPPERCASE (NOW(), LOWER(), TO_JSONB(), etc.)
+- All control flow keywords should be UPPERCASE (BEGIN, END, IF, THEN, ELSE, etc.)
+- All trigger/function keywords should be UPPERCASE (RETURNS, LANGUAGE, EXECUTE, etc.)
+- Column names and table names should remain lowercase with underscores
+- String literals and comments can remain as-is
 - All create statements should include IF NOT EXISTS
 - All tables should have deleted_at, created_at, and updated_at fields

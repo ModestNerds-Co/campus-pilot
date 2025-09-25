@@ -20,7 +20,6 @@ use std::sync::Arc;
 mod config;
 mod db;
 mod dtos;
-mod handlers;
 mod models;
 mod routes;
 mod services;
@@ -34,40 +33,69 @@ use state::AppState;
 #[actix_web::main]
 async fn main() -> anyhow::Result<std::io::Result<()>> {
     dotenv().ok();
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-
-    info!("Booting API 🥱");
 
     // Load and validate configuration
     let config = Config::from_env()?;
     info!("Configuration loaded successfully 📦");
+
+    // Initialize Sentry first for error tracking
+    let _guard = if let Ok(sentry_dsn) = config.app.sentry_dsn {
+        info!("Initializing Sentry monitoring 📊");
+        let guard = sentry::init((
+            sentry_dsn,
+            sentry::ClientOptions {
+                release: sentry::release_name!(),
+                enable_logs: true,
+                ..Default::default()
+            },
+        ));
+
+        Some(guard)
+    } else {
+        info!("Sentry not configured (SENTRY_DSN not set) 🚫");
+        None
+    };
+
+    let logger = sentry::integrations::log::SentryLogger::with_dest(
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).build(),
+    )
+    .filter(|md| match md.level() {
+        // Capture error and warning records as Sentry events
+        log::Level::Error | log::Level::Warn => LogFilter::Event,
+        // Ignore trace and debug level records, as they're too verbose
+        log::Level::Trace | log::Level::Debug => LogFilter::Ignore,
+        // Capture everything else as a breadcrumb
+        _ => LogFilter::Breadcrumb,
+    });
+    log::set_boxed_logger(Box::new(logger))?;
+    log::set_max_level(log::LevelFilter::Trace);
+
+    info!("Booting API 🥱");
 
     let db_pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&config.database.url)
         .await?;
 
-    // Run database migrations
-    info!("Running database migrations... ⚙️");
-    let db_ops = crate::db::DatabaseOperations::new(db_pool.clone());
-    db_ops.run_migrations().await?;
-    info!("Database migrations completed successfully 🍻");
+    let db_ops = DatabaseOperations::new(db_pool.clone());
 
     let app_state = Arc::new(AppState::init(db_pool, config.clone()));
 
-    info!("Ready to rock and roll on port {} 🚀", config.app.port);
+    let addr = format!("0.0.0.0:{}", config.app.port);
+    info!("Ready to rock and roll on {} 🚀", addr);
+
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::from(app_state.clone()))
             .app_data(JsonConfig::default().error_handler(|err, _req| {
-                let message = match &err {
+                let message: String = match &err {
                     actix_web::error::JsonPayloadError::ContentType => {
-                        "Expected Content-Type: application/json"
+                        "Expected Content-Type: application/json".to_string()
                     }
-                    actix_web::error::JsonPayloadError::Deserialize(_) => {
-                        "Invalid JSON: unable to parse request body"
+                    actix_web::error::JsonPayloadError::Deserialize(e) => {
+                        format!("Invalid JSON: {}", e)
                     }
-                    _ => "Malformed JSON payload",
+                    _ => "Malformed JSON payload".to_string(),
                 };
 
                 let res = ApiResponse::<()>::from_status(
@@ -82,18 +110,19 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
                 )
                 .into()
             }))
+            .wrap(Sentry::new())
             .wrap(Cors::permissive())
             .wrap(Governor::new(
                 &GovernorConfigBuilder::default()
-                    .per_second(1)
-                    .burst_size(5)
+                    .per_second(200)
+                    .burst_size(200)
                     .finish()
                     .unwrap(),
             ))
             .wrap(Logger::default())
             .configure(routes::init)
     })
-    .bind(("127.0.0.1", config.app.port))?
+    .bind(addr.as_str())?
     .run()
     .await;
 

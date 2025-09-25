@@ -75,24 +75,6 @@ pub fn status_meaning(code: StatusCode) -> StatusInfo {
     }
 }
 
-pub async fn verify_turnstile(capture_token: &str, turnstile_secret: &str) -> ApiResult<bool> {
-    let client = Client::new();
-    let token = &String::from(capture_token);
-    let params = vec![("secret", turnstile_secret), ("response", token)];
-
-    let res = client
-        .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
-        .form(&params)
-        .send()
-        .await?
-        .json::<TurnstileResponse>()
-        .await?;
-
-    tracing::info!("{}", res.to_string());
-
-    Ok(res.success)
-}
-
 pub async fn send_email(
     to_email: String,
     subject: String,
