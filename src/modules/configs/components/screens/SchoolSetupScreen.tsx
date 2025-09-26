@@ -266,10 +266,10 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="text"
                       value={formData.name}
                       onChange={(e) => updateField("name", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:bg-gray-700 dark:text-white ${
                         getFieldError("name")
                           ? "border-red-500"
-                          : "border-gray-300"
+                          : "border-gray-300 dark:border-gray-600"
                       }`}
                       placeholder="Enter your school's name"
                     />
@@ -299,7 +299,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       onChange={(e) =>
                         updateField("legal_name", e.target.value)
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Official registered name (if different)"
                     />
                   </div>
@@ -312,7 +312,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         Logo (Light)
                       </label>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl hover:border-gray-400 transition-colors">
+                        <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                           {logoPreview.light ? (
                             <div className="relative">
                               <img
@@ -334,7 +334,7 @@ export const SchoolSetupScreen: React.FC = () => {
                               className="cursor-pointer text-center"
                             >
                               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <span className="text-sm text-gray-600">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">
                                 Upload light logo
                               </span>
                             </label>
@@ -350,7 +350,7 @@ export const SchoolSetupScreen: React.FC = () => {
                           }}
                           className="hidden"
                         />
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           PNG, JPG, SVG • Max 2MB • Used on light backgrounds
                         </p>
                       </div>
@@ -362,7 +362,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         Logo (Dark)
                       </label>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl hover:border-gray-400 transition-colors bg-gray-900">
+                        <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl hover:border-gray-400 dark:hover:border-gray-500 transition-colors bg-gray-900">
                           {logoPreview.dark ? (
                             <div className="relative">
                               <img
@@ -384,7 +384,7 @@ export const SchoolSetupScreen: React.FC = () => {
                               className="cursor-pointer text-center"
                             >
                               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <span className="text-sm text-gray-400">
+                              <span className="text-sm text-gray-400 dark:text-gray-300">
                                 Upload dark logo
                               </span>
                             </label>
@@ -400,7 +400,7 @@ export const SchoolSetupScreen: React.FC = () => {
                           }}
                           className="hidden"
                         />
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           PNG, JPG, SVG • Max 2MB • Used on dark backgrounds
                         </p>
                       </div>
@@ -447,10 +447,10 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:bg-gray-700 dark:text-white ${
                         getFieldError("email")
                           ? "border-red-500"
-                          : "border-gray-300"
+                          : "border-gray-300 dark:border-gray-600"
                       }`}
                       placeholder="school@example.com"
                     />
@@ -475,10 +475,10 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => updateField("phone", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:bg-gray-700 dark:text-white ${
                         getFieldError("phone")
                           ? "border-red-500"
-                          : "border-gray-300"
+                          : "border-gray-300 dark:border-gray-600"
                       }`}
                       placeholder="+263 123 456 789"
                     />
@@ -550,7 +550,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         type="text"
                         value={formData.city}
                         onChange={(e) => updateField("city", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                         placeholder="Harare"
                       />
                     </div>
@@ -569,7 +569,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         onChange={(e) =>
                           updateField("province", e.target.value)
                         }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                         placeholder="Harare"
                       />
                     </div>
@@ -585,7 +585,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         id="country"
                         value={formData.country}
                         onChange={(e) => updateField("country", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
                         {COUNTRY_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -610,7 +610,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         onChange={(e) =>
                           updateField("timezone", e.target.value)
                         }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
                         {TIMEZONE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -631,7 +631,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         id="locale"
                         value={formData.locale}
                         onChange={(e) => updateField("locale", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
                         {LOCALE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -650,7 +650,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   type="button"
                   onClick={handleSkipLogos}
                   disabled={isSubmitting}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip logos for now
                 </button>

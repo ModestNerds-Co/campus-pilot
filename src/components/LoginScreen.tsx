@@ -6,18 +6,27 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React, { useState } from 'react';
-import { Eye, EyeOff, Loader2, AlertCircle, School, Mail, Lock } from 'lucide-react';
-import { bootstrapService } from '../modules/configs';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  AlertCircle,
+  School,
+  Mail,
+  Lock,
+} from "lucide-react";
+import { bootstrapService } from "../modules/configs";
+import { ThemeToggle } from "../lib/theme";
+import toast from "react-hot-toast";
 
 interface LoginScreenProps {
   className?: string;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +36,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
 
   const getSchoolInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
       .substring(0, 2);
   };
@@ -39,7 +48,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
     setError(null);
 
     if (!email.trim() || !password) {
-      setError('Please enter both email and password');
+      setError("Please enter both email and password");
       return;
     }
 
@@ -48,26 +57,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
     try {
       // TODO: Implement actual login API call
       // For now, just simulate login
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Mock successful login
-      toast.success('Login successful!');
+      toast.success("Login successful!");
 
       // TODO: Redirect to dashboard
-      console.log('Redirecting to dashboard...');
-
+      console.log("Redirecting to dashboard...");
     } catch (err) {
-      setError('Invalid email or password');
-      toast.error('Login failed');
+      setError("Invalid email or password");
+      toast.error("Login failed");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center p-4 ${className}`}>
+    <div
+      className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 ${className}`}
+    >
+      {/* Theme Toggle */}
+      <div className="absolute top-6 right-6 z-10">
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
           {/* School Branding */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
@@ -86,15 +101,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
               )}
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {schoolData?.name || 'CampusPilot'}
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              {schoolData?.name || "CampusPilot"}
             </h1>
-            {schoolData?.legal_name && schoolData.legal_name !== schoolData.name && (
-              <p className="text-sm text-gray-600 mb-4">
-                {schoolData.legal_name}
-              </p>
-            )}
-            <p className="text-gray-600">Sign in to your account</p>
+            {schoolData?.legal_name &&
+              schoolData.legal_name !== schoolData.name && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  {schoolData.legal_name}
+                </p>
+              )}
+            <p className="text-gray-600 dark:text-gray-300">
+              Sign in to your account
+            </p>
           </div>
 
           {/* Login Form */}
@@ -108,7 +126,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -128,14 +149,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
@@ -147,9 +171,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300 disabled:cursor-not-allowed"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -166,16 +194,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
                   Signing In...
                 </>
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </button>
           </form>
 
           {/* Support Notice */}
           <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">
-              Having trouble?{' '}
-              <span className="text-blue-600 hover:text-blue-700 cursor-pointer">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Having trouble?{" "}
+              <span className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer">
                 Contact your system admin
               </span>
             </p>
@@ -185,16 +213,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = '' }) => {
         {/* School Contact Info */}
         {(schoolData?.email || schoolData?.phone) && (
           <div className="mt-6 text-center">
-            <div className="inline-flex items-center gap-4 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600">
+            <div className="inline-flex items-center gap-4 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 rounded-lg text-sm text-gray-600 dark:text-gray-300">
               {schoolData.email && (
                 <span className="flex items-center gap-2">
                   <Mail className="w-3 h-3" />
                   {schoolData.email}
                 </span>
               )}
-              {schoolData.phone && (
-                <span>{schoolData.phone}</span>
-              )}
+              {schoolData.phone && <span>{schoolData.phone}</span>}
             </div>
           </div>
         )}

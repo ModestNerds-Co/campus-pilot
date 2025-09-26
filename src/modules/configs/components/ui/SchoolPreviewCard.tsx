@@ -6,9 +6,9 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React from 'react';
-import { School, Mail, Phone, MapPin, Wifi, WifiOff } from 'lucide-react';
-import type { SchoolFormData, LogoPreview } from '../../types';
+import React from "react";
+import { School, Mail, Phone, MapPin, Wifi, WifiOff } from "lucide-react";
+import type { SchoolFormData, LogoPreview } from "../../types";
 
 interface SchoolPreviewCardProps {
   schoolData: SchoolFormData;
@@ -20,13 +20,13 @@ interface SchoolPreviewCardProps {
 
 export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
   schoolData,
-  logoPreview
+  logoPreview,
 }) => {
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
       .substring(0, 2);
   };
@@ -36,26 +36,30 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
       schoolData.address_line1,
       schoolData.city,
       schoolData.province,
-      schoolData.country
+      schoolData.country,
     ].filter(Boolean);
 
-    return parts.join(', ') || 'No address provided';
+    return parts.join(", ") || "No address provided";
   };
 
   return (
     <div className="space-y-6">
       {/* Preview Header */}
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Live Preview</h3>
-        <p className="text-sm text-gray-600">See how your school information will appear</p>
-        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full text-sm text-green-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Live Preview
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          See how your school information will appear
+        </p>
+        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-full text-sm text-green-700 dark:text-green-400">
           <WifiOff className="w-3 h-3" />
           Works offline
         </div>
       </div>
 
       {/* Login Screen Preview */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
             {logoPreview.light ? (
@@ -74,29 +78,31 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
           </div>
 
           <div>
-            <h4 className="text-xl font-bold text-gray-900">
-              {schoolData.name || 'Your School Name'}
+            <h4 className="text-xl font-bold text-gray-900 dark:text-white">
+              {schoolData.name || "Your School Name"}
             </h4>
             {schoolData.legal_name && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {schoolData.legal_name}
               </p>
             )}
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-            <h5 className="text-sm font-medium text-gray-700">Login Preview</h5>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-3">
+            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Login Preview
+            </h5>
             <div className="space-y-2">
               <input
                 type="text"
                 placeholder="Email"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg text-sm"
                 disabled
               />
               <input
                 type="password"
                 placeholder="Password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg text-sm"
                 disabled
               />
               <button className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
@@ -108,7 +114,7 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
       </div>
 
       {/* Receipt Header Preview */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -128,17 +134,19 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
                 )}
               </div>
               <div>
-                <h5 className="font-semibold text-gray-900 text-sm">
-                  {schoolData.name || 'Your School Name'}
+                <h5 className="font-semibold text-gray-900 dark:text-white text-sm">
+                  {schoolData.name || "Your School Name"}
                 </h5>
-                <p className="text-xs text-gray-600">Receipt Preview</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Receipt Preview
+                </p>
               </div>
             </div>
           </div>
 
           <div className="border-t border-gray-200 pt-4 space-y-2">
             {schoolData.email && (
-              <div className="flex items-center gap-2 text-xs text-gray-600">
+              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                 <Mail className="w-3 h-3" />
                 {schoolData.email}
               </div>
@@ -149,19 +157,19 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
                 {schoolData.phone}
               </div>
             )}
-            <div className="flex items-start gap-2 text-xs text-gray-600">
+            <div className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
               <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
               <span>{formatAddress()}</span>
             </div>
             {schoolData.emap_code && (
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-500">
                 EMAP: {schoolData.emap_code}
               </div>
             )}
           </div>
 
           <div className="border-t border-gray-200 pt-3">
-            <div className="bg-gray-50 rounded p-3 text-xs text-gray-600">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3 text-xs text-gray-600 dark:text-gray-400">
               <div className="flex justify-between">
                 <span>Date:</span>
                 <span>26 Sep 2025</span>
@@ -176,23 +184,33 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
       </div>
 
       {/* Configuration Summary */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <h5 className="font-semibold text-gray-900 mb-4 text-sm">Configuration</h5>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h5 className="font-semibold text-gray-900 dark:text-white mb-4 text-sm">
+          Configuration
+        </h5>
         <div className="space-y-3 text-xs">
           <div className="flex justify-between">
-            <span className="text-gray-600">Timezone:</span>
-            <span className="text-gray-900">{schoolData.timezone}</span>
+            <span className="text-gray-600 dark:text-gray-400">Timezone:</span>
+            <span className="text-gray-900 dark:text-white">
+              {schoolData.timezone}
+            </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Language:</span>
-            <span className="text-gray-900">{schoolData.locale}</span>
+            <span className="text-gray-600 dark:text-gray-400">Language:</span>
+            <span className="text-gray-900 dark:text-white">
+              {schoolData.locale}
+            </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Logos:</span>
-            <span className="text-gray-900">
-              {logoPreview.light && logoPreview.dark ? 'Light + Dark' :
-               logoPreview.light ? 'Light only' :
-               logoPreview.dark ? 'Dark only' : 'None'}
+            <span className="text-gray-600 dark:text-gray-400">Logos:</span>
+            <span className="text-gray-900 dark:text-white">
+              {logoPreview.light && logoPreview.dark
+                ? "Light + Dark"
+                : logoPreview.light
+                  ? "Light only"
+                  : logoPreview.dark
+                    ? "Dark only"
+                    : "None"}
             </span>
           </div>
         </div>

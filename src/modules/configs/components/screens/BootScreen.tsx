@@ -100,10 +100,10 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <Loader2 className="w-full h-full text-blue-600 animate-spin" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 CampusPilot
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-gray-600 dark:text-gray-300">
                 Checking configuration...
               </p>
             </div>
@@ -117,10 +117,10 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <WifiOff className="w-8 h-8 text-orange-600" />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 You're offline
               </h1>
-              <p className="text-gray-600 max-w-md mx-auto leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
                 Setup can proceed offline. Changes will sync when internet
                 becomes available.
               </p>
@@ -154,10 +154,10 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <AlertTriangle className="w-8 h-8 text-red-600" />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Configuration Error
               </h1>
-              <p className="text-gray-600 max-w-md mx-auto leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
                 {error || "Unable to determine system configuration status."}
               </p>
               <div className="pt-2">
@@ -190,7 +190,9 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <Loader2 className="w-full h-full text-green-600 animate-spin" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900">CampusPilot</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                CampusPilot
+              </h1>
               <p className="text-green-600 font-medium">Configuration loaded</p>
             </div>
           </div>
