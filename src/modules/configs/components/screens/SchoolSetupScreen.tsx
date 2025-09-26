@@ -230,13 +230,13 @@ export const SchoolSetupScreen: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
-            <School className="w-8 h-8 text-blue-600" />
+          <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+            <School className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
             Set up your school
           </h1>
-          <p className="text-lg text-gray-600 max-w-xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-xl mx-auto">
             We'll use this to personalize receipts, reports, and the login
             screen.
           </p>
@@ -247,8 +247,8 @@ export const SchoolSetupScreen: React.FC = () => {
           <div className="flex-1">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Branding Section */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Branding
                 </h2>
 
@@ -257,7 +257,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div>
                     <label
                       htmlFor="name"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       School Name *
                     </label>
@@ -288,7 +288,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div>
                     <label
                       htmlFor="legal_name"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       Registered / Legal Name
                     </label>
@@ -308,7 +308,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Light Logo */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Logo (Light)
                       </label>
                       <div className="space-y-3">
@@ -358,7 +358,7 @@ export const SchoolSetupScreen: React.FC = () => {
 
                     {/* Dark Logo */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Logo (Dark)
                       </label>
                       <div className="space-y-3">
@@ -410,8 +410,8 @@ export const SchoolSetupScreen: React.FC = () => {
               </div>
 
               {/* Contact Information */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Contact Information
                 </h2>
 
@@ -420,7 +420,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div>
                     <label
                       htmlFor="emap_code"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       EMAP Code
                     </label>
@@ -438,7 +438,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div>
                     <label
                       htmlFor="email"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       Official Email
                     </label>
@@ -466,7 +466,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div className="md:col-span-2">
                     <label
                       htmlFor="phone"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       Main Phone Number
                     </label>
@@ -493,8 +493,8 @@ export const SchoolSetupScreen: React.FC = () => {
               </div>
 
               {/* Address */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Address & Location
                 </h2>
 
@@ -502,7 +502,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div>
                     <label
                       htmlFor="address_line1"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       Address Line 1
                     </label>
@@ -521,7 +521,7 @@ export const SchoolSetupScreen: React.FC = () => {
                   <div>
                     <label
                       htmlFor="address_line2"
-                      className="block text-sm font-medium text-gray-700 mb-2"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
                       Address Line 2
                     </label>
@@ -541,7 +541,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     <div>
                       <label
                         htmlFor="city"
-                        className="block text-sm font-medium text-gray-700 mb-2"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                       >
                         City/Town
                       </label>
@@ -558,7 +558,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     <div>
                       <label
                         htmlFor="province"
-                        className="block text-sm font-medium text-gray-700 mb-2"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                       >
                         Province
                       </label>
@@ -577,7 +577,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     <div>
                       <label
                         htmlFor="country"
-                        className="block text-sm font-medium text-gray-700 mb-2"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                       >
                         Country
                       </label>
@@ -600,7 +600,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     <div>
                       <label
                         htmlFor="timezone"
-                        className="block text-sm font-medium text-gray-700 mb-2"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                       >
                         Timezone
                       </label>
@@ -623,7 +623,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     <div>
                       <label
                         htmlFor="locale"
-                        className="block text-sm font-medium text-gray-700 mb-2"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                       >
                         Language
                       </label>
