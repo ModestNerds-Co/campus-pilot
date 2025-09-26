@@ -4,30 +4,56 @@
 
 @layer base {
     :root {
-        --background: 255 255 255;
-        --foreground: 15 23 42;
-        --card: 255 255 255;
-        --card-foreground: 15 23 42;
-        --popover: 255 255 255;
-        --popover-foreground: 15 23 42;
-        --primary: 59 130 246;
-        --primary-foreground: 255 255 255;
-        --secondary: 241 245 249;
-        --secondary-foreground: 15 23 42;
-        --muted: 248 250 252;
-        --muted-foreground: 96 96 96;
-        --accent: 241 245 249;
-        --accent-foreground: 15 23 42;
-        --destructive: 239 68 68;
-        --destructive-foreground: 255 255 255;
-        --success: 34 197 94;
-        --success-foreground: 255 255 255;
-        --warning: 245 158 11;
-        --warning-foreground: 255 255 255;
-        --border: 226 232 240;
-        --input: 226 232 240;
-        --ring: 59 130 246;
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        --primary: 222.2 47.4% 11.2%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222.2 84% 4.9%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96%;
+        --accent-foreground: 222.2 84% 4.9%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+        --success: 142.1 76.2% 36.3%;
+        --success-foreground: 210 40% 98%;
+        --warning: 38 92% 50%;
+        --warning-foreground: 210 40% 98%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 222.2 84% 4.9%;
         --radius: 8px;
+    }
+
+    .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 84% 4.9%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --success: 142.1 70.6% 45.3%;
+        --success-foreground: 210 40% 98%;
+        --warning: 38 92% 50%;
+        --warning-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
     }
 
     * {
@@ -35,7 +61,7 @@
     }
 
     body {
-        @apply bg-white text-slate-900 antialiased;
+        @apply bg-background text-foreground antialiased;
         font-family:
             -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
             "Helvetica Neue", Arial, sans-serif;
@@ -44,41 +70,41 @@
 
     /* Modern headings */
     h1 {
-        @apply text-3xl font-bold tracking-tight text-slate-900;
+        @apply text-3xl font-bold tracking-tight text-foreground;
     }
 
     h2 {
-        @apply text-2xl font-semibold tracking-tight text-slate-900;
+        @apply text-2xl font-semibold tracking-tight text-foreground;
     }
 
     h3 {
-        @apply text-xl font-semibold tracking-tight text-slate-900;
+        @apply text-xl font-semibold tracking-tight text-foreground;
     }
 
     h4 {
-        @apply text-lg font-medium text-slate-900;
+        @apply text-lg font-medium text-foreground;
     }
 
     h5 {
-        @apply text-base font-medium text-slate-900;
+        @apply text-base font-medium text-foreground;
     }
 
     h6 {
-        @apply text-sm font-medium text-slate-900;
+        @apply text-sm font-medium text-foreground;
     }
 
     /* Modern form inputs */
     input,
     textarea,
     select {
-        @apply text-slate-900 bg-white border-gray-300;
-        @apply focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+        @apply text-foreground bg-background border-input;
+        @apply focus:ring-2 focus:ring-ring focus:border-ring;
         @apply rounded-lg transition-all duration-200 ease-in-out;
     }
 
     input::placeholder,
     textarea::placeholder {
-        @apply text-gray-400;
+        @apply text-muted-foreground;
     }
 
     /* Fix autofill styling */
@@ -86,8 +112,8 @@
     input:-webkit-autofill:hover,
     input:-webkit-autofill:focus,
     input:-webkit-autofill:active {
-        -webkit-box-shadow: 0 0 0 30px white inset !important;
-        -webkit-text-fill-color: #1e293b !important;
+        -webkit-box-shadow: 0 0 0 30px hsl(var(--background)) inset !important;
+        -webkit-text-fill-color: hsl(var(--foreground)) !important;
     }
 
     /* Modern buttons */
@@ -114,24 +140,24 @@
 @layer components {
     /* Card styles */
     .card {
-        @apply bg-white rounded-xl shadow-sm border border-gray-200;
+        @apply bg-card text-card-foreground rounded-xl shadow-sm border border-border;
     }
 
     .card-hover {
-        @apply hover:shadow-md hover:border-gray-300 transition-all duration-200;
+        @apply hover:shadow-md transition-all duration-200;
     }
 
     /* Tab styles - browser-like */
     .tab-list {
-        @apply flex items-end border-b border-gray-200 bg-gray-50;
+        @apply flex items-end border-b border-border bg-muted;
     }
 
     .tab-trigger {
         @apply relative px-4 py-2 text-sm font-medium rounded-t-lg transition-all;
-        @apply hover:bg-white/70 data-[state=active]:bg-white;
+        @apply hover:bg-card/70 data-[state=active]:bg-card;
         @apply data-[state=active]:border-t data-[state=active]:border-l data-[state=active]:border-r;
-        @apply data-[state=active]:border-gray-200 data-[state=active]:border-b-white;
-        @apply data-[state=inactive]:text-gray-600 data-[state=active]:text-slate-900;
+        @apply data-[state=active]:border-border data-[state=active]:border-b-card;
+        @apply data-[state=inactive]:text-muted-foreground data-[state=active]:text-card-foreground;
     }
 
     .tab-close {
