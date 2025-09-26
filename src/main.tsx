@@ -11,6 +11,7 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "./lib/theme";
 import { App } from "./App";
 
 // Import global styles
@@ -28,41 +29,35 @@ const queryClient = new QueryClient({
   },
 });
 
-// Initialize light theme only
-document.documentElement.classList.remove("dark");
-document.documentElement.classList.add("light");
+// Theme will be initialized by ThemeProvider
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-      <ReactQueryDevtools initialIsOpen={false} />
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: "#ffffff",
-            color: "#1f2937",
-            border: "1px solid #e5e7eb",
-            fontSize: "12px",
-            borderRadius: "8px",
-            boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-          },
-          success: {
-            iconTheme: {
-              primary: "#10b981",
-              secondary: "#ffffff",
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <App />
+        <ReactQueryDevtools initialIsOpen={false} />
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            duration: 4000,
+            className: "",
+            style: {},
+            success: {
+              iconTheme: {
+                primary: "#10b981",
+                secondary: "#ffffff",
+              },
             },
-          },
-          error: {
-            iconTheme: {
-              primary: "#ef4444",
-              secondary: "#ffffff",
+            error: {
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "#ffffff",
+              },
             },
-          },
-        }}
-      />
-    </QueryClientProvider>
+          }}
+        />
+      </QueryClientProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

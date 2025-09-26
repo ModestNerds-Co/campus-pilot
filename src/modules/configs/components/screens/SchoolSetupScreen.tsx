@@ -6,15 +6,35 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Upload, X, Eye, EyeOff, Loader2, AlertCircle, School } from 'lucide-react';
-import { bootstrapService } from '../../services/bootstrapService';
-import { SchoolPreviewCard } from '../ui/SchoolPreviewCard';
-import type { SchoolFormData, LogoPreview, FormFieldError } from '../../types';
-import { TIMEZONE_OPTIONS, LOCALE_OPTIONS, COUNTRY_OPTIONS, DEFAULT_VALUES } from '../../constants';
-import { validateEmail, validatePhone, validateImage, fileToBase64 } from '../../../../lib/validation';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Upload,
+  X,
+  Eye,
+  EyeOff,
+  Loader2,
+  AlertCircle,
+  School,
+} from "lucide-react";
+import { bootstrapService } from "../../services/bootstrapService";
+import { SchoolPreviewCard } from "../ui/SchoolPreviewCard";
+import type { SchoolFormData, LogoPreview, FormFieldError } from "../../types";
+import {
+  TIMEZONE_OPTIONS,
+  LOCALE_OPTIONS,
+  COUNTRY_OPTIONS,
+  DEFAULT_VALUES,
+} from "../../constants";
+import {
+  validateEmail,
+  validatePhone,
+  validateImage,
+  fileToBase64,
+} from "../../../../lib/validation";
+import { ThemeToggle } from "../../../../lib/theme";
+import toast from "react-hot-toast";
 
 export const SchoolSetupScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -22,15 +42,15 @@ export const SchoolSetupScreen: React.FC = () => {
   const [errors, setErrors] = useState<FormFieldError[]>([]);
 
   const [formData, setFormData] = useState<SchoolFormData>({
-    name: '',
-    legal_name: '',
-    emap_code: '',
-    email: '',
-    phone: '',
-    address_line1: '',
-    address_line2: '',
-    city: '',
-    province: '',
+    name: "",
+    legal_name: "",
+    emap_code: "",
+    email: "",
+    phone: "",
+    address_line1: "",
+    address_line2: "",
+    city: "",
+    province: "",
     country: DEFAULT_VALUES.COUNTRY,
     timezone: DEFAULT_VALUES.TIMEZONE,
     locale: DEFAULT_VALUES.LOCALE,
@@ -42,14 +62,17 @@ export const SchoolSetupScreen: React.FC = () => {
   }>({});
 
   const updateField = (field: keyof SchoolFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear field-specific errors
-    setErrors(prev => prev.filter(err => err.field !== field));
+    setErrors((prev) => prev.filter((err) => err.field !== field));
   };
 
-  const handleLogoUpload = async (type: 'light' | 'dark', file: File | null) => {
+  const handleLogoUpload = async (
+    type: "light" | "dark",
+    file: File | null,
+  ) => {
     if (!file) {
-      setLogoPreview(prev => {
+      setLogoPreview((prev) => {
         const updated = { ...prev };
         delete updated[type];
         return updated;
@@ -60,23 +83,25 @@ export const SchoolSetupScreen: React.FC = () => {
     try {
       const validation = await validateImage(file);
       if (!validation.isValid) {
-        toast.error(`${type === 'light' ? 'Light' : 'Dark'} logo: ${validation.error}`);
+        toast.error(
+          `${type === "light" ? "Light" : "Dark"} logo: ${validation.error}`,
+        );
         return;
       }
 
       if (validation.warnings && validation.warnings.length > 0) {
-        validation.warnings.forEach(warning => toast.error(warning));
+        validation.warnings.forEach((warning) => toast.error(warning));
       }
 
       const url = URL.createObjectURL(file);
-      setLogoPreview(prev => ({
+      setLogoPreview((prev) => ({
         ...prev,
         [type]: {
           file,
           url,
           dimensions: validation.dimensions,
-          size: validation.size!
-        }
+          size: validation.size!,
+        },
       }));
     } catch (error) {
       toast.error(`Failed to process ${type} logo`);
@@ -88,16 +113,22 @@ export const SchoolSetupScreen: React.FC = () => {
 
     // Required name validation
     if (!formData.name.trim()) {
-      newErrors.push({ field: 'name', message: 'School name is required' });
-    } else if (formData.name.trim().length < 2 || formData.name.trim().length > 80) {
-      newErrors.push({ field: 'name', message: 'School name must be between 2 and 80 characters' });
+      newErrors.push({ field: "name", message: "School name is required" });
+    } else if (
+      formData.name.trim().length < 2 ||
+      formData.name.trim().length > 80
+    ) {
+      newErrors.push({
+        field: "name",
+        message: "School name must be between 2 and 80 characters",
+      });
     }
 
     // Optional email validation
     if (formData.email) {
       const emailValidation = validateEmail(formData.email);
       if (!emailValidation.isValid) {
-        newErrors.push({ field: 'email', message: emailValidation.error! });
+        newErrors.push({ field: "email", message: emailValidation.error! });
       }
     }
 
@@ -105,7 +136,7 @@ export const SchoolSetupScreen: React.FC = () => {
     if (formData.phone) {
       const phoneValidation = validatePhone(formData.phone);
       if (!phoneValidation.isValid) {
-        newErrors.push({ field: 'phone', message: phoneValidation.error! });
+        newErrors.push({ field: "phone", message: phoneValidation.error! });
       }
     }
 
@@ -117,7 +148,7 @@ export const SchoolSetupScreen: React.FC = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please correct the errors below');
+      toast.error("Please correct the errors below");
       return;
     }
 
@@ -125,8 +156,12 @@ export const SchoolSetupScreen: React.FC = () => {
 
     try {
       // Convert logos to base64
-      const logo_light_b64 = logoPreview.light ? await fileToBase64(logoPreview.light.file) : null;
-      const logo_dark_b64 = logoPreview.dark ? await fileToBase64(logoPreview.dark.file) : null;
+      const logo_light_b64 = logoPreview.light
+        ? await fileToBase64(logoPreview.light.file)
+        : null;
+      const logo_dark_b64 = logoPreview.dark
+        ? await fileToBase64(logoPreview.dark.file)
+        : null;
 
       const schoolConfig = {
         ...formData,
@@ -143,28 +178,34 @@ export const SchoolSetupScreen: React.FC = () => {
         timezone: formData.timezone || null,
         locale: formData.locale || null,
         logo_light_b64,
-        logo_dark_b64
+        logo_dark_b64,
       };
 
       const response = await bootstrapService.configureSchool(schoolConfig);
 
       if (response.success) {
-        toast.success(response.message || 'School configuration saved successfully');
-        navigate({ to: '/setup/admin' });
+        toast.success(
+          response.message || "School configuration saved successfully",
+        );
+        navigate({ to: "/setup/admin" });
       } else {
         // Handle validation errors from server
         if (response.issues && response.issues.length > 0) {
-          const serverErrors = response.issues.map(issue => ({
-            field: issue.field || 'general',
-            message: issue.detail
+          const serverErrors = response.issues.map((issue) => ({
+            field: issue.field || "general",
+            message: issue.detail,
           }));
           setErrors(serverErrors);
         }
-        toast.error(response.message || 'Failed to save school configuration');
+        toast.error(response.message || "Failed to save school configuration");
       }
     } catch (error) {
-      console.error('School setup failed:', error);
-      toast.error(error instanceof Error ? error.message : 'Setup failed. Please try again.');
+      console.error("School setup failed:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Setup failed. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -173,22 +214,31 @@ export const SchoolSetupScreen: React.FC = () => {
   const handleSkipLogos = () => {
     // Clear logos and continue
     setLogoPreview({});
-    handleSubmit(new Event('submit') as any);
+    handleSubmit(new Event("submit") as any);
   };
 
-  const getFieldError = (field: string) => errors.find(err => err.field === field)?.message;
+  const getFieldError = (field: string) =>
+    errors.find((err) => err.field === field)?.message;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Theme Toggle */}
+      <div className="absolute top-6 right-6 z-10">
+        <ThemeToggle />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
             <School className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Set up your school</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            Set up your school
+          </h1>
           <p className="text-lg text-gray-600 max-w-xl mx-auto">
-            We'll use this to personalize receipts, reports, and the login screen.
+            We'll use this to personalize receipts, reports, and the login
+            screen.
           </p>
         </div>
 
@@ -198,43 +248,57 @@ export const SchoolSetupScreen: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Branding Section */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Branding</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Branding
+                </h2>
 
                 <div className="space-y-6">
                   {/* School Name */}
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       School Name *
                     </label>
                     <input
                       id="name"
                       type="text"
                       value={formData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
+                      onChange={(e) => updateField("name", e.target.value)}
                       className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                        getFieldError('name') ? 'border-red-500' : 'border-gray-300'
+                        getFieldError("name")
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="Enter your school's name"
                     />
-                    {getFieldError('name') && (
+                    {getFieldError("name") && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" />
-                        {getFieldError('name')}
+                        {getFieldError("name")}
                       </p>
                     )}
-                    <p className="mt-2 text-sm text-gray-500">Shown on login, receipts, and reports.</p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Shown on login, receipts, and reports.
+                    </p>
                   </div>
 
                   {/* Legal Name */}
                   <div>
-                    <label htmlFor="legal_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="legal_name"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Registered / Legal Name
                     </label>
                     <input
                       id="legal_name"
                       type="text"
                       value={formData.legal_name}
-                      onChange={(e) => updateField('legal_name', e.target.value)}
+                      onChange={(e) =>
+                        updateField("legal_name", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Official registered name (if different)"
                     />
@@ -258,16 +322,21 @@ export const SchoolSetupScreen: React.FC = () => {
                               />
                               <button
                                 type="button"
-                                onClick={() => handleLogoUpload('light', null)}
+                                onClick={() => handleLogoUpload("light", null)}
                                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
                               >
                                 <X className="w-3 h-3" />
                               </button>
                             </div>
                           ) : (
-                            <label htmlFor="logo-light" className="cursor-pointer text-center">
+                            <label
+                              htmlFor="logo-light"
+                              className="cursor-pointer text-center"
+                            >
                               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <span className="text-sm text-gray-600">Upload light logo</span>
+                              <span className="text-sm text-gray-600">
+                                Upload light logo
+                              </span>
                             </label>
                           )}
                         </div>
@@ -277,11 +346,13 @@ export const SchoolSetupScreen: React.FC = () => {
                           accept="image/png,image/jpeg,image/jpg,image/svg+xml"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handleLogoUpload('light', file);
+                            if (file) handleLogoUpload("light", file);
                           }}
                           className="hidden"
                         />
-                        <p className="text-xs text-gray-500">PNG, JPG, SVG • Max 2MB • Used on light backgrounds</p>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, SVG • Max 2MB • Used on light backgrounds
+                        </p>
                       </div>
                     </div>
 
@@ -301,16 +372,21 @@ export const SchoolSetupScreen: React.FC = () => {
                               />
                               <button
                                 type="button"
-                                onClick={() => handleLogoUpload('dark', null)}
+                                onClick={() => handleLogoUpload("dark", null)}
                                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
                               >
                                 <X className="w-3 h-3" />
                               </button>
                             </div>
                           ) : (
-                            <label htmlFor="logo-dark" className="cursor-pointer text-center">
+                            <label
+                              htmlFor="logo-dark"
+                              className="cursor-pointer text-center"
+                            >
                               <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <span className="text-sm text-gray-400">Upload dark logo</span>
+                              <span className="text-sm text-gray-400">
+                                Upload dark logo
+                              </span>
                             </label>
                           )}
                         </div>
@@ -320,11 +396,13 @@ export const SchoolSetupScreen: React.FC = () => {
                           accept="image/png,image/jpeg,image/jpg,image/svg+xml"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handleLogoUpload('dark', file);
+                            if (file) handleLogoUpload("dark", file);
                           }}
                           className="hidden"
                         />
-                        <p className="text-xs text-gray-500">PNG, JPG, SVG • Max 2MB • Used on dark backgrounds</p>
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, SVG • Max 2MB • Used on dark backgrounds
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -333,19 +411,24 @@ export const SchoolSetupScreen: React.FC = () => {
 
               {/* Contact Information */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Contact Information</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Contact Information
+                </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* EMAP Code */}
                   <div>
-                    <label htmlFor="emap_code" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="emap_code"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       EMAP Code
                     </label>
                     <input
                       id="emap_code"
                       type="text"
                       value={formData.emap_code}
-                      onChange={(e) => updateField('emap_code', e.target.value)}
+                      onChange={(e) => updateField("emap_code", e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Ministry registration code"
                     />
@@ -353,46 +436,56 @@ export const SchoolSetupScreen: React.FC = () => {
 
                   {/* Email */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Official Email
                     </label>
                     <input
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
+                      onChange={(e) => updateField("email", e.target.value)}
                       className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                        getFieldError('email') ? 'border-red-500' : 'border-gray-300'
+                        getFieldError("email")
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="school@example.com"
                     />
-                    {getFieldError('email') && (
+                    {getFieldError("email") && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" />
-                        {getFieldError('email')}
+                        {getFieldError("email")}
                       </p>
                     )}
                   </div>
 
                   {/* Phone */}
                   <div className="md:col-span-2">
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="phone"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Main Phone Number
                     </label>
                     <input
                       id="phone"
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
+                      onChange={(e) => updateField("phone", e.target.value)}
                       className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                        getFieldError('phone') ? 'border-red-500' : 'border-gray-300'
+                        getFieldError("phone")
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="+263 123 456 789"
                     />
-                    {getFieldError('phone') && (
+                    {getFieldError("phone") && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" />
-                        {getFieldError('phone')}
+                        {getFieldError("phone")}
                       </p>
                     )}
                   </div>
@@ -401,32 +494,44 @@ export const SchoolSetupScreen: React.FC = () => {
 
               {/* Address */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Address & Location</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Address & Location
+                </h2>
 
                 <div className="space-y-6">
                   <div>
-                    <label htmlFor="address_line1" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="address_line1"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Address Line 1
                     </label>
                     <input
                       id="address_line1"
                       type="text"
                       value={formData.address_line1}
-                      onChange={(e) => updateField('address_line1', e.target.value)}
+                      onChange={(e) =>
+                        updateField("address_line1", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Street address"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="address_line2" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="address_line2"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Address Line 2
                     </label>
                     <input
                       id="address_line2"
                       type="text"
                       value={formData.address_line2}
-                      onChange={(e) => updateField('address_line2', e.target.value)}
+                      onChange={(e) =>
+                        updateField("address_line2", e.target.value)
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Apartment, suite, etc."
                     />
@@ -434,44 +539,55 @@ export const SchoolSetupScreen: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="city"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         City/Town
                       </label>
                       <input
                         id="city"
                         type="text"
                         value={formData.city}
-                        onChange={(e) => updateField('city', e.target.value)}
+                        onChange={(e) => updateField("city", e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                         placeholder="Harare"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="province"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Province
                       </label>
                       <input
                         id="province"
                         type="text"
                         value={formData.province}
-                        onChange={(e) => updateField('province', e.target.value)}
+                        onChange={(e) =>
+                          updateField("province", e.target.value)
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                         placeholder="Harare"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="country"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Country
                       </label>
                       <select
                         id="country"
                         value={formData.country}
-                        onChange={(e) => updateField('country', e.target.value)}
+                        onChange={(e) => updateField("country", e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
-                        {COUNTRY_OPTIONS.map(option => (
+                        {COUNTRY_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -482,16 +598,21 @@ export const SchoolSetupScreen: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="timezone"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Timezone
                       </label>
                       <select
                         id="timezone"
                         value={formData.timezone}
-                        onChange={(e) => updateField('timezone', e.target.value)}
+                        onChange={(e) =>
+                          updateField("timezone", e.target.value)
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
-                        {TIMEZONE_OPTIONS.map(option => (
+                        {TIMEZONE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -500,16 +621,19 @@ export const SchoolSetupScreen: React.FC = () => {
                     </div>
 
                     <div>
-                      <label htmlFor="locale" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label
+                        htmlFor="locale"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
                         Language
                       </label>
                       <select
                         id="locale"
                         value={formData.locale}
-                        onChange={(e) => updateField('locale', e.target.value)}
+                        onChange={(e) => updateField("locale", e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       >
-                        {LOCALE_OPTIONS.map(option => (
+                        {LOCALE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>

@@ -1,1 +1,52 @@
-@import '../app/global.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme transition for smooth mode changes */
+* {
+    @apply transition-colors duration-200;
+}
+
+/* Dark mode styles for components that need specific handling */
+.dark {
+    color-scheme: dark;
+}
+
+/* Custom scrollbar for both themes */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Focus styles that work in both themes */
+.focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800;
+}
+
+/* Toast styles for both themes */
+.toaster-light {
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.toaster-dark {
+    background: #1f2937;
+    color: #f9fafb;
+    border: 1px solid #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
