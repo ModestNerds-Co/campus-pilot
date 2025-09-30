@@ -43,7 +43,8 @@ impl AppState {
             .endpoint_url(&config.storage.endpoint)
             .region(Region::new(config.storage.region.clone()))
             .credentials_provider(credentials)
-            .force_path_style(true) // Required for MinIO
+            .force_path_style(true)
+            .behavior_version(aws_sdk_s3::config::BehaviorVersion::latest())
             .build();
 
         let s3_client = S3Client::from_conf(s3_config);
