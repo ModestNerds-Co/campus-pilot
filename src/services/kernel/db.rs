@@ -60,12 +60,12 @@ impl KernelDbOps {
             INSERT INTO school_profile (
                 id, name, legal_name, emap_code, phone, email,
                 address_line1, address_line2, city, province, country,
-                timezone, locale
+                timezone, locale, logo_light_url, logo_dark_url
             )
             VALUES (
                 'singleton', $1, $2, $3, $4, $5,
                 $6, $7, $8, $9, $10,
-                $11, $12
+                $11, $12, $13, $14
             )
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
@@ -80,6 +80,8 @@ impl KernelDbOps {
                 country = EXCLUDED.country,
                 timezone = EXCLUDED.timezone,
                 locale = EXCLUDED.locale,
+                logo_light_url = EXCLUDED.logo_light_url,
+                logo_dark_url = EXCLUDED.logo_dark_url,
                 updated_at = NOW()
             "#,
             req.name,
@@ -93,7 +95,9 @@ impl KernelDbOps {
             req.province,
             req.country.unwrap_or_else(|| "Zimbabwe".to_string()),
             req.timezone.unwrap_or_else(|| "Africa/Harare".to_string()),
-            req.locale.unwrap_or_else(|| "en-ZW".to_string())
+            req.locale.unwrap_or_else(|| "en-ZW".to_string()),
+            req.logo_light_url,
+            req.logo_dark_url
         )
         .execute(&mut *tx)
         .await

@@ -14,6 +14,7 @@ use urlencoding::encode;
 pub struct Config {
     pub app: AppConfig,
     pub database: DatabaseConfig,
+    pub storage: StorageConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -27,12 +28,26 @@ pub struct DatabaseConfig {
     pub url: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct StorageConfig {
+    pub endpoint: String,
+    pub region: String,
+    pub bucket: String,
+    pub access_key: String,
+    pub secret_key: String,
+}
+
 impl Config {
     pub fn from_env() -> Result<Self> {
         let app = AppConfig::from_env()?;
         let database = DatabaseConfig::from_env()?;
+        let storage = StorageConfig::from_env()?;
 
-        Ok(Config { app, database })
+        Ok(Config {
+            app,
+            database,
+            storage,
+        })
     }
 }
 
@@ -69,5 +84,25 @@ impl DatabaseConfig {
         );
 
         Ok(DatabaseConfig { url })
+    }
+}
+
+impl StorageConfig {
+    fn from_env() -> Result<Self> {
+        let endpoint = env::var("STORAGE_ENDPOINT").context("STORAGE_ENDPOINT must be set")?;
+        let region = env::var("STORAGE_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+        let bucket = env::var("STORAGE_BUCKET").context("STORAGE_BUCKET must be set")?;
+        let access_key =
+            env::var("STORAGE_ACCESS_KEY").context("STORAGE_ACCESS_KEY must be set")?;
+        let secret_key =
+            env::var("STORAGE_SECRET_KEY").context("STORAGE_SECRET_KEY must be set")?;
+
+        Ok(StorageConfig {
+            endpoint,
+            region,
+            bucket,
+            access_key,
+            secret_key,
+        })
     }
 }

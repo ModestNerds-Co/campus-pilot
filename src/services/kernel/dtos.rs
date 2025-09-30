@@ -17,8 +17,10 @@ pub struct SetupSchoolRequest {
     pub country: Option<String>,
     pub timezone: Option<String>,
     pub locale: Option<String>,
-    pub logo_light_b64: Option<String>,
-    pub logo_dark_b64: Option<String>,
+    #[validate(url(message = "Invalid logo light URL"))]
+    pub logo_light_url: Option<String>,
+    #[validate(url(message = "Invalid logo dark URL"))]
+    pub logo_dark_url: Option<String>,
 }
 
 #[derive(Deserialize)]

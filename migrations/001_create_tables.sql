@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS school_profile (
   country        TEXT DEFAULT 'Zimbabwe',
   timezone       TEXT DEFAULT 'Africa/Harare',
   locale         TEXT DEFAULT 'en-ZW',
-  logo_light_key TEXT,
-  logo_dark_key  TEXT,
+  logo_light_url TEXT,
+  logo_dark_url  TEXT,
   deleted_at     TIMESTAMP WITH TIME ZONE,
   created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
