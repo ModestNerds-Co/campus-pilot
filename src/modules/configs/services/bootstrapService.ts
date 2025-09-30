@@ -6,14 +6,15 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import axios from 'axios';
+import { httpClient } from "../../../lib/httpClient";
+import { AxiosError } from "axios";
 import type {
   ApiEnvelope,
   BootstrapStatus,
   SchoolConfiguration,
-  AdminConfiguration
-} from '../types';
-import { API_ENDPOINTS, API_CONFIG, STORAGE_KEYS } from '../constants';
+  AdminConfiguration,
+} from "../types";
+import { API_ENDPOINTS, API_CONFIG, STORAGE_KEYS } from "../constants";
 
 class BootstrapService {
   private isMockMode = true; // Set to false when real API is ready
@@ -32,14 +33,14 @@ class BootstrapService {
         data: { state },
         issues: null,
         version: API_CONFIG.VERSION,
-        by: API_CONFIG.BY
+        by: API_CONFIG.BY,
       };
     }
 
     try {
-      const response = await axios.get<ApiEnvelope<BootstrapStatus>>(
+      const response = await httpClient.get<ApiEnvelope<BootstrapStatus>>(
         API_ENDPOINTS.BOOTSTRAP_STATUS,
-        { timeout: API_CONFIG.TIMEOUT }
+        { timeout: API_CONFIG.TIMEOUT },
       );
       return response.data;
     } catch (error) {
@@ -50,7 +51,9 @@ class BootstrapService {
   /**
    * Configure school settings
    */
-  async configureSchool(data: SchoolConfiguration): Promise<ApiEnvelope<BootstrapStatus>> {
+  async configureSchool(
+    data: SchoolConfiguration,
+  ): Promise<ApiEnvelope<BootstrapStatus>> {
     if (this.isMockMode) {
       // Mock validation
       if (!data.name.trim()) {
@@ -58,9 +61,15 @@ class BootstrapService {
           success: false,
           message: "Validation failed",
           data: null,
-          issues: [{ code: "REQUIRED_FIELD", detail: "School name is required", field: "name" }],
+          issues: [
+            {
+              code: "REQUIRED_FIELD",
+              detail: "School name is required",
+              field: "name",
+            },
+          ],
           version: API_CONFIG.VERSION,
-          by: API_CONFIG.BY
+          by: API_CONFIG.BY,
         };
       }
 
@@ -69,7 +78,7 @@ class BootstrapService {
       // Store school data in mock storage
       this.setMockData({
         state: "SchoolConfigured",
-        schoolData: data
+        schoolData: data,
       });
 
       return {
@@ -78,19 +87,19 @@ class BootstrapService {
         data: { state: "SchoolConfigured" },
         issues: null,
         version: API_CONFIG.VERSION,
-        by: API_CONFIG.BY
+        by: API_CONFIG.BY,
       };
     }
 
     try {
-      const response = await axios.post<ApiEnvelope<BootstrapStatus>>(
+      const response = await httpClient.post<ApiEnvelope<BootstrapStatus>>(
         API_ENDPOINTS.BOOTSTRAP_SCHOOL,
         data,
-        { timeout: API_CONFIG.TIMEOUT }
+        { timeout: API_CONFIG.TIMEOUT },
       );
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
+      if (error instanceof AxiosError && error.response) {
         return error.response.data;
       }
       throw this.handleApiError(error);
@@ -100,7 +109,9 @@ class BootstrapService {
   /**
    * Create administrator account
    */
-  async createAdmin(data: AdminConfiguration): Promise<ApiEnvelope<BootstrapStatus>> {
+  async createAdmin(
+    data: AdminConfiguration,
+  ): Promise<ApiEnvelope<BootstrapStatus>> {
     if (this.isMockMode) {
       // Mock validation
       const issues = this.validateAdminData(data);
@@ -112,7 +123,7 @@ class BootstrapService {
           data: null,
           issues,
           version: API_CONFIG.VERSION,
-          by: API_CONFIG.BY
+          by: API_CONFIG.BY,
         };
       }
 
@@ -121,7 +132,7 @@ class BootstrapService {
       // Store admin data and mark as ready
       this.setMockData({
         state: "Ready",
-        adminData: { ...data, password: '[PROTECTED]' }
+        adminData: { ...data, password: "[PROTECTED]" },
       });
 
       return {
@@ -130,19 +141,19 @@ class BootstrapService {
         data: { state: "Ready" },
         issues: null,
         version: API_CONFIG.VERSION,
-        by: API_CONFIG.BY
+        by: API_CONFIG.BY,
       };
     }
 
     try {
-      const response = await axios.post<ApiEnvelope<BootstrapStatus>>(
+      const response = await httpClient.post<ApiEnvelope<BootstrapStatus>>(
         API_ENDPOINTS.BOOTSTRAP_ADMIN,
         data,
-        { timeout: API_CONFIG.TIMEOUT }
+        { timeout: API_CONFIG.TIMEOUT },
       );
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
+      if (error instanceof AxiosError && error.response) {
         return error.response.data;
       }
       throw this.handleApiError(error);
@@ -184,56 +195,81 @@ class BootstrapService {
   }
 
   private setMockData(data: any): void {
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOTSTRAP_STATE) || '{}');
-    localStorage.setItem(STORAGE_KEYS.BOOTSTRAP_STATE, JSON.stringify({
-      ...existing,
-      ...data,
-      lastUpdated: new Date().toISOString()
-    }));
+    const existing = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.BOOTSTRAP_STATE) || "{}",
+    );
+    localStorage.setItem(
+      STORAGE_KEYS.BOOTSTRAP_STATE,
+      JSON.stringify({
+        ...existing,
+        ...data,
+        lastUpdated: new Date().toISOString(),
+      }),
+    );
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private validateAdminData(data: AdminConfiguration) {
     const issues = [];
 
     if (!data.full_name.trim()) {
-      issues.push({ code: "REQUIRED_FIELD", detail: "Full name is required", field: "full_name" });
+      issues.push({
+        code: "REQUIRED_FIELD",
+        detail: "Full name is required",
+        field: "full_name",
+      });
     }
 
     if (!data.email.trim()) {
-      issues.push({ code: "REQUIRED_FIELD", detail: "Email is required", field: "email" });
+      issues.push({
+        code: "REQUIRED_FIELD",
+        detail: "Email is required",
+        field: "email",
+      });
     }
 
     if (!data.password || data.password.length < 10) {
-      issues.push({ code: "WEAK_PASSWORD", detail: "Password must be at least 10 characters", field: "password" });
+      issues.push({
+        code: "WEAK_PASSWORD",
+        detail: "Password must be at least 10 characters",
+        field: "password",
+      });
     }
 
     if (!/\d/.test(data.password)) {
-      issues.push({ code: "WEAK_PASSWORD", detail: "Password must include at least one number", field: "password" });
+      issues.push({
+        code: "WEAK_PASSWORD",
+        detail: "Password must include at least one number",
+        field: "password",
+      });
     }
 
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(data.password)) {
-      issues.push({ code: "WEAK_PASSWORD", detail: "Password must include at least one symbol", field: "password" });
+      issues.push({
+        code: "WEAK_PASSWORD",
+        detail: "Password must include at least one symbol",
+        field: "password",
+      });
     }
 
     return issues;
   }
 
   private handleApiError(error: any): Error {
-    if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return new Error('Request timed out. Please try again.');
+    if (error instanceof AxiosError) {
+      if (error.code === "ECONNABORTED") {
+        return new Error("Request timed out. Please try again.");
       }
       if (!error.response) {
-        return new Error('Network error. Please check your connection.');
+        return new Error("Network error. Please check your connection.");
       }
-      return new Error(error.response.data?.message || 'Server error occurred');
+      return new Error(error.response.data?.message || "Server error occurred");
     }
 
-    return error instanceof Error ? error : new Error('Unknown error occurred');
+    return error instanceof Error ? error : new Error("Unknown error occurred");
   }
 }
 
