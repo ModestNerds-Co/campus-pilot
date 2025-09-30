@@ -8,8 +8,8 @@
 
 import React from "react";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { ChangelogModal } from "./components/ChangelogModal";
-import { useVersionCheck } from "./hooks/useVersionCheck";
+import { ChangelogModal } from "./components/changelog-modal";
+import { useVersionCheck } from "./hooks/use-version-check";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";

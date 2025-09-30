@@ -16,9 +16,9 @@ export * from "./constants";
 export { bootstrapService } from "./services/bootstrap-service";
 
 // Components - Screens
-export { BootScreen } from "./components/screens/BootScreen";
-export { SchoolSetupScreen } from "./components/screens/SchoolSetupScreen";
-export { AdminSetupScreen } from "./components/screens/AdminSetupScreen";
+export { BootScreen } from "./components/screens/boot-screen";
+export { SchoolSetupScreen } from "./components/screens/school-setup-screen";
+export { AdminSetupScreen } from "./components/screens/admin-setup-screen";
 
 // Components - UI
-export { SchoolPreviewCard } from "./components/ui/SchoolPreviewCard";
+export { SchoolPreviewCard } from "./components/ui/school-preview-card";

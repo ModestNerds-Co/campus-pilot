@@ -7,9 +7,9 @@
 //
 
 import { useEffect } from "react";
-import { useGlobalKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { useCommandPalette } from "../hooks/useCommandPalette";
-import { CommandPalette } from "./CommandPalette";
+import { useGlobalKeyboardShortcuts } from "../hooks/use-keyboard-shortcuts";
+import { useCommandPalette } from "../hooks/use-command-palette";
+import { CommandPalette } from "./command-palette";
 
 export function GlobalKeyboardHandler() {
   // Initialize global keyboard shortcuts inside router context

@@ -19,7 +19,7 @@ import {
   School,
 } from "lucide-react";
 import { bootstrapService } from "../../services/bootstrap-service";
-import { SchoolPreviewCard } from "../ui/SchoolPreviewCard";
+import { SchoolPreviewCard } from "../ui/school-preview-card";
 import type { SchoolFormData, LogoPreview, FormFieldError } from "../../types";
 import {
   TIMEZONE_OPTIONS,
@@ -34,7 +34,7 @@ import {
   fileToBase64,
 } from "../../../../lib/validation";
 import { ThemeToggle } from "../../../../lib/theme";
-import { SearchableSelect } from "../../../../components/SearchableSelect";
+import { SearchableSelect } from "../../../../components/searchable-select";
 import toast from "react-hot-toast";
 
 export const SchoolSetupScreen: React.FC = () => {

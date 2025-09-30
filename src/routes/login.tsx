@@ -6,9 +6,9 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import { createFileRoute } from '@tanstack/react-router';
-import { LoginScreen } from '../components/LoginScreen';
+import { createFileRoute } from "@tanstack/react-router";
+import { LoginScreen } from "../components/login-screen";
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute("/login")({
   component: LoginScreen,
 });
