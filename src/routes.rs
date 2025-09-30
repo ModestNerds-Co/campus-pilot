@@ -1,14 +1,16 @@
 //
 //  campus-pilot-apis
-//  health.rs
+//  routes.rs
 //
 //  Created by Ngonidzashe Mangudya on 2025/06/21.
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-use crate::models::ApiResponse;
+use crate::models::api_response::ApiResponse;
+use crate::services::kernel;
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, Responder, get, web::ServiceConfig};
+use actix_web::web::{ServiceConfig, scope};
+use actix_web::{HttpResponse, Responder, get};
 use serde_json::json;
 use sqlx::types::chrono::Utc;
 
@@ -26,5 +28,9 @@ async fn health_check() -> impl Responder {
 }
 
 pub fn init(cfg: &mut ServiceConfig) {
-    cfg.service(health_check);
+    cfg.service(
+        scope("/api/1.0")
+            .service(health_check)
+            .service(scope("/kernel").configure(kernel::routes::init)),
+    );
 }

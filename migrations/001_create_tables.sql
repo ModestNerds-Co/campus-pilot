@@ -1,10 +1,14 @@
 -- CREATE TABLE IF NOT EXISTS statements
-CREATE TYPE APP_STATE AS ENUM ('Uninitialized','SchoolConfigured','Ready');
+DO $$ BEGIN
+    CREATE TYPE APP_STATE AS ENUM ('Uninitialized','SchoolConfigured','Ready');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS system_state (
   id             TEXT PRIMARY KEY DEFAULT 'singleton',
   state          APP_STATE NOT NULL DEFAULT 'Uninitialized',
-  bootstrap_lock BOOLEAN NOT NULL DEFAULT FALSE,
+  kernel_lock BOOLEAN NOT NULL DEFAULT FALSE,
   deleted_at     TIMESTAMP WITH TIME ZONE,
   created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -37,7 +41,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_school_only ON school_profile((TRUE)) WHER
 
 CREATE TABLE IF NOT EXISTS users(
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email         CITEXT UNIQUE NOT NULL,
+  email         TEXT UNIQUE NOT NULL CHECK (email = LOWER(email)),
   password_hash TEXT NOT NULL,
   full_name     TEXT NOT NULL,
   phone         TEXT,
@@ -47,7 +51,7 @@ CREATE TABLE IF NOT EXISTS users(
   created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
-CREATE INDEX ON users((LOWER(email)));
+CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
 
 CREATE TABLE IF NOT EXISTS event_log(
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

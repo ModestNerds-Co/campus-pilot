@@ -22,7 +22,6 @@ use std::sync::Arc;
 
 mod config;
 mod db;
-mod dtos;
 mod models;
 mod routes;
 mod services;
@@ -81,6 +80,11 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
         .await?;
 
     let app_state = Arc::new(AppState::init(db_pool, config.clone()));
+
+    // Run database migrations
+    info!("Running database migrations... ⚙️");
+    app_state.db_ops.run_migrations().await?;
+    info!("Database migrations completed successfully 🍻");
 
     let addr = format!("0.0.0.0:{}", config.app.port);
     info!("Ready to rock and roll on {} 🚀", addr);

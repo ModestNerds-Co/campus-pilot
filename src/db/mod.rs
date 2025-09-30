@@ -6,11 +6,8 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-use crate::models::typedefs::ApiResult;
 use anyhow::Result;
-use rust_decimal::prelude::FromPrimitive;
-use sqlx::types::{uuid, BigDecimal};
-use sqlx::{PgPool, QueryBuilder};
+use sqlx::PgPool;
 
 pub struct DatabaseOperations {
     pool: PgPool,
