@@ -43,8 +43,8 @@ export interface SchoolConfiguration {
   country: string | null;
   timezone: string | null;
   locale: string | null;
-  logo_light_b64: string | null;
-  logo_dark_b64: string | null;
+  logo_light_url: string | null;
+  logo_dark_url: string | null;
 }
 
 // Administrator Configuration
@@ -116,13 +116,25 @@ export interface PasswordStrength {
   score: 0 | 1 | 2 | 3 | 4; // weak, fair, good, strong, very strong
   feedback: string[];
   isValid: boolean;
-  label: 'Very Weak' | 'Weak' | 'Fair' | 'Good' | 'Strong';
+  label: "Very Weak" | "Weak" | "Fair" | "Good" | "Strong";
 }
 
 // Timezone and Locale Options
 export interface SelectOption {
   value: string;
   label: string;
+}
+
+// Storage Types
+export interface PresignedUploadRequest {
+  filename: string;
+  file_type: string;
+}
+
+export interface PresignedUploadResponse {
+  upload_url: string;
+  file_key: string;
+  expires_in: number;
 }
 
 // Error Types
@@ -134,7 +146,11 @@ export interface ConfigsError extends Error {
 
 // Event Types
 export interface ConfigsEvent {
-  type: 'school_configured' | 'admin_created' | 'setup_completed' | 'setup_error';
+  type:
+    | "school_configured"
+    | "admin_created"
+    | "setup_completed"
+    | "setup_error";
   timestamp: Date;
   data?: any;
   error?: string;
@@ -156,7 +172,7 @@ export interface UseSchoolConfigResult {
     dark?: LogoPreview;
   };
   updateField: (field: keyof SchoolFormData, value: any) => void;
-  setLogo: (type: 'light' | 'dark', file: File | null) => void;
+  setLogo: (type: "light" | "dark", file: File | null) => void;
   validateForm: () => Promise<boolean>;
   submitForm: () => Promise<boolean>;
 }

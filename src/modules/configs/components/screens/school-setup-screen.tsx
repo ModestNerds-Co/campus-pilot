@@ -19,6 +19,7 @@ import {
   School,
 } from "lucide-react";
 import { bootstrapService } from "../../services/bootstrap-service";
+import { storageService } from "../../../../lib/storage-service";
 import { SchoolPreviewCard } from "../ui/school-preview-card";
 import type { SchoolFormData, LogoPreview, FormFieldError } from "../../types";
 import {
@@ -190,13 +191,25 @@ export const SchoolSetupScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Convert logos to base64
-      const logo_light_b64 = logoPreview.light
-        ? await fileToBase64(logoPreview.light.file)
-        : null;
-      const logo_dark_b64 = logoPreview.dark
-        ? await fileToBase64(logoPreview.dark.file)
-        : null;
+      // Upload logos to MinIO and get URLs
+      let logo_light_url: string | null = null;
+      let logo_dark_url: string | null = null;
+
+      if (logoPreview.light) {
+        toast.loading("Uploading light logo...");
+        logo_light_url = await storageService.uploadFileWithPresignedUrl(
+          logoPreview.light.file,
+        );
+        toast.dismiss();
+      }
+
+      if (logoPreview.dark) {
+        toast.loading("Uploading dark logo...");
+        logo_dark_url = await storageService.uploadFileWithPresignedUrl(
+          logoPreview.dark.file,
+        );
+        toast.dismiss();
+      }
 
       const schoolConfig = {
         ...formData,
@@ -212,8 +225,8 @@ export const SchoolSetupScreen: React.FC = () => {
         country: formData.country || null,
         timezone: formData.timezone || null,
         locale: formData.locale || null,
-        logo_light_b64,
-        logo_dark_b64,
+        logo_light_url,
+        logo_dark_url,
       };
 
       const response = await bootstrapService.configureSchool(schoolConfig);
