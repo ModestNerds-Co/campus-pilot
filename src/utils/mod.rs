@@ -8,4 +8,4 @@
 
 mod utils;
 
-pub use utils::status_meaning;
+pub use utils::{flatten_validation_errors, status_meaning};

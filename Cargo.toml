@@ -28,6 +28,7 @@ base64 = "0.21"
 urlencoding = "2.1.3"
 sentry = { version = "0.43.0", features = ["logs", "log"] }
 sentry-actix = "0.43.0"
+validator = { version = "0.20.0", features = ["derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }

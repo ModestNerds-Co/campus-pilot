@@ -1,11 +1,14 @@
 use serde::Deserialize;
+use validator::Validate;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct SetupSchoolRequest {
+    #[validate(length(min = 1, message = "School name is required"))]
     pub name: String,
     pub legal_name: Option<String>,
     pub emap_code: Option<String>,
     pub phone: Option<String>,
+    #[validate(email(message = "Invalid email format"))]
     pub email: Option<String>,
     pub address_line1: Option<String>,
     pub address_line2: Option<String>,
