@@ -9,7 +9,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, WifiOff, AlertTriangle, RefreshCw } from "lucide-react";
-import { bootstrapService } from "../../services/bootstrapService";
+import { bootstrapService } from "../../services/bootstrap-service";
 import type { BootstrapState } from "../../types";
 import { ThemeToggle } from "../../../../lib/theme";
 import toast from "react-hot-toast";

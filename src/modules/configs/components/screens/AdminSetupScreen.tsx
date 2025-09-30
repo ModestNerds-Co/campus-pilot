@@ -19,7 +19,7 @@ import {
   Shield,
   Check,
 } from "lucide-react";
-import { bootstrapService } from "../../services/bootstrapService";
+import { bootstrapService } from "../../services/bootstrap-service";
 import type {
   AdminFormData,
   FormFieldError,

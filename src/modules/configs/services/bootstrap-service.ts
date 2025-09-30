@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import { httpClient } from "../../../lib/httpClient";
+import { httpClient } from "../../../lib/http-client";
 import { AxiosError } from "axios";
 import type {
   ApiEnvelope,

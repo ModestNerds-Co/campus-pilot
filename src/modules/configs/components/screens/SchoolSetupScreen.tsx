@@ -18,7 +18,7 @@ import {
   AlertCircle,
   School,
 } from "lucide-react";
-import { bootstrapService } from "../../services/bootstrapService";
+import { bootstrapService } from "../../services/bootstrap-service";
 import { SchoolPreviewCard } from "../ui/SchoolPreviewCard";
 import type { SchoolFormData, LogoPreview, FormFieldError } from "../../types";
 import {

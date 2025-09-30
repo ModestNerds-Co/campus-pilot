@@ -7,18 +7,18 @@
 //
 
 // Types
-export type * from './types';
+export type * from "./types";
 
 // Constants
-export * from './constants';
+export * from "./constants";
 
 // Services
-export { bootstrapService } from './services/bootstrapService';
+export { bootstrapService } from "./services/bootstrap-service";
 
 // Components - Screens
-export { BootScreen } from './components/screens/BootScreen';
-export { SchoolSetupScreen } from './components/screens/SchoolSetupScreen';
-export { AdminSetupScreen } from './components/screens/AdminSetupScreen';
+export { BootScreen } from "./components/screens/BootScreen";
+export { SchoolSetupScreen } from "./components/screens/SchoolSetupScreen";
+export { AdminSetupScreen } from "./components/screens/AdminSetupScreen";
 
 // Components - UI
-export { SchoolPreviewCard } from './components/ui/SchoolPreviewCard';
+export { SchoolPreviewCard } from "./components/ui/SchoolPreviewCard";
