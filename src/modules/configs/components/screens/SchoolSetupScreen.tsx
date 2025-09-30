@@ -34,12 +34,47 @@ import {
   fileToBase64,
 } from "../../../../lib/validation";
 import { ThemeToggle } from "../../../../lib/theme";
+import { SearchableSelect } from "../../../../components/SearchableSelect";
 import toast from "react-hot-toast";
 
 export const SchoolSetupScreen: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<FormFieldError[]>([]);
+
+  // Transform options for SearchableSelect
+  const countryOptions = COUNTRY_OPTIONS.map((option, index) => ({
+    id: index + 1,
+    value: option.value,
+    label: option.label,
+  }));
+
+  const timezoneOptions = TIMEZONE_OPTIONS.map((option, index) => ({
+    id: index + 1,
+    value: option.value,
+    label: option.label,
+  }));
+
+  const localeOptions = LOCALE_OPTIONS.map((option, index) => ({
+    id: index + 1,
+    value: option.value,
+    label: option.label,
+  }));
+
+  // Helper functions to convert between SearchableSelect IDs and values
+  const getCountryId = (value: string) =>
+    countryOptions.find((opt) => opt.value === value)?.id || null;
+  const getTimezoneId = (value: string) =>
+    timezoneOptions.find((opt) => opt.value === value)?.id || null;
+  const getLocaleId = (value: string) =>
+    localeOptions.find((opt) => opt.value === value)?.id || null;
+
+  const getCountryValue = (id: number | null) =>
+    countryOptions.find((opt) => opt.id === id)?.value || "";
+  const getTimezoneValue = (id: number | null) =>
+    timezoneOptions.find((opt) => opt.id === id)?.value || "";
+  const getLocaleValue = (id: number | null) =>
+    localeOptions.find((opt) => opt.id === id)?.value || "";
 
   const [formData, setFormData] = useState<SchoolFormData>({
     name: "",
@@ -581,18 +616,15 @@ export const SchoolSetupScreen: React.FC = () => {
                       >
                         Country
                       </label>
-                      <select
-                        id="country"
-                        value={formData.country}
-                        onChange={(e) => updateField("country", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                      >
-                        {COUNTRY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        options={countryOptions}
+                        value={getCountryId(formData.country)}
+                        onChange={(id) =>
+                          updateField("country", getCountryValue(id))
+                        }
+                        placeholder="Select country..."
+                        className="w-full"
+                      />
                     </div>
                   </div>
 
@@ -604,20 +636,15 @@ export const SchoolSetupScreen: React.FC = () => {
                       >
                         Timezone
                       </label>
-                      <select
-                        id="timezone"
-                        value={formData.timezone}
-                        onChange={(e) =>
-                          updateField("timezone", e.target.value)
+                      <SearchableSelect
+                        options={timezoneOptions}
+                        value={getTimezoneId(formData.timezone)}
+                        onChange={(id) =>
+                          updateField("timezone", getTimezoneValue(id))
                         }
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                      >
-                        {TIMEZONE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Select timezone..."
+                        className="w-full"
+                      />
                     </div>
 
                     <div>
@@ -627,18 +654,15 @@ export const SchoolSetupScreen: React.FC = () => {
                       >
                         Language
                       </label>
-                      <select
-                        id="locale"
-                        value={formData.locale}
-                        onChange={(e) => updateField("locale", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                      >
-                        {LOCALE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        options={localeOptions}
+                        value={getLocaleId(formData.locale)}
+                        onChange={(id) =>
+                          updateField("locale", getLocaleValue(id))
+                        }
+                        placeholder="Select language..."
+                        className="w-full"
+                      />
                     </div>
                   </div>
                 </div>

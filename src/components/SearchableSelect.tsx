@@ -119,14 +119,18 @@ export function SearchableSelect({
         onClick={handleToggle}
         disabled={disabled || loading}
         className={cn(
-          "w-full flex items-center justify-between px-3 py-2 text-left bg-white border border-gray-300 rounded-lg shadow-sm text-sm",
-          "hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-          disabled && "bg-gray-50 text-gray-500 cursor-not-allowed",
+          "w-full flex items-center justify-between px-4 py-3 text-left bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm text-sm dark:text-white",
+          "hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+          disabled &&
+            "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed",
           isOpen && "ring-2 ring-blue-500 border-blue-500",
         )}
       >
         <span
-          className={cn("block truncate", !selectedOption && "text-gray-500")}
+          className={cn(
+            "block truncate",
+            !selectedOption && "text-gray-500 dark:text-gray-400",
+          )}
         >
           {loading ? (
             "Loading..."
@@ -134,7 +138,7 @@ export function SearchableSelect({
             <span>
               <span className="font-medium">{selectedOption.value}</span>
               {selectedOption.description && (
-                <span className="text-gray-500 ml-2">
+                <span className="text-gray-500 dark:text-gray-400 ml-2">
                   ({selectedOption.description})
                 </span>
               )}
@@ -152,14 +156,16 @@ export function SearchableSelect({
                 e.stopPropagation();
                 handleSelect(null);
               }}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
             >
-              <span className="text-gray-400 hover:text-gray-600">×</span>
+              <span className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                ×
+              </span>
             </button>
           )}
           <ChevronDown
             className={cn(
-              "w-4 h-4 text-gray-400 transition-transform",
+              "w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform",
               isOpen && "transform rotate-180",
             )}
           />
@@ -168,11 +174,11 @@ export function SearchableSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg">
           {/* Search Input */}
-          <div className="p-2 border-b border-gray-200">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -180,7 +186,7 @@ export function SearchableSelect({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search options..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -192,17 +198,20 @@ export function SearchableSelect({
                 type="button"
                 onClick={() => handleSelect(null)}
                 className={cn(
-                  "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between",
-                  value === null && "bg-blue-50 text-blue-700",
+                  "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between",
+                  value === null &&
+                    "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
                 )}
               >
-                <span className="text-gray-500 italic">Clear selection</span>
+                <span className="text-gray-500 dark:text-gray-400 italic">
+                  Clear selection
+                </span>
                 {value === null && <Check className="w-4 h-4" />}
               </button>
             )}
 
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500 italic">
+              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 italic">
                 No options found
               </div>
             ) : (
@@ -212,21 +221,22 @@ export function SearchableSelect({
                   type="button"
                   onClick={() => handleSelect(option.id)}
                   className={cn(
-                    "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between",
-                    option.id === value && "bg-blue-50 text-blue-700",
+                    "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between",
+                    option.id === value &&
+                      "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
                   )}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-gray-900 dark:text-white">
                       {option.value}
                     </div>
                     {option.label !== option.value && (
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {option.label}
                       </div>
                     )}
                     {option.description && (
-                      <div className="text-xs text-gray-400 truncate">
+                      <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
                         {option.description}
                       </div>
                     )}
