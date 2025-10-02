@@ -50,16 +50,11 @@ class StorageService {
     }
   }
 
-  async uploadFile(
-    uploadUrl: string,
-    file: File,
-    headers?: Record<string, string>,
-  ): Promise<void> {
+  async uploadFile(uploadUrl: string, file: File): Promise<void> {
     try {
       const response = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
-        headers: headers || {},
       });
 
       if (!response.ok) {
@@ -82,11 +77,7 @@ class StorageService {
   async uploadFileWithPresignedUrl(file: File): Promise<string> {
     const presignedData = await this.generatePresignedUrl(file.name, file.type);
 
-    await this.uploadFile(
-      presignedData.upload_url,
-      file,
-      presignedData.headers,
-    );
+    await this.uploadFile(presignedData.upload_url, file);
 
     return this.constructFileUrl(presignedData.file_key);
   }
