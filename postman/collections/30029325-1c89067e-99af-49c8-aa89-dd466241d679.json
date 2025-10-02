@@ -15,8 +15,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/kernel/status",
-              "host": ["{{base_url}}"],
-              "path": ["kernel", "status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kernel",
+                "status"
+              ]
             }
           }
         },
@@ -24,15 +29,25 @@
           "name": "Setup School",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Example High School\",\n  \"legal_name\": \"Example High School Ltd\",\n  \"email\": \"admin@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address_line1\": \"123 School St\",\n  \"address_line2\": \"Suite 100\",\n  \"city\": \"Harare\",\n  \"province\": \"Harare\",\n  \"country\": \"Zimbabwe\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/kernel/setup-school",
-              "host": ["{{base_url}}"],
-              "path": ["kernel", "setup-school"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kernel",
+                "setup-school"
+              ]
             }
           }
         },
@@ -40,15 +55,25 @@
           "name": "Setup Admin",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"full_name\": \"Super Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/kernel/setup-admin",
-              "host": ["{{base_url}}"],
-              "path": ["kernel", "setup-admin"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kernel",
+                "setup-admin"
+              ]
             }
           }
         }
@@ -78,15 +103,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -111,15 +146,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/refresh",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "refresh"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
             }
           }
         },
@@ -127,15 +172,25 @@
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
             }
           }
         },
@@ -144,12 +199,193 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "me"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles?page=1&limit=50",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Items per page (default: 50, max: 100)"
+                },
+                {
+                  "key": "query",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search query for role name or description"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "description": "Role UUID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Teacher\",\n  \"description\": \"Teaching staff with classroom management permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Teacher\",\n  \"description\": \"Senior teaching staff with additional permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"users:create\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\",\n    \"courses:delete\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "description": "Role UUID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "description": "Role UUID"
+                }
+              ]
             }
           }
         }
@@ -163,19 +399,48 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/users?page=1&per_page=20",
-              "host": ["{{base_url}}"],
-              "path": ["users"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "per_page", "value": "20" },
-                { "key": "search", "value": "", "disabled": true },
-                { "key": "role", "value": "", "disabled": true },
-                { "key": "status", "value": "active", "disabled": true },
-                { "key": "sort", "value": "created_at", "disabled": true }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "created_at",
+                  "disabled": true
+                }
               ]
             }
           }
@@ -185,12 +450,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/users/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["users", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
             }
           }
         },
@@ -199,8 +472,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -208,8 +487,12 @@
             },
             "url": {
               "raw": "{{base_url}}/users",
-              "host": ["{{base_url}}"],
-              "path": ["users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
             }
           }
         },
@@ -218,8 +501,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -227,8 +516,13 @@
             },
             "url": {
               "raw": "{{base_url}}/users/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["users", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
             }
           }
         },
@@ -237,12 +531,20 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/users/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["users", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
             }
           }
         },
@@ -251,12 +553,21 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/users/{{user_id}}/activate",
-              "host": ["{{base_url}}"],
-              "path": ["users", "{{user_id}}", "activate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "activate"
+              ]
             }
           }
         },
@@ -265,12 +576,21 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/users/{{user_id}}/deactivate",
-              "host": ["{{base_url}}"],
-              "path": ["users", "{{user_id}}", "deactivate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "deactivate"
+              ]
             }
           }
         }
@@ -284,8 +604,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -293,8 +619,13 @@
             },
             "url": {
               "raw": "{{base_url}}/storage/generate-upload-url",
-              "host": ["{{base_url}}"],
-              "path": ["storage", "generate-upload-url"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "storage",
+                "generate-upload-url"
+              ]
             }
           }
         }
@@ -307,8 +638,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health-check",
-          "host": ["{{base_url}}"],
-          "path": ["health-check"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health-check"
+          ]
         }
       }
     }

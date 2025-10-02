@@ -468,14 +468,29 @@ async fn me(
 }
 
 pub fn routes(cfg: &mut web::ServiceConfig) {
-    use crate::middleware::{AuthMiddleware, auth_rate_limiter};
+    use crate::middleware::AuthMiddleware;
 
-    cfg.service(
-        web::scope("/auth")
-            .wrap(auth_rate_limiter())
-            .service(login)
-            .service(refresh)
-            .service(logout)
-            .service(web::scope("").wrap(AuthMiddleware).service(me)),
-    );
+    #[cfg(not(test))]
+    {
+        use crate::middleware::auth_rate_limiter;
+        cfg.service(
+            web::scope("/auth")
+                .wrap(auth_rate_limiter())
+                .service(login)
+                .service(refresh)
+                .service(logout)
+                .service(web::scope("").wrap(AuthMiddleware).service(me)),
+        );
+    }
+
+    #[cfg(test)]
+    {
+        cfg.service(
+            web::scope("/auth")
+                .service(login)
+                .service(refresh)
+                .service(logout)
+                .service(web::scope("").wrap(AuthMiddleware).service(me)),
+        );
+    }
 }
