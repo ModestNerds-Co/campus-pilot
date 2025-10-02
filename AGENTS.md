@@ -9,6 +9,9 @@
 - Test single: `cargo test test_name`
 - Check/lint: `cargo check`
 - Run server: `cargo run`
+- SQLx prepare (after query changes): `DATABASE_URL=postgresql://127.0.0.1:5432/campus_pilot cargo sqlx prepare`
+  - **IMPORTANT**: Always run this command after adding or modifying `query!` or `query_as!` macros
+  - Commit the `.sqlx/` directory to version control
 
 ## Architecture
 - Actix-web REST API with PostgreSQL database

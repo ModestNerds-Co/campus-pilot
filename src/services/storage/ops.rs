@@ -21,6 +21,7 @@ impl StorageOps {
     }
 
     /// Generate a presigned URL for uploading a file
+    /// Note: Files are uploaded with public-read ACL to allow subsequent access
     pub async fn generate_upload_url(&self, key: &str, expires_in_secs: u64) -> Result<String> {
         let presigning_config = PresigningConfig::builder()
             .expires_in(Duration::from_secs(expires_in_secs))
@@ -32,6 +33,7 @@ impl StorageOps {
             .put_object()
             .bucket(&self.bucket)
             .key(key)
+            .acl(aws_sdk_s3::types::ObjectCannedAcl::PublicRead) // Make uploaded objects publicly readable
             .presigned(presigning_config)
             .await
             .context("Failed to generate presigned URL")?;
