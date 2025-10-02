@@ -314,7 +314,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="text"
                       value={formData.name}
                       onChange={(e) => updateField("name", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:bg-gray-700 dark:text-white ${
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
                         getFieldError("name")
                           ? "border-red-500"
                           : "border-gray-300 dark:border-gray-600"
@@ -347,7 +347,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       onChange={(e) =>
                         updateField("legal_name", e.target.value)
                       }
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Official registered name (if different)"
                     />
                   </div>
@@ -477,7 +477,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="text"
                       value={formData.emap_code}
                       onChange={(e) => updateField("emap_code", e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Ministry registration code"
                     />
                   </div>
@@ -495,7 +495,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:bg-gray-700 dark:text-white ${
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
                         getFieldError("email")
                           ? "border-red-500"
                           : "border-gray-300 dark:border-gray-600"
@@ -523,7 +523,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => updateField("phone", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:bg-gray-700 dark:text-white ${
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
                         getFieldError("phone")
                           ? "border-red-500"
                           : "border-gray-300 dark:border-gray-600"
@@ -561,7 +561,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       onChange={(e) =>
                         updateField("address_line1", e.target.value)
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Street address"
                     />
                   </div>
@@ -580,7 +580,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       onChange={(e) =>
                         updateField("address_line2", e.target.value)
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Apartment, suite, etc."
                     />
                   </div>
@@ -598,7 +598,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         type="text"
                         value={formData.city}
                         onChange={(e) => updateField("city", e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                         placeholder="Harare"
                       />
                     </div>
@@ -617,7 +617,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         onChange={(e) =>
                           updateField("province", e.target.value)
                         }
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                         placeholder="Harare"
                       />
                     </div>

@@ -231,10 +231,10 @@ export const AdminSetupScreen: React.FC = () => {
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => updateField("full_name", e.target.value)}
-                  className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
                     getFieldError("full_name")
                       ? "border-red-500"
-                      : "border-gray-300"
+                      : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder="Enter your full name"
                 />
@@ -260,8 +260,10 @@ export const AdminSetupScreen: React.FC = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField("email", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  getFieldError("email") ? "border-red-500" : "border-gray-300"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                  getFieldError("email")
+                    ? "border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="admin@yourschool.com"
               />
@@ -286,8 +288,10 @@ export const AdminSetupScreen: React.FC = () => {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  getFieldError("phone") ? "border-red-500" : "border-gray-300"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                  getFieldError("phone")
+                    ? "border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="+263 123 456 789"
               />
@@ -314,10 +318,10 @@ export const AdminSetupScreen: React.FC = () => {
                   value={formData.password}
                   onChange={(e) => updateField("password", e.target.value)}
                   onKeyDown={handlePasswordKeyDown}
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
                     getFieldError("password")
                       ? "border-red-500"
-                      : "border-gray-300"
+                      : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder="Enter a secure password"
                 />
@@ -405,10 +409,10 @@ export const AdminSetupScreen: React.FC = () => {
                   onChange={(e) =>
                     updateField("password_confirm", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
                     getFieldError("password_confirm")
                       ? "border-red-500"
-                      : "border-gray-300"
+                      : "border-gray-300 dark:border-gray-600"
                   }`}
                   placeholder="Confirm your password"
                 />
