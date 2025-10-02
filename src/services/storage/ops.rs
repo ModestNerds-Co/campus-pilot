@@ -20,8 +20,58 @@ impl StorageOps {
         Self { client, bucket }
     }
 
+    /// Ensure the bucket exists and has public read policy
+    pub async fn ensure_bucket_setup(&self) -> Result<()> {
+        // Check if bucket exists
+        match self.client.head_bucket().bucket(&self.bucket).send().await {
+            Ok(_) => {
+                // Bucket exists, set policy
+                self.set_public_read_policy().await?;
+            }
+            Err(_) => {
+                // Create bucket
+                self.client
+                    .create_bucket()
+                    .bucket(&self.bucket)
+                    .send()
+                    .await
+                    .context("Failed to create bucket")?;
+
+                // Set policy on new bucket
+                self.set_public_read_policy().await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Set bucket policy to allow public read access
+    async fn set_public_read_policy(&self) -> Result<()> {
+        let policy = serde_json::json!({
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [format!("arn:aws:s3:::{}/*", self.bucket)]
+                }
+            ]
+        });
+
+        self.client
+            .put_bucket_policy()
+            .bucket(&self.bucket)
+            .policy(policy.to_string())
+            .send()
+            .await
+            .context("Failed to set bucket policy")?;
+
+        Ok(())
+    }
+
     /// Generate a presigned URL for uploading a file
-    /// Note: Files are uploaded with public-read ACL to allow subsequent access
+    /// Note: Files are publicly accessible via bucket policy
     pub async fn generate_upload_url(&self, key: &str, expires_in_secs: u64) -> Result<String> {
         let presigning_config = PresigningConfig::builder()
             .expires_in(Duration::from_secs(expires_in_secs))
@@ -33,7 +83,6 @@ impl StorageOps {
             .put_object()
             .bucket(&self.bucket)
             .key(key)
-            .acl(aws_sdk_s3::types::ObjectCannedAcl::PublicRead) // Make uploaded objects publicly readable
             .presigned(presigning_config)
             .await
             .context("Failed to generate presigned URL")?;

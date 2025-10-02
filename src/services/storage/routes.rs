@@ -12,7 +12,7 @@ use validator::Validate;
 
 use crate::{
     models::api_response::ApiResponse,
-    services::storage::dtos::{GenerateUploadUrlRequest, GenerateUploadUrlResponse, UploadHeaders},
+    services::storage::dtos::{GenerateUploadUrlRequest, GenerateUploadUrlResponse},
     state::AppState,
     utils::flatten_validation_errors,
 };
@@ -52,9 +52,6 @@ pub async fn generate_upload_url(
                 upload_url,
                 file_key,
                 expires_in,
-                headers: UploadHeaders {
-                    acl: "public-read".to_string(),
-                },
             };
 
             Ok(HttpResponse::Ok().json(ApiResponse::from_status(

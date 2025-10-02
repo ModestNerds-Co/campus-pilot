@@ -86,6 +86,11 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     app_state.db_ops.run_migrations().await?;
     info!("Database migrations completed successfully 🍻");
 
+    // Setup storage bucket
+    info!("Setting up storage bucket... 🗄️");
+    app_state.storage_ops.ensure_bucket_setup().await?;
+    info!("Storage bucket configured successfully 📦");
+
     let addr = format!("0.0.0.0:{}", config.app.port);
     info!("Ready to rock and roll on {} 🚀", addr);
 
