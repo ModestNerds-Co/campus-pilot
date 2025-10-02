@@ -22,6 +22,7 @@ use std::sync::Arc;
 
 mod config;
 mod db;
+mod middleware;
 mod models;
 mod routes;
 mod services;

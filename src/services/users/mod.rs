@@ -6,9 +6,6 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-mod dtos;
-pub mod models;
-mod ops;
-mod routes;
-
-pub use routes::routes;
+pub mod dtos;
+pub mod ops;
+pub mod routes;

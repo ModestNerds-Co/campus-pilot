@@ -87,3 +87,8 @@ pub fn verify_token(token: &str, secret: &str) -> ApiResult<Claims> {
 
     Ok(token_data.claims)
 }
+
+/// Verify and decode an access token (alias for verify_token)
+pub fn verify_access_token(token: &str, secret: &str) -> ApiResult<Claims> {
+    verify_token(token, secret)
+}

@@ -36,6 +36,7 @@ argon2 = "0.5"
 jsonwebtoken = "9.3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+futures-util = "0.3.31"
 
 [dev-dependencies]
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
