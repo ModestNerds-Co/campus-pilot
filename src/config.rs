@@ -15,12 +15,18 @@ pub struct Config {
     pub app: AppConfig,
     pub database: DatabaseConfig,
     pub storage: StorageConfig,
+    pub jwt: JwtConfig,
 }
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub port: u16,
     pub sentry_dsn: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct JwtConfig {
+    pub secret: String,
 }
 
 #[derive(Debug, Clone)]
@@ -42,11 +48,13 @@ impl Config {
         let app = AppConfig::from_env()?;
         let database = DatabaseConfig::from_env()?;
         let storage = StorageConfig::from_env()?;
+        let jwt = JwtConfig::from_env()?;
 
         Ok(Config {
             app,
             database,
             storage,
+            jwt,
         })
     }
 }
@@ -104,5 +112,12 @@ impl StorageConfig {
             access_key,
             secret_key,
         })
+    }
+}
+
+impl JwtConfig {
+    fn from_env() -> Result<Self> {
+        let secret = env::var("JWT_SECRET").context("JWT_SECRET must be set")?;
+        Ok(JwtConfig { secret })
     }
 }

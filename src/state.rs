@@ -18,6 +18,7 @@ use crate::services::storage::ops::StorageOps;
 use std::sync::Arc;
 
 pub struct AppState {
+    pub db: PgPool,
     pub db_ops: Arc<DatabaseOperations>,
     pub kernel_db: Arc<KernelDbOps>,
     pub storage_ops: Arc<StorageOps>,
@@ -51,6 +52,7 @@ impl AppState {
         let storage_ops = Arc::new(StorageOps::new(s3_client, config.storage.bucket.clone()));
 
         Self {
+            db: pool,
             db_ops,
             kernel_db,
             storage_ops,

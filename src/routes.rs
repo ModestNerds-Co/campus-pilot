@@ -7,7 +7,7 @@
 //
 
 use crate::models::api_response::ApiResponse;
-use crate::services::{kernel, storage};
+use crate::services::{auth, kernel, storage};
 use actix_web::http::StatusCode;
 use actix_web::web::{ServiceConfig, scope};
 use actix_web::{HttpResponse, Responder, get};
@@ -31,6 +31,7 @@ pub fn init(cfg: &mut ServiceConfig) {
     cfg.service(
         scope("/api/1.0")
             .service(health_check)
+            .configure(auth::routes)
             .service(scope("/kernel").configure(kernel::routes::init))
             .service(scope("/storage").configure(storage::routes::init)),
     );
