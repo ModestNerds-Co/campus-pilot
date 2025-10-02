@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Eye,
   EyeOff,
@@ -19,6 +19,8 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { ThemeToggle } from "../lib/theme";
 import { useAuthStore } from "../stores/auth-store";
+import { bootstrapService } from "../modules/configs";
+import type { SchoolConfiguration } from "../modules/configs/types";
 import toast from "react-hot-toast";
 
 interface LoginScreenProps {
@@ -36,6 +38,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [schoolConfig, setSchoolConfig] = useState<SchoolConfiguration | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const fetchSchoolConfig = async () => {
+      try {
+        const response = await bootstrapService.checkStatus();
+        if (response.success && response.data?.school) {
+          setSchoolConfig(response.data.school);
+        }
+      } catch (error) {
+        console.error("Failed to fetch school config:", error);
+      }
+    };
+
+    fetchSchoolConfig();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +74,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
 
       if (success) {
         toast.success("Login successful!");
-        navigate({ to: "/" });
+        navigate({ to: "/admin" });
       } else {
         const errorMsg = authError || "Invalid email or password";
         setError(errorMsg);
@@ -83,13 +103,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
           {/* School Branding */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
-              <School className="w-10 h-10 text-blue-600" />
+            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-full flex items-center justify-center overflow-hidden">
+              {schoolConfig?.logo_light_url ? (
+                <img
+                  src={schoolConfig.logo_light_url}
+                  alt={`${schoolConfig.name} logo`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <School className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+              )}
             </div>
 
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              CampusPilot
+              {schoolConfig?.name || "CampusPilot"}
             </h1>
+            {schoolConfig?.legal_name && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                {schoolConfig.legal_name}
+              </p>
+            )}
             <p className="text-gray-600 dark:text-gray-300">
               Sign in to your account
             </p>
@@ -188,6 +221,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
               </span>
             </p>
           </div>
+        </div>
+
+        {/* School Contact Info */}
+        {(schoolConfig?.email || schoolConfig?.phone) && (
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center gap-4 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
+              {schoolConfig.email && (
+                <span className="flex items-center gap-2">
+                  <Mail className="w-3 h-3" />
+                  {schoolConfig.email}
+                </span>
+              )}
+              {schoolConfig.phone && <span>{schoolConfig.phone}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Powered by CampusPilot */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Powered by{" "}
+            <span className="font-semibold text-gray-500 dark:text-gray-400">
+              CampusPilot
+            </span>
+          </p>
         </div>
       </div>
     </div>

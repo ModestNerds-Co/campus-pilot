@@ -21,18 +21,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRoles = [],
 }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, checkAuth } = useAuthStore();
+  const { isAuthenticated, user, accessToken } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const verifyAuth = async () => {
-      if (!isAuthenticated) {
-        navigate({ to: "/login" });
-        return;
-      }
-
-      const isValid = await checkAuth();
-      if (!isValid) {
+      if (!isAuthenticated || !accessToken) {
         navigate({ to: "/login" });
         return;
       }
@@ -51,7 +45,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
 
     verifyAuth();
-  }, [isAuthenticated, user, checkAuth, navigate, requiredRoles]);
+  }, [isAuthenticated, user, accessToken, navigate, requiredRoles]);
 
   if (isChecking) {
     return (

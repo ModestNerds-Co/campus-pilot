@@ -27,6 +27,7 @@ export type BootstrapState = "Uninitialized" | "SchoolConfigured" | "Ready";
 
 export interface BootstrapStatus {
   state: BootstrapState;
+  school?: SchoolConfiguration;
 }
 
 // School Configuration
@@ -135,6 +136,7 @@ export interface PresignedUploadResponse {
   upload_url: string;
   file_key: string;
   expires_in: number;
+  headers?: Record<string, string>;
 }
 
 // Error Types
