@@ -1,673 +1,726 @@
 {
-  "info": {
-    "_postman_id": "30029325-1c89067e-99af-49c8-aa89-dd466241d679",
-    "name": "Campus Pilot",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "item": [
-    {
-      "name": "Kernel",
-      "item": [
-        {
-          "name": "Get Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/kernel/status",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "kernel",
-                "status"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Setup School",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Example High School\",\n  \"legal_name\": \"Example High School Ltd\",\n  \"email\": \"admin@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address_line1\": \"123 School St\",\n  \"address_line2\": \"Suite 100\",\n  \"city\": \"Harare\",\n  \"province\": \"Harare\",\n  \"country\": \"Zimbabwe\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/kernel/setup-school",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "kernel",
-                "setup-school"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Setup Admin",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Super Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/kernel/setup-admin",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "kernel",
-                "setup-admin"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Auth",
-      "item": [
-        {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    if (response.data && response.data.access_token) {",
-                  "        pm.collectionVariables.set('access_token', response.data.access_token);",
-                  "        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    if (response.data && response.data.access_token) {",
-                  "        pm.collectionVariables.set('access_token', response.data.access_token);",
-                  "        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/refresh",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "refresh"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "logout"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Current User",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "me"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Roles",
-      "item": [
-        {
-          "name": "List Roles",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/roles?page=1&limit=50",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "roles"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number (default: 1)"
-                },
-                {
-                  "key": "limit",
-                  "value": "50",
-                  "description": "Items per page (default: 50, max: 100)"
-                },
-                {
-                  "key": "query",
-                  "value": "",
-                  "disabled": true,
-                  "description": "Search query for role name or description"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Role",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/roles/:id",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "roles",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000000",
-                  "description": "Role UUID"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Role",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Teacher\",\n  \"description\": \"Teaching staff with classroom management permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/roles",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "roles"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Role",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Senior Teacher\",\n  \"description\": \"Senior teaching staff with additional permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"users:create\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\",\n    \"courses:delete\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/roles/:id",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "roles",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000000",
-                  "description": "Role UUID"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Role",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/roles/:id",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "roles",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "00000000-0000-0000-0000-000000000000",
-                  "description": "Role UUID"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Users",
-      "item": [
-        {
-          "name": "List Users",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users?page=1&per_page=20",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "per_page",
-                  "value": "20"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "active",
-                  "disabled": true
-                },
-                {
-                  "key": "sort",
-                  "value": "created_at",
-                  "disabled": true
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get User",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users/{{user_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users",
-                "{{user_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create User",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"full_name\": \"New User\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"roles\": [\"Teacher\"],\n  \"is_active\": true\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/users",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+9876543210\",\n  \"roles\": [\"Teacher\", \"Admin\"]\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/users/{{user_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users",
-                "{{user_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete User",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users/{{user_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users",
-                "{{user_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Activate User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users/{{user_id}}/activate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users",
-                "{{user_id}}",
-                "activate"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Deactivate User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/users/{{user_id}}/deactivate",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "users",
-                "{{user_id}}",
-                "deactivate"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Storage",
-      "item": [
-        {
-          "name": "Generate Upload URL",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"filename\": \"profile.jpg\",\n  \"file_type\": \"image/jpeg\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/storage/generate-upload-url",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "storage",
-                "generate-upload-url"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Health Check",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/health-check",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "health-check"
-          ]
-        }
-      }
-    }
-  ],
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8000/api/1.0",
-      "type": "default"
-    },
-    {
-      "key": "access_token",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": "refresh_token",
-      "value": "",
-      "type": "default"
-    },
-    {
-      "key": "user_id",
-      "value": "",
-      "type": "default"
-    }
-  ]
+	"info": {
+		"_postman_id": "30029325-1c89067e-99af-49c8-aa89-dd466241d679",
+		"name": "Campus Pilot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Kernel",
+			"item": [
+				{
+					"name": "Get Status",
+					"id": "30029325-e4232bcc-b371-489f-91e5-f25a65fa103c",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/kernel/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"kernel",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Setup School",
+					"id": "30029325-c953a442-f91a-4125-a221-b3e48412910d",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Example High School\",\n  \"legal_name\": \"Example High School Ltd\",\n  \"email\": \"admin@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address_line1\": \"123 School St\",\n  \"address_line2\": \"Suite 100\",\n  \"city\": \"Harare\",\n  \"province\": \"Harare\",\n  \"country\": \"Zimbabwe\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/kernel/setup-school",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"kernel",
+								"setup-school"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Setup Admin",
+					"id": "30029325-93f0a9e1-855b-4316-a29e-a1eee9e42f37",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Super Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/kernel/setup-admin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"kernel",
+								"setup-admin"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "30029325-00732b90-5669-4190-b4f6-d06fad1ed481"
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c8baad7d-1add-49b6-95e0-cb2c38f5ae53",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.access_token) {",
+									"        pm.collectionVariables.set('access_token', response.data.access_token);",
+									"        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"id": "30029325-53bbc343-5585-4d96-8223-a140ce10ca6f",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"imngonii@gmail.com\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.access_token) {",
+									"        pm.collectionVariables.set('access_token', response.data.access_token);",
+									"        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"id": "30029325-f88faf53-5d34-402e-9110-0b4743b575df",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"id": "30029325-d6738735-8dce-4407-86c8-57cbf7f97da2",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"id": "30029325-a15b072d-8586-4446-8277-e10c39577428",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "30029325-90c514d7-c2cc-4da2-b46b-32c2cb1fda89"
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "List Roles",
+					"id": "30029325-2a58b78d-cce1-48d3-8fd4-8b5ace81dbd1",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles?page=1&limit=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"roles"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Items per page (default: 50, max: 100)"
+								},
+								{
+									"key": "query",
+									"value": "",
+									"description": "Search query for role name or description",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role",
+					"id": "30029325-3b7d4d12-e946-4d90-a37c-e0b7ee37b3d0",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"roles",
+								":id"
+							],
+							"variable": [
+								{
+									"id": "688ff40a-b0a2-4c55-9201-0aaa67d83961",
+									"key": "id",
+									"value": "00000000-0000-0000-0000-000000000000",
+									"description": "Role UUID"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Role",
+					"id": "30029325-c9698e66-0ccb-4bdd-9bc4-69f2583fedf0",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Teacher\",\n  \"description\": \"Teaching staff with classroom management permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"roles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"id": "30029325-46f5e350-635a-4b07-b7f6-a8113949c8a8",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Senior Teacher\",\n  \"description\": \"Senior teaching staff with additional permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"users:create\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\",\n    \"courses:delete\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/roles/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"roles",
+								":id"
+							],
+							"variable": [
+								{
+									"id": "964e7453-1970-40c7-9763-c7909ffecf87",
+									"key": "id",
+									"value": "00000000-0000-0000-0000-000000000000",
+									"description": "Role UUID"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"id": "30029325-7df3fd2a-c1a8-4948-9774-d3fee20d7a2b",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/roles/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"roles",
+								":id"
+							],
+							"variable": [
+								{
+									"id": "72c2329a-8858-4872-a2bb-9fa823ee475b",
+									"key": "id",
+									"value": "00000000-0000-0000-0000-000000000000",
+									"description": "Role UUID"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "30029325-67747516-2ae2-4333-825f-726ff6e89c0c"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "List Users",
+					"id": "30029325-7f0e3d79-f028-4df2-9bc8-77ba8e231486",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users?page=1&per_page=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "role",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "active",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "created_at",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User",
+					"id": "30029325-29fd90b1-58a4-41b1-bc3a-94045215262b",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"id": "30029325-624b2103-3498-43c6-82dc-000f4372f3a0",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"newuser@example.com\",\n  \"full_name\": \"New User\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"roles\": [\"Teacher\"],\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"id": "30029325-d02b5464-47a8-43fc-911c-f4f70a8762f1",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+9876543210\",\n  \"roles\": [\"Teacher\", \"Admin\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"id": "30029325-39edc003-527d-4e3d-bad5-42507100eca5",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate User",
+					"id": "30029325-7695f538-94b5-4e88-b907-8a1c298e4d2d",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/activate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate User",
+					"id": "30029325-44d5aaef-2d13-42dd-8d92-f9e0c712ae1d",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/deactivate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "30029325-d46342b4-7597-4fee-bd41-4131f425101e"
+		},
+		{
+			"name": "Storage",
+			"item": [
+				{
+					"name": "Generate Upload URL",
+					"id": "30029325-4efd5c5c-402d-487b-a291-9e94f0a5b929",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"filename\": \"profile.jpg\",\n  \"file_type\": \"image/jpeg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/storage/generate-upload-url",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"storage",
+								"generate-upload-url"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "30029325-55eb6ae5-cf30-4766-a596-56e4f7cfb5ae"
+		},
+		{
+			"name": "Health Check",
+			"id": "30029325-9de20ef0-5d9a-403a-b28a-d0b9763347f6",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health-check",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health-check"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/1.0",
+			"type": "default"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "default"
+		}
+	]
 }
