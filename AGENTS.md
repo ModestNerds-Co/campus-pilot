@@ -2,6 +2,10 @@
 
 ## Meta Rules
 - **Always update this AGENT.md file when discovering new patterns, rules, or conventions**
+- **Always update the Postman collection file when adding or modifying API endpoints**
+  - Location: `postman/collections/30029325-1c89067e-99af-49c8-aa89-dd466241d679.json`
+  - Include proper folder structure, request bodies, and authorization headers
+  - Add test scripts to auto-save tokens for auth endpoints
 
 ## Commands
 - Build: `cargo build`
@@ -27,6 +31,9 @@
 - Types: Use `serde` for JSON serialization, `sqlx` types for database
 - Naming: snake_case for variables/functions, PascalCase for types/structs
 - API responses: Wrap in `ApiResponse<T>` struct for consistency
+- Routes: Use attribute macros (`#[get]`, `#[post]`, `#[put]`, `#[delete]`) on handler functions
+- Middleware: Apply at scope level, not individual routes (e.g., `.wrap(AuthMiddleware)`)
+- Authentication: All protected routes must use `AuthMiddleware` and appropriate `RequirePermission` middleware
 
 ## SQL Style (PostgreSQL)
 - All SQL keywords should use UPPERCASE (CREATE, SELECT, INSERT, UPDATE, DELETE, etc.)
