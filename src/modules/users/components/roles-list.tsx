@@ -45,7 +45,7 @@ export const RolesList: React.FC = () => {
 
       if (response.success && response.data) {
         setRoles(response.data.roles);
-        setTotalPages(response.data.pagination.total_pages);
+        setTotalPages(response?.pagination?.total_pages || 1);
       }
     } catch (error) {
       toast.error("Failed to load roles");

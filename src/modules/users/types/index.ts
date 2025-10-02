@@ -63,6 +63,7 @@ export interface ApiEnvelope<T = any> {
   success: boolean;
   message: string | null;
   data: T | null;
+  pagination: PaginationMeta | null;
   issues: ValidationIssue[] | null;
   version: number;
   by: string;

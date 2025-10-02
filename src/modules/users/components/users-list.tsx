@@ -51,7 +51,7 @@ export const UsersList: React.FC = () => {
 
       if (response.success && response.data) {
         setUsers(response.data.users);
-        setTotalPages(response.data.pagination.total_pages);
+        setTotalPages(response?.pagination?.total_pages ?? 1);
       }
     } catch (error) {
       toast.error("Failed to load users");
