@@ -22,4 +22,11 @@ pub struct GenerateUploadUrlResponse {
     pub upload_url: String,
     pub file_key: String,
     pub expires_in: u64,
+    pub headers: UploadHeaders,
+}
+
+#[derive(Serialize)]
+pub struct UploadHeaders {
+    #[serde(rename = "x-amz-acl")]
+    pub acl: String,
 }
