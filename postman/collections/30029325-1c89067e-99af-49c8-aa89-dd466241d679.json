@@ -1,188 +1,338 @@
 {
-	"info": {
-		"_postman_id": "30029325-1c89067e-99af-49c8-aa89-dd466241d679",
-		"name": "Campus Pilot",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Kernel",
-			"item": [
-				{
-					"name": "Get Status",
-					"id": "30029325-56ec6bea-7cf3-4fc4-a965-7cb3b27ad65b",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{local}}/kernel/status",
-							"host": [
-								"{{local}}"
-							],
-							"path": [
-								"kernel",
-								"status"
-							]
-						}
-					},
-					"response": [
-						{
-							"id": "30029325-8afbb571-b709-4a9b-b518-8cefa66a43b9",
-							"name": "Success",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{local}}/kernel/status",
-									"host": [
-										"{{local}}"
-									],
-									"path": [
-										"kernel",
-										"status"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": null,
-							"header": [
-								{
-									"key": "content-length",
-									"value": "117"
-								},
-								{
-									"key": "content-type",
-									"value": "application/json"
-								},
-								{
-									"key": "access-control-allow-credentials",
-									"value": "true"
-								},
-								{
-									"key": "vary",
-									"value": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
-								},
-								{
-									"key": "access-control-expose-headers",
-									"value": "content-type"
-								},
-								{
-									"key": "date",
-									"value": "Tue, 30 Sep 2025 22:06:17 GMT"
-								}
-							],
-							"cookie": [],
-							"responseTime": null,
-							"body": "{\n    \"success\": true,\n    \"message\": \"OK\",\n    \"data\": {\n        \"state\": \"Uninitialized\"\n    },\n    \"issues\": null,\n    \"version\": 1,\n    \"by\": \"Codecraft Solutions\"\n}"
-						}
-					]
-				},
-				{
-					"name": "Setup School",
-					"id": "30029325-0fffb911-83e3-4f9e-8d01-5481f5f47b15",
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{local}}/kernel/setup-school",
-							"host": [
-								"{{local}}"
-							],
-							"path": [
-								"kernel",
-								"setup-school"
-							]
-						}
-					},
-					"response": []
-				}
-			],
-			"id": "30029325-a6222d3f-3a6f-4c39-81d6-11dcc8e10251"
-		},
-		{
-			"name": "Health Check",
-			"id": "30029325-1a5d52e0-db6a-4c19-aea4-392f180cf286",
-			"protocolProfileBehavior": {
-				"disableBodyPruning": true
-			},
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{local}}/health-check",
-					"host": [
-						"{{local}}"
-					],
-					"path": [
-						"health-check"
-					]
-				}
-			},
-			"response": [
-				{
-					"id": "30029325-7a257ab7-3d05-47ec-8865-a6dfba650561",
-					"name": "Success",
-					"originalRequest": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{local}}/health-check",
-							"host": [
-								"{{local}}"
-							],
-							"path": [
-								"health-check"
-							]
-						}
-					},
-					"status": "OK",
-					"code": 200,
-					"_postman_previewlanguage": null,
-					"header": [
-						{
-							"key": "content-length",
-							"value": "202"
-						},
-						{
-							"key": "vary",
-							"value": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
-						},
-						{
-							"key": "content-type",
-							"value": "application/json"
-						},
-						{
-							"key": "access-control-allow-credentials",
-							"value": "true"
-						},
-						{
-							"key": "access-control-expose-headers",
-							"value": "content-type"
-						},
-						{
-							"key": "date",
-							"value": "Tue, 30 Sep 2025 21:57:46 GMT"
-						}
-					],
-					"cookie": [],
-					"responseTime": null,
-					"body": "{\n    \"success\": true,\n    \"message\": \"OK\",\n    \"data\": {\n        \"service\": \"campus-pilot\",\n        \"status\": \"healthy\",\n        \"timestamp\": \"2025-09-30T21:57:46.551636+00:00\",\n        \"version\": \"1.0.0\"\n    },\n    \"issues\": null,\n    \"version\": 1,\n    \"by\": \"Codecraft Solutions\"\n}"
-				}
-			]
-		}
-	],
-	"variable": [
-		{
-			"key": "local",
-			"value": "",
-			"type": "default"
-		}
-	]
+  "info": {
+    "_postman_id": "30029325-1c89067e-99af-49c8-aa89-dd466241d679",
+    "name": "Campus Pilot",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Kernel",
+      "item": [
+        {
+          "name": "Get Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/kernel/status",
+              "host": ["{{base_url}}"],
+              "path": ["kernel", "status"]
+            }
+          }
+        },
+        {
+          "name": "Setup School",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Example High School\",\n  \"legal_name\": \"Example High School Ltd\",\n  \"email\": \"admin@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address_line1\": \"123 School St\",\n  \"address_line2\": \"Suite 100\",\n  \"city\": \"Harare\",\n  \"province\": \"Harare\",\n  \"country\": \"Zimbabwe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/kernel/setup-school",
+              "host": ["{{base_url}}"],
+              "path": ["kernel", "setup-school"]
+            }
+          }
+        },
+        {
+          "name": "Setup Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Super Admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/kernel/setup-admin",
+              "host": ["{{base_url}}"],
+              "path": ["kernel", "setup-admin"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', response.data.access_token);",
+                  "        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', response.data.access_token);",
+                  "        pm.collectionVariables.set('refresh_token', response.data.refresh_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "role", "value": "", "disabled": true },
+                { "key": "status", "value": "active", "disabled": true },
+                { "key": "sort", "value": "created_at", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"full_name\": \"New User\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"roles\": [\"Teacher\"],\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+9876543210\",\n  \"roles\": [\"Teacher\", \"Admin\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Activate User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/activate",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/deactivate",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}", "deactivate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Storage",
+      "item": [
+        {
+          "name": "Generate Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"profile.jpg\",\n  \"file_type\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/storage/generate-upload-url",
+              "host": ["{{base_url}}"],
+              "path": ["storage", "generate-upload-url"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health-check",
+          "host": ["{{base_url}}"],
+          "path": ["health-check"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/1.0",
+      "type": "default"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "default"
+    }
+  ]
 }
