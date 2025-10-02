@@ -122,7 +122,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"imngonii@gmail.com\",\n  \"password\": \"SecurePass123!\"\n}"
+							"raw": "{\n  \"email\": \"imngonii@gmail.com\",\n  \"password\": \"norjUm-santun-hoxbu1@\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/auth/login",
