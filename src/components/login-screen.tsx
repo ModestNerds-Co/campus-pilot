@@ -239,13 +239,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
         )}
 
         {/* Powered by CampusPilot */}
-        <div className="mt-8 text-center">
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Powered by{" "}
-            <span className="font-semibold text-gray-500 dark:text-gray-400">
-              CampusPilot
-            </span>
-          </p>
+        <div className="mt-8 flex items-center justify-center gap-1">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            Powered by Campus Pilot
+          </span>
+          <img
+            src="/assets/images/campus-pilot-logo.svg"
+            alt="CampusPilot"
+            className="h-7"
+          />
         </div>
       </div>
     </div>

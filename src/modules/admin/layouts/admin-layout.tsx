@@ -132,9 +132,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   <Menu className="w-6 h-6" />
                 )}
               </button>
-              <h1 className="ml-4 lg:ml-0 text-xl font-bold text-gray-900 dark:text-white">
-                CampusPilot Admin
-              </h1>
+              <div className="ml-4 lg:ml-0 flex items-center gap-3">
+                <img
+                  src="/assets/images/campus-pilot-logo.svg"
+                  alt="CampusPilot"
+                  className="h-8"
+                />
+                <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
+                  Admin
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
