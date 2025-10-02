@@ -6,7 +6,7 @@ use crate::{
     models::typedefs::ApiResult,
     services::kernel::{
         dtos::SetupSchoolRequest,
-        models::{KernelStatus, SystemState},
+        models::{KernelStatus, SchoolInfo, SystemState},
     },
 };
 
@@ -26,9 +26,34 @@ impl KernelDbOps {
                 .await
                 .unwrap_or_else(|_| "Uninitialized".to_string());
 
-        Ok(KernelStatus {
-            state: SystemState::from_str(&state_str),
-        })
+        let state = SystemState::from_str(&state_str);
+
+        // If system is Ready or SchoolConfigured, fetch school info
+        let school = if matches!(state, SystemState::Ready | SystemState::SchoolConfigured) {
+            self.get_school_info().await.ok()
+        } else {
+            None
+        };
+
+        Ok(KernelStatus { state, school })
+    }
+
+    async fn get_school_info(&self) -> ApiResult<SchoolInfo> {
+        let school = sqlx::query_as!(
+            SchoolInfo,
+            r#"
+            SELECT name, legal_name, email, phone,
+                   address_line1, address_line2, city, province, country,
+                   logo_light_url, logo_dark_url
+            FROM school_profile
+            WHERE id = 'singleton'
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to fetch school info")?;
+
+        Ok(school)
     }
 
     pub async fn update_system_state(&self, state: SystemState) -> ApiResult<()> {

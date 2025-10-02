@@ -30,6 +30,23 @@ impl SystemState {
 }
 
 #[derive(Serialize)]
+pub struct SchoolInfo {
+    pub name: String,
+    pub legal_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub address_line1: Option<String>,
+    pub address_line2: Option<String>,
+    pub city: Option<String>,
+    pub province: Option<String>,
+    pub country: Option<String>,
+    pub logo_light_url: Option<String>,
+    pub logo_dark_url: Option<String>,
+}
+
+#[derive(Serialize)]
 pub struct KernelStatus {
     pub state: SystemState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub school: Option<SchoolInfo>,
 }
