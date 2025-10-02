@@ -25,6 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_refresh_tokens_updated_at ON refresh_tokens;
 CREATE TRIGGER update_refresh_tokens_updated_at
     BEFORE UPDATE ON refresh_tokens
     FOR EACH ROW
