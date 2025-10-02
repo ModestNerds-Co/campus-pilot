@@ -1,0 +1,188 @@
+{
+	"info": {
+		"_postman_id": "30029325-1c89067e-99af-49c8-aa89-dd466241d679",
+		"name": "Campus Pilot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Kernel",
+			"item": [
+				{
+					"name": "Get Status",
+					"id": "30029325-56ec6bea-7cf3-4fc4-a965-7cb3b27ad65b",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{local}}/kernel/status",
+							"host": [
+								"{{local}}"
+							],
+							"path": [
+								"kernel",
+								"status"
+							]
+						}
+					},
+					"response": [
+						{
+							"id": "30029325-8afbb571-b709-4a9b-b518-8cefa66a43b9",
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{local}}/kernel/status",
+									"host": [
+										"{{local}}"
+									],
+									"path": [
+										"kernel",
+										"status"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "content-length",
+									"value": "117"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "content-type"
+								},
+								{
+									"key": "date",
+									"value": "Tue, 30 Sep 2025 22:06:17 GMT"
+								}
+							],
+							"cookie": [],
+							"responseTime": null,
+							"body": "{\n    \"success\": true,\n    \"message\": \"OK\",\n    \"data\": {\n        \"state\": \"Uninitialized\"\n    },\n    \"issues\": null,\n    \"version\": 1,\n    \"by\": \"Codecraft Solutions\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Setup School",
+					"id": "30029325-0fffb911-83e3-4f9e-8d01-5481f5f47b15",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{local}}/kernel/setup-school",
+							"host": [
+								"{{local}}"
+							],
+							"path": [
+								"kernel",
+								"setup-school"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "30029325-a6222d3f-3a6f-4c39-81d6-11dcc8e10251"
+		},
+		{
+			"name": "Health Check",
+			"id": "30029325-1a5d52e0-db6a-4c19-aea4-392f180cf286",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{local}}/health-check",
+					"host": [
+						"{{local}}"
+					],
+					"path": [
+						"health-check"
+					]
+				}
+			},
+			"response": [
+				{
+					"id": "30029325-7a257ab7-3d05-47ec-8865-a6dfba650561",
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{local}}/health-check",
+							"host": [
+								"{{local}}"
+							],
+							"path": [
+								"health-check"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "content-length",
+							"value": "202"
+						},
+						{
+							"key": "vary",
+							"value": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json"
+						},
+						{
+							"key": "access-control-allow-credentials",
+							"value": "true"
+						},
+						{
+							"key": "access-control-expose-headers",
+							"value": "content-type"
+						},
+						{
+							"key": "date",
+							"value": "Tue, 30 Sep 2025 21:57:46 GMT"
+						}
+					],
+					"cookie": [],
+					"responseTime": null,
+					"body": "{\n    \"success\": true,\n    \"message\": \"OK\",\n    \"data\": {\n        \"service\": \"campus-pilot\",\n        \"status\": \"healthy\",\n        \"timestamp\": \"2025-09-30T21:57:46.551636+00:00\",\n        \"version\": \"1.0.0\"\n    },\n    \"issues\": null,\n    \"version\": 1,\n    \"by\": \"Codecraft Solutions\"\n}"
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "local",
+			"value": "",
+			"type": "default"
+		}
+	]
+}
