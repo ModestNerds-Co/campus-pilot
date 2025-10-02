@@ -9,6 +9,19 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { bootstrapService } from "../modules/configs";
 
+const getAuthStatus = (): boolean => {
+  try {
+    const authData = localStorage.getItem("campuspilot_auth");
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      return parsed.state?.isAuthenticated || false;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     try {
@@ -16,14 +29,18 @@ export const Route = createFileRoute("/")({
       if (response.success && response.data) {
         const state = response.data.state;
 
-        // Redirect based on bootstrap state
         switch (state) {
           case "Uninitialized":
             throw redirect({ to: "/setup/school" });
           case "SchoolConfigured":
             throw redirect({ to: "/setup/admin" });
           case "Ready":
-            throw redirect({ to: "/login" });
+            const isAuthenticated = getAuthStatus();
+            if (isAuthenticated) {
+              throw redirect({ to: "/dashboard" });
+            } else {
+              throw redirect({ to: "/login" });
+            }
           default:
             throw redirect({ to: "/boot" });
         }
@@ -31,13 +48,11 @@ export const Route = createFileRoute("/")({
         throw redirect({ to: "/boot" });
       }
     } catch (error) {
-      // If it's already a redirect, re-throw it
       if (error && typeof error === "object" && "redirect" in error) {
         throw error;
       }
-      // For other errors, go to boot screen
       throw redirect({ to: "/boot" });
     }
   },
-  component: () => null, // This should never render
+  component: () => null,
 });

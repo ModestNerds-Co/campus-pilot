@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BootRouteImport } from './routes/boot'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SetupSchoolRouteImport } from './routes/setup.school'
@@ -18,6 +19,11 @@ import { Route as SetupAdminRouteImport } from './routes/setup.admin'
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BootRoute = BootRouteImport.update({
@@ -44,6 +50,7 @@ const SetupAdminRoute = SetupAdminRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/boot': typeof BootRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/boot': typeof BootRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
@@ -59,21 +67,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/boot': typeof BootRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/boot' | '/login' | '/setup/admin' | '/setup/school'
+  fullPaths:
+    | '/'
+    | '/boot'
+    | '/dashboard'
+    | '/login'
+    | '/setup/admin'
+    | '/setup/school'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/boot' | '/login' | '/setup/admin' | '/setup/school'
-  id: '__root__' | '/' | '/boot' | '/login' | '/setup/admin' | '/setup/school'
+  to: '/' | '/boot' | '/dashboard' | '/login' | '/setup/admin' | '/setup/school'
+  id:
+    | '__root__'
+    | '/'
+    | '/boot'
+    | '/dashboard'
+    | '/login'
+    | '/setup/admin'
+    | '/setup/school'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BootRoute: typeof BootRoute
+  DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   SetupAdminRoute: typeof SetupAdminRoute
   SetupSchoolRoute: typeof SetupSchoolRoute
@@ -86,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/boot': {
@@ -122,6 +152,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BootRoute: BootRoute,
+  DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   SetupAdminRoute: SetupAdminRoute,
   SetupSchoolRoute: SetupSchoolRoute,

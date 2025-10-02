@@ -14,13 +14,14 @@ import type {
   PresignedUploadResponse,
 } from "../modules/configs/types";
 
-const MINIO_BASE_URL = import.meta.env.VITE_MINIO_BASE_URL || "http://localhost:9000";
+const MINIO_BASE_URL =
+  import.meta.env.VITE_MINIO_BASE_URL || "http://localhost:9000";
 const MINIO_BUCKET = import.meta.env.VITE_MINIO_BUCKET || "campus-pilot";
 
 class StorageService {
   async generatePresignedUrl(
     filename: string,
-    fileType: string
+    fileType: string,
   ): Promise<PresignedUploadResponse> {
     try {
       const request: PresignedUploadRequest = {
@@ -34,7 +35,7 @@ class StorageService {
 
       if (!response.data.success || !response.data.data) {
         throw new Error(
-          response.data.message || "Failed to generate upload URL"
+          response.data.message || "Failed to generate upload URL",
         );
       }
 
@@ -42,7 +43,7 @@ class StorageService {
     } catch (error) {
       if (error instanceof AxiosError) {
         throw new Error(
-          error.response?.data?.message || "Failed to generate upload URL"
+          error.response?.data?.message || "Failed to generate upload URL",
         );
       }
       throw error;
@@ -75,10 +76,7 @@ class StorageService {
   }
 
   async uploadFileWithPresignedUrl(file: File): Promise<string> {
-    const presignedData = await this.generatePresignedUrl(
-      file.name,
-      file.type
-    );
+    const presignedData = await this.generatePresignedUrl(file.name, file.type);
 
     await this.uploadFile(presignedData.upload_url, file);
 

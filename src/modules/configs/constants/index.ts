@@ -1,6 +1,6 @@
 //
 //  campus-pilot
-//  constants/index.ts - Configs Module Constants
+//  constants/index.ts
 //
 //  Created by Ngonidzashe Mangudya on 26/09/2025.
 //  Copyright (c) 2025 Codecraft Solutions
@@ -12,7 +12,7 @@ import type { SelectOption } from "../types";
 export const API_ENDPOINTS = {
   BOOTSTRAP_STATUS: "/api/1.0/kernel/status",
   BOOTSTRAP_SCHOOL: "/api/1.0/kernel/setup-school",
-  BOOTSTRAP_ADMIN: "/api/1.0/bootstrap/admin",
+  BOOTSTRAP_ADMIN: "/api/1.0/kernel/setup-admin",
   STORAGE_PRESIGNED_URL: "/api/1.0/storage/generate-upload-url",
 } as const;
 

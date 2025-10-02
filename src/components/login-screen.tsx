@@ -16,8 +16,9 @@ import {
   Mail,
   Lock,
 } from "lucide-react";
-import { bootstrapService } from "../modules/configs";
+import { useNavigate } from "@tanstack/react-router";
 import { ThemeToggle } from "../lib/theme";
+import { useAuthStore } from "../stores/auth-store";
 import toast from "react-hot-toast";
 
 interface LoginScreenProps {
@@ -25,27 +26,21 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
+  const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
+  const authError = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get school data from mock storage for branding
-  const schoolData = bootstrapService.getMockSchoolData();
-
-  const getSchoolInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((word) => word.charAt(0))
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    clearError();
 
     if (!email.trim() || !password) {
       setError("Please enter both email and password");
@@ -55,18 +50,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual login API call
-      // For now, just simulate login
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const success = await login(email.trim(), password);
 
-      // Mock successful login
-      toast.success("Login successful!");
-
-      // TODO: Redirect to dashboard
-      console.log("Redirecting to dashboard...");
+      if (success) {
+        toast.success("Login successful!");
+        navigate({ to: "/" });
+      } else {
+        const errorMsg = authError || "Invalid email or password";
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
     } catch (err) {
-      setError("Invalid email or password");
-      toast.error("Login failed");
+      const errorMsg =
+        err instanceof Error ? err.message : "Login failed. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -86,30 +84,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
           {/* School Branding */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
-              {schoolData?.logo_light_b64 ? (
-                <img
-                  src={`data:image/png;base64,${schoolData.logo_light_b64}`}
-                  alt="School logo"
-                  className="w-16 h-16 object-contain rounded-full"
-                />
-              ) : schoolData?.name ? (
-                <span className="text-blue-600 font-bold text-xl">
-                  {getSchoolInitials(schoolData.name)}
-                </span>
-              ) : (
-                <School className="w-10 h-10 text-blue-600" />
-              )}
+              <School className="w-10 h-10 text-blue-600" />
             </div>
 
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {schoolData?.name || "CampusPilot"}
+              CampusPilot
             </h1>
-            {schoolData?.legal_name &&
-              schoolData.legal_name !== schoolData.name && (
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                  {schoolData.legal_name}
-                </p>
-              )}
             <p className="text-gray-600 dark:text-gray-300">
               Sign in to your account
             </p>
@@ -209,21 +189,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
             </p>
           </div>
         </div>
-
-        {/* School Contact Info */}
-        {(schoolData?.email || schoolData?.phone) && (
-          <div className="mt-6 text-center">
-            <div className="inline-flex items-center gap-4 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 rounded-lg text-sm text-gray-600 dark:text-gray-300">
-              {schoolData.email && (
-                <span className="flex items-center gap-2">
-                  <Mail className="w-3 h-3" />
-                  {schoolData.email}
-                </span>
-              )}
-              {schoolData.phone && <span>{schoolData.phone}</span>}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
