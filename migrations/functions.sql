@@ -1,3 +1,11 @@
+-- Function to automatically update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_timestamp() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END$$;
+
+-- Function to log events
 CREATE OR REPLACE FUNCTION log_event() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   IF (tg_op='DELETE') THEN
