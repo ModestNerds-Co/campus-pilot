@@ -1,5 +1,6 @@
 use anyhow::Context;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::{
     models::typedefs::ApiResult,
@@ -110,5 +111,58 @@ impl KernelDbOps {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn create_admin_user(
+        &self,
+        full_name: &str,
+        email: &str,
+        phone: Option<&str>,
+        password_hash: &str,
+    ) -> ApiResult<Uuid> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .context("Failed to start transaction")?;
+
+        // Check if user already exists
+        let existing_user: Option<(Uuid,)> = sqlx::query_as(
+            r#"
+            SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL
+            "#,
+        )
+        .bind(email)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("Failed to check for existing user")?;
+
+        if existing_user.is_some() {
+            return Err(anyhow::anyhow!("User with this email already exists"));
+        }
+
+        // Create admin user
+        let user_id: Uuid = sqlx::query_scalar(
+            r#"
+            INSERT INTO users (full_name, email, phone, password_hash, roles, is_active)
+            VALUES ($1, $2, $3, $4, $5, true)
+            RETURNING id
+            "#,
+        )
+        .bind(full_name)
+        .bind(email)
+        .bind(phone)
+        .bind(password_hash)
+        .bind(vec!["Super Admin"])
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to create admin user")?;
+
+        tx.commit().await.context("Failed to commit transaction")?;
+
+        // Update system state to Ready (outside transaction)
+        self.update_system_state(SystemState::Ready).await?;
+
+        Ok(user_id)
     }
 }

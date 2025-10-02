@@ -50,7 +50,7 @@
 - [x] POST /api/1.0/kernel/setup-school endpoint
 - [x] School configuration DTOs with validation
 - [x] KernelDbOps for database operations
-- [ ] **POST /api/1.0/kernel/setup-admin endpoint**
+- [x] **POST /api/1.0/kernel/setup-admin endpoint**
   - Accept: full_name, email, password, phone
   - Validate password strength (min 10 chars, numbers, symbols)
   - Hash password with bcrypt/argon2

@@ -23,10 +23,13 @@ pub struct SetupSchoolRequest {
     pub logo_dark_url: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct CreateAdminReq {
+    #[validate(length(min = 1, message = "Full name is required"))]
     pub full_name: String,
+    #[validate(email(message = "Invalid email format"))]
     pub email: String,
     pub phone: Option<String>,
+    #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
     pub password: String,
 }
