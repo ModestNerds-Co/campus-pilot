@@ -53,10 +53,6 @@ pub struct UserResponse {
 #[derive(Serialize)]
 pub struct PaginatedUsersResponse {
     pub users: Vec<UserResponse>,
-    pub total: i64,
-    pub page: i64,
-    pub per_page: i64,
-    pub total_pages: i64,
 }
 
 #[derive(Deserialize)]

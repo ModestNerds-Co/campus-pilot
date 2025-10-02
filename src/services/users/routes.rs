@@ -13,7 +13,7 @@ use validator::Validate;
 
 use crate::{
     middleware::{AuthMiddleware, RequirePermission},
-    models::api_response::ApiResponse,
+    models::api_response::{ApiResponse, PaginationMeta},
     services::auth::models::User,
     state::AppState,
     utils::{flatten_validation_errors, hash_password},
@@ -58,19 +58,16 @@ async fn list_users(
         }
     };
 
-    let total_pages = (total as f64 / per_page as f64).ceil() as i64;
+    let pagination = PaginationMeta::new(page as u32, per_page as u32, total);
 
     let response = PaginatedUsersResponse {
         users: users.into_iter().map(|u| u.into()).collect(),
-        total,
-        page,
-        per_page,
-        total_pages,
     };
 
-    Ok(HttpResponse::Ok().json(ApiResponse::from_status(
+    Ok(HttpResponse::Ok().json(ApiResponse::with_pagination(
         StatusCode::OK,
         Some(response),
+        pagination,
         None,
     )))
 }

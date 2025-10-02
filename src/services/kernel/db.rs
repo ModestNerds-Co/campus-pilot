@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{
     models::typedefs::ApiResult,
     services::kernel::{
-        dtos::SetupSchoolRequest,
+        dtos::{SchoolProfileResponse, SetupSchoolRequest, UpdateSchoolProfileRequest},
         models::{KernelStatus, SchoolInfo, SystemState},
     },
 };
@@ -189,5 +189,93 @@ impl KernelDbOps {
         self.update_system_state(SystemState::Ready).await?;
 
         Ok(user_id)
+    }
+
+    pub async fn get_school_profile(&self) -> ApiResult<SchoolProfileResponse> {
+        let profile = sqlx::query_as!(
+            SchoolProfileResponse,
+            r#"
+            SELECT id, name, legal_name, emap_code, email, phone,
+                   address_line1, address_line2, city, province, country,
+                   timezone, locale, logo_light_url, logo_dark_url
+            FROM school_profile
+            WHERE id = 'singleton'
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to fetch school profile")?;
+
+        Ok(profile)
+    }
+
+    pub async fn update_school_profile(
+        &self,
+        req: UpdateSchoolProfileRequest,
+    ) -> ApiResult<SchoolProfileResponse> {
+        let profile = sqlx::query_as!(
+            SchoolProfileResponse,
+            r#"
+            UPDATE school_profile
+            SET name = COALESCE($1, name),
+                legal_name = COALESCE($2, legal_name),
+                emap_code = COALESCE($3, emap_code),
+                email = COALESCE($4, email),
+                phone = COALESCE($5, phone),
+                address_line1 = COALESCE($6, address_line1),
+                address_line2 = COALESCE($7, address_line2),
+                city = COALESCE($8, city),
+                province = COALESCE($9, province),
+                country = COALESCE($10, country),
+                timezone = COALESCE($11, timezone),
+                locale = COALESCE($12, locale),
+                updated_at = NOW()
+            WHERE id = 'singleton'
+            RETURNING id, name, legal_name, emap_code, email, phone,
+                      address_line1, address_line2, city, province, country,
+                      timezone, locale, logo_light_url, logo_dark_url
+            "#,
+            req.name,
+            req.legal_name,
+            req.emap_code,
+            req.email,
+            req.phone,
+            req.address_line1,
+            req.address_line2,
+            req.city,
+            req.province,
+            req.country,
+            req.timezone,
+            req.locale
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to update school profile")?;
+
+        Ok(profile)
+    }
+
+    pub async fn update_school_logos(
+        &self,
+        logo_light_url: Option<String>,
+        logo_dark_url: Option<String>,
+    ) -> ApiResult<(Option<String>, Option<String>)> {
+        let result = sqlx::query!(
+            r#"
+            UPDATE school_profile
+            SET logo_light_url = COALESCE($1, logo_light_url),
+                logo_dark_url = COALESCE($2, logo_dark_url),
+                updated_at = NOW()
+            WHERE id = 'singleton'
+            RETURNING logo_light_url, logo_dark_url
+            "#,
+            logo_light_url,
+            logo_dark_url
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to update school logos")?;
+
+        Ok((result.logo_light_url, result.logo_dark_url))
     }
 }

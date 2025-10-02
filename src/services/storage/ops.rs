@@ -13,11 +13,16 @@ use std::time::Duration;
 pub struct StorageOps {
     client: S3Client,
     bucket: String,
+    endpoint: String,
 }
 
 impl StorageOps {
-    pub fn new(client: S3Client, bucket: String) -> Self {
-        Self { client, bucket }
+    pub fn new(client: S3Client, bucket: String, endpoint: String) -> Self {
+        Self {
+            client,
+            bucket,
+            endpoint,
+        }
     }
 
     /// Ensure the bucket exists and has public read policy
@@ -68,6 +73,24 @@ impl StorageOps {
             .context("Failed to set bucket policy")?;
 
         Ok(())
+    }
+
+    /// Upload a file directly to storage and return the public URL
+    pub async fn upload_file(&self, key: &str, data: &[u8], content_type: &str) -> Result<String> {
+        self.client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .body(data.to_vec().into())
+            .content_type(content_type)
+            .send()
+            .await
+            .context("Failed to upload file to storage")?;
+
+        // Return the public URL (bucket is publicly readable)
+        let public_url = format!("{}/{}/{}", self.endpoint, self.bucket, key);
+
+        Ok(public_url)
     }
 
     /// Generate a presigned URL for uploading a file

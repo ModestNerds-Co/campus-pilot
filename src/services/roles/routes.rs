@@ -8,7 +8,7 @@ use validator::Validate;
 
 use crate::{
     middleware::{AuthMiddleware, RequirePermission},
-    models::api_response::ApiResponse,
+    models::api_response::{ApiResponse, PaginationMeta},
     state::AppState,
     utils::flatten_validation_errors,
 };
@@ -41,19 +41,16 @@ async fn list_roles(
             }
         };
 
-    let total_pages = ((total as f64) / (limit as f64)).ceil() as u32;
+    let pagination = PaginationMeta::new(page, limit, total);
 
     let response = ListRolesResponse {
         roles: roles.into_iter().map(RoleResponse::from).collect(),
-        total,
-        page,
-        limit,
-        total_pages,
     };
 
-    Ok(HttpResponse::Ok().json(ApiResponse::from_status(
+    Ok(HttpResponse::Ok().json(ApiResponse::with_pagination(
         StatusCode::OK,
         Some(response),
+        pagination,
         None,
     )))
 }

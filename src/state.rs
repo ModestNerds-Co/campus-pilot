@@ -49,7 +49,11 @@ impl AppState {
             .build();
 
         let s3_client = S3Client::from_conf(s3_config);
-        let storage_ops = Arc::new(StorageOps::new(s3_client, config.storage.bucket.clone()));
+        let storage_ops = Arc::new(StorageOps::new(
+            s3_client,
+            config.storage.bucket.clone(),
+            config.storage.endpoint.clone(),
+        ));
 
         Self {
             db: pool,

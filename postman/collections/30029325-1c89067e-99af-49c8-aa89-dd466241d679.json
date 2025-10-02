@@ -76,6 +76,101 @@
               ]
             }
           }
+        },
+        {
+          "name": "Get School Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/kernel/school-profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kernel",
+                "school-profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update School Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated School Name\",\n  \"legal_name\": \"Updated Legal Name Ltd\",\n  \"emap_code\": \"SCH123\",\n  \"email\": \"contact@school.edu\",\n  \"phone\": \"+1234567890\",\n  \"address_line1\": \"123 New Address\",\n  \"address_line2\": \"Suite 200\",\n  \"city\": \"City Name\",\n  \"province\": \"Province\",\n  \"country\": \"Country\",\n  \"timezone\": \"Africa/Harare\",\n  \"locale\": \"en-ZW\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/kernel/school-profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kernel",
+                "school-profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload School Logos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "logo_light",
+                  "type": "file",
+                  "src": [],
+                  "description": "Light theme logo (PNG, JPG, SVG)"
+                },
+                {
+                  "key": "logo_dark",
+                  "type": "file",
+                  "src": [],
+                  "description": "Dark theme logo (PNG, JPG, SVG)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/kernel/school-profile/logo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kernel",
+                "school-profile",
+                "logo"
+              ]
+            }
+          }
         }
       ]
     },

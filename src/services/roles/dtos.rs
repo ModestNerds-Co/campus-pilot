@@ -58,10 +58,6 @@ pub struct ListRolesQuery {
 #[derive(Debug, Serialize)]
 pub struct ListRolesResponse {
     pub roles: Vec<RoleResponse>,
-    pub total: i64,
-    pub page: u32,
-    pub limit: u32,
-    pub total_pages: u32,
 }
 
 impl From<super::models::Role> for RoleResponse {
