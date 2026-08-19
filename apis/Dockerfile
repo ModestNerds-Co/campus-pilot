@@ -4,7 +4,8 @@ WORKDIR /app
 ENV SQLX_OFFLINE=false
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs && printf "" > src/lib.rs
-RUN cargo build --release && rm -rf src
+RUN cargo build --release
+RUN rm -rf src target/release/.fingerprint/campus-pilot-* target/release/campus-pilot* 2>/dev/null; true
 COPY src ./src
 COPY migrations ./migrations
 RUN cargo build --release
