@@ -1,0 +1,95 @@
+#
+#  campus-pilot
+#  docker-compose.yml
+#
+#  Created by Ngonidzashe Mangudya on 21/08/2025.
+#  Copyright (c) 2025 Codecraft Solutions
+#
+
+version: "3.8"
+
+networks:
+  traefik:
+    external: false
+
+services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: tgpatcher-traefik
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./logs:/var/log/traefik
+    networks:
+      - traefik
+    restart: unless-stopped
+
+  # Main Application (Frontend + Backend)
+  app:
+    build: .
+    container_name: tgpatcher-app
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./logs:/app/logs
+      - ./error-pages:/app/public/error:ro
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=false"
+    restart: unless-stopped
+
+  # OAuth2 Proxy for Microsoft Authentication (Fixed)
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:latest
+    container_name: tgpatcher-oauth2-proxy
+    command:
+      - --http-address=0.0.0.0:4180
+      - --provider=oidc
+      - --oidc-issuer-url=https://login.microsoftonline.com/f112db44-daf9-4839-8649-9855b5b4efd9/v2.0
+      - --client-id=REDACTED_CLIENT_ID
+      - --client-secret=REDACTED_CLIENT_SECRET
+      - --cookie-secret=REDACTED_COOKIE_SECRET
+      - --email-domain=*
+      - --upstream=http://app:3001
+      - --redirect-url=https://localhost/oauth2/callback
+      - --cookie-secure=true
+      - --scope=openid profile email
+      - --skip-provider-button=false
+      - --pass-host-header=true
+      - --reverse-proxy=true
+      - --set-xauthrequest=true
+      - --oidc-extra-audience=REDACTED_CLIENT_ID
+      - --insecure-oidc-allow-unverified-email=true
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.oauth2-proxy.rule=Host(`localhost`)"
+      - "traefik.http.routers.oauth2-proxy.entrypoints=web,websecure"
+      - "traefik.http.routers.oauth2-proxy.tls=true"
+      - "traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180"
+    restart: unless-stopped
+
+  # Redis for token caching
+  redis:
+    image: redis:7-alpine
+    container_name: tgpatcher-redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - traefik
+    restart: unless-stopped
+
+volumes:
+  redis-data:
