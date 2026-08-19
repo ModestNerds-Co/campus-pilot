@@ -1,52 +1,157 @@
+/* ─────────────────────────────────────────────────────────────────
+   Campus Pilot — Global Styles
+   Layer order mirrors huchu's globals.css. Tokens come from
+   src/styles/tokens.css which is imported first.
+   ───────────────────────────────────────────────────────────────── */
+
+@import "./styles/tokens.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Theme transition for smooth mode changes */
-* {
-    @apply transition-colors duration-200;
+/* ── Base layer ─────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  /* Default focus ring — replaces ad hoc outline:none */
+  *:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px var(--focus-ring-soft);
+  }
+  html {
+    scrollbar-gutter: stable;
+  }
+  body {
+    background: var(--canvas);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background-image: var(--app-canvas-wash);
+    background-attachment: fixed;
+  }
+  /* Scoped transitions — not universal * */
+  a, button, [role="button"], input, select, textarea {
+    transition-property: color, background-color, border-color, box-shadow, opacity;
+    transition-duration: var(--motion-duration-default);
+    transition-timing-function: var(--motion-ease-default);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-/* Dark mode styles for components that need specific handling */
-.dark {
-    color-scheme: dark;
+@layer app {
+  .dark { color-scheme: dark; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--surface-muted); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-full); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
+
+  /* Focus utility */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    --tw-ring-color: var(--focus-ring);
+  }
+
+  /* Toast */
+  .toaster-light { background: var(--surface); color: var(--text-strong); border: 1px solid var(--border); box-shadow: var(--shadow-popover); }
+  .toaster-dark  { background: var(--surface); color: var(--text-strong); border: 1px solid var(--border); box-shadow: var(--shadow-popover); }
+
+  /* Card primitive (mirrors huchu .card) */
+  .cp-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-card);
+  }
+  .cp-card-hover:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-hover);
+  }
+  .cp-card-head {
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--card-divider);
+  }
+  .cp-card-title {
+    font-size: var(--type-size-16);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-strong);
+    line-height: var(--leading-tight);
+  }
+  .cp-card-sub {
+    font-size: var(--type-size-13);
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .cp-card-body { padding: var(--space-5); }
+  .cp-card-foot {
+    padding: var(--space-4) var(--space-5);
+    border-top: 1px solid var(--card-divider);
+    background: var(--surface-muted);
+    border-bottom-left-radius: var(--card-radius);
+    border-bottom-right-radius: var(--card-radius);
+  }
+
+  /* Page chrome */
+  .cp-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-6);
+  }
+  .cp-page-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .cp-page-title {
+    font-size: var(--type-size-22);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-strong);
+    line-height: var(--leading-tight);
+  }
+  .cp-page-desc {
+    font-size: var(--type-size-14);
+    color: var(--text-muted);
+    margin-top: var(--space-1);
+  }
+
+  /* Bottom sheet / overlay helpers */
+  .cp-overlay-scrim {
+    position: fixed;
+    inset: 0;
+    background: var(--surface-overlay);
+    z-index: var(--z-overlay);
+  }
+
+  /* Z scale helpers */
+  .cp-z-sidebar { z-index: var(--z-sidebar); }
+  .cp-z-nav     { z-index: var(--z-nav); }
+  .cp-z-overlay { z-index: var(--z-overlay); }
+  .cp-z-toast   { z-index: var(--z-toast); }
+
+  /* Hide desktop rail on mobile until hydration */
+  @media (max-width: 767.98px) {
+    .cp-sidebar-desktop { display: none; }
+  }
+
+  @media (max-width: 640px) {
+    html { font-size: 16px; }
+    input, select, textarea { font-size: 16px; }
+  }
 }
 
-/* Custom scrollbar for both themes */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
-}
-
-::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-gray-500;
-}
-
-/* Focus styles that work in both themes */
-.focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-    @apply dark:focus:ring-blue-400 dark:focus:ring-offset-gray-800;
-}
-
-/* Toast styles for both themes */
-.toaster-light {
-    background: #ffffff;
-    color: #1f2937;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.toaster-dark {
-    background: #1f2937;
-    color: #f9fafb;
-    border: 1px solid #374151;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .font-tabular { font-variant-numeric: tabular-nums; }
 }
