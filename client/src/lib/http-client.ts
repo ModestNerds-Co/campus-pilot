@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 //
 //  campus-pilot
 //  httpClient.ts - Global Axios HTTP Client

@@ -36,7 +36,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           user.roles.includes(role),
         );
         if (!hasRequiredRole) {
-          navigate({ to: "/forbidden" });
+          navigate({ to: "/" }); // was /forbidden
           return;
         }
       }

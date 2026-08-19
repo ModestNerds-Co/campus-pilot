@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "ES6"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES6"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -20,9 +24,35 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./app/*"]
-    }
+      "@/*": [
+        "./src/*",
+        "./app/*"
+      ],
+      "@/components/*": [
+        "./src/components/*",
+        "./app/components/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/stores/*": [
+        "./src/stores/*",
+        "./app/stores/*"
+      ],
+      "@/modules/*": [
+        "./src/modules/*"
+      ]
+    },
+    "types": [
+      "vite/client"
+    ]
   },
-  "include": ["app", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "app",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

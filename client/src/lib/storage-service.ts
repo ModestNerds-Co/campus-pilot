@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 //
 //  campus-pilot
 //  storage-service.ts - MinIO Storage Service

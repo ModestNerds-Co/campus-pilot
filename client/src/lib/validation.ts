@@ -54,7 +54,7 @@ export interface PasswordStrength {
 
 export const validatePassword = (password: string): PasswordStrength => {
   const feedback: string[] = [];
-  let score = 0;
+  let score: PasswordStrength["score"] = 0;
 
   if (password.length < 10) {
     feedback.push("Use at least 10 characters");
@@ -91,7 +91,7 @@ export const validatePassword = (password: string): PasswordStrength => {
   if (password.length >= 20) score += 1;
 
   // Cap at 4
-  score = Math.min(score, 4) as 0 | 1 | 2 | 3 | 4;
+  score = Math.min(score, 4) as PasswordStrength["score"];
 
   const labels: PasswordStrength["label"][] = [
     "Very Weak",

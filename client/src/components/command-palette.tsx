@@ -23,7 +23,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useUIStore } from "../stores/uiStore";
+import { useUIStore } from "../../app/stores/uiStore";
 import { cn } from "../lib/utils";
 
 interface Command {
@@ -71,7 +71,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       action: () => {
         console.log("Closing tab:", activeTabId);
         if (activeTabId) {
-          const tab = tabs.find((t) => t.id === activeTabId);
+          const tab = tabs.find((t: any) => t.id === activeTabId);
           if (tab?.isDirty) {
             const confirmed = window.confirm(
               "You have unsaved changes. Are you sure you want to close this tab?",
@@ -85,7 +85,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       keywords: ["close", "remove"],
     },
     // Tab switching
-    ...tabs.map((tab, index) => ({
+    ...tabs.map((tab: any, index: number) => ({
       id: `switch-tab-${tab.id}`,
       label: `Switch to ${tab.reference}`,
       description: `Application ID: ${tab.tgapplicationid}`,
@@ -96,8 +96,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         setActiveTab(tab.id);
         console.log("Set active tab to:", tab.id);
         navigate({
-          to: "/case/$applicationId",
-          params: { applicationId: tab.tgapplicationid.toString() },
+          to: "/dashboard",
+          params: {} as any,
         })
           .then(() => {
             console.log("Navigation completed");
@@ -121,7 +121,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   function getSubTabCommands(): Command[] {
     if (!activeTabId) return [];
 
-    const activeTab = tabs.find((t) => t.id === activeTabId);
+    const activeTab = tabs.find((t: any) => t.id === activeTabId);
     if (!activeTab) return [];
 
     // Common sub-tabs for both person and organization
@@ -178,9 +178,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           activeTab.tgapplicationid,
         );
         navigate({
-          to: "/case/$applicationId",
-          params: { applicationId: activeTab.tgapplicationid.toString() },
-          search: { subtab: subTab.id },
+          to: "/dashboard",
+          params: {} as any,
         } as any);
       },
       group: "Sub-tabs",
@@ -195,7 +194,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       command.label.toLowerCase().includes(searchText) ||
       command.description?.toLowerCase().includes(searchText) ||
       command.keywords?.some((keyword) =>
-        keyword.toLowerCase().includes(searchText),
+        (keyword: string) => keyword.toLowerCase().includes(searchText),
       )
     );
   });
