@@ -1,46 +1,16 @@
-#
-#  campus-pilot
-#  Dockerfile
-#
-#  Created by Ngonidzashe Mangudya on 21/08/2025.
-#  Copyright (c) 2025 Codecraft Solutions
-#
-
-# Production build stage
-FROM node:18-alpine as builder
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Set working directory
+# syntax=docker/dockerfile:1
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copy package files
+RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies
-RUN pnpm install
-
-# Copy source code
+RUN pnpm install --frozen-lockfile
 COPY . .
-
-# Build the frontend
+ARG VITE_API_BASE_URL=http://localhost:8000
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm run build
 
-# Production stage
-FROM node:18-alpine as production
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install only production dependencies
-RUN pnpm install --prod
-
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
+FROM nginx:alpine AS runtime
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

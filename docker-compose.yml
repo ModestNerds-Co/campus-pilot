@@ -1,0 +1,141 @@
+name: campus-pilot
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: campus-pilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-campus_pilot}
+      POSTGRES_PASSWORD: ${DB_PASS:-campus_pilot}
+      POSTGRES_DB: ${DB_NAME:-campus_pilot}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-campus_pilot} -d ${DB_NAME:-campus_pilot}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - campus
+
+  minio:
+    image: minio/minio:latest
+    container_name: campus-pilot-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:-minioadmin}
+    ports:
+      - "${STORAGE_PORT:-9000}:9000"
+      - "${STORAGE_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - campus
+
+  # Create bucket on startup (idempotent)
+  minio-setup:
+    image: minio/mc:latest
+    container_name: campus-pilot-minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      /usr/bin/mc mb --ignore-existing local/campus-pilot &&
+      /usr/bin/mc anonymous set public local/campus-pilot 2>/dev/null || true;
+      exit 0;
+      "
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:-minioadmin}
+    networks:
+      - campus
+    restart: "no"
+
+  apis:
+    build:
+      context: ./apis
+      dockerfile: Dockerfile
+    container_name: campus-pilot-apis
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
+    environment:
+      APP_PORT: ${APP_PORT:-8000}
+      RUST_LOG: ${RUST_LOG:-info}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-a-32-char-random-string}
+      DB_USER: ${DB_USER:-campus_pilot}
+      DB_PASS: ${DB_PASS:-campus_pilot}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-campus_pilot}
+      STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-campus-pilot}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
+    ports:
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-8000}/health || wget -qO- http://localhost:${APP_PORT:-8000}/api/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    networks:
+      - campus
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    container_name: campus-pilot-client
+    restart: unless-stopped
+    depends_on:
+      apis:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+    ports:
+      - "${CLIENT_PORT:-3000}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - campus
+
+networks:
+  campus:
+    name: campus-pilot
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: campus-pilot-postgres
+  minio_data:
+    name: campus-pilot-minio
