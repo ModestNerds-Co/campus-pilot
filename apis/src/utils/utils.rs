@@ -1,0 +1,123 @@
+//
+//  campus-pilot-apis
+//  utils.rs
+//
+//  Created by Ngonidzashe Mangudya on 2025/06/22.
+//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
+//
+
+use crate::models::status_info::StatusInfo;
+use crate::models::typedefs::ApiResult;
+use actix_web::http::StatusCode;
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+};
+use validator::ValidationErrors;
+
+pub fn status_meaning(code: StatusCode) -> StatusInfo {
+    match code {
+        StatusCode::OK => StatusInfo {
+            meaning: "OK",
+            description: "Request was executed successfully",
+        },
+        StatusCode::CREATED => StatusInfo {
+            meaning: "Created",
+            description: "Resource was created successfully",
+        },
+        StatusCode::ACCEPTED => StatusInfo {
+            meaning: "Accepted",
+            description: "Request was accepted but not yet executed",
+        },
+        StatusCode::NO_CONTENT => StatusInfo {
+            meaning: "No Content",
+            description: "No content was returned",
+        },
+        StatusCode::BAD_REQUEST => StatusInfo {
+            meaning: "Bad Request",
+            description: "Request was malformed",
+        },
+        StatusCode::UNAUTHORIZED => StatusInfo {
+            meaning: "Unauthorized",
+            description: "Request was not authorized",
+        },
+        StatusCode::FORBIDDEN => StatusInfo {
+            meaning: "Forbidden",
+            description: "Request was forbidden",
+        },
+        StatusCode::NOT_FOUND => StatusInfo {
+            meaning: "Not Found",
+            description: "Resource was not found",
+        },
+        StatusCode::METHOD_NOT_ALLOWED => StatusInfo {
+            meaning: "Method Not Allowed",
+            description: "Method was not allowed",
+        },
+        StatusCode::CONFLICT => StatusInfo {
+            meaning: "Conflict",
+            description: "Request was not executed due to conflict",
+        },
+        StatusCode::INTERNAL_SERVER_ERROR => StatusInfo {
+            meaning: "Server Error",
+            description: "Server was unable to execute request",
+        },
+        _ => StatusInfo {
+            meaning: "Unknown Status",
+            description: "No mapped description available",
+        },
+    }
+}
+
+pub fn flatten_validation_errors(errs: &ValidationErrors) -> Vec<String> {
+    use validator::ValidationErrorsKind::*;
+    let mut out = Vec::new();
+    for (field, kind) in errs.errors() {
+        match kind {
+            Field(fe) => {
+                for e in fe {
+                    let msg = e
+                        .message
+                        .clone()
+                        .unwrap_or_else(|| std::borrow::Cow::from(e.code.to_string()));
+                    out.push(format!("{field}: {msg}"));
+                }
+            }
+            Struct(se) => out.extend(
+                flatten_validation_errors(se)
+                    .into_iter()
+                    .map(|m| format!("{field}.{m}")),
+            ),
+            List(map) => {
+                for (idx, ve) in map {
+                    out.extend(
+                        flatten_validation_errors(ve)
+                            .into_iter()
+                            .map(|m| format!("{field}[{idx}].{m}")),
+                    );
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Hash a password using Argon2id
+pub fn hash_password(password: &str) -> ApiResult<String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|e| anyhow::anyhow!("Failed to hash password: {}", e))?
+        .to_string();
+    Ok(password_hash)
+}
+
+/// Verify a password against a hash using Argon2id
+pub fn verify_password(password: &str, password_hash: &str) -> ApiResult<bool> {
+    let parsed_hash = PasswordHash::new(password_hash)
+        .map_err(|e| anyhow::anyhow!("Failed to parse password hash: {}", e))?;
+    let argon2 = Argon2::default();
+    Ok(argon2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok())
+}

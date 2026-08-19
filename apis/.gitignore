@@ -1,0 +1,5 @@
+target/
+.env
+AGENT.md
+.sqlx
+.DS_Store
