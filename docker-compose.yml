@@ -43,6 +43,7 @@ services:
       retries: 5
     networks:
       - campus
+      - media-server_default
 
   # Create bucket on startup (idempotent)
   minio-setup:
@@ -89,6 +90,7 @@ services:
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-campus_pilot}
       STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-https://storage.campus.antonlabs.cc}
       STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
       STORAGE_BUCKET: ${STORAGE_BUCKET:-campus-pilot}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
@@ -133,6 +135,8 @@ networks:
   campus:
     name: campus-pilot
     driver: bridge
+  media-server_default:
+    external: true
 
 volumes:
   postgres_data:

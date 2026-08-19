@@ -37,6 +37,7 @@ pub struct DatabaseConfig {
 #[derive(Debug, Clone)]
 pub struct StorageConfig {
     pub endpoint: String,
+    pub public_endpoint: Option<String>,
     pub region: String,
     pub bucket: String,
     pub access_key: String,
@@ -98,6 +99,7 @@ impl DatabaseConfig {
 impl StorageConfig {
     fn from_env() -> Result<Self> {
         let endpoint = env::var("STORAGE_ENDPOINT").context("STORAGE_ENDPOINT must be set")?;
+        let public_endpoint = env::var("STORAGE_PUBLIC_ENDPOINT").ok();
         let region = env::var("STORAGE_REGION").unwrap_or_else(|_| "us-east-1".to_string());
         let bucket = env::var("STORAGE_BUCKET").context("STORAGE_BUCKET must be set")?;
         let access_key =
@@ -107,6 +109,7 @@ impl StorageConfig {
 
         Ok(StorageConfig {
             endpoint,
+            public_endpoint,
             region,
             bucket,
             access_key,

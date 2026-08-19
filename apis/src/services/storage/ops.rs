@@ -14,14 +14,16 @@ pub struct StorageOps {
     client: S3Client,
     bucket: String,
     endpoint: String,
+    public_endpoint: Option<String>,
 }
 
 impl StorageOps {
-    pub fn new(client: S3Client, bucket: String, endpoint: String) -> Self {
+    pub fn new(client: S3Client, bucket: String, endpoint: String, public_endpoint: Option<String>) -> Self {
         Self {
             client,
             bucket,
             endpoint,
+            public_endpoint,
         }
     }
 
@@ -110,7 +112,23 @@ impl StorageOps {
             .await
             .context("Failed to generate presigned URL")?;
 
-        Ok(presigned_request.uri().to_string())
+        let url = presigned_request.uri().to_string();
+        // Rewrite internal minio host to public endpoint if configured (browser needs public host)
+        if let Some(public) = &self.public_endpoint {
+            if let Ok(mut parsed) = url::Url::parse(&url) {
+                if let Ok(public_parsed) = url::Url::parse(public) {
+                    parsed.set_scheme(public_parsed.scheme()).ok();
+                    parsed.set_host(public_parsed.host_str()).ok();
+                    if let Some(port) = public_parsed.port() {
+                        parsed.set_port(Some(port)).ok();
+                    } else {
+                        parsed.set_port(None).ok();
+                    }
+                    return Ok(parsed.to_string());
+                }
+            }
+        }
+        Ok(url)
     }
 
     /// Generate a presigned URL for downloading/viewing a file

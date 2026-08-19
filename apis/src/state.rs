@@ -53,6 +53,7 @@ impl AppState {
             s3_client,
             config.storage.bucket.clone(),
             config.storage.endpoint.clone(),
+            config.storage.public_endpoint.clone(),
         ));
 
         Self {
