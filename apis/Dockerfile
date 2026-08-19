@@ -1,13 +1,14 @@
 # syntax=docker/dockerfile:1
 FROM rust:1.91-bookworm AS builder
 WORKDIR /app
-ENV SQLX_OFFLINE=false
+ENV SQLX_OFFLINE=true
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs && printf "" > src/lib.rs
 RUN cargo build --release
 RUN rm -rf src target/release/.fingerprint/campus-pilot-* target/release/campus-pilot* 2>/dev/null; true
 COPY src ./src
 COPY migrations ./migrations
+COPY .sqlx ./.sqlx
 RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime

@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT name, legal_name, email, phone,\n                   address_line1, address_line2, city, province, country,\n                   logo_light_url, logo_dark_url\n            FROM school_profile\n            WHERE id = 'singleton'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "legal_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "phone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "address_line1",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "address_line2",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "province",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "country",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "logo_light_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "logo_dark_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "1679ea3a87a4eafecc96970944c11f099348d10ab997821e1b150a962a747b99"
+}
