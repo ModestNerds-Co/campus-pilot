@@ -1,6 +1,7 @@
 //
 //  campus-pilot
 //  admin-layout.tsx - Admin Layout with Sidebar
+//  Slice 1: token-driven shell (design system v1.0)
 //
 //  Created by Ngonidzashe Mangudya on 02/10/2025.
 //  Copyright (c) 2025 Codecraft Solutions
@@ -12,7 +13,6 @@ import { useAuthStore } from "../../../stores/auth-store";
 import {
   LayoutDashboard,
   Users,
-  Shield,
   Building2,
   GraduationCap,
   BookOpen,
@@ -116,55 +116,71 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[var(--canvas)]">
       {/* Top Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
+      <nav
+        className="fixed top-0 left-0 right-0 z-[var(--z-nav)] bg-[var(--surface)] border-b border-[var(--border)]"
+        style={{
+          height: "var(--app-bar-h)",
+          boxShadow: "var(--chrome-shadow)",
+        }}
+      >
+        <div className="px-4 sm:px-6 lg:px-8 h-full">
+          <div className="flex justify-between h-full items-center">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={sidebarOpen}
+                className="lg:hidden inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] border border-transparent text-[var(--text-body)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 transition-colors"
               >
                 {sidebarOpen ? (
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 ) : (
-                  <Menu className="w-6 h-6" />
+                  <Menu className="w-5 h-5" />
                 )}
               </button>
-              <div className="ml-4 lg:ml-0 flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <img
                   src="/assets/images/campus-pilot-logo.svg"
                   alt="CampusPilot"
-                  className="h-8"
+                  className="h-7"
                 />
-                <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
+                <span className="text-[15px] font-semibold tracking-tight text-[var(--text-strong)] hidden sm:block">
                   Admin
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
 
-              <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-                <User className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="hidden sm:flex items-center gap-3 pl-3 pr-3 py-1.5 rounded-full bg-[var(--surface-muted)] border border-[var(--border-subtle)]">
+                <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+                  <User className="w-4 h-4 text-[var(--text-muted)]" />
+                </span>
+                <div className="pr-1">
+                  <p className="text-[13px] font-medium leading-none text-[var(--text-strong)]">
                     {user?.full_name}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-[11px] leading-none text-[var(--text-muted)] mt-0.5">
                     {user?.roles[0]}
                   </p>
                 </div>
               </div>
 
+              {/* Mobile user avatar */}
+              <div className="sm:hidden inline-flex items-center justify-center h-8 w-8 rounded-full bg-[var(--surface-muted)] border border-[var(--border)]">
+                <User className="w-4 h-4 text-[var(--text-muted)]" />
+              </div>
+
               <button
                 onClick={handleLogout}
-                className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-                title="Logout"
+                aria-label="Log out"
+                title="Log out"
+                className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] border border-transparent text-[var(--text-muted)] hover:bg-[var(--tone-danger-bg)] hover:text-[var(--tone-danger)] hover:border-[var(--tone-danger-bd)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 transition-colors"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -173,12 +189,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-16 left-0 bottom-0 z-30 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 lg:translate-x-0 ${
+        aria-label="Admin navigation"
+        className={`cp-sidebar-desktop fixed left-0 bottom-0 z-[var(--z-sidebar)] w-64 bg-[var(--surface)] border-r border-[var(--border)] transform transition-transform duration-200 ease-[var(--motion-ease-default)] lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ top: "var(--app-bar-h)" }}
       >
-        <div className="h-full overflow-y-auto px-4 py-6">
-          <nav className="space-y-2">
+        <div className="h-full overflow-y-auto px-3 py-5">
+          <nav className="space-y-1" aria-label="Primary">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isItemActive = isParentActive(item);
@@ -189,34 +207,35 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   <div key={item.label}>
                     <button
                       onClick={() => toggleExpanded(item.label)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      aria-expanded={isExpanded}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 ${
                         isItemActive
-                          ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          ? "bg-[var(--surface-muted)] text-[var(--text-strong)]"
+                          : "text-[var(--text-body)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5" />
-                        <span className="font-medium">{item.label}</span>
-                      </div>
+                      <span className="flex items-center gap-2.5">
+                        <Icon className="w-[18px] h-[18px] shrink-0" />
+                        <span>{item.label}</span>
+                      </span>
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
+                        className={`w-4 h-4 shrink-0 text-[var(--text-muted)] transition-transform duration-200 ${
                           isExpanded ? "rotate-180" : ""
                         }`}
                       />
                     </button>
                     {isExpanded && (
-                      <div className="mt-1 ml-8 space-y-1">
+                      <div className="mt-1 ml-3 pl-6 space-y-1 border-l border-[var(--border-subtle)]">
                         {item.children.map((child) => (
                           <Link
                             key={child.href}
                             to={child.href}
-                            className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                              isActive(child.href)
-                                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
-                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            }`}
                             onClick={() => setSidebarOpen(false)}
+                            className={`block px-3 py-1.5 rounded-[var(--radius-md)] text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] ${
+                              isActive(child.href)
+                                ? "bg-[var(--surface-muted)] text-[var(--text-strong)] font-medium"
+                                : "text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-body)]"
+                            }`}
                           >
                             {child.label}
                           </Link>
@@ -231,15 +250,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 <Link
                   key={item.href}
                   to={item.href!}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    isItemActive
-                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  }`}
                   onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 ${
+                    isItemActive
+                      ? "bg-[var(--surface-muted)] text-[var(--text-strong)]"
+                      : "text-[var(--text-body)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
+                  }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon className="w-[18px] h-[18px] shrink-0" />
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
@@ -250,14 +269,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-20 bg-[var(--surface-overlay)] backdrop-blur-[2px] lg:hidden"
+          style={{ top: "var(--app-bar-h)" }}
           onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Main Content */}
-      <main className="pt-16 lg:pl-64">
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+      <main
+        className="pt-[var(--app-bar-h)] lg:pl-64"
+        style={{ minHeight: "100dvh" }}
+      >
+        <div className="mx-auto max-w-[1280px] p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

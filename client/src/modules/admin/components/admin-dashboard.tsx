@@ -1,13 +1,12 @@
 //
 //  campus-pilot
-//  admin-dashboard.tsx - Admin Dashboard Component
-//
-//  Created by Ngonidzashe Mangudya on 02/10/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  admin-dashboard.tsx - Admin Dashboard Component (token-driven)
 //
 
 import React from "react";
 import { useAuthStore } from "../../../stores/auth-store";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Users,
   Building2,
@@ -15,56 +14,52 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
-  DollarSign,
   UserCheck,
   BookOpen,
   Clock,
 } from "lucide-react";
 
+type Tone = "brand" | "success" | "accent" | "warn";
+
+const toneMap: Record<Tone, { bg: string; fg: string }> = {
+  brand: { bg: "bg-[var(--brand-soft)]", fg: "text-[var(--brand)]" },
+  success: { bg: "bg-[var(--tone-success-bg)]", fg: "text-[var(--tone-success)]" },
+  accent: { bg: "bg-[var(--accent-100)]", fg: "text-[var(--accent-700)]" },
+  warn: { bg: "bg-[var(--tone-warn-bg)]", fg: "text-[var(--tone-warn)]" },
+};
+
 interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
-  trend?: {
-    value: string;
-    isPositive: boolean;
-  };
-  iconColor: string;
-  iconBg: string;
+  trend?: { value: string; isPositive: boolean };
+  tone?: Tone;
 }
 
-const StatCard: React.FC<StatCardProps> = ({
-  title,
-  value,
-  icon: Icon,
-  trend,
-  iconColor,
-  iconBg,
-}) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, tone = "brand" }) => {
+  const t = toneMap[tone];
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+    <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-          {title}
-        </span>
-        <div className={`p-2 rounded-lg ${iconBg}`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+        <span className="text-sm font-medium text-[var(--text-muted)]">{title}</span>
+        <div className={`flex size-9 items-center justify-center rounded-[var(--radius-lg)] ${t.bg}`}>
+          <Icon className={`size-5 ${t.fg}`} />
         </div>
       </div>
       <div className="flex items-end justify-between">
         <div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+          <div className="text-2xl font-semibold tracking-tight text-[var(--text-strong)] mb-1">
             {value}
           </div>
           {trend && (
             <div className="flex items-center gap-1">
               {trend.isPositive ? (
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <TrendingUp className="size-4 text-[var(--tone-success)]" />
               ) : (
-                <TrendingDown className="w-4 h-4 text-red-600" />
+                <TrendingDown className="size-4 text-[var(--tone-danger)]" />
               )}
               <span
-                className={`text-sm font-medium ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
+                className={`text-sm font-medium ${trend.isPositive ? "text-[var(--tone-success)]" : "text-[var(--tone-danger)]"}`}
               >
                 {trend.value}
               </span>
@@ -72,7 +67,7 @@ const StatCard: React.FC<StatCardProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -82,17 +77,13 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Welcome back, {user?.full_name}
-          </p>
+          <h1 className="text-[22px] font-semibold leading-tight text-[var(--text-strong)]">Dashboard</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Welcome back, {user?.full_name}</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-400">
-          <Calendar className="w-4 h-4" />
+        <div className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] shadow-sm">
+          <Calendar className="size-4" />
           <span>
             {new Date().toLocaleDateString("en-US", {
               weekday: "short",
@@ -106,163 +97,86 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total students"
-          value="0"
-          icon={GraduationCap}
-          trend={{ value: "0%", isPositive: true }}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-50 dark:bg-blue-900/20"
-        />
-        <StatCard
-          title="Total staff"
-          value="0"
-          icon={UserCheck}
-          trend={{ value: "0%", isPositive: true }}
-          iconColor="text-green-600"
-          iconBg="bg-green-50 dark:bg-green-900/20"
-        />
-        <StatCard
-          title="Departments"
-          value="0"
-          icon={Building2}
-          iconColor="text-purple-600"
-          iconBg="bg-purple-50 dark:bg-purple-900/20"
-        />
-        <StatCard
-          title="Active users"
-          value="1"
-          icon={Users}
-          trend={{ value: "0%", isPositive: true }}
-          iconColor="text-orange-600"
-          iconBg="bg-orange-50 dark:bg-orange-900/20"
-        />
+        <StatCard title="Total students" value="0" icon={GraduationCap} trend={{ value: "0%", isPositive: true }} tone="brand" />
+        <StatCard title="Total staff" value="0" icon={UserCheck} trend={{ value: "0%", isPositive: true }} tone="success" />
+        <StatCard title="Departments" value="0" icon={Building2} tone="accent" />
+        <StatCard title="Active users" value="1" icon={Users} trend={{ value: "0%", isPositive: true }} tone="warn" />
       </div>
 
       {/* Activity Chart */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Student Enrollment Trend
-          </h2>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              Week
-            </button>
-            <button className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg">
-              Month
-            </button>
-            <button className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              Year
-            </button>
+          <h2 className="text-base font-semibold text-[var(--text-strong)]">Student Enrollment Trend</h2>
+          <div className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-muted)] p-1">
+            <button className="rounded-full px-3 py-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-strong)]">Week</button>
+            <button className="rounded-full bg-[var(--surface)] px-3 py-1 text-sm font-medium text-[var(--text-strong)] shadow-sm border border-[var(--border)]">Month</button>
+            <button className="rounded-full px-3 py-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-strong)]">Year</button>
           </div>
         </div>
-        <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="flex h-64 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--surface-muted)]">
           <div className="text-center">
-            <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">
-              Chart visualization coming soon
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-              Activity data will be displayed here
-            </p>
+            <Clock className="mx-auto mb-3 size-12 text-[var(--text-subtle)]" />
+            <p className="text-sm text-[var(--text-muted)]">Chart visualization coming soon</p>
+            <p className="mt-1 text-sm text-[var(--text-subtle)]">Activity data will be displayed here</p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Recent Activity
-          </h2>
-          <div className="space-y-4">
-            <div className="text-center py-8">
-              <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">
-                No recent activity
-              </p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Activity will appear here as you use the system
-              </p>
-            </div>
+        <Card className="p-6">
+          <h2 className="mb-4 text-base font-semibold text-[var(--text-strong)]">Recent Activity</h2>
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <BookOpen className="mx-auto mb-1 size-12 text-[var(--text-subtle)]" />
+            <p className="text-sm text-[var(--text-muted)]">No recent activity</p>
+            <p className="mt-1 text-sm text-[var(--text-subtle)]">Activity will appear here as you use the system</p>
           </div>
-        </div>
+        </Card>
 
-        {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Quick Actions
-          </h2>
+        <Card className="p-6">
+          <h2 className="mb-4 text-base font-semibold text-[var(--text-strong)]">Quick Actions</h2>
           <div className="space-y-3">
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-left">
-              <Users className="w-5 h-5" />
-              <span className="font-medium">Add New User</span>
+            <button className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-100)] bg-[var(--brand-soft)] px-4 py-3 text-left text-sm font-medium text-[var(--brand-strong)] hover:bg-[var(--brand-100)]">
+              <Users className="size-5" />
+              Add New User
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-left">
-              <Building2 className="w-5 h-5" />
-              <span className="font-medium">Create Department</span>
+            <button className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--tone-success-bd)] bg-[var(--tone-success-bg)] px-4 py-3 text-left text-sm font-medium text-[var(--tone-success-strong)] hover:brightness-95">
+              <Building2 className="size-5" />
+              Create Department
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-left">
-              <GraduationCap className="w-5 h-5" />
-              <span className="font-medium">Enroll Student</span>
+            <button className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-left text-sm font-medium text-[var(--text-strong)] hover:bg-[var(--surface-sunken)]">
+              <GraduationCap className="size-5" />
+              Enroll Student
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors text-left">
-              <BookOpen className="w-5 h-5" />
-              <span className="font-medium">Create Subject</span>
+            <button className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left text-sm font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]">
+              <BookOpen className="size-5" />
+              Create Subject
             </button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Getting Started Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-4">
-          Getting Started
-        </h2>
+      <Card className="border-[var(--brand-100)] bg-[var(--brand-soft)] p-6">
+        <h2 className="mb-4 text-base font-semibold text-[var(--brand-strong)]">Getting Started</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              1
+          {[
+            { n: 1, title: "Set up school structure", desc: "Create departments and classes" },
+            { n: 2, title: "Add staff members", desc: "Create employee records" },
+            { n: 3, title: "Enroll students", desc: "Start adding students" },
+          ].map((s) => (
+            <div key={s.n} className="flex gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold text-white">
+                {s.n}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[var(--brand-strong)]">{s.title}</p>
+                <p className="mt-1 text-sm text-[var(--brand-strong)]/80">{s.desc}</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-300">
-                Set up school structure
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                Create departments and classes
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              2
-            </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-300">
-                Add staff members
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                Create employee records
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              3
-            </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-300">
-                Enroll students
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                Start adding students
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

@@ -12,15 +12,17 @@ use std::time::Duration;
 
 pub struct StorageOps {
     client: S3Client,
+    presign_client: Option<S3Client>,
     bucket: String,
     endpoint: String,
     public_endpoint: Option<String>,
 }
 
 impl StorageOps {
-    pub fn new(client: S3Client, bucket: String, endpoint: String, public_endpoint: Option<String>) -> Self {
+    pub fn new(client: S3Client, presign_client: Option<S3Client>, bucket: String, endpoint: String, public_endpoint: Option<String>) -> Self {
         Self {
             client,
+            presign_client,
             bucket,
             endpoint,
             public_endpoint,
@@ -103,8 +105,9 @@ impl StorageOps {
             .build()
             .context("Failed to build presigning config")?;
 
-        let presigned_request = self
-            .client
+        // Use presign_client with public endpoint if available, so SigV4 is calculated with the public host
+        let client = self.presign_client.as_ref().unwrap_or(&self.client);
+        let presigned_request = client
             .put_object()
             .bucket(&self.bucket)
             .key(key)
@@ -112,23 +115,7 @@ impl StorageOps {
             .await
             .context("Failed to generate presigned URL")?;
 
-        let url = presigned_request.uri().to_string();
-        // Rewrite internal minio host to public endpoint if configured (browser needs public host)
-        if let Some(public) = &self.public_endpoint {
-            if let Ok(mut parsed) = url::Url::parse(&url) {
-                if let Ok(public_parsed) = url::Url::parse(public) {
-                    parsed.set_scheme(public_parsed.scheme()).ok();
-                    parsed.set_host(public_parsed.host_str()).ok();
-                    if let Some(port) = public_parsed.port() {
-                        parsed.set_port(Some(port)).ok();
-                    } else {
-                        parsed.set_port(None).ok();
-                    }
-                    return Ok(parsed.to_string());
-                }
-            }
-        }
-        Ok(url)
+        Ok(presigned_request.uri().to_string())
     }
 
     /// Generate a presigned URL for downloading/viewing a file

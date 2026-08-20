@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StyleGuideRouteImport } from './routes/style-guide'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BootRouteImport } from './routes/boot'
@@ -20,6 +21,11 @@ import { Route as SetupAdminRouteImport } from './routes/setup.admin'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
 
+const StyleGuideRoute = StyleGuideRouteImport.update({
+  id: '/style-guide',
+  path: '/style-guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/boot': typeof BootRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/style-guide': typeof StyleGuideRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/users': typeof AdminUsersRoute
   '/setup/admin': typeof SetupAdminRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/boot': typeof BootRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/style-guide': typeof StyleGuideRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/users': typeof AdminUsersRoute
   '/setup/admin': typeof SetupAdminRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/boot': typeof BootRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/style-guide': typeof StyleGuideRoute
   '/admin/roles': typeof AdminRolesRoute
   '/admin/users': typeof AdminUsersRoute
   '/setup/admin': typeof SetupAdminRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/boot'
     | '/dashboard'
     | '/login'
+    | '/style-guide'
     | '/admin/roles'
     | '/admin/users'
     | '/setup/admin'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/boot'
     | '/dashboard'
     | '/login'
+    | '/style-guide'
     | '/admin/roles'
     | '/admin/users'
     | '/setup/admin'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/boot'
     | '/dashboard'
     | '/login'
+    | '/style-guide'
     | '/admin/roles'
     | '/admin/users'
     | '/setup/admin'
@@ -151,12 +163,20 @@ export interface RootRouteChildren {
   BootRoute: typeof BootRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  StyleGuideRoute: typeof StyleGuideRoute
   SetupAdminRoute: typeof SetupAdminRoute
   SetupSchoolRoute: typeof SetupSchoolRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/style-guide': {
+      id: '/style-guide'
+      path: '/style-guide'
+      fullPath: '/style-guide'
+      preLoaderRoute: typeof StyleGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -250,6 +270,7 @@ const rootRouteChildren: RootRouteChildren = {
   BootRoute: BootRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  StyleGuideRoute: StyleGuideRoute,
   SetupAdminRoute: SetupAdminRoute,
   SetupSchoolRoute: SetupSchoolRoute,
 }

@@ -99,38 +99,33 @@ export function useTheme() {
   return context;
 }
 
-// Theme toggle component
+// Theme toggle component — token-driven, 36px floor
 export function ThemeToggle({ className = '' }: { className?: string }) {
-  const { theme, setTheme, actualTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const handleToggle = () => {
-    // Cycle through: light → dark → system
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('system');
-    } else {
-      setTheme('light');
-    }
+    if (theme === 'light') setTheme('dark');
+    else if (theme === 'dark') setTheme('system');
+    else setTheme('light');
   };
 
   const getIcon = () => {
     switch (theme) {
       case 'light':
         return (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
         );
       case 'dark':
         return (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
         );
       default:
         return (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         );
@@ -139,28 +134,30 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 
   const getLabel = () => {
     switch (theme) {
-      case 'light': return 'Light mode';
-      case 'dark': return 'Dark mode';
-      case 'system': return 'System theme';
+      case 'light': return 'Light';
+      case 'dark': return 'Dark';
+      case 'system': return 'System';
     }
   };
 
   return (
     <button
       onClick={handleToggle}
+      aria-label={`Theme: ${getLabel()}. Click to change.`}
+      title={`Current: ${getLabel()}. Click to change.`}
       className={`
-        inline-flex items-center gap-2 px-3 py-2 rounded-lg border
-        transition-colors duration-200
-        ${actualTheme === 'dark'
-          ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700'
-          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-        }
+        inline-flex items-center justify-center gap-2
+        h-9 px-3 rounded-[var(--radius-md)] border text-[13px] font-medium
+        bg-[var(--surface)] text-[var(--text-body)] border-[var(--border)]
+        hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] hover:border-[var(--border-strong)]
+        active:bg-[var(--surface-sunken)]
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2
+        transition-colors duration-200 ease-[var(--motion-ease-default)]
         ${className}
       `}
-      title={`Current: ${getLabel()}. Click to change.`}
     >
       {getIcon()}
-      <span className="text-sm font-medium">{getLabel()}</span>
+      <span>{getLabel()}</span>
     </button>
   );
 }
