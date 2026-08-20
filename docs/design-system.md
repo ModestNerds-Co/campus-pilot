@@ -1,18 +1,19 @@
 # Campus Pilot — Design System
 
-**Version:** 1.0 · 20 Aug 2026  
-**Inspiration:** `iamngoni/huchu` + `@corelithzw/react` elegance — translated, not copied.  
+**Version:** 2.0 · 20 Aug 2026 — huchu "Warm Paper" full reskin  
+**Inspiration:** `iamngoni/huchu` `docs/ux/platform-ux-playbook.md` — adopted directly (palette, type scale, radii, shadow rules), translated only where huchu is CRM-specific (status vocabulary) or unavailable (the `SS Huchu` display font — we stay on `Inter var`).  
 **Implementation:** CSS variables in `src/styles/tokens.css` + Tailwind v3.4.3 config + lightweight `src/components/ui/*` primitives. No private package required.
 
 ---
 
-## 1. Philosophy (from huchu, adapted)
+## 1. Philosophy (from huchu's platform-ux-playbook, adopted)
 
 1. **One token, one truth.** If you type a hex, stop. Find the token. `src/styles/tokens.css` owns every colour, radius, shadow, and motion value. Tailwind maps to it (`tailwind.config.js` → `var(--*)`).
-2. **Saturated colour means action or state, never decoration.** Page chrome is neutral — `--canvas` `#F7F8FA` with cards on `--surface` `#FFF`. Blue appears once per surface, on the primary action.
+2. **Warm paper chrome, saturated colour only for action or state.** Page chrome sits on `--canvas` `#FCFCF4` (warm paper, not cool gray) with cards on `--surface` `#FFF`. Indigo `#4C64D4` appears once per surface, on the primary action.
 3. **Role tokens, not swatches.** Use `--text-strong / --text-body / --text-muted`, `--border / --border-strong / --hairline`, `--brand / --brand-soft / --brand-tint` — never `gray-400` or `blue-600` literals.
-4. **Copy is load-bearing.** Sentence case everywhere. Button = verb. Empty state = what + why + next step. Toast = one sentence.
-5. **A11y is structural:** `focus-visible` 2px `var(--focus-ring)` + 3px halo, 36px touch floor, `prefers-reduced-motion`, colour + icon + label together.
+4. **Border-first surfaces.** Cards and panels separate with a 1px border, not a shadow. Shadow is reserved for things that float above the page (popovers, modals) — see §2.6.
+5. **Copy is load-bearing.** Sentence case everywhere. Button = verb. Empty state = what + why + next step. Toast = one sentence.
+6. **A11y is structural:** `focus-visible` 2px `var(--focus-ring)` + 3px halo, 36px touch floor, `prefers-reduced-motion`, colour + icon + label together.
 
 ---
 
@@ -20,15 +21,15 @@
 
 All tokens live in `src/styles/tokens.css` at `:root` with a `.dark` override.
 
-### 2.1 Surfaces
+### 2.1 Surfaces (warm paper)
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--canvas` | `#F7F8FA` | `#0F1115` | Page background (`body`) |
-| `--surface` | `#FFFFFF` | `#1A1D23` | Cards, popovers, inputs |
-| `--surface-muted` | `#F1F3F6` | `#23272F` | Hover, skeletons, table head |
-| `--surface-sunken` | `#E8EBF0` | `#2A2F3A` | Pressed, active states |
-| `--surface-deep` | `#DDE1E7` | `#343A46` | Deeply inset |
+| `--canvas` | `#FCFCF4` | `#171614` | Page background (`body`) — warm paper, not cool gray |
+| `--surface` | `#FFFFFF` | `#211F1B` | Cards, popovers, inputs |
+| `--surface-muted` | `#F7F7F2` | `#2A2822` | Hover, skeletons, table head |
+| `--surface-sunken` | `#F0F0E8` | `#332F27` | Pressed, active states |
+| `--surface-deep` | `#E3E3D8` | `#3D382E` | Deeply inset |
 
 Aliases (`--surface-app`, `--surface-panel`, etc.) all point at the ladder above so legacy screens keep working.
 
@@ -36,55 +37,55 @@ Aliases (`--surface-app`, `--surface-panel`, etc.) all point at the ladder above
 
 | Token | Light | Dark |
 |---|---|---|
-| `--text-strong` | `#16181D` | `#F2F4F7` |
-| `--text-body` | `#262A33` | `#D5D9E1` |
-| `--text-muted` | `#565C69` | `#9AA0AD` |
-| `--text-subtle` | `#5E6573` | `#7A8191` |
-| `--text-inverse` | `#FFF` | `#0F1115` |
-| `--text-link` | `#0944C2` | `#7BA4F5` |
+| `--text-strong` | `#111111` | `#F5F3EC` |
+| `--text-body` | `#111111` | `#F5F3EC` |
+| `--text-muted` | `#6B6B6B` | `#B8B4A8` |
+| `--text-subtle` | `#9A9A93` | `#8C887C` |
+| `--text-inverse` | `#FFF` | `#171614` |
+| `--text-link` | `#4C64D4` | `#8A94E8` |
 
-`--text-primary/secondary/tertiary` are aliases.
+`--text-strong`/`--text-body` share one near-black value per huchu's spec — hierarchy comes from weight (700 headings vs 400 body), not colour. `--text-primary/secondary/tertiary` are aliases.
 
 ### 2.3 Borders & edges
 
-`--border` `#E5E8EE` · `--border-strong` `#D2D7E0` · `--border-subtle` `#EEF0F4` · `--hairline` `rgba(22,24,29,.08)`  
+`--border` `#E6E6E0` · `--border-strong` `#D6D6C8` · `--border-subtle` `#EFEFE8` · `--hairline` `rgba(17,17,17,.08)`  
 `--chrome-edge` / `--chrome-shadow` draw the sidebar/app-bar seam.
 
-### 2.4 Brand
+### 2.4 Brand / action
 
-Campus blue refined from `blue-600 (#2563EB)` → **`#0B5DF0`** (Huchu family — same hue, more saturated, better contrast at larger sizes).
+Campus blue replaced with huchu's **`#4C64D4`** indigo (`action-primary-bg` in the huchu playbook) — a deliberate hue shift off the old saturated `#0B5DF0` blue, softer and warmer to sit on paper canvas.
 
 ```
---brand:        #0B5DF0
---brand-strong: #0944C2
---brand-deeper: #08379C
---brand-soft:   #E8EFFE
---brand-tint:   rgba(11,93,240,.08)
+--brand:        #4C64D4
+--brand-strong: #3B4FB0
+--brand-deeper: #2E3D8A
+--brand-soft:   #EEF0FF   (huchu action-secondary-bg)
+--brand-tint:   rgba(76,100,212,.08)
 --brand-50/100/200/300/400/500/700/900  full ramp
 ```
 
-Dark: `--brand` → `#3B82F6`, soft → `rgba(59,130,246,.14)`.
+Dark: `--brand` → `#8A94E8`, soft → `rgba(76,100,212,.16)`.
 
 ### 2.5 Semantic tones
 
-Each tone has `-bg` (wash), `-bd` (border), and the tone itself:
+Each tone has `-bg` (wash), `-bd` (border), and the tone itself — recolored to huchu's canonical status colour mapping:
 
-* **info** → brand
-* **success** `#168052` / `#E6F4EC`
-* **warn** `#B45309` / `#FEF3C7`
-* **danger** `#B83A2A` / `#FEE2E2`
-* **neutral** `#565C69` / `surface-muted`
+* **info** → brand `#4C64D4`
+* **success** `#2CA47C` / `#E3F4EC` (huchu "Passing")
+* **warn** `#F46414` / `#FDEBE0` (huchu "Need changes")
+* **danger** `#EC442C` / `#FDE7E3` (huchu `action-destructive-bg`)
+* **neutral** `#6B6B6B` / `surface-muted`
 
-Dark tones are same hue at 14–22% opacity washes.
+Dark tones are same hue at 16–28% opacity washes.
 
 ### 2.6 Shape, type, motion, spacing, z
 
-* **Radii:** `--radius-xs 4` / `sm 6` / `md 8` / `lg 10` / `xl 14` / `2xl 18` / `3xl 22` / `4xl 26` + `full/pill 9999px`.
-* **Type:** `Inter var` (`--font-sans`) + monospace fallback. No `Montserrat` load (removed — was never fetched). Weights 400/500/600/700. Tabular-nums on IDs/money where needed (`font-variant-numeric: tabular-nums`).
+* **Radii (huchu 4-tier, collapsed from the old 8-tier scale):** `--radius-xs 4` / `sm 6` (huchu small) / `md 8` (huchu control default) / `lg 10` / `xl 12` (huchu card/popover) / `2xl` / `3xl` / `4xl` all `16` (huchu extra-large, capped — no size above it) + `full/pill 9999px`.
+* **Type (huchu strict scale):** `Inter var` (`--font-sans`) — huchu's `SS Huchu` display face is proprietary/unavailable, so we stay on Inter for both body and display. Page title `32/700` (`--type-page-title-size`), section title `20/700` (`--type-section-title-size`), body `14/400`, label `13/600`, table header `12/600` uppercase, table cell `14/500`, caption `12/500`. Tabular-nums on IDs/money where needed (`font-variant-numeric: tabular-nums`).
 * **Motion:** `--motion-ease-default cubic-bezier(0.2,0.8,0.2,1)`, durations 150/200/300ms. `prefers-reduced-motion` snaps to `0.01ms`.
 * **Spacing:** `--space-1 4` / `2 8` / `3 12` / `4 16` / `5 20` / `6 24` / `8 32` / `10 40` / `12 48`. Gutters: `content-gutter-x 16`, `content-gutter-y 24`.
 * **Z:** `--z-sidebar 50` / `--z-nav 60` / `--z-overlay 100` / `--z-toast 200`. Every overlay shares `--z-overlay`; open order decides stacking.
-* **Elevation:** `--shadow-rest / -hover / -popover / -modal` — border at rest, shadow only when floating.
+* **Elevation — border-first:** `--shadow-rest` is `none` — primary surfaces (cards, panels) separate with a 1px border only, per huchu's "minimal elevation" rule. `--shadow-hover` is a bare 1-layer lift. `--shadow-popover` / `--shadow-modal` are the only real shadows, reserved for floating overlays, using huchu's exact overlay shadow (`0 12px 24px -12px rgba(17,17,17,.18), 0 2px 6px rgba(17,17,17,.06)`).
 
 ### 2.7 Dark mode
 
@@ -184,7 +185,15 @@ Token wash: `surface-overlay rgba(22,24,29,.14)` for scrim, `z-overlay` for stac
 ## 5. Spacing & typography scale
 
 * 8-point base (`4/8/12/16/20/24/32`). Page = `space-6 (24)`, card head/body = `16/20`, gap between cards = `24`.
-* Type: title `22/600/tight`, label `13/500`, body `14/relaxed`, caption `12`. Money/IDs may add `font-tabular` / `font-mono`.
+* Type (huchu strict 3-tier hierarchy — use exactly these, do not invent in-between sizes):
+  * Page title `32/700` — one per screen, in the app-bar per §4.1, not redrawn in page body.
+  * Section title `20/700` — card/panel headings.
+  * Label `13/600` — form labels, filter labels.
+  * Body `14/400` — paragraph copy.
+  * Table header `12/600` uppercase.
+  * Table cell `14/500`.
+  * Caption `12/500` — helper text, timestamps.
+* Money/IDs/timestamps use `font-mono` / `font-tabular` and are right-aligned in tables unless context requires otherwise.
 
 ---
 
@@ -205,7 +214,7 @@ Routed at **`/style-guide`** (`src/routes/style-guide.tsx`). Renders palette swa
 
 ## 8. Approval checklist
 
-* [ ] Palette reviewed (light + dark) — brand `#0B5DF0` / dark `#3B82F6` and tone washes
+* [ ] Palette reviewed (light + dark) — brand `#4C64D4` / dark `#8A94E8` and tone washes
 * [ ] Type scale + spacing rhythm approved
 * [ ] `Button / Card / Badge / Input / Empty / Skeleton` examples approved
 * [ ] `/style-guide` renders in `vite build` preview and `docker build -f client/Dockerfile`
