@@ -80,6 +80,8 @@
   --brand-900:       #22307A;
   --brand-primary:   var(--brand);
   --on-brand:        #FFFFFF;
+  --on-brand-muted:  rgba(255, 255, 255, 0.8);
+  --on-brand-hover:  rgba(255, 255, 255, 0.2);
 
   /* Gray ramp (warm, for bridges) */
   --gray-50:   #FCFCF4;
@@ -394,7 +396,7 @@
   --text-muted:       #B8B4A8;
   --text-subtle:      #8C887C;
   --text-inverse:     #171614;
-  --text-link:        #8A94E8;
+  --text-link:        #7C8CE8;
 
   --border:           #3A362E;
   --border-strong:    #4A453A;
@@ -402,9 +404,12 @@
   --hairline:         rgba(245, 243, 236, 0.08);
   --chrome-edge:      var(--border-strong);
 
-  --brand:            #8A94E8;
-  --brand-strong:     #6B77D6;
-  --brand-deeper:     #4C5CC4;
+  /* Brand is mid-tone (not pastel) so it stays AA-safe both as text/icon on
+     dark canvas AND as a solid fill behind white button labels — see
+     docs/design-system.md §2.4 dark-mode contrast note. */
+  --brand:            #566BDA;
+  --brand-strong:     #465AC0;
+  --brand-deeper:     #37479E;
   --brand-soft:       rgba(76, 100, 212, 0.16);
   --brand-tint:       rgba(76, 100, 212, 0.10);
   --brand-50:         rgba(76,100,212,0.10);
@@ -428,18 +433,21 @@
 
   --tone-info-bg:        rgba(76,100,212,0.16);
   --tone-info-bd:        rgba(76,100,212,0.28);
-  --tone-success:        #4CC79A;
-  --tone-success-bg:     rgba(44,164,124,0.16);
-  --tone-success-bd:     rgba(44,164,124,0.28);
-  --tone-success-strong: #7EDBB8;
-  --tone-warn:           #FF9A5C;
-  --tone-warn-bg:        rgba(244,100,20,0.16);
-  --tone-warn-bd:        rgba(244,100,20,0.28);
-  --tone-warn-strong:    #FFB88A;
-  --tone-danger:         #FF7A63;
-  --tone-danger-bg:      rgba(236,68,44,0.16);
-  --tone-danger-bd:      rgba(236,68,44,0.28);
-  --tone-danger-strong:  #FFA394;
+  /* Tones are mid-tone (not pastel) for the same reason as --brand above:
+     several screens use a tone's "-strong" step as a solid hover fill behind
+     white button text (e.g. boot-screen retry buttons), not only as wash text. */
+  --tone-success:        #1F9068;
+  --tone-success-bg:     rgba(31,144,104,0.16);
+  --tone-success-bd:     rgba(31,144,104,0.28);
+  --tone-success-strong: #16744F;
+  --tone-warn:           #C1621E;
+  --tone-warn-bg:        rgba(193,98,30,0.16);
+  --tone-warn-bd:        rgba(193,98,30,0.28);
+  --tone-warn-strong:    #9E4F18;
+  --tone-danger:         #D14A36;
+  --tone-danger-bg:      rgba(209,74,54,0.16);
+  --tone-danger-bd:      rgba(209,74,54,0.28);
+  --tone-danger-strong:  #B03A28;
 
   --surface-overlay:     rgba(0, 0, 0, 0.55);
   --shadow-rest:    none;
@@ -447,10 +455,10 @@
   --shadow-popover: 0 12px 24px -12px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   --shadow-modal:   0 16px 32px -12px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
 
-  --focus-ring:      #8A94E8;
-  --focus-ring-soft: rgba(138, 148, 232, 0.22);
+  --focus-ring:      #7C8CE8;
+  --focus-ring-soft: rgba(124, 140, 232, 0.22);
 
-  --app-canvas-wash: radial-gradient(1200px 600px at 20% -10%, rgba(138,148,232,0.08), transparent 60%), radial-gradient(900px 500px at 90% 0%, rgba(76,199,154,0.05), transparent 60%);
+  --app-canvas-wash: radial-gradient(1200px 600px at 20% -10%, rgba(86,107,218,0.08), transparent 60%), radial-gradient(900px 500px at 90% 0%, rgba(31,144,104,0.05), transparent 60%);
 
   --background: 30 8% 8%;
   --foreground: 47 31% 94%;
@@ -458,21 +466,21 @@
   --card-foreground: 47 31% 94%;
   --popover: 40 10% 12%;
   --popover-foreground: 47 31% 94%;
-  --primary: 234 67% 73%;
-  --primary-foreground: 30 8% 8%;
+  --primary: 231 64% 60%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 45 11% 15%;
   --secondary-foreground: 47 31% 94%;
   --muted: 45 11% 15%;
   --muted-foreground: 45 10% 69%;
   --accent: 45 11% 15%;
   --accent-foreground: 47 31% 94%;
-  --destructive: 9 100% 69%;
-  --destructive-foreground: 30 8% 8%;
+  --destructive: 8 63% 52%;
+  --destructive-foreground: 0 0% 100%;
   --border: 40 12% 20%;
   --input: 40 12% 20%;
-  --ring: 234 67% 73%;
-  --success: 158 52% 54%;
-  --warning: 23 100% 68%;
+  --ring: 231 64% 60%;
+  --success: 159 65% 34%;
+  --warning: 25 73% 44%;
 
   --table-header-bg:    #24221C;
   --table-header-text:  var(--text-subtle);

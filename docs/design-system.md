@@ -64,7 +64,9 @@ Campus blue replaced with huchu's **`#4C64D4`** indigo (`action-primary-bg` in t
 --brand-50/100/200/300/400/500/700/900  full ramp
 ```
 
-Dark: `--brand` → `#8A94E8`, soft → `rgba(76,100,212,.16)`.
+Dark: `--brand` → `#566BDA`, soft → `rgba(76,100,212,.16)`.
+
+> **Dark-mode contrast note:** huchu's playbook only specifies a light "warm paper" palette — dark mode is our own extrapolation. `--brand` and the tone tokens (`--tone-success/warn/danger`) do double duty as both (a) text/icon colour on dark canvas and (b) solid button-fill behind white label text (`bg-[var(--action-primary-bg)] text-white`, `bg-[var(--tone-danger)] text-white`, etc.). A pastel-light dark accent reads well for (a) but fails WCAG contrast for (b) — e.g. white text on a pale `#8A94E8` fill is ~2.8:1, well under the 4.5:1 AA floor. Dark-mode `--brand`/tones are therefore kept **mid-tone, not pastel** (~4–4.6:1 with white), and `-strong` variants darken further (matching light mode's darken-on-hover direction) rather than lightening, so hover/pressed states improve contrast instead of degrading it. This is an explicit trade-off: `-strong` values are slightly muted when used as wash-text (badges) — a future pass could split `-on-fill` vs `-on-wash` tone variants if that becomes a real complaint.
 
 ### 2.5 Semantic tones
 

@@ -73,24 +73,24 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-overlay)] p-4"
+      className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-[var(--surface-overlay)] p-4"
       onClick={handleBackdropClick}
     >
       <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--brand)] p-6 text-white">
+        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--action-primary-bg)] p-6 text-[var(--action-primary-fg)]">
           <div className="flex items-center gap-3">
             <Tag className="w-6 h-6" />
             <div>
               <h2 className="text-xl font-semibold">What's New</h2>
-              <p className="text-white/80 text-sm">
+              <p className="text-[var(--on-brand-muted)] text-sm">
                 TGPatcher v{currentVersion}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white/20 rounded-[var(--radius-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand)]"
+            className="p-1 hover:bg-[var(--on-brand-hover)] rounded-[var(--radius-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--action-primary-bg)]"
           >
             <X className="w-5 h-5" />
           </button>
