@@ -1,13 +1,13 @@
 /* ─────────────────────────────────────────────────────────────────────
    Campus Pilot — Design Tokens
-   Adopted from huchu (iamngoni/huchu) "Warm Paper" system. Single source of truth.
+   Adopted from huchu (iamngoni/huchu) "Pure White" system. Single source of truth.
    Light + dark palettes. No literals outside this file.
 
    Principles (from huchu's platform-ux-playbook):
-   1. Saturated colour = action or state, never decoration. Chrome is neutral warm paper.
+   1. Saturated colour = action or state, never decoration. Chrome is neutral pure white / cool slate.
    2. Role tokens, not swatches: --text-strong/body/muted, --border, --brand
    3. Copy is load-bearing: sentence case, verb-led buttons
-   4. Border-first surfaces — shadow only for floating overlays
+   4. Border-first surfaces — shadow only for floating overlays (huchu soft shadow)
    5. Focus ring + halo, 36px touch target, prefers-reduced-motion
    ───────────────────────────────────────────────────────────────────── */
 
@@ -16,12 +16,12 @@
 :root {
   color-scheme: light;
 
-  /* ── Surfaces (warm paper) ────────────────────────────────── */
-  --canvas:           #FCFCF4;
+  /* ── Surfaces (pure Huchu white) ────────────────────────────── */
+  --canvas:           #FFFFFF;
   --surface:          #FFFFFF;
-  --surface-muted:    #F7F7F2;
-  --surface-sunken:   #F0F0E8;
-  --surface-deep:     #E3E3D8;
+  --surface-muted:    #F8F9FA;
+  --surface-sunken:   #F3F4F6;
+  --surface-deep:     #EEF0F3;
 
   /* Aliases read by existing screens */
   --surface-app:            var(--canvas);
@@ -34,13 +34,13 @@
   --surface-soft:           var(--surface-sunken);
   --surface-hover:          var(--surface-muted);
   --surface-active:         var(--brand-soft);
-  --surface-overlay:        rgba(17, 17, 17, 0.14);
+  --surface-overlay:        rgba(15, 23, 42, 0.14);
 
-  /* ── Text ───────────────────────────────────────────────── */
+  /* ── Text (slate) ─────────────────────────────────────────── */
   --text-strong:    #111111;
   --text-body:      #111111;
-  --text-muted:     #6B6B6B;
-  --text-subtle:    #9A9A93;
+  --text-muted:     #64748B;
+  --text-subtle:    #94A3B8;
   --text-inverse:   #FFFFFF;
   --text-link:      #4C64D4;
   --text-primary:   var(--text-strong);
@@ -49,11 +49,11 @@
   --icon-default:   var(--text-muted);
   --icon-strong:    var(--text-strong);
 
-  /* ── Borders ────────────────────────────────────────────── */
-  --border:          #E6E6E0;
-  --border-strong:   #D6D6C8;
-  --border-subtle:   #EFEFE8;
-  --hairline:        rgba(17, 17, 17, 0.08);
+  /* ── Borders (cool hairline) ──────────────────────────────── */
+  --border:          #E5E7EB;
+  --border-strong:   #D1D5DB;
+  --border-subtle:   #F1F5F9;
+  --hairline:        rgba(15, 23, 42, 0.08);
   --chrome-edge:     var(--border-strong);
   --chrome-shadow:   0 1px 0 0 var(--hairline);
   --edge-subtle:     var(--border-subtle);
@@ -83,17 +83,17 @@
   --on-brand-muted:  rgba(255, 255, 255, 0.8);
   --on-brand-hover:  rgba(255, 255, 255, 0.2);
 
-  /* Gray ramp (warm, for bridges) */
-  --gray-50:   #FCFCF4;
-  --gray-100:  #F7F7F2;
-  --gray-200:  #E6E6E0;
-  --gray-300:  #D6D6C8;
-  --gray-400:  #B5B5A8;
-  --gray-500:  #9A9A93;
-  --gray-600:  #6B6B6B;
-  --gray-700:  #4A4A4A;
-  --gray-800:  #2A2A2A;
-  --gray-900:  #111111;
+  /* Gray ramp (cool slate, for bridges) */
+  --gray-50:   #FFFFFF;
+  --gray-100:  #F8F9FA;
+  --gray-200:  #E5E7EB;
+  --gray-300:  #D1D5DB;
+  --gray-400:  #94A3B8;
+  --gray-500:  #64748B;
+  --gray-600:  #475569;
+  --gray-700:  #334155;
+  --gray-800:  #1E293B;
+  --gray-900:  #0F172A;
 
   --neutral-0:   var(--surface);
   --neutral-50:  var(--gray-50);
@@ -178,12 +178,12 @@
   --interactive-primary:      var(--brand);
   --interactive-danger:       var(--tone-danger);
 
-  /* ── Elevation — border-first, shadow only for floating overlays ─ */
+  /* ── Elevation — border-first, huchu soft shadow for floating overlays ─ */
   --shadow-none:    none;
   --shadow-rest:    none;
-  --shadow-hover:   0 2px 6px rgba(17, 17, 17, 0.06);
-  --shadow-popover: 0 12px 24px -12px rgba(17, 17, 17, 0.18), 0 2px 6px rgba(17, 17, 17, 0.06);
-  --shadow-modal:   0 16px 32px -12px rgba(17, 17, 17, 0.22), 0 4px 8px rgba(17, 17, 17, 0.08);
+  --shadow-hover:   0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-popover: 0 4px 16px -4px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06);
+  --shadow-modal:   0 20px 40px -12px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
   --shadow-card:    var(--shadow-rest);
 
   --elevation-0: var(--shadow-none);
@@ -300,7 +300,7 @@
   --z-toast:   200;
 
   /* ── Shadcn compat (hsl triplets for existing tailwind config) ─── */
-  --background: 60 33% 97%;
+  --background: 0 0% 100%;
   --foreground: 0 0% 7%;
   --card: 0 0% 100%;
   --card-foreground: 0 0% 7%;
@@ -310,14 +310,14 @@
   --primary-foreground: 0 0% 100%;
   --secondary: 231 100% 97%;
   --secondary-foreground: 0 0% 7%;
-  --muted: 60 20% 96%;
-  --muted-foreground: 0 0% 42%;
-  --accent: 60 20% 96%;
+  --muted: 210 17% 98%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 220 14% 96%;
   --accent-foreground: 0 0% 7%;
   --destructive: 8 84% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 60 11% 89%;
-  --input: 60 11% 89%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
   --ring: 229 61% 56%;
   --success: 160 58% 41%;
   --success-foreground: 0 0% 100%;
@@ -378,7 +378,7 @@
   --table-row-hover-bg: var(--surface-muted);
 
   /* ── App chrome ─────────────────────────────────────────── */
-  --app-canvas-wash: radial-gradient(1200px 600px at 20% -10%, rgba(76,100,212,0.05), transparent 60%), radial-gradient(900px 500px at 90% 0%, rgba(44,164,124,0.04), transparent 60%);
+  --app-canvas-wash: none;
 }
 
 /* ── Dark mode ────────────────────────────────────────────────────── */
@@ -458,7 +458,7 @@
   --focus-ring:      #7C8CE8;
   --focus-ring-soft: rgba(124, 140, 232, 0.22);
 
-  --app-canvas-wash: radial-gradient(1200px 600px at 20% -10%, rgba(86,107,218,0.08), transparent 60%), radial-gradient(900px 500px at 90% 0%, rgba(31,144,104,0.05), transparent 60%);
+  --app-canvas-wash: none;
 
   --background: 30 8% 8%;
   --foreground: 47 31% 94%;

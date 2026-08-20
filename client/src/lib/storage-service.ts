@@ -16,7 +16,7 @@ import type {
 } from "../modules/configs/types";
 
 const MINIO_BASE_URL =
-  import.meta.env.VITE_MINIO_BASE_URL || "http://localhost:9000";
+  import.meta.env.VITE_MINIO_BASE_URL || "https://campus-storage.antonlabs.cc";
 const MINIO_BUCKET = import.meta.env.VITE_MINIO_BUCKET || "campus-pilot";
 
 class StorageService {
