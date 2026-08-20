@@ -1,6 +1,6 @@
 //
 //  campus-pilot
-//  AdminSetupScreen.tsx - Administrator Creation Screen
+//  AdminSetupScreen.tsx - Administrator Creation Screen (token-driven, huchu elegance)
 //
 //  Created by Ngonidzashe Mangudya on 26/09/2025.
 //  Copyright (c) 2025 Codecraft Solutions
@@ -193,7 +193,7 @@ export const AdminSetupScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-[var(--canvas)]" style={{ backgroundImage: "var(--app-canvas-wash)" }}>
       {/* Theme Toggle */}
       <div className="absolute top-6 right-6 z-10">
         <ThemeToggle />
@@ -202,45 +202,45 @@ export const AdminSetupScreen: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 mx-auto mb-4 bg-[var(--tone-success-bg)] border border-[var(--tone-success-bd)] rounded-full flex items-center justify-center">
+            <Shield className="w-8 h-8 text-[var(--tone-success)]" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-3xl font-bold text-[var(--text-strong)] mb-4">
             Create the first administrator
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-xl mx-auto">
+          <p className="text-lg text-[var(--text-muted)] max-w-xl mx-auto">
             This account manages users, classes, fees, and more.
           </p>
         </div>
 
         {/* Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+        <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name */}
             <div>
               <label
                 htmlFor="full_name"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Full Name *
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)] pointer-events-none" />
                 <input
                   id="full_name"
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => updateField("full_name", e.target.value)}
-                  className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                  data-slot="input" className={`w-full pl-11 pr-4 h-[var(--h-control-md)] rounded-[var(--radius-md)] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] text-sm ${
                     getFieldError("full_name")
-                      ? "border-red-500"
-                      : "border-gray-300 dark:border-gray-600"
+                      ? "border-[var(--tone-danger)]"
+                      : "border-[var(--input-border)]"
                   }`}
                   placeholder="Enter your full name"
                 />
               </div>
               {getFieldError("full_name") && (
-                <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                <p className="mt-2 text-sm text-[var(--tone-danger-strong)] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {getFieldError("full_name")}
                 </p>
@@ -251,7 +251,7 @@ export const AdminSetupScreen: React.FC = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Admin Email (will be your login) *
               </label>
@@ -260,15 +260,15 @@ export const AdminSetupScreen: React.FC = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateField("email", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                data-slot="input" className={`w-full px-4 h-[var(--h-control-md)] rounded-[var(--radius-md)] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] text-sm ${
                   getFieldError("email")
-                    ? "border-red-500"
-                    : "border-gray-300 dark:border-gray-600"
+                    ? "border-[var(--tone-danger)]"
+                    : "border-[var(--input-border)]"
                 }`}
                 placeholder="admin@yourschool.com"
               />
               {getFieldError("email") && (
-                <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                <p className="mt-2 text-sm text-[var(--tone-danger-strong)] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {getFieldError("email")}
                 </p>
@@ -279,7 +279,7 @@ export const AdminSetupScreen: React.FC = () => {
             <div>
               <label
                 htmlFor="phone"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Phone Number
               </label>
@@ -288,15 +288,15 @@ export const AdminSetupScreen: React.FC = () => {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                data-slot="input" className={`w-full px-4 h-[var(--h-control-md)] rounded-[var(--radius-md)] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] text-sm ${
                   getFieldError("phone")
-                    ? "border-red-500"
-                    : "border-gray-300 dark:border-gray-600"
+                    ? "border-[var(--tone-danger)]"
+                    : "border-[var(--input-border)]"
                 }`}
                 placeholder="+263 123 456 789"
               />
               {getFieldError("phone") && (
-                <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                <p className="mt-2 text-sm text-[var(--tone-danger-strong)] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {getFieldError("phone")}
                 </p>
@@ -307,7 +307,7 @@ export const AdminSetupScreen: React.FC = () => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Password *
               </label>
@@ -318,17 +318,17 @@ export const AdminSetupScreen: React.FC = () => {
                   value={formData.password}
                   onChange={(e) => updateField("password", e.target.value)}
                   onKeyDown={handlePasswordKeyDown}
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                  data-slot="input" className={`w-full px-4 pr-11 h-[var(--h-control-md)] rounded-[var(--radius-md)] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] text-sm ${
                     getFieldError("password")
-                      ? "border-red-500"
-                      : "border-gray-300 dark:border-gray-600"
+                      ? "border-[var(--tone-danger)]"
+                      : "border-[var(--input-border)]"
                   }`}
                   placeholder="Enter a secure password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -340,7 +340,7 @@ export const AdminSetupScreen: React.FC = () => {
 
               {/* Caps Lock Warning */}
               {capsLockOn && (
-                <p className="mt-2 text-sm text-yellow-600 flex items-center gap-2">
+                <p className="mt-2 text-sm text-[var(--tone-warn-strong)] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   Caps Lock is on
                 </p>
@@ -350,30 +350,30 @@ export const AdminSetupScreen: React.FC = () => {
               {formData.password && (
                 <div className="mt-3 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span className="text-sm font-medium text-[var(--text-strong)]">
                       Password strength
                     </span>
                     <span
                       className={`text-sm font-medium ${
                         passwordStrength.isValid
-                          ? "text-green-600"
-                          : "text-red-600"
+                          ? "text-[var(--tone-success-strong)]"
+                          : "text-[var(--tone-danger-strong)]"
                       }`}
                     >
                       {passwordStrength.label}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-[var(--surface-muted)] border border-[var(--border-subtle)] rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
                       style={{ width: `${(passwordStrength.score + 1) * 20}%` }}
                     />
                   </div>
                   {passwordStrength.feedback.length > 0 && (
-                    <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                    <div className="text-sm text-[var(--text-muted)] space-y-1">
                       {passwordStrength.feedback.map((feedback, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <div className="w-1 h-1 bg-gray-400 rounded-full" />
+                          <div className="w-1 h-1 bg-[var(--text-subtle)] rounded-full" />
                           {feedback}
                         </div>
                       ))}
@@ -383,12 +383,12 @@ export const AdminSetupScreen: React.FC = () => {
               )}
 
               {getFieldError("password") && (
-                <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                <p className="mt-2 text-sm text-[var(--tone-danger-strong)] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {getFieldError("password")}
                 </p>
               )}
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
                 At least 10 characters, including a number and symbol.
               </p>
             </div>
@@ -397,7 +397,7 @@ export const AdminSetupScreen: React.FC = () => {
             <div>
               <label
                 htmlFor="password_confirm"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Confirm Password *
               </label>
@@ -409,17 +409,17 @@ export const AdminSetupScreen: React.FC = () => {
                   onChange={(e) =>
                     updateField("password_confirm", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:bg-gray-700 dark:text-white ${
+                  data-slot="input" className={`w-full px-4 pr-11 h-[var(--h-control-md)] rounded-[var(--radius-md)] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] text-sm ${
                     getFieldError("password_confirm")
-                      ? "border-red-500"
-                      : "border-gray-300 dark:border-gray-600"
+                      ? "border-[var(--tone-danger)]"
+                      : "border-[var(--input-border)]"
                   }`}
                   placeholder="Confirm your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                 >
                   {showPasswordConfirm ? (
                     <EyeOff className="w-5 h-5" />
@@ -434,15 +434,15 @@ export const AdminSetupScreen: React.FC = () => {
                 <div className="mt-2 flex items-center gap-2">
                   {formData.password === formData.password_confirm ? (
                     <>
-                      <Check className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-green-600">
+                      <Check className="w-4 h-4 text-[var(--tone-success)]" />
+                      <span className="text-sm text-[var(--tone-success-strong)]">
                         Passwords match
                       </span>
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                      <span className="text-sm text-red-600">
+                      <AlertCircle className="w-4 h-4 text-[var(--tone-danger)]" />
+                      <span className="text-sm text-[var(--tone-danger-strong)]">
                         Passwords do not match
                       </span>
                     </>
@@ -451,7 +451,7 @@ export const AdminSetupScreen: React.FC = () => {
               )}
 
               {getFieldError("password_confirm") && (
-                <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                <p className="mt-2 text-sm text-[var(--tone-danger-strong)] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {getFieldError("password_confirm")}
                 </p>
@@ -464,7 +464,7 @@ export const AdminSetupScreen: React.FC = () => {
                 type="button"
                 onClick={handleBack}
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 h-[var(--h-control-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-strong)] rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
                 Back to School Details
@@ -473,7 +473,7 @@ export const AdminSetupScreen: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || !passwordStrength.isValid}
-                className="flex items-center gap-2 px-8 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl transition-colors disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-8 h-[var(--h-control-md)] bg-[var(--tone-success)] hover:bg-[var(--tone-success-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-white font-semibold rounded-[var(--radius-md)] transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
               >
                 {isSubmitting ? (
                   <>
@@ -492,14 +492,14 @@ export const AdminSetupScreen: React.FC = () => {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+        <div className="mt-6 bg-[var(--tone-info-bg)] border border-[var(--tone-info-bd)] rounded-[var(--radius-xl)] p-4">
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <Shield className="w-5 h-5 text-[var(--tone-info-strong)] mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
+              <h4 className="text-sm font-medium text-[var(--tone-info-strong)] mb-1">
                 Security Notice
               </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+              <p className="text-sm text-[var(--tone-info-strong)] opacity-90">
                 This administrator account will have full access to the system.
                 Keep your credentials secure and use a strong, unique password.
                 You can create additional admin accounts later.
