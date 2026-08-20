@@ -1,7 +1,7 @@
 //
 //  campus-pilot
-//  BootScreen.tsx - Bootstrap Loading Screen
-//
+//  BootScreen.tsx - Bootstrap Loading Screen (token-driven, huchu elegance)
+//  Canvas-neutral chrome, token surfaces/borders/text/tones. No literal grays/blues.
 //  Created by Ngonidzashe Mangudya on 26/09/2025.
 //  Copyright (c) 2025 Codecraft Solutions
 //
@@ -97,13 +97,13 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
         return (
           <div className="text-center space-y-6">
             <div className="w-16 h-16 mx-auto">
-              <Loader2 className="w-full h-full text-blue-600 animate-spin" />
+              <Loader2 className="w-full h-full text-[var(--brand)] animate-spin" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
                 CampusPilot
               </h1>
-              <p className="text-gray-600 dark:text-gray-300">
+              <p className="text-[var(--text-muted)]">
                 Checking configuration...
               </p>
             </div>
@@ -113,14 +113,14 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
       case "offline":
         return (
           <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto bg-orange-100 rounded-full flex items-center justify-center">
-              <WifiOff className="w-8 h-8 text-orange-600" />
+            <div className="w-16 h-16 mx-auto bg-[var(--tone-warn-bg)] border border-[var(--tone-warn-bd)] rounded-full flex items-center justify-center">
+              <WifiOff className="w-8 h-8 text-[var(--tone-warn)]" />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
                 You're offline
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+              <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
                 Setup can proceed offline. Changes will sync when internet
                 becomes available.
               </p>
@@ -128,7 +128,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed"
+                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-warn)] hover:bg-[var(--tone-warn-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-white font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
                 >
                   {isRetrying ? (
                     <>
@@ -150,21 +150,21 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
       case "error":
         return (
           <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+            <div className="w-16 h-16 mx-auto bg-[var(--tone-danger-bg)] border border-[var(--tone-danger-bd)] rounded-full flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-[var(--tone-danger)]" />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
                 Configuration Error
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+              <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
                 {error || "Unable to determine system configuration status."}
               </p>
               <div className="pt-2">
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed"
+                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-danger)] hover:bg-[var(--tone-danger-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-white font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
                 >
                   {isRetrying ? (
                     <>
@@ -187,13 +187,13 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
         return (
           <div className="text-center space-y-6">
             <div className="w-16 h-16 mx-auto">
-              <Loader2 className="w-full h-full text-green-600 animate-spin" />
+              <Loader2 className="w-full h-full text-[var(--tone-success)] animate-spin" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
                 CampusPilot
               </h1>
-              <p className="text-green-600 font-medium">Configuration loaded</p>
+              <p className="text-[var(--tone-success)] font-medium">Configuration loaded</p>
             </div>
           </div>
         );
@@ -205,23 +205,24 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 ${className}`}
+      className={`min-h-screen bg-[var(--canvas)] flex items-center justify-center p-4 ${className}`}
+      style={{ backgroundImage: "var(--app-canvas-wash)" }}
     >
       {/* Theme Toggle */}
-      <div className="absolute top-6 right-6">
+      <div className="absolute top-6 right-6 z-10">
         <ThemeToggle />
       </div>
 
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+        <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
           {renderContent()}
         </div>
 
         {/* Offline indicator */}
         {status === "offline" && (
           <div className="mt-6 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg text-sm text-orange-700 dark:text-orange-300">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--tone-warn-bg)] border border-[var(--tone-warn-bd)] rounded-[var(--radius-lg)] text-sm text-[var(--tone-warn-strong)]">
+              <div className="w-2 h-2 bg-[var(--tone-warn)] rounded-full"></div>
               Works offline
             </div>
           </div>
