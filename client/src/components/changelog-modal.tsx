@@ -28,13 +28,13 @@ interface ChangelogModalProps {
 const ChangeTypeIcon = ({ type }: { type: string }) => {
   switch (type) {
     case "new":
-      return <Sparkles className="w-4 h-4 text-green-600" />;
+      return <Sparkles className="w-4 h-4 text-[var(--tone-success)]" />;
     case "fixed":
-      return <Bug className="w-4 h-4 text-blue-600" />;
+      return <Bug className="w-4 h-4 text-[var(--tone-info)]" />;
     case "improved":
-      return <Zap className="w-4 h-4 text-purple-600" />;
+      return <Zap className="w-4 h-4 text-[var(--accent-500)]" />;
     case "breaking":
-      return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      return <AlertTriangle className="w-4 h-4 text-[var(--tone-danger)]" />;
     default:
       return null;
   }
@@ -51,10 +51,10 @@ const ChangeTypeLabel = ({ type }: { type: string }) => {
 };
 
 const ChangeTypeColors = {
-  new: "border-l-green-500 bg-green-50",
-  fixed: "border-l-blue-500 bg-blue-50",
-  improved: "border-l-purple-500 bg-purple-50",
-  breaking: "border-l-red-500 bg-red-50",
+  new: "border-l-[var(--tone-success)] bg-[var(--tone-success-bg)]",
+  fixed: "border-l-[var(--tone-info)] bg-[var(--tone-info-bg)]",
+  improved: "border-l-[var(--accent-500)] bg-[var(--accent-50)]",
+  breaking: "border-l-[var(--tone-danger)] bg-[var(--tone-danger-bg)]",
 };
 
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({
@@ -83,14 +83,14 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
             <Tag className="w-6 h-6" />
             <div>
               <h2 className="text-xl font-semibold">What's New</h2>
-              <p className="text-blue-100 text-sm">
+              <p className="text-white/80 text-sm">
                 TGPatcher v{currentVersion}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+            className="p-1 hover:bg-white/20 rounded-[var(--radius-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand)]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -100,19 +100,19 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
         <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
           {entries.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-500">No new changes to display.</p>
+              <p className="text-[var(--text-muted)]">No new changes to display.</p>
             </div>
           ) : (
             <div className="p-6 space-y-8">
               {entries.map((entry, index) => (
                 <div key={entry.version} className="space-y-4">
                   {/* Version Header */}
-                  <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
+                  <div className="flex items-center gap-3 pb-2 border-b border-[var(--border)]">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[var(--badge-brand-bg)] text-[var(--badge-brand-text)] border border-[var(--tone-info-bd)]">
                         v{entry.version}
                       </span>
-                      <div className="flex items-center gap-1 text-gray-500 text-sm">
+                      <div className="flex items-center gap-1 text-[var(--text-muted)] text-sm">
                         <Calendar className="w-4 h-4" />
                         {new Date(entry.date).toLocaleDateString()}
                       </div>
@@ -128,10 +128,10 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                         <div key={type} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <ChangeTypeIcon type={type} />
-                            <h4 className="font-medium text-gray-900">
+                            <h4 className="font-medium text-[var(--text-strong)]">
                               <ChangeTypeLabel type={type} />
                             </h4>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-[var(--text-muted)]">
                               ({changes.length})
                             </span>
                           </div>
@@ -139,13 +139,13 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                             {changes.map((change, changeIndex) => (
                               <div
                                 key={changeIndex}
-                                className={`pl-4 border-l-4 py-2 px-3 rounded-r ${
+                                className={`pl-4 border-l-4 py-2 px-3 rounded-r-[var(--radius-sm)] ${
                                   ChangeTypeColors[
                                     type as keyof typeof ChangeTypeColors
                                   ]
                                 }`}
                               >
-                                <p className="text-sm text-gray-700">
+                                <p className="text-sm text-[var(--text-body)]">
                                   {change}
                                 </p>
                               </div>
@@ -158,7 +158,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
 
                   {/* Separator for multiple versions */}
                   {index < entries.length - 1 && (
-                    <div className="border-t border-gray-200 pt-6" />
+                    <div className="border-t border-[var(--border)] pt-6" />
                   )}
                 </div>
               ))}

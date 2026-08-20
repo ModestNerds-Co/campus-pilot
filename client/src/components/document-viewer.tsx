@@ -106,16 +106,16 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     } else {
       return (
         <div className="flex flex-col items-center justify-center h-full">
-          <FileText className="w-16 h-16 text-gray-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <FileText className="w-16 h-16 text-[var(--text-subtle)] mb-4" />
+          <h3 className="text-lg font-semibold text-[var(--text-strong)] mb-2">
             Unknown Document Type
           </h3>
-          <p className="text-gray-600 text-center mb-4">
+          <p className="text-[var(--text-muted)] text-center mb-4">
             File type: {docType.mimeType}
           </p>
           <button
             onClick={handleDownload}
-            className="compact-button bg-blue-600 text-white flex items-center gap-2"
+            className="h-[var(--h-control-md)] px-4 bg-[var(--action-primary-bg)] hover:bg-[var(--action-primary-bg-hover)] text-[var(--action-primary-fg)] rounded-[var(--radius-md)] flex items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
           >
             <Download className="w-4 h-4" />
             Download Document
@@ -127,22 +127,22 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-[2px] flex items-center justify-center z-[var(--z-overlay)] p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg max-w-6xl w-full h-full m-4 overflow-hidden flex flex-col"
+        className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] shadow-[var(--shadow-modal)] max-w-6xl w-full h-full m-4 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+          <h3 className="text-lg font-semibold text-[var(--text-strong)]">
             {documentId ? `${title} - ID: ${documentId}` : title}
           </h3>
           <div className="flex items-center gap-2">
             {documentData && !loading && (
               <button
                 onClick={handleDownload}
-                className="compact-button bg-blue-600 text-white flex items-center gap-1"
+                className="h-[var(--h-control-md)] px-3 bg-[var(--action-primary-bg)] hover:bg-[var(--action-primary-bg-hover)] text-[var(--action-primary-fg)] rounded-[var(--radius-md)] flex items-center gap-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
               >
                 <Download className="w-4 h-4" />
                 Download
@@ -150,7 +150,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             )}
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full"
+              className="p-2 hover:bg-[var(--surface-muted)] rounded-full text-[var(--text-muted)] hover:text-[var(--text-strong)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
               <X className="w-5 h-5" />
             </button>
