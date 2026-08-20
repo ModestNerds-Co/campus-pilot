@@ -1,9 +1,7 @@
 //
 //  campus-pilot
-//  LoginScreen.tsx - Login Screen Component
-//
-//  Created by Ngonidzashe Mangudya on 26/09/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  LoginScreen.tsx - Login Screen Component (token-driven, huchu elegance)
+//  Canvas-neutral chrome, token surfaces/borders/text/brand. No literal grays/blues.
 //
 
 import React, { useState, useEffect } from "react";
@@ -92,7 +90,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 ${className}`}
+      className={`min-h-screen bg-[var(--canvas)] flex items-center justify-center p-4 ${className}`}
+      style={{ backgroundImage: "var(--app-canvas-wash)" }}
     >
       {/* Theme Toggle */}
       <div className="absolute top-6 right-6 z-10">
@@ -100,10 +99,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
       </div>
 
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8">
+        <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
           {/* School Branding */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-full flex items-center justify-center overflow-hidden">
+            <div className="w-20 h-20 mx-auto mb-4 bg-[var(--brand-soft)] border border-[var(--brand-100)] rounded-full flex items-center justify-center overflow-hidden">
               {schoolConfig?.logo_light_url ? (
                 <img
                   src={schoolConfig.logo_light_url}
@@ -111,27 +110,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <School className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                <School className="w-10 h-10 text-[var(--brand)]" />
               )}
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold text-[var(--text-strong)] mb-2">
               {schoolConfig?.name || "CampusPilot"}
             </h1>
             {schoolConfig?.legal_name && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <p className="text-sm text-[var(--text-muted)] mb-2">
                 {schoolConfig.legal_name}
               </p>
             )}
-            <p className="text-gray-600 dark:text-gray-300">
-              Sign in to your account
-            </p>
+            <p className="text-[var(--text-body)]">Sign in to your account</p>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-red-700">
+              <div className="bg-[var(--tone-danger-bg)] border border-[var(--tone-danger-bd)] rounded-[var(--radius-lg)] p-3 flex items-center gap-2 text-[var(--tone-danger-strong)]">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </div>
@@ -141,19 +138,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)]" />
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  data-slot="input"
+                  className="w-full pl-11 pr-4 h-[var(--h-control-md)] rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors disabled:bg-[var(--surface-muted)] disabled:cursor-not-allowed text-sm"
                   placeholder="Enter your email"
                   autoComplete="email"
                 />
@@ -164,19 +162,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)]" />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  data-slot="input"
+                  className="w-full pl-11 pr-11 h-[var(--h-control-md)] rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0 transition-colors disabled:bg-[var(--surface-muted)] disabled:cursor-not-allowed text-sm"
                   placeholder="Enter your password"
                   autoComplete="current-password"
                 />
@@ -184,7 +183,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300 disabled:cursor-not-allowed"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed"
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -199,7 +199,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+              className="w-full px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--action-primary-bg)] hover:bg-[var(--action-primary-bg-hover)] active:bg-[var(--action-primary-bg-pressed)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--action-primary-fg)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
             >
               {isLoading ? (
                 <>
@@ -214,9 +214,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
 
           {/* Support Notice */}
           <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[var(--text-muted)]">
               Having trouble?{" "}
-              <span className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer">
+              <span className="text-[var(--text-link)] hover:underline cursor-pointer">
                 Contact your system admin
               </span>
             </p>
@@ -226,7 +226,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
         {/* School Contact Info */}
         {(schoolConfig?.email || schoolConfig?.phone) && (
           <div className="mt-6 text-center">
-            <div className="inline-flex items-center gap-4 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
+            <div className="inline-flex items-center gap-4 px-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] text-sm text-[var(--text-body)] shadow-[var(--shadow-rest)]">
               {schoolConfig.email && (
                 <span className="flex items-center gap-2">
                   <Mail className="w-3 h-3" />
@@ -240,7 +240,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
 
         {/* Powered by CampusPilot */}
         <div className="mt-8 flex items-center justify-center gap-1">
-          <span className="text-xs text-gray-400 dark:text-gray-500">
+          <span className="text-xs text-[var(--text-subtle)]">
             Powered by Campus Pilot
           </span>
           <img
