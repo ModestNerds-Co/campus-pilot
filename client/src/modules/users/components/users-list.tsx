@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
+import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 
 export const UsersList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -108,18 +109,17 @@ export const UsersList: React.FC = () => {
     fetchUsers();
   };
 
+  usePageChrome(
+    "Users",
+    <Button onClick={handleAddUser}>
+      <Plus className="size-4" />
+      Add User
+    </Button>,
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold leading-tight text-[var(--text-strong)]">Users</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">Manage user accounts and permissions</p>
-        </div>
-        <Button onClick={handleAddUser}>
-          <Plus className="size-4" />
-          Add User
-        </Button>
-      </div>
+      <p className="text-sm text-[var(--text-muted)]">Manage user accounts and permissions</p>
 
       <TableControlsBar>
         <TableControlsSearch onSubmit={handleSearch}>

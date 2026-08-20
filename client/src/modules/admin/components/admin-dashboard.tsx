@@ -7,6 +7,7 @@ import React from "react";
 import { useAuthStore } from "../../../stores/auth-store";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import {
   Users,
   Building2,
@@ -74,14 +75,13 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, to
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuthStore();
 
+  usePageChrome("Dashboard");
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-semibold leading-tight text-[var(--text-strong)]">Dashboard</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">Welcome back, {user?.full_name}</p>
-        </div>
+        <p className="text-sm text-[var(--text-muted)]">Welcome back, {user?.full_name}</p>
         <div className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] shadow-sm">
           <Calendar className="size-4" />
           <span>
