@@ -100,7 +100,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <Loader2 className="w-full h-full text-[var(--brand)] animate-spin" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
+              <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
                 CampusPilot
               </h1>
               <p className="text-[var(--text-muted)]">
@@ -117,7 +117,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <WifiOff className="w-8 h-8 text-[var(--tone-warn)]" />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
+              <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
                 You're offline
               </h1>
               <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
@@ -154,7 +154,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <AlertTriangle className="w-8 h-8 text-[var(--tone-danger)]" />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
+              <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
                 Configuration Error
               </h1>
               <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
@@ -190,7 +190,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
               <Loader2 className="w-full h-full text-[var(--tone-success)] animate-spin" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-[var(--text-strong)]">
+              <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
                 CampusPilot
               </h1>
               <p className="text-[var(--tone-success)] font-medium">Configuration loaded</p>

@@ -44,7 +44,7 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
     <div className="space-y-6">
       {/* Preview Header */}
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-[var(--text-strong)] mb-2">
+        <h3 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-2">
           Live Preview
         </h3>
         <p className="text-sm text-[var(--text-muted)]">

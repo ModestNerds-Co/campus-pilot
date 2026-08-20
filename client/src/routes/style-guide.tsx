@@ -32,7 +32,7 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-[var(--text-strong)]">{title}</h2>
+        <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)]">{title}</h2>
         {desc ? <p className="mt-1 text-sm text-[var(--text-muted)]">{desc}</p> : null}
       </div>
       <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">{children}</div>
@@ -63,7 +63,7 @@ function StyleGuidePage() {
 
       <main className="mx-auto max-w-6xl space-y-8 p-6 lg:p-8">
         <div className="space-y-2">
-          <h1 className="text-[22px] font-semibold leading-tight text-[var(--text-strong)]">Design system</h1>
+          <h1 className="text-[length:var(--type-page-title-size)] font-bold leading-tight text-[var(--text-strong)]">Design system</h1>
           <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-muted)]">
             Elegance from huchu, adapted to Campus Pilot. Neutral chrome, brand as action, role tokens everywhere. Toggle theme top-right to
             verify light + dark. This page is the proof — if it renders in <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 font-mono text-xs">vite build</code> and in Docker, the system ships.
@@ -81,12 +81,12 @@ function StyleGuidePage() {
             <Swatch name="Strong" value="--border-strong" className="bg-[var(--border-strong)]" />
           </div>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <Swatch name="Brand" value="#0B5DF0" className="bg-[var(--brand)]" />
+            <Swatch name="Brand" value="--brand" className="bg-[var(--brand)]" />
             <Swatch name="Brand soft" value="--brand-soft" className="bg-[var(--brand-soft)]" />
-            <Swatch name="Success" value="#168052" className="bg-[var(--tone-success)]" />
-            <Swatch name="Warn" value="#B45309" className="bg-[var(--tone-warn)]" />
-            <Swatch name="Danger" value="#B83A2A" className="bg-[var(--tone-danger)]" />
-            <Swatch name="Info" value="--brand" className="bg-[var(--tone-info)]" />
+            <Swatch name="Success" value="--tone-success" className="bg-[var(--tone-success)]" />
+            <Swatch name="Warn" value="--tone-warn" className="bg-[var(--tone-warn)]" />
+            <Swatch name="Danger" value="--tone-danger" className="bg-[var(--tone-danger)]" />
+            <Swatch name="Info" value="--tone-info" className="bg-[var(--tone-info)]" />
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <span className="inline-flex items-center gap-1.5 text-xs"><span className="size-3 rounded-full bg-[var(--tone-success)]" /> success wash <span className="rounded bg-[var(--tone-success-bg)] px-2 py-0.5 text-[var(--tone-success-strong)]">Aa</span></span>
@@ -96,13 +96,15 @@ function StyleGuidePage() {
         </Section>
 
         {/* Typography */}
-        <Section title="Typography" desc="Inter var. Weights 400/500/600. Tight title, relaxed body.">
+        <Section title="Typography" desc="Inter var. huchu strict 3-tier scale — page title / section title / body, plus table + caption steps.">
           <div className="space-y-3">
-            <div className="text-[32px] font-semibold leading-tight text-[var(--text-strong)]">Display 32 — the big number</div>
-            <div className="text-[22px] font-semibold leading-tight text-[var(--text-strong)]">Page title 22 — Departments</div>
-            <div className="text-sm font-medium text-[var(--text-strong)]">Label 13 — medium, tight</div>
-            <div className="text-sm leading-relaxed text-[var(--text-body)]">Body 14 — relaxed. The quick brown fox jumps over the lazy dog. Use for prose, table cells, form help.</div>
-            <div className="text-xs text-[var(--text-muted)]">Caption 12 — subtle, for hints</div>
+            <div className="text-[length:var(--type-page-title-size)] font-bold leading-tight text-[var(--text-strong)]">Page title 32/700 — Departments</div>
+            <div className="text-[length:var(--type-section-title-size)] font-bold leading-tight text-[var(--text-strong)]">Section title 20/700 — Recent activity</div>
+            <div className="text-[length:var(--type-label-size)] font-semibold text-[var(--text-strong)]">Label 13/600 — Email address</div>
+            <div className="text-[length:var(--type-body-size)] leading-relaxed text-[var(--text-body)]">Body 14/400 — The quick brown fox jumps over the lazy dog. Use for prose, table cells, form help.</div>
+            <div className="text-[length:var(--type-table-header-size)] font-semibold uppercase tracking-wider text-[var(--table-header-text)]">Table header 12/600 uppercase</div>
+            <div className="text-[length:var(--type-table-cell-size)] font-medium text-[var(--text-strong)]">Table cell 14/500</div>
+            <div className="text-[length:var(--type-caption-size)] font-medium text-[var(--text-muted)]">Caption 12/500 — subtle, for hints</div>
             <div className="font-mono text-sm text-[var(--text-body)]">Mono 14 — IDs, codes <span className="font-tabular">123,456.00</span></div>
           </div>
         </Section>

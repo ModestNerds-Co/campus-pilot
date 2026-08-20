@@ -114,7 +114,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
               )}
             </div>
 
-            <h1 className="text-2xl font-bold text-[var(--text-strong)] mb-2">
+            <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)] mb-2">
               {schoolConfig?.name || "CampusPilot"}
             </h1>
             {schoolConfig?.legal_name && (

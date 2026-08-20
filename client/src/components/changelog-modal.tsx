@@ -82,7 +82,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
           <div className="flex items-center gap-3">
             <Tag className="w-6 h-6" />
             <div>
-              <h2 className="text-xl font-semibold">What's New</h2>
+              <h2 className="text-[length:var(--type-section-title-size)] font-bold">What's New</h2>
               <p className="text-[var(--on-brand-muted)] text-sm">
                 TGPatcher v{currentVersion}
               </p>

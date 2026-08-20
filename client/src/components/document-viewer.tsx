@@ -135,7 +135,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-          <h3 className="text-lg font-semibold text-[var(--text-strong)]">
+          <h3 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)]">
             {documentId ? `${title} - ID: ${documentId}` : title}
           </h3>
           <div className="flex items-center gap-2">

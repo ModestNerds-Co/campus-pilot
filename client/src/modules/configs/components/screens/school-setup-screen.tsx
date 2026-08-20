@@ -296,7 +296,7 @@ export const SchoolSetupScreen: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Branding Section */}
               <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
-                <h2 className="text-xl font-semibold text-[var(--text-strong)] mb-6">
+                <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-6">
                   Branding
                 </h2>
 
@@ -459,7 +459,7 @@ export const SchoolSetupScreen: React.FC = () => {
 
               {/* Contact Information */}
               <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
-                <h2 className="text-xl font-semibold text-[var(--text-strong)] mb-6">
+                <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-6">
                   Contact Information
                 </h2>
 
@@ -542,7 +542,7 @@ export const SchoolSetupScreen: React.FC = () => {
 
               {/* Address */}
               <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
-                <h2 className="text-xl font-semibold text-[var(--text-strong)] mb-6">
+                <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-6">
                   Address & Location
                 </h2>
 
