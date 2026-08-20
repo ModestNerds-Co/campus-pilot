@@ -61,8 +61,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-            <p className="text-gray-600">Loading document...</p>
+            <Loader2 className="mx-auto mb-2 size-8 animate-spin text-[var(--brand)]" />
+            <p className="text-sm text-[var(--text-muted)]">Loading document...</p>
           </div>
         </div>
       );
@@ -72,8 +72,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">Failed to load document</p>
+            <AlertCircle className="mx-auto mb-2 size-12 text-[var(--text-subtle)]" />
+            <p className="text-sm text-[var(--text-muted)]">Failed to load document</p>
           </div>
         </div>
       );

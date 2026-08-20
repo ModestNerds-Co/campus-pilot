@@ -1,9 +1,6 @@
 //
 //  campus-pilot
-//  protected-route.tsx - Protected Route Component
-//
-//  Created by Ngonidzashe Mangudya on 02/10/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  protected-route.tsx - Protected Route Component (token-driven)
 //
 
 import React, { useEffect, useState } from "react";
@@ -16,10 +13,7 @@ interface ProtectedRouteProps {
   requiredRoles?: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requiredRoles = [],
-}) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles = [] }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user, accessToken } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
@@ -30,31 +24,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         navigate({ to: "/login" });
         return;
       }
-
       if (requiredRoles.length > 0 && user) {
-        const hasRequiredRole = requiredRoles.some((role) =>
-          user.roles.includes(role),
-        );
+        const hasRequiredRole = requiredRoles.some((role) => user.roles.includes(role));
         if (!hasRequiredRole) {
-          navigate({ to: "/" }); // was /forbidden
+          navigate({ to: "/" });
           return;
         }
       }
-
       setIsChecking(false);
     };
-
     verifyAuth();
   }, [isAuthenticated, user, accessToken, navigate, requiredRoles]);
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-300">
-            Verifying authentication...
-          </p>
+          <Loader2 className="mx-auto mb-4 size-8 animate-spin text-[var(--brand)]" />
+          <p className="text-sm text-[var(--text-muted)]">Verifying authentication...</p>
         </div>
       </div>
     );

@@ -73,12 +73,12 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-overlay)] p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--brand)] p-6 text-white">
           <div className="flex items-center gap-3">
             <Tag className="w-6 h-6" />
             <div>

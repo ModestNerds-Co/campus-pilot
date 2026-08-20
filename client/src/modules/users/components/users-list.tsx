@@ -1,9 +1,6 @@
 //
 //  campus-pilot
-//  users-list.tsx - Users List Component
-//
-//  Created by Ngonidzashe Mangudya on 02/10/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  users-list.tsx - Users List Component (token-driven)
 //
 
 import React, { useState, useEffect } from "react";
@@ -22,14 +19,16 @@ import { usersService } from "../services/users-service";
 import type { User, UsersListParams } from "../types";
 import toast from "react-hot-toast";
 import { UserFormModal } from "./user-form-modal";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TablePagination } from "@/components/ui/data-table";
 
 export const UsersList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -39,16 +38,10 @@ export const UsersList: React.FC = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const params: UsersListParams = {
-        page: currentPage,
-        per_page: 20,
-      };
-
+      const params: UsersListParams = { page: currentPage, per_page: 20 };
       if (searchQuery) params.search = searchQuery;
       if (statusFilter !== "all") params.status = statusFilter;
-
       const response = await usersService.listUsers(params);
-
       if (response.success && response.data) {
         setUsers(response.data.users);
         setTotalPages(response?.pagination?.total_pages ?? 1);
@@ -73,21 +66,14 @@ export const UsersList: React.FC = () => {
 
   const handleToggleActive = async (user: User) => {
     try {
-      const response = user.is_active
-        ? await usersService.deactivateUser(user.id)
-        : await usersService.activateUser(user.id);
-
+      const response = user.is_active ? await usersService.deactivateUser(user.id) : await usersService.activateUser(user.id);
       if (response.success) {
-        toast.success(
-          user.is_active
-            ? "User deactivated successfully"
-            : "User activated successfully",
-        );
+        toast.success(user.is_active ? "User deactivated successfully" : "User activated successfully");
         fetchUsers();
       } else {
         toast.error(response.message || "Failed to update user status");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update user status");
     }
     setOpenMenuId(null);
@@ -95,7 +81,6 @@ export const UsersList: React.FC = () => {
 
   const handleDelete = async (userId: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
-
     try {
       const response = await usersService.deleteUser(userId);
       if (response.success) {
@@ -104,7 +89,7 @@ export const UsersList: React.FC = () => {
       } else {
         toast.error(response.message || "Failed to delete user");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete user");
     }
     setOpenMenuId(null);
@@ -114,252 +99,178 @@ export const UsersList: React.FC = () => {
     setSelectedUser(undefined);
     setIsModalOpen(true);
   };
-
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
     setOpenMenuId(null);
   };
-
   const handleModalSuccess = () => {
     fetchUsers();
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Users
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage user accounts and permissions
-          </p>
+          <h1 className="text-[22px] font-semibold leading-tight text-[var(--text-strong)]">Users</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Manage user accounts and permissions</p>
         </div>
-        <button
-          onClick={handleAddUser}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
+        <Button onClick={handleAddUser}>
+          <Plus className="size-4" />
           Add User
-        </button>
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <form onSubmit={handleSearch} className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search users..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-          </form>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
+        <form onSubmit={handleSearch} className="flex-1">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search users..."
+            leadingIcon={<Search className="size-4" />}
+            aria-label="Search users"
+          />
+        </form>
+        <Select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="sm:w-[180px]"
+          aria-label="Status filter"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </Select>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <TableWrap>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <Loader2 className="size-8 animate-spin text-[var(--brand)]" />
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-12">
-            <UsersIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">No users found</p>
-          </div>
+          <TableEmpty icon={<UsersIcon className="size-12" />} title="No users found" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+          <TableScroll>
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Roles
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Last Login
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <TH>User</TH>
+                  <TH>Contact</TH>
+                  <TH>Roles</TH>
+                  <TH>Status</TH>
+                  <TH>Last Login</TH>
+                  <TH className="text-right">Actions</TH>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              </THead>
+              <TBody>
                 {users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  <TR key={user.id}>
+                    <TD className="whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-[var(--brand-soft)]">
+                          <span className="text-sm font-medium text-[var(--brand-strong)]">
                             {user.full_name.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {user.full_name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {user.email}
-                          </div>
+                        <div>
+                          <div className="text-sm font-medium text-[var(--text-strong)]">{user.full_name}</div>
+                          <div className="text-sm text-[var(--text-muted)]">{user.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        {user.phone || "—"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
+                    </TD>
+                    <TD className="whitespace-nowrap text-sm text-[var(--text-strong)]">{user.phone || "—"}</TD>
+                    <TD>
                       <div className="flex flex-wrap gap-1">
                         {user.roles.map((role, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
-                          >
+                          <Badge key={index} tone="brand" className="capitalize">
                             {role}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          user.is_active
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-                        }`}
-                      >
-                        {user.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {user.last_login_at
-                        ? new Date(user.last_login_at).toLocaleDateString()
-                        : "Never"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="relative">
+                    </TD>
+                    <TD className="whitespace-nowrap">
+                      <Badge tone={user.is_active ? "success" : "danger"}>{user.is_active ? "Active" : "Inactive"}</Badge>
+                    </TD>
+                    <TD className="whitespace-nowrap text-sm text-[var(--text-muted)]">
+                      {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : "Never"}
+                    </TD>
+                    <TD className="whitespace-nowrap text-right">
+                      <div className="relative flex justify-end">
                         <button
-                          onClick={() =>
-                            setOpenMenuId(
-                              openMenuId === user.id ? null : user.id,
-                            )
-                          }
-                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
+                          onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                          className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                          aria-label="User actions"
                         >
-                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                          <MoreVertical className="size-4" />
                         </button>
                         {openMenuId === user.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-10">
+                          <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
                             <button
                               onClick={() => handleEditUser(user)}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+                              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
-                              <Edit className="w-4 h-4" />
-                              Edit
+                              <Edit className="size-4" /> Edit
                             </button>
                             <button
                               onClick={() => handleToggleActive(user)}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+                              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               {user.is_active ? (
                                 <>
-                                  <UserX className="w-4 h-4" />
-                                  Deactivate
+                                  <UserX className="size-4" /> Deactivate
                                 </>
                               ) : (
                                 <>
-                                  <UserCheck className="w-4 h-4" />
-                                  Activate
+                                  <UserCheck className="size-4" /> Activate
                                 </>
                               )}
                             </button>
                             <button
                               onClick={() => handleDelete(user.id)}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
-                              <Trash2 className="w-4 h-4" />
-                              Delete
+                              <Trash2 className="size-4" /> Delete
                             </button>
                           </div>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TD>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TBody>
+            </Table>
+          </TableScroll>
         )}
 
-        {/* Pagination */}
         {!isLoading && users.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
+          <TablePagination>
+            <div className="text-sm text-[var(--text-muted)]">
+              Page {currentPage} of {totalPages}
             </div>
-          </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </TablePagination>
         )}
-      </div>
+      </TableWrap>
 
-      {/* User Form Modal */}
-      <UserFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleModalSuccess}
-        user={selectedUser}
-      />
+      <UserFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleModalSuccess} user={selectedUser} />
     </div>
   );
 };

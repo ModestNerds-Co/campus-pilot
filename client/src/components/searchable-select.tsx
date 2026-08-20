@@ -1,9 +1,6 @@
 //
 //  campus-pilot
-//  SearchableSelect.tsx
-//
-//  Created by Ngonidzashe Mangudya on 21/08/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  SearchableSelect.tsx (token-driven)
 //
 
 import React, { useState, useEffect, useRef } from "react";
@@ -44,7 +41,6 @@ export function SearchableSelect({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter options based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredOptions(options);
@@ -53,55 +49,39 @@ export function SearchableSelect({
         (option) =>
           option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
           option.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (option.description &&
-            option.description
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase())),
+          (option.description && option.description.toLowerCase().includes(searchQuery.toLowerCase())),
       );
       setFilteredOptions(filtered);
     }
   }, [searchQuery, options]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setSearchQuery("");
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Focus search input when dropdown opens
   useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
+    if (isOpen && searchInputRef.current) searchInputRef.current.focus();
   }, [isOpen]);
 
   const selectedOption = options.find((option) => option.id === value);
-
   const handleSelect = (optionValue: number | null) => {
     onChange(optionValue);
     setIsOpen(false);
     setSearchQuery("");
   };
-
   const handleToggle = () => {
     if (!disabled) {
       setIsOpen(!isOpen);
-      if (!isOpen) {
-        setSearchQuery("");
-      }
+      if (!isOpen) setSearchQuery("");
     }
   };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       setIsOpen(false);
@@ -113,34 +93,25 @@ export function SearchableSelect({
 
   return (
     <div className={cn("relative", className)} ref={dropdownRef}>
-      {/* Trigger Button */}
       <button
         type="button"
         onClick={handleToggle}
         disabled={disabled || loading}
         className={cn(
-          "w-full flex items-center justify-between px-4 py-3 text-left bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm text-sm text-gray-900 dark:text-white",
-          "hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-          disabled &&
-            "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed",
-          isOpen && "ring-2 ring-blue-500 border-blue-500",
+          "flex h-[var(--h-control-md)] w-full items-center justify-between rounded-[var(--radius-md)] border bg-[var(--surface)] px-3 py-2 text-left text-sm text-[var(--text-strong)] shadow-sm",
+          "border-[var(--border)] hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]",
+          disabled && "cursor-not-allowed bg-[var(--surface-muted)] text-[var(--text-subtle)] opacity-60",
+          isOpen && "ring-2 ring-[var(--focus-ring)] border-[var(--focus-ring)]",
         )}
       >
-        <span
-          className={cn(
-            "block truncate",
-            !selectedOption && "text-gray-500 dark:text-gray-400",
-          )}
-        >
+        <span className={cn("block truncate", !selectedOption && "text-[var(--text-subtle)]")}>
           {loading ? (
             "Loading..."
           ) : selectedOption ? (
             <span>
               <span className="font-medium">{selectedOption.value}</span>
               {selectedOption.description && (
-                <span className="text-gray-500 dark:text-gray-400 ml-2">
-                  ({selectedOption.description})
-                </span>
+                <span className="ml-2 text-[var(--text-muted)]">({selectedOption.description})</span>
               )}
             </span>
           ) : (
@@ -150,35 +121,34 @@ export function SearchableSelect({
 
         <div className="flex items-center gap-1">
           {selectedOption && allowClear && !disabled && (
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
                 handleSelect(null);
               }}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.stopPropagation();
+                  handleSelect(null);
+                }
+              }}
+              className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
+              aria-label="Clear selection"
             >
-              <span className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                ×
-              </span>
-            </button>
+              ×
+            </span>
           )}
-          <ChevronDown
-            className={cn(
-              "w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform",
-              isOpen && "transform rotate-180",
-            )}
-          />
+          <ChevronDown className={cn("size-4 text-[var(--text-muted)] transition-transform", isOpen && "rotate-180")} />
         </div>
       </button>
 
-      {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg">
-          {/* Search Input */}
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-popover)]">
+          <div className="border-b border-[var(--border)] p-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -186,34 +156,28 @@ export function SearchableSelect({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search options..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-900 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
               />
             </div>
           </div>
 
-          {/* Options List */}
           <div className="max-h-60 overflow-y-auto">
             {allowClear && (
               <button
                 type="button"
                 onClick={() => handleSelect(null)}
                 className={cn(
-                  "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between",
-                  value === null &&
-                    "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
+                  "flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]",
+                  value === null && "bg-[var(--brand-soft)] text-[var(--brand-strong)]",
                 )}
               >
-                <span className="text-gray-500 dark:text-gray-400 italic">
-                  Clear selection
-                </span>
-                {value === null && <Check className="w-4 h-4" />}
+                <span className="italic text-[var(--text-muted)]">Clear selection</span>
+                {value === null && <Check className="size-4" />}
               </button>
             )}
 
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 italic">
-                No options found
-              </div>
+              <div className="px-3 py-2 text-sm italic text-[var(--text-muted)]">No options found</div>
             ) : (
               filteredOptions.map((option) => (
                 <button
@@ -221,29 +185,20 @@ export function SearchableSelect({
                   type="button"
                   onClick={() => handleSelect(option.id)}
                   className={cn(
-                    "w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between",
-                    option.id === value &&
-                      "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
+                    "flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]",
+                    option.id === value && "bg-[var(--brand-soft)] text-[var(--brand-strong)]",
                   )}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      {option.value}
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-[var(--text-strong)]">{option.value}</div>
                     {option.label !== option.value && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {option.label}
-                      </div>
+                      <div className="truncate text-xs text-[var(--text-muted)]">{option.label}</div>
                     )}
                     {option.description && (
-                      <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                        {option.description}
-                      </div>
+                      <div className="truncate text-xs text-[var(--text-subtle)]">{option.description}</div>
                     )}
                   </div>
-                  {option.id === value && (
-                    <Check className="w-4 h-4 flex-shrink-0" />
-                  )}
+                  {option.id === value && <Check className="size-4 shrink-0" />}
                 </button>
               ))
             )}

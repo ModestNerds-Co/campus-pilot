@@ -1,17 +1,17 @@
 //
 //  campus-pilot
-//  user-form-modal.tsx - User Form Modal Component
-//
-//  Created by Ngonidzashe Mangudya on 03/10/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  user-form-modal.tsx - User Form Modal Component (token-driven)
 //
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { usersService } from "../services/users-service";
 import { rolesService } from "../services/roles-service";
 import type { User, CreateUserRequest, UpdateUserRequest, Role } from "../types";
 import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { DialogShell, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/dialog";
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -20,12 +20,7 @@ interface UserFormModalProps {
   user?: User;
 }
 
-export const UserFormModal: React.FC<UserFormModalProps> = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  user,
-}) => {
+export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSuccess, user }) => {
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
@@ -52,14 +47,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           is_active: user.is_active,
         });
       } else {
-        setFormData({
-          email: "",
-          full_name: "",
-          password: "",
-          phone: "",
-          roles: [],
-          is_active: true,
-        });
+        setFormData({ email: "", full_name: "", password: "", phone: "", roles: [], is_active: true });
       }
     }
   }, [user, isOpen]);
@@ -71,7 +59,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       if (response.success && response.data) {
         setAvailableRoles(response.data.roles);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load roles");
     } finally {
       setIsLoadingRoles(false);
@@ -80,29 +68,23 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.email.trim()) {
       toast.error("Email is required");
       return;
     }
-
     if (!formData.full_name.trim()) {
       toast.error("Full name is required");
       return;
     }
-
     if (!user && !formData.password.trim()) {
       toast.error("Password is required for new users");
       return;
     }
-
     if (formData.roles.length === 0) {
       toast.error("At least one role is required");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       if (user) {
         const updateData: UpdateUserRequest = {
@@ -112,9 +94,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           roles: formData.roles,
           is_active: formData.is_active,
         };
-        if (formData.password) {
-          updateData.password = formData.password;
-        }
+        if (formData.password) updateData.password = formData.password;
         const response = await usersService.updateUser(user.id, updateData);
         if (response.success) {
           toast.success("User updated successfully");
@@ -141,7 +121,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           toast.error(response.message || "Failed to create user");
         }
       }
-    } catch (error) {
+    } catch {
       toast.error(user ? "Failed to update user" : "Failed to create user");
     } finally {
       setIsSubmitting(false);
@@ -151,214 +131,144 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const toggleRole = (roleName: string) => {
     setFormData((prev) => ({
       ...prev,
-      roles: prev.roles.includes(roleName)
-        ? prev.roles.filter((r) => r !== roleName)
-        : [...prev.roles, roleName],
+      roles: prev.roles.includes(roleName) ? prev.roles.filter((r) => r !== roleName) : [...prev.roles, roleName],
     }));
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/50 transition-opacity"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {user ? "Edit User" : "Add New User"}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+    <DialogShell open={isOpen} onClose={onClose}>
+      <DialogHeader title={user ? "Edit User" : "Add New User"} onClose={onClose} />
+      <form onSubmit={handleSubmit}>
+        <DialogBody className="space-y-4">
+          <div>
+            <Label>
+              Email <span className="text-[var(--tone-danger)]">*</span>
+            </Label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="user@example.com"
+              className="mt-1.5"
+              required
+            />
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                placeholder="user@example.com"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                required
+          <div>
+            <Label>
+              Full Name <span className="text-[var(--tone-danger)]">*</span>
+            </Label>
+            <Input
+              type="text"
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              placeholder="John Doe"
+              className="mt-1.5"
+              required
+            />
+          </div>
+
+          <div>
+            <Label>Phone</Label>
+            <Input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="+123****7890"
+              className="mt-1.5"
+            />
+          </div>
+
+          <div>
+            <Label>
+              Password {!user && <span className="text-[var(--tone-danger)]">*</span>}
+              {user && <span className="ml-1 text-xs font-normal text-[var(--text-subtle)]">(leave blank to keep unchanged)</span>}
+            </Label>
+            <div className="relative mt-1.5">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder={user ? "Enter new password" : "Enter password"}
+                className="pr-10"
+                required={!user}
               />
-            </div>
-
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.full_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
-                }
-                placeholder="John Doe"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                required
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                placeholder="+1234567890"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password {!user && <span className="text-red-500">*</span>}
-                {user && (
-                  <span className="text-xs text-gray-500 ml-1">
-                    (leave blank to keep unchanged)
-                  </span>
-                )}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  placeholder={user ? "Enter new password" : "Enter password"}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  required={!user}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Roles */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Roles <span className="text-red-500">*</span>
-              </label>
-              {isLoadingRoles ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                </div>
-              ) : (
-                <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 space-y-2 max-h-40 overflow-y-auto">
-                  {availableRoles.map((role) => (
-                    <label
-                      key={role.id}
-                      className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.roles.includes(role.name)}
-                        onChange={() => toggleRole(role.name)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {role.name}
-                        </span>
-                        {role.description && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {role.description}
-                          </p>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {formData.roles.length} role{formData.roles.length !== 1 ? "s" : ""} selected
-              </p>
-            </div>
-
-            {/* Active Status */}
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) =>
-                    setFormData({ ...formData, is_active: e.target.checked })
-                  }
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Active user
-                </span>
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                Inactive users cannot log in to the system
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                disabled={isSubmitting}
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-strong)]"
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {user ? "Updating..." : "Creating..."}
-                  </>
-                ) : (
-                  <>{user ? "Update User" : "Create User"}</>
-                )}
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-    </div>
+          </div>
+
+          <div>
+            <Label className="mb-2">
+              Roles <span className="text-[var(--tone-danger)]">*</span>
+            </Label>
+            {isLoadingRoles ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="size-5 animate-spin text-[var(--brand)]" />
+              </div>
+            ) : (
+              <div className="max-h-40 space-y-2 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
+                {availableRoles.map((role) => (
+                  <label
+                    key={role.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] p-2 hover:bg-[var(--surface-muted)]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.roles.includes(role.name)}
+                      onChange={() => toggleRole(role.name)}
+                      className="size-4 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--focus-ring)]"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-[var(--text-strong)]">{role.name}</span>
+                      {role.description && <p className="text-xs text-[var(--text-muted)]">{role.description}</p>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="mt-1 text-xs text-[var(--text-subtle)]">
+              {formData.roles.length} role{formData.roles.length !== 1 ? "s" : ""} selected
+            </p>
+          </div>
+
+          <div>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                className="size-4 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--focus-ring)]"
+              />
+              <span className="text-sm font-medium text-[var(--text-strong)]">Active user</span>
+            </label>
+            <p className="ml-6 mt-1 text-xs text-[var(--text-subtle)]">Inactive users cannot log in to the system</p>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                {user ? "Updating..." : "Creating..."}
+              </>
+            ) : (
+              <>{user ? "Update User" : "Create User"}</>
+            )}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogShell>
   );
 };

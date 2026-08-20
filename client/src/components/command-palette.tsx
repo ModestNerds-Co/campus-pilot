@@ -289,36 +289,36 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center pt-32">
-      <div className="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-2xl max-h-96 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[var(--surface-overlay)] pt-32">
+      <div className="w-full max-w-2xl max-h-96 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)]">
         {/* Search Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-gray-200">
-          <Search className="w-5 h-5 text-gray-400" />
+        <div className="flex items-center gap-3 border-b border-[var(--border)] p-4">
+          <Search className="size-5 text-[var(--text-muted)]" />
           <input
             ref={inputRef}
             type="text"
             placeholder="Type a command or search..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent outline-none border-none focus:ring-0 focus:border-none focus:outline-none text-gray-900"
+            className="flex-1 bg-transparent text-sm text-[var(--text-strong)] outline-none placeholder:text-[var(--text-subtle)]"
             style={{ boxShadow: "none", border: "none" }}
           />
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
-            <X className="w-4 h-4 text-gray-400" />
+          <button onClick={onClose} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]">
+            <X className="size-4 text-[var(--text-muted)]" />
           </button>
         </div>
 
         {/* Commands List */}
         <div className="overflow-y-auto max-h-80">
           {Object.keys(groupedCommands).length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Search className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <div className="p-8 text-center text-[var(--text-muted)]">
+              <Search className="mx-auto mb-2 size-8 text-[var(--text-subtle)]" />
               <p>No commands found</p>
             </div>
           ) : (
             Object.entries(groupedCommands).map(([group, groupCommands]) => (
               <div key={group}>
-                <div className="px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-100">
+                <div className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2 text-xs font-semibold text-[var(--text-muted)]">
                   {group}
                 </div>
                 {groupCommands.map((command, index) => {
@@ -339,18 +339,18 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                         }
                       }}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0",
+                        "flex w-full items-center gap-3 border-b border-[var(--border-subtle)] p-3 text-left transition-colors last:border-b-0 hover:bg-[var(--surface-muted)]",
                         globalIndex === selectedIndex &&
-                          "bg-blue-50 text-blue-600",
+                          "bg-[var(--brand-soft)] text-[var(--brand-strong)]",
                       )}
                     >
-                      {Icon && <Icon className="w-4 h-4 text-gray-400" />}
+                      {Icon && <Icon className="size-4 text-[var(--text-muted)]" />}
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">
                           {command.label}
                         </div>
                         {command.description && (
-                          <div className="text-xs text-gray-500 truncate">
+                          <div className="truncate text-xs text-[var(--text-muted)]">
                             {command.description}
                           </div>
                         )}
@@ -364,7 +364,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
           <div className="flex items-center justify-between">
             <span>Use ↑↓ to navigate, Enter to select</span>
             <span>ESC to close</span>
