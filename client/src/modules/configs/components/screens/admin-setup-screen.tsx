@@ -473,7 +473,7 @@ export const AdminSetupScreen: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || !passwordStrength.isValid}
-                className="flex items-center gap-2 px-8 h-[var(--h-control-md)] bg-[var(--tone-success)] hover:bg-[var(--tone-success-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-white font-semibold rounded-[var(--radius-md)] transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
+                className="flex items-center gap-2 px-8 h-[var(--h-control-md)] bg-[var(--tone-success)] hover:bg-[var(--tone-success-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
               >
                 {isSubmitting ? (
                   <>

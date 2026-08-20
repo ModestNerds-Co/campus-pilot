@@ -23,7 +23,7 @@ const variantStyles: Record<Variant, string> = {
   secondary:   "bg-[var(--surface)] text-[var(--text-strong)] border border-[var(--border)] hover:bg-[var(--surface-muted)] hover:border-[var(--border-strong)] active:bg-[var(--surface-sunken)] shadow-sm",
   outline:     "bg-[var(--surface)] text-[var(--text-strong)] border border-[var(--border)] hover:bg-[var(--surface-muted)] active:bg-[var(--surface-sunken)]",
   ghost:       "bg-transparent text-[var(--text-body)] hover:bg-[var(--button-ghost-hover-bg)] active:bg-[var(--surface-sunken)] border border-transparent",
-  destructive: "bg-[var(--tone-danger)] text-white hover:bg-[var(--tone-danger-strong)] active:bg-[var(--tone-danger-strong)] active:brightness-90 shadow-sm border border-transparent",
+  destructive: "bg-[var(--tone-danger)] text-[var(--on-brand)] hover:bg-[var(--tone-danger-strong)] active:bg-[var(--tone-danger-strong)] active:brightness-90 shadow-sm border border-transparent",
   link:        "bg-transparent text-[var(--text-link)] underline-offset-4 hover:underline border border-transparent p-0 h-auto",
 };
 

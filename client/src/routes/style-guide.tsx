@@ -46,7 +46,7 @@ function StyleGuidePage() {
       {/* Top bar */}
       <header className="sticky top-0 z-[var(--z-nav)] flex h-14 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-6">
         <div className="flex items-center gap-3">
-          <div className="flex size-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] text-white">
+          <div className="flex size-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] text-[var(--on-brand)]">
             <Sparkles className="size-4" />
           </div>
           <div>

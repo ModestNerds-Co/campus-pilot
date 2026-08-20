@@ -128,7 +128,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-warn)] hover:bg-[var(--tone-warn-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-white font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
+                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-warn)] hover:bg-[var(--tone-warn-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
                 >
                   {isRetrying ? (
                     <>
@@ -164,7 +164,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-danger)] hover:bg-[var(--tone-danger-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-white font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
+                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-danger)] hover:bg-[var(--tone-danger-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
                 >
                   {isRetrying ? (
                     <>

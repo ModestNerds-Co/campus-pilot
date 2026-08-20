@@ -166,7 +166,7 @@ export const AdminDashboard: React.FC = () => {
             { n: 3, title: "Enroll students", desc: "Start adding students" },
           ].map((s) => (
             <div key={s.n} className="flex gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold text-white">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold text-[var(--on-brand)]">
                 {s.n}
               </div>
               <div>

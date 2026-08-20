@@ -371,7 +371,7 @@ export const SchoolSetupScreen: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleLogoUpload("light", null)}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-[var(--tone-danger)] text-white rounded-full flex items-center justify-center hover:bg-[var(--tone-danger-strong)] transition-colors"
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-[var(--tone-danger)] text-[var(--on-brand)] rounded-full flex items-center justify-center hover:bg-[var(--tone-danger-strong)] transition-colors"
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -421,7 +421,7 @@ export const SchoolSetupScreen: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleLogoUpload("dark", null)}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-[var(--tone-danger)] text-white rounded-full flex items-center justify-center hover:bg-[var(--tone-danger-strong)] transition-colors"
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-[var(--tone-danger)] text-[var(--on-brand)] rounded-full flex items-center justify-center hover:bg-[var(--tone-danger-strong)] transition-colors"
                               >
                                 <X className="w-3 h-3" />
                               </button>
