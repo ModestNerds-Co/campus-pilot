@@ -2,7 +2,11 @@
    Campus Pilot — Global Styles
    Layer order mirrors huchu's globals.css. Tokens come from
    src/styles/tokens.css which is imported first.
+   Atkinson Hyperlegible is Huchu's typeface — hoisted here so it
+   loads even though @corelithzw/react re-imports it inside a layer.
    ───────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Atkinson+Hyperlegible+Mono:wght@400..700&display=swap");
 
 @import "./styles/tokens.css";
 @tailwind base;

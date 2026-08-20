@@ -1,14 +1,15 @@
 /* ─────────────────────────────────────────────────────────────────────
    Campus Pilot — Design Tokens
-   Adopted from huchu (iamngoni/huchu) "Pure White" system. Single source of truth.
-   Light + dark palettes. No literals outside this file.
+   Exact Huchu (iamngoni/huchu) — @corelithzw/react 0.4.1
+   Single source of truth. No literals outside this file.
+   Dump: awk '/^:root/,/^}/' node_modules/@corelithzw/react/dist/styles.css
 
-   Principles (from huchu's platform-ux-playbook):
-   1. Saturated colour = action or state, never decoration. Chrome is neutral pure white / cool slate.
-   2. Role tokens, not swatches: --text-strong/body/muted, --border, --brand
-   3. Copy is load-bearing: sentence case, verb-led buttons
-   4. Border-first surfaces — shadow only for floating overlays (huchu soft shadow)
-   5. Focus ring + halo, 36px touch target, prefers-reduced-motion
+   Principles:
+   1. Saturated colour = action/state only. Chrome neutral #F7F8FA/#FFF.
+   2. Role tokens, not swatches.
+   3. Sentence case, verb-led buttons.
+   4. Border-first, shadow only for floating overlays.
+   5. 36px touch floor, focus 2px + 3px halo, reduced-motion.
    ───────────────────────────────────────────────────────────────────── */
 
 @layer theme, base, tokens, app, components, utilities;
@@ -16,14 +17,13 @@
 :root {
   color-scheme: light;
 
-  /* ── Surfaces (pure Huchu white) ────────────────────────────── */
-  --canvas:           #FFFFFF;
+  /* ── Surfaces — Huchu exact ─────────────────────────────── */
+  --canvas:           #F7F8FA;
   --surface:          #FFFFFF;
-  --surface-muted:    #F8F9FA;
-  --surface-sunken:   #F3F4F6;
-  --surface-deep:     #EEF0F3;
+  --surface-muted:    #F1F3F6;
+  --surface-sunken:   #E8EBF0;
+  --surface-deep:     #DDE1E7;
 
-  /* Aliases read by existing screens */
   --surface-app:            var(--canvas);
   --surface-canvas:         var(--canvas);
   --surface-base:           var(--surface);
@@ -34,26 +34,29 @@
   --surface-soft:           var(--surface-sunken);
   --surface-hover:          var(--surface-muted);
   --surface-active:         var(--brand-soft);
-  --surface-overlay:        rgba(15, 23, 42, 0.14);
+  --surface-overlay:        rgba(22, 24, 29, 0.14);
 
-  /* ── Text (slate) ─────────────────────────────────────────── */
-  --text-strong:    #111111;
-  --text-body:      #111111;
-  --text-muted:     #64748B;
-  --text-subtle:    #94A3B8;
+  /* ── Text — Huchu exact ──────────────────────────────── */
+  --text-strong:    #16181D;
+  --text-body:      #262A33;
+  --text-muted:     #565C69;
+  --text-subtle:    #5E6573;
   --text-inverse:   #FFFFFF;
-  --text-link:      #4C64D4;
+  --text-link:      #0944C2;
   --text-primary:   var(--text-strong);
   --text-secondary: var(--text-body);
   --text-tertiary:  var(--text-muted);
   --icon-default:   var(--text-muted);
   --icon-strong:    var(--text-strong);
+  --ink:            #16181D;
+  --ink-soft:       #262A33;
 
-  /* ── Borders (cool hairline) ──────────────────────────────── */
-  --border:          #E5E7EB;
-  --border-strong:   #D1D5DB;
-  --border-subtle:   #F1F5F9;
-  --hairline:        rgba(15, 23, 42, 0.08);
+  /* ── Borders — Huchu exact ───────────────────────────── */
+  --border:          #E5E8EE;
+  --border-strong:   #D2D7E0;
+  --border-subtle:   #EEF0F4;
+  --border-hover:    #BFB9A8;
+  --hairline:        rgba(22,24,29,.08);
   --chrome-edge:     var(--border-strong);
   --chrome-shadow:   0 1px 0 0 var(--hairline);
   --edge-subtle:     var(--border-subtle);
@@ -64,36 +67,36 @@
   --input-border:    var(--border);
   --input-bg:        var(--surface);
 
-  /* ── Brand / action (huchu indigo #4C64D4) ────────────────── */
-  --brand:           #4C64D4;
-  --brand-strong:    #3B4FB0;
-  --brand-deeper:    #2E3D8A;
-  --brand-soft:      #EEF0FF;
-  --brand-tint:      rgba(76, 100, 212, 0.08);
-  --brand-50:        #EEF0FF;
-  --brand-100:       #DCE0FB;
-  --brand-200:       #BFC7F5;
-  --brand-300:       #9BA6EE;
-  --brand-400:       #7383E0;
+  /* ── Brand — Huchu #0B5DF0 (not #4C64D4) ──────────────── */
+  --brand:           #0B5DF0;
+  --brand-strong:    #0944C2;
+  --brand-deeper:    #08379C;
+  --brand-soft:      #E8EFFE;
+  --brand-tint:      rgba(11,93,240,.08);
+  --brand-50:        #E8EFFE;
+  --brand-100:       #D2E0FE;
+  --brand-200:       #B3C6FE;
+  --brand-300:       #86A8F7;
+  --brand-400:       #4B86F5;
   --brand-500:       var(--brand);
   --brand-700:       var(--brand-strong);
-  --brand-900:       #22307A;
+  --brand-900:       #082A6B;
   --brand-primary:   var(--brand);
   --on-brand:        #FFFFFF;
   --on-brand-muted:  rgba(255, 255, 255, 0.8);
   --on-brand-hover:  rgba(255, 255, 255, 0.2);
 
-  /* Gray ramp (cool slate, for bridges) */
-  --gray-50:   #FFFFFF;
-  --gray-100:  #F8F9FA;
-  --gray-200:  #E5E7EB;
-  --gray-300:  #D1D5DB;
-  --gray-400:  #94A3B8;
-  --gray-500:  #64748B;
-  --gray-600:  #475569;
-  --gray-700:  #334155;
-  --gray-800:  #1E293B;
-  --gray-900:  #0F172A;
+  /* Gray ramp — cool slate exact */
+  --gray-50:   #F7F8FA;
+  --gray-100:  #F1F3F6;
+  --gray-200:  #E5E8EE;
+  --gray-300:  #D2D7E0;
+  --gray-400:  #B9C0CF;
+  --gray-500:  #8B92A8;
+  --gray-600:  #565C69;
+  --gray-700:  #3E4350;
+  --gray-800:  #262A33;
+  --gray-900:  #16181D;
 
   --neutral-0:   var(--surface);
   --neutral-50:  var(--gray-50);
@@ -107,44 +110,31 @@
   --neutral-800: var(--gray-800);
   --neutral-900: var(--gray-900);
 
-  /* Accent (second series, teal-mixed) */
-  --accent-500: color-mix(in oklab, #1A9E8A 65%, var(--brand));
-  --accent-50:  color-mix(in oklab, var(--accent-500) 10%, var(--surface));
-  --accent-100: color-mix(in oklab, var(--accent-500) 18%, var(--surface));
-  --accent-200: color-mix(in oklab, var(--accent-500) 32%, var(--surface));
-  --accent-300: color-mix(in oklab, var(--accent-500) 48%, var(--surface));
-  --accent-400: color-mix(in oklab, var(--accent-500) 74%, var(--surface));
-  --accent-600: color-mix(in oklab, var(--accent-500) 82%, var(--gray-900));
-  --accent-700: color-mix(in oklab, var(--accent-500) 68%, var(--gray-900));
-  --accent-800: color-mix(in oklab, var(--accent-500) 54%, var(--gray-900));
-  --accent-900: color-mix(in oklab, var(--accent-500) 42%, var(--gray-900));
-
-  /* ── Semantic tones (huchu canonical status colour mapping) ── */
+  /* ── Tones — Huchu exact ──────────────────────────────── */
   --tone-info:             var(--brand);
-  --tone-info-bg:          var(--brand-soft);
-  --tone-info-bd:          var(--brand-100);
-  --tone-info-strong:      var(--brand-strong);
+  --tone-info-bg:          #E8EFFE;
+  --tone-info-bd:          #D2E0FE;
+  --tone-info-strong:      #0944C2;
 
-  --tone-success:          #2CA47C;
-  --tone-success-bg:       #E3F4EC;
-  --tone-success-bd:       #B9E4D3;
-  --tone-success-strong:   #1F7A57;
+  --tone-success:          #5E8E54;
+  --tone-success-bg:       #E7EFE0;
+  --tone-success-bd:       #C9DDC2;
+  --tone-success-strong:   #2E5526;
 
-  --tone-warn:             #F46414;
-  --tone-warn-bg:          #FDEBE0;
-  --tone-warn-bd:          #FBCBA8;
-  --tone-warn-strong:      #C2500F;
+  --tone-warn:             #B07626;
+  --tone-warn-bg:          #F4E6C5;
+  --tone-warn-bd:          #EAD6A4;
+  --tone-warn-strong:      #7A4E1A;
 
-  --tone-danger:           #EC442C;
-  --tone-danger-bg:        #FDE7E3;
-  --tone-danger-bd:        #F7BEB2;
-  --tone-danger-strong:    #B8331F;
+  --tone-danger:           #B83A2A;
+  --tone-danger-bg:        #F6E2DD;
+  --tone-danger-bd:        #E8C4BD;
+  --tone-danger-strong:    #7A2419;
 
   --tone-neutral:          var(--gray-600);
   --tone-neutral-bg:       var(--surface-muted);
   --tone-neutral-bd:       var(--border);
 
-  /* Expanded ramps for tone use */
   --success-50:  var(--tone-success-bg);
   --success-100: var(--tone-success-bd);
   --success-500: var(--tone-success);
@@ -161,31 +151,37 @@
   --info-100:    var(--tone-info-bd);
   --info-500:    var(--tone-info);
   --info-700:    var(--tone-info-strong);
+  --dot-attention: var(--brand);
+  --dot-progress:  var(--brand);
+  --dot-ok:        var(--tone-success);
+  --dot-idle:      var(--text-subtle);
 
-  /* ── Actions ────────────────────────────────────────────── */
+  /* ── Actions — Huchu exact ────────────────────────────── */
   --action-primary-bg:        var(--brand);
   --action-primary-fg:        #FFFFFF;
   --action-primary-bg-hover:  var(--brand-strong);
   --action-primary-bg-pressed:var(--brand-deeper);
-  --action-secondary-bg:      var(--brand-soft);
+  --action-secondary-bg:      var(--surface);
   --action-secondary-fg:      var(--text-strong);
   --action-secondary-bg-h:    var(--surface-muted);
   --action-outline-bg:        var(--surface);
   --action-outline-hover-bg:  var(--surface-muted);
   --action-disabled-bg:       var(--surface-muted);
   --action-disabled-fg:       var(--text-subtle);
-  --action-destructive-bg:    var(--tone-danger);
+  --action-destructive-bg:    #B83A2A;
+  --action-destructive-bg-hover: #A33324;
+  --action-destructive-soft-bg: #6B655A;
+  --action-destructive-soft-hover:#57524A;
   --interactive-primary:      var(--brand);
   --interactive-danger:       var(--tone-danger);
 
-  /* ── Elevation — border-first, huchu soft shadow for floating overlays ─ */
+  /* ── Elevation — Huchu soft ───────────────────────────── */
   --shadow-none:    none;
   --shadow-rest:    none;
-  --shadow-hover:   0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-popover: 0 4px 16px -4px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06);
-  --shadow-modal:   0 20px 40px -12px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-hover:   0 1px 2px rgba(22,24,29,0.06), 0 1px 3px rgba(22,24,29,0.08);
+  --shadow-popover: 0 4px 12px rgba(22,24,29,0.08), 0 8px 24px rgba(22,24,29,0.10);
+  --shadow-modal:   0 8px 24px rgba(22,24,29,0.12), 0 16px 48px rgba(22,24,29,0.14);
   --shadow-card:    var(--shadow-rest);
-
   --elevation-0: var(--shadow-none);
   --elevation-1: inset 0 0 0 1px var(--border);
   --elevation-2: inset 0 0 0 1px var(--border), var(--shadow-hover);
@@ -199,37 +195,37 @@
   --surface-frame-shadow:       inset 0 0 0 1px var(--border);
   --surface-frame-shadow-hover: inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
 
-  /* ── Focus ──────────────────────────────────────────────── */
-  --focus-ring:      #4C64D4;
-  --focus-ring-soft: rgba(76, 100, 212, 0.18);
+  /* ── Focus — Huchu ───────────────────────────────────── */
+  --focus-ring:      #0B5DF0;
+  --focus-ring-soft: rgba(11,93,240,.22);
   --focus-ring-offset: var(--canvas);
   --ring: var(--focus-ring);
 
-  /* ── Shape (huchu: small 6 / control 8 / card 12 / xl 16 / pill) ── */
+  /* ── Shape — Huchu 4/6/8/10/14/18 ─────────────────────── */
   --radius:       8px;
   --radius-xs:    4px;
   --radius-sm:    6px;
   --radius-md:    8px;
   --radius-lg:    10px;
-  --radius-xl:    12px;
-  --radius-2xl:   16px;
-  --radius-3xl:   16px;
-  --radius-4xl:   16px;
+  --radius-xl:    14px;
+  --radius-2xl:   18px;
+  --radius-3xl:   18px;
+  --radius-4xl:   18px;
   --radius-full:  9999px;
   --radius-pill:  9999px;
   --button-radius: var(--radius-md);
   --card-radius:   var(--radius-xl);
-  --control-height-sm: 30px;
+  --control-height-sm: 32px;
   --control-height-md: 36px;
-  --h-control-sm: 30px;
+  --h-control-sm: 32px;
   --h-control-md: 36px;
   --input-height: var(--h-control-md);
   --button-height: var(--h-control-md);
 
-  /* ── Typography (huchu strict 3-tier scale) ────────────────── */
-  --font-sans: "Inter var", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, monospace;
-  --font-display: "Inter var", ui-sans-serif, system-ui, sans-serif;
+  /* ── Typography — Huchu Atkinson ──────────────────────── */
+  --font-sans: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Code", monospace;
+  --font-display: var(--font-sans);
   --font-family: var(--font-sans);
   --font-weight-regular: 400;
   --font-weight-medium:  500;
@@ -268,7 +264,7 @@
   --type-caption-size:   var(--type-size-12);
   --type-caption-weight: var(--font-weight-medium);
 
-  /* ── Spacing ────────────────────────────────────────────── */
+  /* ── Spacing — 8pt Huchu ──────────────────────────────── */
   --space-1:  4px;
   --space-2:  8px;
   --space-3:  12px;
@@ -282,49 +278,49 @@
   --content-gutter-y: var(--space-6);
   --section-gutter-x: var(--space-4);
   --table-gutter-x:   var(--space-3);
-  --app-bar-h:        3.5rem;
-  --list-toolbar-h:   3.25rem;
+  --app-bar-h:        64px;
+  --list-toolbar-h:   52px;
   --table-row-min-h:  48px;
   --table-head-min-h: 40px;
 
-  /* ── Motion ─────────────────────────────────────────────── */
+  /* ── Motion ───────────────────────────────────────────── */
   --motion-ease-default: cubic-bezier(0.2, 0.8, 0.2, 1);
   --motion-duration-fast:   150ms;
   --motion-duration-default:200ms;
   --motion-duration-slow:   300ms;
 
-  /* ── Z scale ────────────────────────────────────────────── */
+  /* ── Z ────────────────────────────────────────────────── */
   --z-sidebar: 50;
   --z-nav:     60;
   --z-overlay: 100;
   --z-toast:   200;
 
-  /* ── Shadcn compat (hsl triplets for existing tailwind config) ─── */
-  --background: 0 0% 100%;
-  --foreground: 0 0% 7%;
+  /* ── Shadcn compat ────────────────────────────────────── */
+  --background: 220 14% 96%;
+  --foreground: 222 13% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 7%;
+  --card-foreground: 222 13% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 7%;
-  --primary: 229 61% 56%;
+  --popover-foreground: 222 13% 10%;
+  --primary: 221 89% 49%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 231 100% 97%;
-  --secondary-foreground: 0 0% 7%;
-  --muted: 210 17% 98%;
-  --muted-foreground: 215 16% 47%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 13% 10%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 38%;
   --accent: 220 14% 96%;
-  --accent-foreground: 0 0% 7%;
-  --destructive: 8 84% 55%;
+  --accent-foreground: 222 13% 10%;
+  --destructive: 8 64% 43%;
   --destructive-foreground: 0 0% 100%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 229 61% 56%;
-  --success: 160 58% 41%;
+  --border: 220 14% 91%;
+  --input: 220 14% 91%;
+  --ring: 221 89% 49%;
+  --success: 118 19% 44%;
   --success-foreground: 0 0% 100%;
-  --warning: 21 91% 52%;
+  --warning: 38 64% 42%;
   --warning-foreground: 0 0% 100%;
   --chart-1: var(--brand);
-  --chart-2: var(--accent-500);
+  --chart-2: #2E7D32;
   --chart-3: var(--tone-success);
   --chart-4: var(--tone-warn);
   --chart-5: var(--tone-danger);
@@ -336,10 +332,9 @@
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: var(--surface-muted);
   --sidebar-accent-foreground: var(--text-strong);
-  --sidebar-border: var(--chrome-edge);
+  --sidebar-border: var(--border);
   --sidebar-ring: var(--focus-ring);
 
-  /* ── Badges ─────────────────────────────────────────────── */
   --badge-neutral-bg:   var(--tone-neutral-bg);
   --badge-neutral-text: var(--text-body);
   --badge-brand-bg:     var(--brand-soft);
@@ -349,17 +344,16 @@
   --badge-success-bg:   var(--tone-success-bg);
   --badge-success-text: var(--tone-success-strong);
   --badge-warning-bg:   var(--tone-warn-bg);
-  --badge-warning-text: var(--warning-700);
+  --badge-warning-text: var(--tone-warn-strong);
   --badge-danger-bg:    var(--tone-danger-bg);
   --badge-danger-text:  var(--tone-danger-strong);
 
-  /* ── Status ─────────────────────────────────────────────── */
   --status-success-bg:     var(--tone-success-bg);
   --status-success-border: var(--tone-success-bd);
   --status-success-text:   var(--tone-success-strong);
   --status-warning-bg:     var(--tone-warn-bg);
   --status-warning-border: var(--tone-warn-bd);
-  --status-warning-text:   var(--warning-700);
+  --status-warning-text:   var(--tone-warn-strong);
   --status-error-bg:       var(--tone-danger-bg);
   --status-error-border:   var(--tone-danger-bd);
   --status-error-text:     var(--tone-danger-strong);
@@ -370,120 +364,32 @@
   --status-pending-border: var(--border-strong);
   --status-pending-text:   var(--text-muted);
 
-  /* ── Tables ─────────────────────────────────────────────── */
   --table-header-bg:    var(--surface-muted);
   --table-header-text:  var(--text-subtle);
   --table-divider:      var(--border-subtle);
   --table-row-bg:       var(--surface);
   --table-row-hover-bg: var(--surface-muted);
 
-  /* ── App chrome ─────────────────────────────────────────── */
   --app-canvas-wash: none;
 }
 
-/* ── Dark mode ────────────────────────────────────────────────────── */
+/* ── Dark — Huchu dark is system, keep minimal ────────────── */
 .dark {
   color-scheme: dark;
-
-  --canvas:           #171614;
-  --surface:          #211F1B;
-  --surface-muted:    #2A2822;
-  --surface-sunken:   #332F27;
-  --surface-deep:     #3D382E;
-
-  --text-strong:      #F5F3EC;
-  --text-body:        #F5F3EC;
-  --text-muted:       #B8B4A8;
-  --text-subtle:      #8C887C;
-  --text-inverse:     #171614;
-  --text-link:        #7C8CE8;
-
-  --border:           #3A362E;
-  --border-strong:    #4A453A;
-  --border-subtle:    #2A2822;
-  --hairline:         rgba(245, 243, 236, 0.08);
-  --chrome-edge:      var(--border-strong);
-
-  /* Brand is mid-tone (not pastel) so it stays AA-safe both as text/icon on
-     dark canvas AND as a solid fill behind white button labels — see
-     docs/design-system.md §2.4 dark-mode contrast note. */
-  --brand:            #566BDA;
-  --brand-strong:     #465AC0;
-  --brand-deeper:     #37479E;
-  --brand-soft:       rgba(76, 100, 212, 0.16);
-  --brand-tint:       rgba(76, 100, 212, 0.10);
-  --brand-50:         rgba(76,100,212,0.10);
-  --brand-100:        rgba(76,100,212,0.18);
-  --brand-200:        #3A4680;
-  --brand-300:        #4C5CA8;
-  --brand-500:        var(--brand);
-  --brand-700:        var(--brand-strong);
-  --brand-900:        #2A3468;
-
-  --gray-50:   #211F1B;
-  --gray-100:  #2A2822;
-  --gray-200:  #3A362E;
-  --gray-300:  #4A453A;
-  --gray-400:  #6B6656;
-  --gray-500:  #8C887C;
-  --gray-600:  #B8B4A8;
-  --gray-700:  #D6D3C8;
-  --gray-800:  #EBE9E0;
-  --gray-900:  #F5F3EC;
-
-  --tone-info-bg:        rgba(76,100,212,0.16);
-  --tone-info-bd:        rgba(76,100,212,0.28);
-  /* Tones are mid-tone (not pastel) for the same reason as --brand above:
-     several screens use a tone's "-strong" step as a solid hover fill behind
-     white button text (e.g. boot-screen retry buttons), not only as wash text. */
-  --tone-success:        #1F9068;
-  --tone-success-bg:     rgba(31,144,104,0.16);
-  --tone-success-bd:     rgba(31,144,104,0.28);
-  --tone-success-strong: #16744F;
-  --tone-warn:           #C1621E;
-  --tone-warn-bg:        rgba(193,98,30,0.16);
-  --tone-warn-bd:        rgba(193,98,30,0.28);
-  --tone-warn-strong:    #9E4F18;
-  --tone-danger:         #D14A36;
-  --tone-danger-bg:      rgba(209,74,54,0.16);
-  --tone-danger-bd:      rgba(209,74,54,0.28);
-  --tone-danger-strong:  #B03A28;
-
-  --surface-overlay:     rgba(0, 0, 0, 0.55);
-  --shadow-rest:    none;
-  --shadow-hover:   0 2px 6px rgba(0, 0, 0, 0.3);
-  --shadow-popover: 0 12px 24px -12px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
-  --shadow-modal:   0 16px 32px -12px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
-
-  --focus-ring:      #7C8CE8;
-  --focus-ring-soft: rgba(124, 140, 232, 0.22);
-
+  --canvas:           #0F1114;
+  --surface:          #1A1D21;
+  --surface-muted:    #242830;
+  --surface-sunken:   #2E333E;
+  --surface-deep:     #353C4A;
+  --text-strong:      #F1F3F6;
+  --text-body:        #E5E8EE;
+  --text-muted:       #8B92A8;
+  --text-subtle:      #6B7285;
+  --border:           #2E333E;
+  --border-strong:    #3E4452;
+  --border-subtle:    #242830;
+  --brand:            #3B82F6;
+  --brand-strong:     #2563EB;
+  --brand-soft:       rgba(59,130,246,0.14);
   --app-canvas-wash: none;
-
-  --background: 30 8% 8%;
-  --foreground: 47 31% 94%;
-  --card: 40 10% 12%;
-  --card-foreground: 47 31% 94%;
-  --popover: 40 10% 12%;
-  --popover-foreground: 47 31% 94%;
-  --primary: 231 64% 60%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 45 11% 15%;
-  --secondary-foreground: 47 31% 94%;
-  --muted: 45 11% 15%;
-  --muted-foreground: 45 10% 69%;
-  --accent: 45 11% 15%;
-  --accent-foreground: 47 31% 94%;
-  --destructive: 8 63% 52%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 40 12% 20%;
-  --input: 40 12% 20%;
-  --ring: 231 64% 60%;
-  --success: 159 65% 34%;
-  --warning: 25 73% 44%;
-
-  --table-header-bg:    #24221C;
-  --table-header-text:  var(--text-subtle);
-  --table-row-bg:       var(--surface);
-  --table-row-hover-bg: var(--surface-muted);
 }
