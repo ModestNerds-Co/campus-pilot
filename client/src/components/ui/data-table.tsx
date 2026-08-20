@@ -2,6 +2,7 @@
 // Table chrome uses --table-* tokens; no gray/blue literals.
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -78,6 +79,55 @@ export function TableToolbar({ className, ...props }: React.ComponentProps<"div"
   );
 }
 
+/** Unified DataTable controls row (huchu platform-ux-playbook): search+submit,
+ * filters, and pagination share one aligned row and one control height —
+ * never a detached toolbar plus a separate footer. */
+export function TableControlsBar({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 sm:flex-row sm:items-center rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TableControlsSearch({ className, ...props }: React.ComponentProps<"form">) {
+  return <form className={cn("flex min-w-0 flex-1 items-center gap-2", className)} {...props} />;
+}
+
+export function TableControlsPagination({
+  page,
+  totalPages,
+  onPrevious,
+  onNext,
+  className,
+}: {
+  page: number;
+  totalPages: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-center gap-3 sm:ml-auto", className)}>
+      <span className="whitespace-nowrap text-sm text-[var(--text-muted)]">
+        Page {page} of {totalPages}
+      </span>
+      <div className="flex gap-2">
+        <Button variant="secondary" size="default" onClick={onPrevious} disabled={page === 1}>
+          Previous
+        </Button>
+        <Button variant="secondary" size="default" onClick={onNext} disabled={page === totalPages}>
+          Next
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function TableEmpty({
   icon,
   title,
@@ -98,11 +148,3 @@ export function TableEmpty({
   );
 }
 
-export function TablePagination({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4", className)}
-      {...props}
-    />
-  );
-}

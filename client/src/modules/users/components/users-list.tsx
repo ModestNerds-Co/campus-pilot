@@ -22,7 +22,7 @@ import { UserFormModal } from "./user-form-modal";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TablePagination } from "@/components/ui/data-table";
+import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
 
 export const UsersList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -121,8 +121,8 @@ export const UsersList: React.FC = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
-        <form onSubmit={handleSearch} className="flex-1">
+      <TableControlsBar>
+        <TableControlsSearch onSubmit={handleSearch}>
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -130,7 +130,10 @@ export const UsersList: React.FC = () => {
             leadingIcon={<Search className="size-4" />}
             aria-label="Search users"
           />
-        </form>
+          <Button type="submit" variant="secondary">
+            Search
+          </Button>
+        </TableControlsSearch>
         <Select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -141,7 +144,15 @@ export const UsersList: React.FC = () => {
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </Select>
-      </div>
+        {!isLoading && users.length > 0 && (
+          <TableControlsPagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPrevious={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            onNext={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          />
+        )}
+      </TableControlsBar>
 
       <TableWrap>
         {isLoading ? (
@@ -241,32 +252,6 @@ export const UsersList: React.FC = () => {
               </TBody>
             </Table>
           </TableScroll>
-        )}
-
-        {!isLoading && users.length > 0 && (
-          <TablePagination>
-            <div className="text-sm text-[var(--text-muted)]">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </TablePagination>
         )}
       </TableWrap>
 

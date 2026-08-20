@@ -12,7 +12,7 @@ import { RoleFormModal } from "./role-form-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TablePagination } from "@/components/ui/data-table";
+import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
 
 export const RolesList: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -94,8 +94,8 @@ export const RolesList: React.FC = () => {
         </Button>
       </div>
 
-      <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
-        <form onSubmit={handleSearch}>
+      <TableControlsBar>
+        <TableControlsSearch onSubmit={handleSearch}>
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -103,8 +103,19 @@ export const RolesList: React.FC = () => {
             leadingIcon={<Search className="size-4" />}
             aria-label="Search roles"
           />
-        </form>
-      </div>
+          <Button type="submit" variant="secondary">
+            Search
+          </Button>
+        </TableControlsSearch>
+        {!isLoading && roles.length > 0 && (
+          <TableControlsPagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPrevious={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            onNext={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          />
+        )}
+      </TableControlsBar>
 
       <TableWrap>
         {isLoading ? (
@@ -186,27 +197,6 @@ export const RolesList: React.FC = () => {
               </TBody>
             </Table>
           </TableScroll>
-        )}
-
-        {!isLoading && roles.length > 0 && (
-          <TablePagination>
-            <div className="text-sm text-[var(--text-muted)]">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                Previous
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </TablePagination>
         )}
       </TableWrap>
 
