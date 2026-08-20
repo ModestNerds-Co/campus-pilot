@@ -6,3 +6,4 @@ dist/
 target/
 coverage/
 !apis/.sqlx/
+client/tsconfig.tsbuildinfo
