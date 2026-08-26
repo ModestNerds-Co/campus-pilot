@@ -44,6 +44,7 @@ The application owns one module catalog. Each entry has a stable key, label, gro
 
 Initial school module catalog:
 
+- Agent
 - People and admissions
 - Academics
 - Timetabling
@@ -66,7 +67,7 @@ The final three adopt useful LADS concepts in school language. LADS route-string
 
 - The launcher is a quiet, searchable campus map: recent modules first, then grouped modules. It must not become a dense wall of identical cards.
 - Each operational module owns its local navigation and provides a clear “All modules” return path.
-- Administration navigation is limited to overview, users, roles and access, licensing, and school settings.
+- Administration navigation is limited to overview, users, roles and access, licensing, school settings, and the Agent management pages the signed-in administrator may open.
 - Unimplemented licensed modules route to an honest setup/coming-soon state; there are no dead links or invented operational data.
 - Secondary creation and editing flows use accessible right-side drawers. Centered modals are not used.
 
@@ -96,7 +97,10 @@ The final three adopt useful LADS concepts in school language. LADS route-string
 ## 8. Agent access
 
 - Agent is a licensed module and follows the same login, role, permission, module-enablement, and record-scope rules as every other module.
+- Agent has stable module key `agent`, route `/modules/agent`, and permission namespace `agent`.
 - Agent capabilities never outrank the signed-in person. Effective access also applies campus Agent policy and any required human approval.
-- Provider administration, capability policy, limits, and campus-wide usage reporting are Administration concerns with their own permissions.
+- Every server-owned product operation is classified for Agent as executable, approval-required, human-only, or prohibited. No operation may be left unclassified.
+- Provider administration, routing, capability policy, limits, campus-wide usage, and run audit are Administration concerns with distinct permissions.
 - Dynamic custom roles may receive Agent permissions and capability policy; seeded role names are not used as authorization shortcuts.
+- New-campus School Administrator seeds receive Agent-administration permissions. Existing non-owner roles do not silently gain Agent access during migration.
 - The canonical capability, provider, metering, and approval model is `docs/agent-platform.md`.

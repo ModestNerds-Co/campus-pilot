@@ -1,164 +1,286 @@
 # Campus Pilot Agent Platform
 
-This is the canonical product and engineering reference for the Agent module, contextual chat, AI providers, module capabilities, approvals, usage, and auditability.
+This is the canonical product and engineering reference for Agent, contextual chat, AI providers, product capabilities, approvals, usage, limits, and auditability.
 
-## 1. Product structure
+## 1. Product outcome
 
-- Agent is a first-class campus module with its own route, navigation, conversation history, run history, and usage view.
-- A compact Agent entry point is available from every authenticated module. It opens a right-side contextual drawer; the full Agent workspace remains the destination for long conversations, history, approvals, and administration.
-- The contextual drawer carries the current module and record context only when the user deliberately opens it. It has one scrolling message region and a fixed composer; it must not place another scrolling form inside the conversation.
-- Agent appears only when the module is enabled for the campus and the signed-in user has `agent:view`.
-- AI provider setup, routing, capability policy, budgets, and campus-wide usage reporting live in Administration. They do not live in a provider-specific settings page inside the Agent module.
-- Provider credentials, raw secrets, internal prompts, and hidden reasoning are never shown to the Agent or returned to a browser.
+- Agent is a licensed, first-class campus module with stable key `agent` and canonical route `/modules/agent`.
+- Its full workspace owns conversations, search and history, run status, approvals awaiting the person, and personal usage.
+- Every authenticated operational module exposes one compact Agent trigger when Agent is enabled and the signed-in person has `agent:view`. The trigger opens a right-side contextual drawer; it is not a floating control over operational content.
+- The contextual drawer is for focused work. It has one scrolling message region and a fixed composer. Long conversations, history, approvals, and run inspection open in the full Agent module.
+- Provider setup, routing, capability policy, limits, campus-wide usage, and run audit live in Administration. They are not hidden inside the Agent conversation workspace.
 
-## 2. Principles
+“All functionality is available to Agent” has a precise meaning: every server-owned operation that reads or changes campus state has a stable operation key and an explicit Agent exposure classification. Every safe automatable operation is callable through the capability broker. Operations involving credentials, authentication, raw license keys, unrestricted privilege escalation, or unsupported irreversible effects remain human-only or prohibited, but still appear in the coverage registry with a reason. Full coverage means no operation is unclassified; it does not mean a model may execute unsafe operations.
 
-- The server, not the model or chat UI, owns authorization, validation, transactions, and audit records.
-- Agent capabilities call typed domain operations. They do not click the UI, construct private HTTP requests, or bypass module services.
-- Every supported product operation is deliberately classified as exposed, approval-required, or prohibited. A coverage test prevents a new API operation from being silently omitted from that classification.
-- Effective capability access is always the intersection of campus licensing, the person's current roles and data scope, campus Agent policy, capability risk policy, and any required approval. Agent access never outranks the person using it.
-- A wildcard role still respects licensing, record scope, Agent policy, and approval requirements.
-- Read, propose, prepare, execute, and irreversible actions are different risk classes. A permission to view a module does not imply permission to execute changes through Agent.
-- Consequential work is previewed before execution and produces a clear result or failure. Partial success is never presented as full completion.
+Client-only presentation controls such as theme, local sorting, and opening navigation are not product operations and do not need Agent capabilities.
 
-## 3. Capability contract
+## 2. CCS foundation and Campus Pilot improvements
 
-Each module owns a typed capability catalog. Every capability definition includes:
+Reuse these proven patterns from `/Users/modestnerd/Developer/Projects/ccs`:
 
-- a stable key such as `fleet.vehicles.list` or `timetabling.draft.generate`;
-- module key and human-readable label;
-- input and output schemas;
-- the existing application permission it requires;
-- supported record/data scopes;
-- risk class: `read`, `propose`, `write`, `restricted`, or `irreversible`;
-- approval mode: none, confirm each run, designated approver, or prohibited;
-- idempotency behavior and retry policy;
-- redaction rules for input, output, logs, and model context;
-- the typed domain handler used to perform the operation.
+- a code-owned, typed tool catalogue with stable names and schemas;
+- one domain implementation shared by first-party chat and other Agent transports;
+- access derived from the person's current role on every request;
+- tenant-scoped encrypted provider credentials and write-only secrets;
+- ordered provider/model fallback routes with safe failure categories;
+- durable threads, messages, jobs, provider attribution, audit events, and readable run trails;
+- a full assistant workspace plus an authenticated-shell entry point;
+- worker claiming, timeouts, interruption recovery, and idempotent job transitions.
 
-The capability broker performs this sequence for every call:
+Campus Pilot must improve on the current CCS implementation:
 
-1. Resolve the authenticated user, tenant, roles, effective permissions, and record scope.
-2. Confirm that the capability and its owning module are enabled for the tenant.
-3. Apply campus capability policy, limits, and approval requirements.
-4. Validate the structured input before any domain operation runs.
-5. Record the call and correlation ID.
-6. Execute the same domain operation used by the application.
-7. Record the structured result, resource changes, usage, duration, and final status.
+- capability coverage is per product operation and per module, not a partial central tool list;
+- permissions are exact operation permissions, not coarse role scopes or HTTP-method inference;
+- Agent is licensed and has its own role permissions;
+- provider, routing, policy, usage, limits, and audit administration have distinct permissions;
+- conversations run durably outside the request lifecycle;
+- approvals are per immutable proposal, not a permanent token-level write flag;
+- provider attempts and capability calls have normalized person/module/capability usage and cost events;
+- sensitive learner, health, payroll, finance, and staff data has field-level context, trail, audit, and log redaction;
+- one correlation ID links the message, run, provider attempts, capability calls, approvals, usage, audit, and result.
 
-Password changes, authentication secrets, provider credentials, license keys, and unrestricted role escalation are prohibited model-visible capabilities. Administration may expose safe operations around them, but secrets are write-only and never enter conversation context or tool output.
+## 3. Product operation and capability catalogues
 
-## 4. Role and module access
+The application owns two related code catalogues:
 
-- Everyone signs in through the existing login and lands on `/home`.
-- Agent does not have a separate login or a privileged service identity for interactive use.
-- A conversation run is attributed to the signed-in person and reevaluates their current roles and module access on every request.
-- A person may use multiple assigned roles; Agent receives the same effective permission set as the application.
-- Custom roles can receive Agent permissions and specific capability policy just like seeded roles.
-- Campus Owners and School Administrators can manage provider connections and campus Agent policy only when they have the corresponding Administration permissions.
-- Sensitive record scopes, especially learner, staff, finance, payroll, and health data, are enforced inside domain queries. The model must not receive records the person could not open directly.
+- `ProductOperationCatalog` contains every server-owned domain operation, including human-only and prohibited operations.
+- `AgentCapabilityCatalog` contains the executable subset and the typed handlers the broker may call.
 
-Initial Agent permissions:
+Every mounted API route references a stable operation constant. A product operation is classified as `exposed`, `approval_required`, `human_only`, or `prohibited`. CI fails when an operation has no classification, when a capability key is duplicated, or when a human-only/prohibited entry has no reason.
 
-- `agent:view` — open Agent and use permitted read capabilities.
-- `agent:run` — start Agent runs and use non-read capabilities allowed by policy.
-- `agent:approve` — approve designated pending actions when the person also has the underlying module permission.
+Each operation and capability definition includes:
+
+- stable operation and capability keys such as `fleet.vehicles.list` or `timetabling.publish`;
+- owning module, label, version, and exact required permission keys;
+- input and output schemas and the shared typed domain service;
+- supported record and data scopes;
+- effect: `read`, `propose`, `mutate`, or `external_side_effect`;
+- reversibility: `not_applicable`, `reversible`, or `irreversible`;
+- data sensitivity: `general`, `personal`, `sensitive`, or `highly_sensitive`;
+- approval mode: none, requester confirmation, designated approver, dual control, or prohibited;
+- idempotency, retry, resource-version, and stale-data strategy;
+- field-level rules for model context, input, result, run trail, audit, and log redaction;
+- allowed provider/data-residency classes and usage tags.
+
+HTTP routes and Agent handlers call the same typed domain service. Agent code does not click the UI, construct private HTTP requests, issue arbitrary SQL, or bypass module transactions and validation.
+
+## 4. Login, roles, modules, and permissions
+
+- Everyone uses the existing sign-in and lands on `/home`.
+- Agent has no separate login and no privileged service identity for interactive use.
+- The launcher shows Agent only when the campus license enables it and the person has `agent:view`.
+- Every request and every capability call reloads the tenant, person, current roles, effective permissions, enabled modules, record scope, Agent policy, and limits.
+- A stored role or policy snapshot exists for reporting only; it is never authority for later execution.
+- Custom roles receive Agent permissions and capability policy in the same dynamic role editor as seeded roles.
+- A wildcard permission still respects licensing, record scope, policy, approvals, provider eligibility, and limits.
+
+Agent permissions:
+
+- `agent:view` — open the Agent module and contextual drawer.
+- `agent:run` — submit runs and use capabilities allowed by the underlying permissions and policy.
 - `agent:history` — view the person's own conversations and runs.
-- `ai_providers:view` / `ai_providers:edit` — review or manage provider connections and routing in Administration.
-- `agent_policy:view` / `agent_policy:edit` — review or manage capability policy, limits, and approvals.
-- `agent_usage:view` — view campus usage according to reporting scope.
+- `agent:share` — share a thread with explicitly selected people.
+- `agent:approve` — approve an eligible proposal when the approver also holds the underlying operation permission and record scope.
 
-## 5. Provider administration and routing
+Administration permissions:
 
-Adopt the useful CCS provider pattern and keep it tenant-scoped:
+- `ai_providers:view` / `ai_providers:edit`;
+- `ai_routing:view` / `ai_routing:edit`;
+- `agent_policy:view` / `agent_policy:edit`;
+- `agent_usage:view` / `agent_usage:export`;
+- `agent_limits:view` / `agent_limits:edit`;
+- `agent_audit:view`.
 
-- Multiple encrypted provider connections may exist for one campus.
-- Support subscription/OAuth connections and API-key connections without exposing stored credentials.
-- Each connection stores provider, authentication method, account label, status, credential ciphertext, fingerprint, configured-by user, and timestamps.
-- Provider secrets require an application encryption key, are encrypted at rest, are redacted from logs, and are never returned after save.
-- Task routes define an ordered provider/model chain for a task class. A provider failure may fall through to the next configured route.
-- Model IDs, reasoning modes, supported tool features, context limits, and pricing metadata are validated against a server-owned catalog or a safely refreshed provider catalog.
-- Connection tests report operational status without echoing credentials or provider response bodies that may contain secrets.
+Campus Owner retains wildcard behaviour. New-campus School Administrator seeds should include the Administration permissions above. Existing non-owner roles must not silently gain Agent access during migration; an administrator deliberately assigns it to seeded or custom roles.
 
-Initial task classes should remain small and explicit:
+## 5. Capability broker
 
-- campus conversation and search;
-- module read and reporting;
-- document extraction;
-- drafting and proposal generation;
-- approved operational actions.
+The capability broker is the only Agent execution boundary. First-party chat, the contextual drawer, background runs, and any future MCP/API adapter all call the same broker and catalogue.
 
-Provider setup is an Administration page with right-side drawers for connect, edit routing, reconnect, and disconnect confirmation. The Agent module reports when no usable route is available but does not expose provider controls to unauthorized users.
+For every call the broker:
 
-## 6. Conversations, runs, and approvals
+1. Resolves the authenticated tenant and person and reloads current access.
+2. Confirms that Agent and the capability's owning module are enabled.
+3. Resolves the exact capability version and validates structured input.
+4. Applies record scope, sensitivity, campus policy, provider eligibility, approvals, and limits.
+5. Creates the correlation, capability-call, usage, and audit records.
+6. Invokes the shared typed domain service in its normal transaction boundary.
+7. Records the redacted result, affected resources, duration, outcome, and final usage.
 
-- Threads belong to a tenant and creator. Sharing is explicit and auditable; it is not implied by role membership.
-- Messages store user-visible content, provider/model attribution, timestamps, and the related run. Hidden reasoning is never persisted.
-- Every turn creates an Agent run with status, task class, originating module, optional record context, request ID, idempotency key, and timing.
-- Every model response and capability call is stored as a step trail with secrets and sensitive fields redacted.
-- Long work runs outside the request lifecycle and can be resumed, cancelled, or recovered after worker interruption.
-- Approval-required actions store an immutable preview, the exact proposed inputs, expiry, approver rules, and the decision. Approval executes the saved proposal; it does not ask the model to reconstruct it.
-- If source data changes after a proposal is created, the server marks it stale and requires a fresh preview.
-- Irreversible actions require explicit product authorization and stronger confirmation. They are prohibited by default.
+The broker rejects tenant or user IDs supplied by a model. Resource identifiers are always resolved again under the authenticated tenant and person.
 
-## 7. Usage and cost reporting
+An optional remote MCP/API adapter may be added later. It is disabled by default and uses expiring, revocable, hashed personal tokens with per-capability allowlists. Token access is intersected with the person's current roles on every call; a token never becomes a service superuser.
 
-Every provider attempt and capability call emits a normalized usage event. Store provider-reported values when available and leave unknown values unknown rather than estimating them as zero.
+## 6. Conversation and contextual execution
 
-Usage dimensions:
+The contextual drawer sends only:
 
-- tenant, user, role snapshot, and conversation/run;
-- originating module and capability key;
-- provider connection, provider, model, and task class;
-- input, output, cached, and reasoning tokens when reported;
-- request count, tool/capability call count, duration, retries, and outcome;
-- provider cost and currency when reported;
-- catalog-estimated cost, pricing version, and currency when it can be calculated reliably.
+- `originModuleKey`;
+- the current route;
+- an optional allowlisted `{ recordType, recordId }`;
+- an optional display label.
 
-Administration reporting must support:
+The browser never sends DOM text or a trusted record snapshot as context. The server rehydrates current record context through an authorized read capability. A removable context chip such as “Fleet · Vehicle ABC 123” shows exactly what will be supplied.
 
-- totals and trends by person, module, capability, provider, model, and task class;
-- successful, failed, retried, and approval-rejected runs;
-- the ability to open a run's redacted step and audit trail;
-- filters by date range and campus;
-- export of the currently filtered operational report;
-- clear separation between provider-reported cost, estimated cost, and unknown cost.
+Every submitted message atomically creates the user message, an `agent_run`, a queue/lease record, and one correlation ID. A worker executes the run; the client follows durable state through SSE or polling. Runs support `queued`, `running`, `awaiting_approval`, `completed`, `failed`, `cancelled`, and `interrupted` states.
 
-Policy may define soft alerts or hard limits per tenant, user, role, module, capability, provider, and reporting period. A more specific limit cannot grant access that a broader policy denies. Limit rejections are recorded as usage/audit events without calling a provider.
+Workers use leases and heartbeats, accept cancel requests, and resume only from idempotent checkpoints. Non-idempotent external actions are never replayed automatically. Progress events are redacted and orphan messages/runs have an explicit recovery path.
 
-## 8. Data model boundaries
+Documents and records are untrusted data, not instructions. Tool results are schema-bound, size-bounded, and redacted before they enter model context.
 
-The implementation should keep these concerns separate:
+## 7. Proposals and approvals
 
-- `ai_provider_connections` and OAuth/device-flow attempts — encrypted provider access;
-- `ai_task_routes` — ordered provider/model configuration per task class;
-- `agent_capability_catalog` — code-owned capability definitions exposed through the API;
-- `agent_policy_rules` and `agent_limits` — tenant configuration referencing stable capability and module keys;
-- `agent_threads` and `agent_messages` — user-visible conversation state;
-- `agent_runs`, `agent_run_steps`, and `agent_tool_calls` — durable execution and redacted trails;
-- `agent_approvals` — immutable proposals and human decisions;
-- `agent_usage_events` — append-only normalized metering;
-- the existing audit event system — human, agent, and service accountability.
+Read, propose, mutate, external side effect, reversible, irreversible, sensitive, and approval-required are independent policy dimensions. A permission to view a module never implies permission to change it through Agent.
 
-Provider credentials must not share tables with messages or usage. Usage events must not become the only audit record for state changes.
+An approval stores:
 
-## 9. Rust workspace integration
+- exact capability key and version;
+- canonical validated input and redacted preview;
+- proposal hash;
+- affected resource IDs and versions;
+- requester, approver rules, expiry, and policy snapshot;
+- decision, decision reason, and execution result.
 
-- Add Agent as its own module crate. It may aggregate capability definitions from sibling module crates; operational module crates must not depend on Agent.
-- Put the shared capability descriptor and execution context contracts in `cp-common` without adding business logic there.
-- Each operational module exports its definitions and typed handlers beside its domain operations.
-- The Agent broker aggregates those definitions and invokes handlers using the authenticated tenant/user context.
-- The app crate mounts the Agent API and applies `AuthMiddleware` outermost, followed by the existing module and permission boundary.
-- Provider management remains in the app/Administration layer because it owns tenant configuration, authentication flows, and encrypted secrets.
-- Add coverage tests that compare routed product operations with the Agent classification registry and reject unknown capability keys in role/policy configuration.
+Approval executes the saved proposal through the broker; the model does not reconstruct it. Immediately before execution, the broker reloads authorization, licensing, policy, limits, and resource versions. Changed source data marks the proposal stale and requires a new preview.
 
-## 10. Delivery sequence
+Provider credential entry, OAuth completion, API-key rotation, password changes, raw license-key entry, and unrestricted role escalation remain direct human workflows. Agent may read safe connection status, test a connection, or propose a route change for an authorized administrator, but secrets never enter messages or model-visible capability input/output.
 
-1. Capability foundation: descriptor contracts, registry, coverage classification, run/audit schema, and no model execution.
-2. Provider administration: encrypted connections, connection health, model catalog, task routing, and Administration drawers.
-3. Read-only Agent: licensed module, full conversation workspace, contextual drawer, durable threads, and current-module read capabilities.
-4. Metering and governance: normalized usage events, person/module/capability reports, limits, and redacted run trails.
-5. Proposals and approvals: typed previews, stale-proposal checks, designated approvals, and idempotent execution.
-6. Module coverage: add capabilities module by module, with tests proving every product operation is classified.
+## 8. Administration information architecture
 
-Do not ship a chat box that can only answer generic questions and imply that it controls the campus. Each released capability must be real, authorized, auditable, metered, and represented accurately in the UI.
+Administration gets an `Agent management` navigation group with full pages for:
+
+- **Overview** — provider readiness, recent run health, approvals, spend/usage summary, and policy alerts.
+- **AI providers** — connections, account labels, status, last test/use, reconnect, rotate, and disconnect.
+- **Routing** — task defaults, module/capability overrides, provider/model order, feature and sensitivity eligibility.
+- **Capabilities and approvals** — the complete operation coverage matrix, policy, risk, approval mode, and availability by module.
+- **Usage and limits** — filters, trends, budgets, limits, and export.
+- **Runs and audit** — redacted step trails, provider attempts, capability calls, approvals, outcomes, and correlation search.
+
+Usage tables, capability matrices, and run trails are full pages because they require comparison and sustained scrolling. Right-side drawers are reserved for focused connect, reconnect, route edit, policy edit, limit edit, approval decision, and disconnect workflows. Drawer header/footer remain fixed while their single content region scrolls.
+
+The full Agent module shows personal usage only. Campus-wide administration is never mixed into an ordinary conversation.
+
+## 9. Provider connections and routing
+
+- A campus may configure multiple connections for the same provider.
+- Support API-key and provider-supported OAuth/device-flow connections behind server-side adapters.
+- Connections store tenant, provider, authentication method, account label, status, encrypted credential, fingerprint, configured-by person, credential version, last tested/use, safe failure category, and timestamps.
+- Secrets require an application encryption key, are encrypted at rest, are write-only, and are never returned after save.
+- Refreshed OAuth credentials are persisted with optimistic concurrency so a stale run cannot overwrite a newer credential.
+- Model/provider catalogues are versioned and server-owned or safely refreshed. The server validates provider, model, reasoning mode, tool support, context limits, pricing version, and route eligibility on save and again at execution.
+
+Routing precedence is:
+
+1. capability-specific override;
+2. module and operation-class override;
+3. task-class route;
+4. tenant default.
+
+Initial task classes are campus conversation/search, module read/reporting, document extraction, drafting/proposal, and approved operational action.
+
+Route selection considers task class, sensitivity, module/capability policy, provider eligibility, health, required tool features, remaining budget, and ordered fallback. Only transient/provider failures may fall through. Policy denial, invalid input, stale proposal, approval rejection, or hard-limit denial stops immediately without contacting another provider. Every provider attempt is separately metered; raw upstream error bodies are never persisted.
+
+## 10. Usage, cost, reporting, and limits
+
+Usage distinguishes:
+
+- `origin_module_key` — where the person opened Agent;
+- `capability_module_key` — the module that owns the called capability.
+
+This supports both “Agent usage from Fleet” and “usage of Fleet capabilities.”
+
+Every provider attempt records nullable normalized values for input, output, cached, and reasoning tokens; provider-reported cost/currency; independently estimated cost/currency/pricing version; provider connection, provider, model, route priority, task class, duration, retries, failure category, and outcome. Unknown values remain `NULL`, never zero.
+
+Every capability call records person, role snapshot, origin module, capability module, capability key/version, approval state, duration, outcome, affected resource references, run, thread, and correlation IDs.
+
+Administration reporting supports usage per person, per module, and per capability, with totals, trends, and filters by:
+
+- person and role snapshot;
+- originating module and capability module;
+- capability, provider connection, provider, model, and task class;
+- success, failure, retry, cancellation, approval rejection, and limit rejection;
+- date range and campus.
+
+Export uses the exact active filters. Provider-reported, estimated, and unknown cost are visually distinct.
+
+Limits may apply per campus, person, role, origin module, capability module, capability, provider, model, and reporting period. Any deny wins. A specific rule may tighten but never override a broader deny. Hard limits use transactional reservations/counters so concurrent runs cannot overspend. A rejected run records usage and audit events without calling a provider.
+
+## 11. Data and audit boundaries
+
+Keep these concerns separate:
+
+- `ai_provider_connections`, OAuth/device-flow attempts, and provider model snapshots;
+- `ai_task_routes`;
+- code-owned product operation and Agent capability catalogues;
+- `agent_policy_rules`, `agent_limits`, and transactional limit reservations/counters;
+- `agent_threads`, explicit thread membership, and user-visible messages;
+- `agent_runs`, run steps, and capability calls;
+- `agent_approvals`;
+- append-only `agent_usage_events`;
+- actor-aware, append-only audit events for consequential state changes.
+
+The current trigger-based `event_log` records table changes but lacks the actor, request, approval, and Agent-run linkage required here. Before Agent write capabilities ship, introduce a first-class actor-aware audit ledger with tenant, actor type/person, action, target, request/correlation ID, reason, redacted metadata, and timestamp. The legacy table may remain table-change evidence during migration, but it is not the Agent audit boundary.
+
+Provider credentials never share tables with messages or usage. Usage is not the audit record, and a run trail is not the usage ledger.
+
+## 12. Module capability coverage
+
+The code catalogue contains the exact operation list. This planning map defines the capability families that must be inventoried; it is not permission to invent unavailable features.
+
+| Module | Capability families | Initial policy emphasis |
+| --- | --- | --- |
+| Administration | users, roles, licensing, school settings, Agent governance | Secrets stay human-only; access escalation and license changes require strong approval. |
+| People and admissions | applications, admissions, learners, guardians, enrolment | Personal data and assigned-record scopes. |
+| Academics | subjects, classes, assessment structures, progression, reports | Publish/progression changes require preview and approval. |
+| Timetabling | rules, generation, drafts, conflict review, publication | Generation is durable; publication executes an immutable reviewed draft. |
+| Communication | drafts, audiences, announcements, sends, delivery history | Sending is an external side effect and approval-gated. |
+| Finance | accounts, budgets, journals, controls, statements, reports | Propose before post; dual control where policy requires it. |
+| Fees and billing | fee structures, invoices, receipts, balances, statements | Financial writes are idempotent and auditable. |
+| Library | catalogue, circulation, reservations, fines, member lookup | Borrower scope and reversible circulation commands. |
+| HR and payroll | staff, leave, contracts, payroll preparation and runs | Highly sensitive data; payroll execution needs dual control. |
+| Procurement | requests, approvals, suppliers, orders, receiving | Existing approval chain is preserved; Agent cannot self-approve. |
+| Fleet | vehicles, drivers, daily logs, trips, maintenance | Driver/vehicle scope, record versions, and reversible updates. |
+| Hostel | residences, rooms, allocation, occupancy, pastoral records | Allocation changes need preview; pastoral data is sensitive. |
+| Health services | visits, care records, medication, wellbeing follow-up | Highly sensitive; minimum context and strict role/record scope. |
+| Assets and inventory | assets, stores, stock movement, custodianship | Stock movement is idempotent and approval-aware. |
+| Document registry | filing, classification, retention, retrieval | Documents are untrusted input; retention/destruction is restricted. |
+| Internal audit | plans, findings, evidence, remediation | Preserve independence and immutable finding history. |
+| Agent | threads, sharing, runs, approvals, personal usage | No cross-person history without explicit sharing/report permission. |
+
+## 13. Rust workspace integration
+
+- `cp-common` owns stable operation/capability descriptors, execution principal/context, policy enums, and keys; it contains no business logic.
+- Each operational module owns typed domain services, its operation catalogue, and capability adapters beside those services.
+- A new `cp-agent` crate aggregates registries, evaluates policy, routes providers, redacts data, and orchestrates runs. It may depend on operational modules; operational modules never depend on Agent.
+- A dedicated Agent worker binary/crate claims durable runs and handles recovery.
+- The app crate mounts Agent APIs plus Administration provider, routing, policy, usage, limit, and audit APIs. `AuthMiddleware` remains outermost, followed by module, permission, scope, and broker checks.
+- Chat and any future MCP/API adapter use the broker; there is no second dispatcher or duplicated business implementation.
+
+## 14. Mandatory coverage and security tests
+
+CI must prove:
+
+- every mounted product operation has one unique stable key and an exposure classification;
+- every exposed capability has schemas, module, exact permission, handler, redaction, idempotency, stale-data, and tests;
+- every handler calls the same domain service as the normal API/UI path;
+- no handler trusts tenant or person identity from model input;
+- role revocation, scope change, module disablement, policy change, and limit change apply before the next call;
+- credentials and protected learner, staff, health, payroll, and finance fields cannot enter messages, trails, usage, audit metadata, provider errors, or logs;
+- fallback occurs only for eligible provider/transient failures;
+- every provider attempt and capability call is metered, including failed fallbacks and denied runs;
+- concurrent runs cannot exceed a hard limit and report rollups equal immutable usage events;
+- unknown tokens/cost remain unknown;
+- approval replay is idempotent and stale proposals cannot execute;
+- contextual record hydration cannot read a record the person cannot open directly;
+- desktop and mobile Agent workspace/drawer pass focus trap, Escape, focus return, background scroll lock, and single-scroll-region checks.
+
+## 15. Delivery sequence
+
+1. **Operation inventory and broker foundation** — classify every current server operation, add exact operation permissions and CI coverage, introduce actor-aware audit events, and build the broker with no provider execution.
+2. **Provider administration and metering** — encrypted connections, model catalogues, server-validated routing, safe provider attempts, and normalized attempt usage.
+3. **Durable read-only Agent module** — licensed `/modules/agent`, worker-backed runs, durable threads, run history, and genuine authorized read capabilities.
+4. **Contextual module drawer** — server-rehydrated module/record context, context chips, full accessibility behaviour, and a clear path to the full Agent workspace.
+5. **Governance and reporting** — capability/policy inventory, person/module/capability usage, transactional limits, run/audit inspection, and filtered export.
+6. **Proposals, approvals, and executable coverage** — immutable proposals, stale checks, designated/dual approvals, then safe write capability expansion module by module.
+
+Do not ship a generic chat box that implies broad campus control. A released capability must be real, currently authorized, auditable, metered, and accurately represented in the UI. Do not release a module operation without a coverage classification.
