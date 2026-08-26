@@ -280,7 +280,7 @@ export const CampusHome: React.FC = () => {
             ) : null}
 
             {sidebarGroups.length > 0 ? (
-              <section aria-labelledby="launcher-browse-nav">
+              <section aria-labelledby="launcher-browse-nav" className="hidden lg:block">
                 <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="launcher-browse-nav">Browse by task</h2>
                 <div className="space-y-1">
                   {sidebarGroups.map((group) => (

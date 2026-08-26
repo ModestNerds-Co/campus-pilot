@@ -32,8 +32,8 @@ The implementation source of truth is `client/src/styles/tokens.css`.
 - Administration is one module in this launcher; it is never the default post-login destination.
 - Campus Owners see the core Administration workspace pinned first. Never show an owner copy that tells them to contact an administrator.
 - Protected routes refresh the authenticated access profile before rendering so persisted browser state cannot hide newly granted roles or modules.
-- The launcher uses the same fixed-rail and contextual-header grammar as module shells. Its rail holds campus identity, All modules, authorized shortcuts, task-group jump links, theme, account identity, and sign-out.
-- On mobile, the launcher rail becomes the shared off-canvas navigation pattern with a scrim, Escape support, focus containment, focus restoration, and background scroll lock.
+- The launcher uses the same fixed-rail and contextual-header grammar as module shells. Its desktop rail holds campus identity, All modules, authorized shortcuts, task-group jump links, theme, account identity, and sign-out.
+- On mobile, the launcher rail becomes the shared off-canvas navigation pattern with a scrim, Escape support, focus containment, focus restoration, and background scroll lock. Keep this drawer short enough to avoid nested scrolling: task-group jump links remain desktop-only.
 - Operational modules own their local navigation and provide an “All modules” return path.
 - Access, licensing, role, and module semantics are defined in `docs/access-control.md`.
 
