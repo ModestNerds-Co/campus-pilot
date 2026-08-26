@@ -64,7 +64,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   const [isDirty, setIsDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  usePageChrome("Timetabling");
+  usePageChrome("Overview");
 
   const load = useCallback(async () => {
     setIsLoading(true);

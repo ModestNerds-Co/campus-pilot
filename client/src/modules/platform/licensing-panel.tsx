@@ -102,9 +102,7 @@ export const LicensingPanel: React.FC = () => {
     <div className="space-y-8">
       <section>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">Modules</p>
-          <h1 className="mt-3 max-w-[21ch] text-3xl font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--text-strong)]">Licensing</h1>
-          <p className="mt-4 max-w-[34em] text-sm leading-6 text-[var(--text-muted)]">Review enabled modules or activate a license key.</p>
+          <p className="max-w-[34em] text-sm leading-6 text-[var(--text-muted)]">Review enabled modules or activate a license key.</p>
         </div>
       </section>
 

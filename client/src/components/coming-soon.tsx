@@ -5,9 +5,7 @@
 //  Created by Ngonidzashe Mangudya on 21/08/2026.
 //  Copyright (c) 2025 Codecraft Solutions
 //
-//  Every ERP module is wired end-to-end (nav -> route -> API stub) from day
-//  one, per the platform's module map; this is what a not-yet-built module
-//  shows instead of a raw 404 or an empty page.
+//  Placeholder for a module that has a defined scope but no workspace yet.
 
 import React from "react";
 import { ArrowRight, CircleDashed } from "lucide-react";
@@ -37,7 +35,6 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon
                 <CircleDashed className="size-3.5" />
                 Planned module
               </div>
-              <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{title}</h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--sidebar-muted)]">{description}</p>
             </div>
           </div>
@@ -50,7 +47,7 @@ export const ComingSoon: React.FC<ComingSoonProps> = ({ title, description, icon
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Module scope</p>
               <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-[var(--text-strong)]" id="module-scope-title">
-                What this workspace will cover
+                Planned areas
               </h2>
             </div>
           </div>

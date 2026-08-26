@@ -17,7 +17,7 @@ export const AdminDashboard: React.FC = () => {
   const visibleAreas = administrationAreas.filter(
     (area) => user?.permissions?.includes("*") || user?.permissions?.includes(area.permission),
   );
-  usePageChrome("Administration");
+  usePageChrome("Overview");
 
   return (
     <div className="space-y-10">

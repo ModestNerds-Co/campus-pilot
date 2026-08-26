@@ -7,7 +7,7 @@
 //
 
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { bootstrapService } from "../modules/configs";
+import { bootstrapService, type BootstrapState } from "../modules/configs";
 
 const getAuthStatus = (): boolean => {
   try {
@@ -24,35 +24,18 @@ const getAuthStatus = (): boolean => {
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
+    let state: BootstrapState;
     try {
       const response = await bootstrapService.checkStatus();
-      if (response.success && response.data) {
-        const state = response.data.state;
-
-        switch (state) {
-          case "Uninitialized":
-            throw redirect({ to: "/setup/school" });
-          case "SchoolConfigured":
-            throw redirect({ to: "/setup/admin" });
-          case "Ready":
-            const isAuthenticated = getAuthStatus();
-            if (isAuthenticated) {
-              throw redirect({ to: "/home" });
-            } else {
-              throw redirect({ to: "/login" });
-            }
-          default:
-            throw redirect({ to: "/boot" });
-        }
-      } else {
-        throw redirect({ to: "/boot" });
-      }
-    } catch (error) {
-      if (error && typeof error === "object" && "redirect" in error) {
-        throw error;
-      }
+      if (!response.success || !response.data) throw new Error("Bootstrap status unavailable");
+      state = response.data.state;
+    } catch {
       throw redirect({ to: "/boot" });
     }
+
+    if (state === "Uninitialized") throw redirect({ to: "/setup/school" });
+    if (state === "SchoolConfigured") throw redirect({ to: "/setup/admin" });
+    throw redirect({ to: getAuthStatus() ? "/home" : "/login" });
   },
   component: () => null,
 });

@@ -160,14 +160,14 @@ export const RolesList: React.FC = () => {
           />
         ) : (
           <TableScroll>
-            <Table>
+            <Table className="min-w-[960px] table-fixed">
               <THead>
                 <tr>
-                  <TH>Role name</TH>
-                  <TH>Description</TH>
+                  <TH className="w-[220px]">Role name</TH>
+                  <TH className="w-[280px]">Description</TH>
                   <TH>Access profile</TH>
-                  <TH>Created</TH>
-                  <TH className="text-right">Actions</TH>
+                  <TH className="w-[132px]">Created</TH>
+                  <TH className="w-[80px] text-right">Actions</TH>
                 </tr>
               </THead>
               <TBody>

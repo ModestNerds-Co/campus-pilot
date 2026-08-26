@@ -312,6 +312,7 @@ export const AdminSetupScreen: React.FC = () => {
                   placeholder="Enter a secure password"
                 />
                 <button
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
@@ -403,6 +404,7 @@ export const AdminSetupScreen: React.FC = () => {
                   placeholder="Confirm your password"
                 />
                 <button
+                  aria-label={showPasswordConfirm ? "Hide password confirmation" : "Show password confirmation"}
                   type="button"
                   onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-subtle)] hover:text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"

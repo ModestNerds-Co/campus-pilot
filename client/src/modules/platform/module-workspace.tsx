@@ -38,7 +38,7 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({ moduleKey }) 
 const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) => {
   const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
   const Icon = visual.icon;
-  usePageChrome(module.label);
+  usePageChrome("Overview");
 
   if (module.key === "fleet") {
     return (
@@ -63,7 +63,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
       <section aria-labelledby="module-scope">
         <div className="border-b border-[var(--border)] pb-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Module scope</p>
-          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="module-scope">What this workspace will cover</h2>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="module-scope">Planned areas</h2>
         </div>
         <div className="grid gap-x-8 md:grid-cols-2 xl:grid-cols-3">
           {visual.highlights.map((highlight, index) => (

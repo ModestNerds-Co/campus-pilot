@@ -351,11 +351,12 @@ export const SchoolSetupScreen: React.FC = () => {
                                 className="max-h-24 max-w-24 object-contain"
                               />
                               <button
+                                aria-label="Remove light logo"
                                 type="button"
                                 onClick={() => handleLogoUpload("light", null)}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-[var(--tone-danger)] text-[var(--on-brand)] rounded-full flex items-center justify-center hover:bg-[var(--tone-danger-strong)] transition-colors"
+                                className="absolute -right-3 -top-3 flex size-10 items-center justify-center rounded-full bg-[var(--tone-danger)] text-[var(--on-brand)] transition-colors hover:bg-[var(--tone-danger-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                               >
-                                <X className="w-3 h-3" />
+                                <X className="size-4" />
                               </button>
                             </div>
                           ) : (
@@ -401,11 +402,12 @@ export const SchoolSetupScreen: React.FC = () => {
                                 className="max-h-24 max-w-24 object-contain"
                               />
                               <button
+                                aria-label="Remove dark logo"
                                 type="button"
                                 onClick={() => handleLogoUpload("dark", null)}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-[var(--tone-danger)] text-[var(--on-brand)] rounded-full flex items-center justify-center hover:bg-[var(--tone-danger-strong)] transition-colors"
+                                className="absolute -right-3 -top-3 flex size-10 items-center justify-center rounded-full bg-[var(--tone-danger)] text-[var(--on-brand)] transition-colors hover:bg-[var(--tone-danger-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                               >
-                                <X className="w-3 h-3" />
+                                <X className="size-4" />
                               </button>
                             </div>
                           ) : (
@@ -612,6 +614,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         Country
                       </label>
                       <SearchableSelect
+                        id="country"
                         options={countryOptions}
                         value={getCountryId(formData.country)}
                         onChange={(id) =>
@@ -632,6 +635,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         Timezone
                       </label>
                       <SearchableSelect
+                        id="timezone"
                         options={timezoneOptions}
                         value={getTimezoneId(formData.timezone)}
                         onChange={(id) =>
@@ -650,6 +654,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         Language
                       </label>
                       <SearchableSelect
+                        id="locale"
                         options={localeOptions}
                         value={getLocaleId(formData.locale)}
                         onChange={(id) =>

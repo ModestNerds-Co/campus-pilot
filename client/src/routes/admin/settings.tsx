@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin/settings")({
         description="Manage the campus identity, academic defaults and platform-wide preferences."
         highlights={["School profile", "Academic calendar defaults", "Notifications and integrations"]}
         icon={Settings2}
-        title="Settings"
+        title="School settings"
       />
     </ProtectedRoute>
   ),

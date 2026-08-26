@@ -22,7 +22,7 @@ import type { SchoolConfiguration } from "@/modules/configs/types";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { accessService } from "./access-service";
-import { defaultModuleVisual, moduleVisuals, stageLabel } from "./module-registry";
+import { defaultModuleVisual, moduleRouteKey, moduleVisuals, stageLabel } from "./module-registry";
 import type { ModuleDefinition } from "./types";
 
 const RECENT_MODULE_KEY = "campuspilot_recent_module";
@@ -498,7 +498,7 @@ const ModuleDestination: React.FC<{
     <Link
       className="block focus-visible:rounded-[var(--radius-xl)]"
       onClick={() => onOpen(module.key)}
-      params={{ moduleKey: module.key }}
+      params={{ moduleKey: moduleRouteKey(module.key) }}
       to="/modules/$moduleKey"
     >
       {children}

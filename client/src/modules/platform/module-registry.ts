@@ -97,3 +97,7 @@ export function stageLabel(stage: string) {
   if (stage === "foundation") return "In setup";
   return "Planned";
 }
+
+export function moduleRouteKey(moduleKey: string) {
+  return moduleKey.replace(/_/g, "-");
+}

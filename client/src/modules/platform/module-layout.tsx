@@ -20,7 +20,7 @@ import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
 import { useAuthStore } from "@/stores/auth-store";
 
-import { defaultModuleVisual, moduleVisuals } from "./module-registry";
+import { defaultModuleVisual, moduleRouteKey, moduleVisuals } from "./module-registry";
 import { PageChromeProvider, usePageChromeContext } from "@/modules/admin/layouts/page-chrome";
 
 interface ModuleLayoutProps {
@@ -188,7 +188,7 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({ a
   <Link
     aria-current={active ? "page" : undefined}
     className={navClass(active)}
-    params={{ moduleKey }}
+    params={{ moduleKey: moduleRouteKey(moduleKey) }}
     to="/modules/$moduleKey"
   >
     <LayoutDashboard className="size-[17px]" />
