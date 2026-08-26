@@ -86,6 +86,11 @@ export function DialogShell({
   panelClassName?: string;
 }) {
   const panelRef = React.useRef<HTMLDivElement>(null);
+  const onCloseRef = React.useRef(onClose);
+
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -100,12 +105,13 @@ export function DialogShell({
     const preferredFocus =
       panel?.querySelector<HTMLElement>('[data-autofocus="true"]') ||
       panel?.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled]), select:not([disabled])");
-    (preferredFocus || focusable?.[0] || panel)?.focus();
+    const focusTarget = preferredFocus || focusable?.[0] || panel;
+    const focusFrame = window.requestAnimationFrame(() => focusTarget?.focus({ preventScroll: true }));
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !panel) return;
@@ -128,11 +134,12 @@ export function DialogShell({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
-      previousFocus?.focus();
+      previousFocus?.focus({ preventScroll: true });
     };
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
   return createPortal(

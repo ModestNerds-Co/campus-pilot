@@ -189,6 +189,12 @@
     min-height: 0;
     flex: 1 1 auto;
     flex-direction: column;
+    overflow: hidden;
+  }
+  .cp-drawer-panel [data-drawer-body] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
 
   @keyframes cp-drawer-enter {

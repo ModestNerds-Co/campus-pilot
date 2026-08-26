@@ -3,7 +3,7 @@
 //  roles-list.tsx - Roles List Component (token-driven)
 //
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Shield, Plus, Search, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { rolesService } from "../services/roles-service";
 import type { Role, RolesListParams } from "../types";
@@ -30,6 +30,7 @@ export const RolesList: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<Role | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Role | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const canCreate = hasPermission(currentUser?.permissions, "roles:create");
   const canEdit = hasPermission(currentUser?.permissions, "roles:edit");
   const canDelete = hasPermission(currentUser?.permissions, "roles:delete");
@@ -93,6 +94,13 @@ export const RolesList: React.FC = () => {
     setIsModalOpen(true);
     setOpenMenuId(null);
   };
+  const handleCloseRole = () => {
+    const roleId = selectedRole?.id;
+    setIsModalOpen(false);
+    if (roleId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[roleId]?.focus({ preventScroll: true }));
+    }
+  };
   const handleModalSuccess = () => {
     fetchRoles();
   };
@@ -109,10 +117,6 @@ export const RolesList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
-        Seeded roles provide a dependable starting point. Their names and access can evolve, while stable keys keep assignments intact.
-      </p>
-
       <TableControlsBar>
         <TableControlsSearch onSubmit={handleSearch}>
           <Input
@@ -170,9 +174,8 @@ export const RolesList: React.FC = () => {
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-medium text-[var(--text-strong)]">{role.name}</span>
-                            {role.is_system ? <Badge tone="neutral">Seeded</Badge> : <Badge tone="outline">Custom</Badge>}
+                            {role.is_system ? <Badge tone="neutral">Protected</Badge> : null}
                           </div>
-                          <p className="mt-1 font-mono text-[11px] text-[var(--text-subtle)]">{role.key}</p>
                         </div>
                       </div>
                     </TD>
@@ -186,7 +189,7 @@ export const RolesList: React.FC = () => {
                         </p>
                         <p className="mt-1 max-w-sm truncate text-xs text-[var(--text-muted)]">
                           {role.permissions.includes("*")
-                            ? "All actions in licensed modules"
+                            ? "All module actions"
                             : permissionNamespaces(role.permissions).map(humanizeKey).join(", ")}
                         </p>
                       </div>
@@ -197,6 +200,7 @@ export const RolesList: React.FC = () => {
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
                         {(canEdit || (canDelete && !role.is_system)) ? <button
+                          ref={(element) => { actionButtonRefs.current[role.id] = element; }}
                           onClick={() => setOpenMenuId(openMenuId === role.id ? null : role.id)}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                           aria-label={`Actions for ${role.name}`}
@@ -232,7 +236,7 @@ export const RolesList: React.FC = () => {
         )}
       </TableWrap>
 
-      <RoleFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleModalSuccess} role={selectedRole} />
+      <RoleFormModal isOpen={isModalOpen} onClose={handleCloseRole} onSuccess={handleModalSuccess} role={selectedRole} />
       <ConfirmDrawer
         confirmLabel="Delete role"
         description={`Delete the ${pendingDelete?.name || "selected"} role? Review any assigned users first; this action cannot be undone.`}

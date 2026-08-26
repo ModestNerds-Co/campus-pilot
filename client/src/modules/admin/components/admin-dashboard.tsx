@@ -6,10 +6,10 @@ import { useAuthStore } from "@/stores/auth-store";
 import { usePageChrome } from "../layouts/page-chrome";
 
 const administrationAreas = [
-  { title: "Users", description: "Create school accounts, manage status, and assign one or more roles.", href: "/admin/users" as const, icon: UsersRound, action: "Manage users", permission: "users:view" },
-  { title: "Roles and access", description: "Edit seeded roles or build custom access from enabled campus modules.", href: "/admin/roles" as const, icon: ShieldCheck, action: "Manage roles", permission: "roles:view" },
-  { title: "Licensing", description: "Review module entitlement state and activate signed campus license keys.", href: "/admin/licensing" as const, icon: KeyRound, action: "Review licensing", permission: "licensing:view" },
-  { title: "School settings", description: "Maintain campus identity, academic defaults, notifications, and integrations.", href: "/admin/settings" as const, icon: Settings2, action: "Open settings", permission: "school_settings:view" },
+  { title: "Users", description: "Create accounts, manage status, and assign roles.", href: "/admin/users" as const, icon: UsersRound, action: "Manage users", permission: "users:view" },
+  { title: "Roles and access", description: "Manage role permissions and create custom roles.", href: "/admin/roles" as const, icon: ShieldCheck, action: "Manage roles", permission: "roles:view" },
+  { title: "Licensing", description: "Review module access and activate a license key.", href: "/admin/licensing" as const, icon: KeyRound, action: "Review licensing", permission: "licensing:view" },
+  { title: "School settings", description: "Manage campus identity, academic defaults, notifications, and integrations.", href: "/admin/settings" as const, icon: Settings2, action: "Open settings", permission: "school_settings:view" },
 ];
 
 export const AdminDashboard: React.FC = () => {
@@ -24,13 +24,13 @@ export const AdminDashboard: React.FC = () => {
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.48fr)] lg:items-end">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">Campus management</p>
-          <h1 className="mt-3 max-w-[18ch] text-3xl font-semibold leading-[1.06] tracking-[-0.045em] text-[var(--text-strong)] sm:text-4xl">Govern access without mixing it into daily school work.</h1>
-          <p className="mt-4 max-w-[34em] text-base leading-7 text-[var(--text-muted)]">Administration controls who can enter each licensed module and how the campus is configured.</p>
+          <h1 className="mt-3 max-w-[18ch] text-3xl font-semibold leading-[1.06] tracking-[-0.045em] text-[var(--text-strong)] sm:text-4xl">Administration</h1>
+          <p className="mt-4 max-w-[34em] text-base leading-7 text-[var(--text-muted)]">Manage users, roles, module access, licensing, and school settings.</p>
         </div>
         <Link className="group flex items-center justify-between gap-5 bg-[var(--sidebar)] p-5 text-[var(--sidebar-foreground)]" to="/home">
           <span className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-[9px] bg-[var(--brand-highlight)] text-[var(--sidebar-active-fg)]"><Grid2X2 className="size-[18px]" /></span>
-            <span><span className="block text-sm font-semibold">All modules</span><span className="mt-0.5 block text-xs text-[var(--sidebar-muted)]">Return to campus work</span></span>
+            <span><span className="block text-sm font-semibold">All modules</span><span className="mt-0.5 block text-xs text-[var(--sidebar-muted)]">Open module launcher</span></span>
           </span>
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
         </Link>
@@ -55,16 +55,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </section>
 
-      <section className="grid gap-5 bg-[var(--surface-muted)] p-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Your administration access</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">These names are presentation labels; stable role keys keep assignments intact if a role is renamed.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          {(user?.role_names?.length ? user.role_names : ["Campus access"]).map((role) => <span className="rounded-full bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-body)] shadow-[var(--shadow-rest)]" key={role}>{role}</span>)}
-          <span className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--brand-strong)]">{user?.modules?.length ?? 0} enabled modules</span>
-        </div>
-      </section>
     </div>
   );
 };

@@ -194,7 +194,7 @@ export const AdminSetupScreen: React.FC = () => {
 
   return (
     <SetupScaffold
-      description="Create the accountable owner for school configuration, user access, classes, fees, and daily operations."
+      description="Create the first account that can manage school settings, users, and access."
       maxWidth="narrow"
       step={2}
       title="Create the first administrator"

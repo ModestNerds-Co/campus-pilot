@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, KeyRound, Loader2, LockKeyhole, Power, RefreshCw, ShieldCheck } from "lucide-react";
+import { CheckCircle2, KeyRound, Loader2, Power, RefreshCw, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +58,7 @@ export const LicensingPanel: React.FC = () => {
   const activate = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!licenseKey.trim()) {
-      toast.error("Paste a signed license key to continue");
+      toast.error("Paste a license key to continue");
       return;
     }
     setIsActivating(true);
@@ -100,15 +100,11 @@ export const LicensingPanel: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.45fr)] lg:items-end">
+      <section>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">Module entitlements</p>
-          <h1 className="mt-3 max-w-[21ch] text-3xl font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--text-strong)]">Enable school capabilities without changing anyone’s role.</h1>
-          <p className="mt-4 max-w-[34em] text-sm leading-6 text-[var(--text-muted)]">A module must be licensed and permitted by a role before it appears on the campus launcher.</p>
-        </div>
-        <div className="flex items-start gap-3 bg-[var(--surface-muted)] p-4">
-          <LockKeyhole className="mt-0.5 size-5 shrink-0 text-[var(--brand-strong)]" />
-          <p className="text-sm leading-6 text-[var(--text-muted)]">License keys are signature-verified. Campus Pilot stores only a fingerprint and entitlement claims, never the original key.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">Modules</p>
+          <h1 className="mt-3 max-w-[21ch] text-3xl font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--text-strong)]">Licensing</h1>
+          <p className="mt-4 max-w-[34em] text-sm leading-6 text-[var(--text-muted)]">Review enabled modules or activate a license key.</p>
         </div>
       </section>
 
@@ -126,7 +122,7 @@ export const LicensingPanel: React.FC = () => {
         <section aria-labelledby="licensed-modules">
           <div className="border-b border-[var(--border)] pb-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Campus catalog</p>
-            <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="licensed-modules">Licensed and available modules</h2>
+            <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="licensed-modules">Available modules</h2>
           </div>
           <div className="grid gap-x-8 md:grid-cols-2">
             {catalog.map((module) => {
@@ -158,19 +154,17 @@ export const LicensingPanel: React.FC = () => {
 
       <DialogShell onClose={() => !isActivating && setLicenseDrawerOpen(false)} open={licenseDrawerOpen}>
         <DialogHeader onClose={() => setLicenseDrawerOpen(false)} title="Activate license" />
-        <form className="contents" onSubmit={activate}>
+        <form onSubmit={activate}>
           <DialogBody className="space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">Signed module entitlement</p>
-            <div className="bg-[var(--surface-muted)] p-4 text-sm leading-6 text-[var(--text-muted)]">The key must be issued for this campus. It may enable one module or a licensed bundle and can include an expiry date.</div>
+            <p className="text-sm leading-6 text-[var(--text-muted)]">Use a license key issued for this campus. It may enable one module or several modules and may include an expiry date.</p>
             <div>
               <Label htmlFor="license-key">License key</Label>
-              <Textarea autoComplete="off" className="mt-2 min-h-40 resize-y font-mono text-xs" id="license-key" onChange={(event) => setLicenseKey(event.target.value)} placeholder="Paste the complete signed license key" spellCheck={false} value={licenseKey} />
-              <p className="mt-2 text-xs leading-5 text-[var(--text-subtle)]">The original key is discarded after successful verification.</p>
+              <Textarea autoComplete="off" className="mt-2 min-h-40 resize-y font-mono text-xs" id="license-key" onChange={(event) => setLicenseKey(event.target.value)} placeholder="Paste the complete license key" spellCheck={false} value={licenseKey} />
             </div>
           </DialogBody>
           <DialogFooter>
             <Button disabled={isActivating} onClick={() => setLicenseDrawerOpen(false)} type="button" variant="ghost">Keep current licensing</Button>
-            <Button disabled={isActivating || !licenseKey.trim()} type="submit">{isActivating ? <><Loader2 className="size-4 animate-spin" />Verifying license…</> : <><KeyRound className="size-4" />Activate license</>}</Button>
+            <Button disabled={isActivating || !licenseKey.trim()} type="submit">{isActivating ? <><Loader2 className="size-4 animate-spin" />Activating…</> : <><KeyRound className="size-4" />Activate license</>}</Button>
           </DialogFooter>
         </form>
       </DialogShell>
@@ -181,9 +175,9 @@ export const LicensingPanel: React.FC = () => {
 };
 
 function sourceLabel(source?: TenantModule["source"]) {
-  if (source === "core") return "Core module";
-  if (source === "license") return "Signed license";
-  if (source === "legacy") return "Existing installation";
+  if (source === "core") return "Included";
+  if (source === "license") return "License";
+  if (source === "legacy") return "Enabled";
   return "License required";
 }
 

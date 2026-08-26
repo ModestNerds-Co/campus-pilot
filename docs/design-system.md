@@ -94,7 +94,15 @@ The current shared implementation is `client/src/components/ui/dialog.tsx`; its 
 - Tables may scroll horizontally when the data cannot responsibly collapse, while surrounding page chrome remains stable.
 - Copy errors in plain language and provide a useful recovery action.
 
-## 7. Implementation and QA checklist
+## 7. Product copy
+
+- Keep end-user copy operational. A sentence should report a status, explain a consequence, or tell the operator what to do next.
+- Remove slogans, reassurance, and repeated explanations that do not change a decision or action.
+- Do not expose implementation details such as seeded roles, stable keys, signatures, fingerprints, entitlement claims, legacy migrations, or internal access mechanics.
+- Use familiar product terms such as users, roles, modules, licensing, and school settings. Keep internal terminology in code and technical documentation.
+- Preserve concise safety information when it explains an irreversible action, access change, expiry, or recovery step.
+
+## 8. Implementation and QA checklist
 
 Before a UI checkpoint is deployed:
 
@@ -103,11 +111,12 @@ Before a UI checkpoint is deployed:
 - [ ] Navigation has no dead links.
 - [ ] Loading, empty, error, and success behavior is intentional.
 - [ ] Keyboard focus, Escape, and focus return work for drawers and mobile navigation.
+- [ ] UI copy contains only operational status, consequences, and actions; no implementation notes or marketing slogans.
 - [ ] Desktop and mobile browser checks pass.
 - [ ] `pnpm run build` passes in `client/`.
 - [ ] The client is rebuilt with both Compose files and the public route remains healthy.
 
-## 8. Canonical files
+## 9. Canonical files
 
 - `client/src/styles/tokens.css` — color, type, spacing, shape, motion, and elevation tokens.
 - `client/src/index.css` — global behavior, accessibility, and reusable shell helpers.

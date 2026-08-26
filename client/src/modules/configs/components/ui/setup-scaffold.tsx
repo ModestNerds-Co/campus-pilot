@@ -37,9 +37,9 @@ export function SetupScaffold({
 
         <div className="relative z-10 my-auto py-12">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-highlight)]">SETUP {String(step).padStart(2, "0")} OF 02</p>
-          <h2 className="mt-5 text-3xl font-semibold tracking-[-0.045em]">Build the campus foundation.</h2>
+          <h2 className="mt-5 text-3xl font-semibold tracking-[-0.045em]">Set up Campus Pilot.</h2>
           <p className="mt-4 text-sm leading-6 text-[var(--sidebar-muted)]">
-            Two focused steps establish the school identity and the account responsible for it.
+            Add the school details and first administrator.
           </p>
 
           <ol className="mt-9 space-y-3" aria-label="Setup progress">

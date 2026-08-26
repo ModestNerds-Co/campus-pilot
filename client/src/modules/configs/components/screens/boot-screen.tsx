@@ -190,7 +190,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
             </div>
             <div className="space-y-2">
               <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
-                Campus Pilot is ready
+                Opening sign in
               </h1>
               <p className="text-[var(--tone-success)] font-medium">Configuration loaded</p>
             </div>
@@ -216,11 +216,10 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
           </div>
         </div>
         <div className="relative z-10 my-auto max-w-md py-12">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-highlight)]">WORKSPACE CHECK</p>
-          <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-[-0.05em]">One dependable place to start the school day.</h2>
-          <p className="mt-5 text-base leading-7 text-[var(--sidebar-muted)]">Campus Pilot verifies the school, administrator, and service connection before anyone enters the workspace.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-highlight)]">Workspace status</p>
+          <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-[-0.05em]">Checking school configuration</h2>
+          <p className="mt-5 text-base leading-7 text-[var(--sidebar-muted)]">The sign-in page will open when the check completes.</p>
         </div>
-        <p className="relative z-10 text-sm text-[var(--sidebar-muted)]">Private campus workspace · Invite only</p>
       </section>
 
       <section className="flex min-h-[100dvh] flex-col bg-[var(--surface)]">
@@ -231,7 +230,7 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
             </span>
             <span className="text-sm font-bold">Campus Pilot</span>
           </div>
-          <span className="hidden text-xs font-medium text-[var(--text-muted)] lg:block">Secure school workspace</span>
+          <span className="hidden text-xs font-medium text-[var(--text-muted)] lg:block">System status</span>
           <ThemeToggle />
         </div>
 

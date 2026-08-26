@@ -363,7 +363,7 @@ export const CampusHome: React.FC = () => {
                   {greeting()}, {firstName}.
                 </h1>
                 <p className="mt-3 max-w-[42em] text-sm leading-6 text-[var(--text-muted)] sm:text-base">
-                  Open a workspace for {schoolName}. Your modules follow the campus license and your assigned roles.
+                  Open a workspace for {schoolName}.
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--text-muted)] sm:pb-1">
@@ -416,7 +416,7 @@ export const CampusHome: React.FC = () => {
               </h2>
               <p className="mt-1 max-w-[40em] text-sm leading-6 text-[var(--text-muted)]">
                 {hasOwnerAccess
-                  ? "Your Campus Owner access was recognized, but the core workspace could not be loaded. Refresh to retry the access check."
+                  ? "Refresh to try loading Administration again."
                   : "Ask your campus administrator to assign a role with access to an enabled module."}
               </p>
               {hasOwnerAccess ? <Button className="mt-4" onClick={() => window.location.reload()} variant="secondary">Refresh access</Button> : null}
@@ -427,7 +427,7 @@ export const CampusHome: React.FC = () => {
         {!isLoading && !loadError && featuredModule && !searchQuery ? (
           <section className="mt-6" aria-label={featuredModule.key === "administration" ? "Administration workspace" : "Continue working"}>
             <FeaturedModule
-              context={featuredModule.key === "administration" ? "Core campus workspace" : recentModule ? "Continue where you left off" : "Start here"}
+              context={featuredModule.key === "administration" ? "Administration" : recentModule ? "Continue where you left off" : "Start here"}
               module={featuredModule}
               onOpen={handleModuleOpen}
             />

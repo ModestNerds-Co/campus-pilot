@@ -179,15 +179,10 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
   return (
     <DialogShell open={isOpen} onClose={onClose} panelClassName="max-w-[720px]">
       <DialogHeader title={role ? "Edit role" : "Create role"} onClose={onClose} />
-      <form className="contents" onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <DialogBody className="space-y-7">
           <section className="space-y-4" aria-labelledby="role-details-heading">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--text-strong)]" id="role-details-heading">Role details</h3>
-              <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                Names can change; the stable role key used by access rules remains unchanged.
-              </p>
-            </div>
+            <h3 className="text-sm font-semibold text-[var(--text-strong)]" id="role-details-heading">Role details</h3>
             <div>
               <Label htmlFor="role-name">Role name <span className="text-[var(--tone-danger)]">*</span></Label>
               <Input
@@ -200,12 +195,6 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                 value={formData.name}
               />
             </div>
-            {role ? (
-              <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">Stable key</p>
-                <p className="mt-1 font-mono text-xs text-[var(--text-body)]">{role.key}</p>
-              </div>
-            ) : null}
             <div>
               <Label htmlFor="role-description">Description</Label>
               <Textarea
@@ -223,20 +212,20 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
             <div>
               <h3 className="text-sm font-semibold text-[var(--text-strong)]" id="access-profile-heading">Access profile</h3>
               <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                Full access follows the campus license. Custom access is granted module by module.
+                Choose full access or select permissions by module.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <AccessModeCard
                 active={accessMode === "full"}
-                description="Every action in every module enabled for this campus."
+                description="Every permission in current and future modules."
                 icon={ShieldCheck}
                 label="Full access"
                 onClick={() => selectAccessMode("full")}
               />
               <AccessModeCard
                 active={accessMode === "custom"}
-                description="Choose precisely which module actions this role can use."
+                description="Select permissions by module."
                 icon={SlidersHorizontal}
                 label="Custom access"
                 onClick={() => selectAccessMode("custom")}
@@ -337,9 +326,9 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
             <div className="flex gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-100)] bg-[var(--brand-soft)] p-4">
               <Check className="mt-0.5 size-5 shrink-0 text-[var(--brand-strong)]" />
               <div>
-                <p className="text-sm font-semibold text-[var(--text-strong)]">All licensed modules</p>
+                <p className="text-sm font-semibold text-[var(--text-strong)]">All modules</p>
                 <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                  This role automatically gains access when a new module is licensed. License restrictions still apply.
+                  Includes every permission in current and future modules.
                 </p>
               </div>
             </div>

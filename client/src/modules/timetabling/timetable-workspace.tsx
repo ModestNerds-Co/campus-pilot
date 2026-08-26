@@ -178,7 +178,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
         <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-40" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]"><CheckCircle2 className="size-3.5" />Licensed module · available</div>
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]"><CheckCircle2 className="size-3.5" />Available</div>
             <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{module.label}</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">Build from verified school rules, generate without class, teacher, or room collisions, then review before publishing.</p>
           </div>
@@ -234,7 +234,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
 
           <section aria-labelledby="registries-heading">
             <div className="border-b border-[var(--border)] pb-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">02 · Academic foundation</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">02 · Academic setup</p>
               <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="registries-heading">Scheduling registries</h2>
             </div>
             <div className="grid gap-5 pt-5 md:grid-cols-2">
@@ -316,7 +316,7 @@ const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableC
 );
 
 const RunReview: React.FC<{ canPublish: boolean; isPublishing: boolean; onPublish: () => void; run: TimetableRun | null; selectedClassId: string | null; setSelectedClassId: (id: string | null) => void }> = ({ canPublish, isPublishing, onPublish, run, selectedClassId, setSelectedClassId }) => {
-  if (!run) return <StateMessage description="Complete the scheduling foundation and generate a draft. Campus Pilot will keep the result here for review." title="No timetable draft yet" />;
+  if (!run) return <StateMessage description="Complete the timetable setup, then generate a draft." title="No timetable draft yet" />;
   const config = run.configuration;
   const selectedClass = selectedClassId ?? config.classes[0]?.id ?? null;
   return (

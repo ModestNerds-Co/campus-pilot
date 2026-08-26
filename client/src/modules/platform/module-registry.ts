@@ -89,11 +89,11 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
 
 export const defaultModuleVisual: ModuleVisual = {
   icon: ShieldCheck,
-  highlights: ["Module workspace", "Permission-aware access", "Campus records"],
+  highlights: ["Module workspace", "Campus records", "Operational reports"],
 };
 
 export function stageLabel(stage: string) {
   if (stage === "available") return "Ready";
-  if (stage === "foundation") return "Foundation";
+  if (stage === "foundation") return "In setup";
   return "Planned";
 }

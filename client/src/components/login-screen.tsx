@@ -9,13 +9,8 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  History,
-  KeyRound,
   Loader2,
   LockKeyhole,
-  School,
-  ShieldCheck,
-  UsersRound,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -27,12 +22,6 @@ import type { SchoolConfiguration } from "../modules/configs/types";
 interface LoginScreenProps {
   className?: string;
 }
-
-const assurances = [
-  { icon: School, label: "One accountable campus workspace" },
-  { icon: UsersRound, label: "Role-aware access for every team" },
-  { icon: History, label: "Operational records with a clear history" },
-];
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
   const navigate = useNavigate();
@@ -76,7 +65,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
     try {
       const success = await login(email.trim(), password);
       if (success) {
-        toast.success("Welcome back");
+        toast.success("Signed in");
         navigate({ to: "/home", replace: true });
       } else {
         const message = authError || "The email address or password does not match an active account.";
@@ -115,31 +104,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
         </div>
 
         <div className="relative z-10 my-auto max-w-lg py-12">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-highlight)]">WELCOME TO CAMPUS PILOT</p>
-          <h1 className="mt-6 text-5xl font-semibold leading-[1.04] tracking-[-0.055em] text-[var(--sidebar-foreground)] xl:text-6xl">
-            Your campus,
-            <br />
-            clearly run.
-          </h1>
-          <p className="mt-6 max-w-md text-lg leading-8 text-[var(--sidebar-muted)]">
-            People, learning and daily operations in one calm, accountable workspace.
-          </p>
-
-          <ul aria-label="Platform assurances" className="mt-11 space-y-4">
-            {assurances.map(({ icon: Icon, label }) => (
-              <li className="flex items-center gap-4" key={label}>
-                <span className="flex size-10 items-center justify-center rounded-[9px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--brand-highlight)]">
-                  <Icon className="size-[18px]" />
-                </span>
-                <span className="text-sm font-semibold text-[var(--sidebar-foreground)]">{label}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="relative z-10 flex items-center gap-3 text-sm text-[var(--sidebar-muted)]">
-          <span aria-hidden="true" className="size-2.5 rounded-full bg-[var(--brand-highlight)]" />
-          Private campus workspace · Invite only
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-highlight)]">School workspace</p>
+          <h1 className="mt-6 text-5xl font-semibold leading-[1.04] tracking-[-0.055em] text-[var(--sidebar-foreground)] xl:text-6xl">{schoolConfig?.name || "Campus workspace"}</h1>
         </div>
       </section>
 
@@ -151,14 +117,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
             </span>
             <span className="text-sm font-bold tracking-[-0.02em]">Campus Pilot</span>
           </div>
-          <span className="hidden text-xs font-medium text-[var(--text-muted)] lg:block">Secure school workspace</span>
+          <span className="hidden text-xs font-medium text-[var(--text-muted)] lg:block">Account access</span>
           <ThemeToggle />
         </div>
 
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10 lg:py-12">
           <div className="w-full max-w-[430px]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">WELCOME BACK</p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-4xl">
+            <h2 className="text-3xl font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-4xl">
               Sign in to {schoolName}
             </h2>
             <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
@@ -200,7 +165,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
                   <label className="block text-sm font-medium text-[var(--text-strong)]" htmlFor="password">
                     Password
                   </label>
-                  <span className="text-xs text-[var(--text-muted)]">Managed by your administrator</span>
                 </div>
                 <div className="relative">
                   <input
@@ -246,13 +210,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
 
             <div className="mt-8 border-t border-[var(--border)] pt-6 text-center text-sm text-[var(--text-muted)]">
               Need access? Contact your school administrator.
-            </div>
-            <div className="mt-9 flex items-center justify-center gap-2 text-xs text-[var(--text-subtle)]">
-              <KeyRound className="size-3.5" />
-              <span>Protected workspace</span>
-              <span aria-hidden="true">·</span>
-              <ShieldCheck className="size-3.5" />
-              <span>Role-aware access</span>
             </div>
           </div>
         </div>

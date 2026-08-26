@@ -77,8 +77,8 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
       <section className="flex items-start gap-4 bg-[var(--surface-muted)] p-5">
         <CircleDashed className="mt-0.5 size-5 shrink-0 text-[var(--brand-strong)]" />
         <div>
-          <h2 className="text-sm font-semibold text-[var(--text-strong)]">This licensed workspace is being built in stages</h2>
-          <p className="mt-1 max-w-[55em] text-sm leading-6 text-[var(--text-muted)]">The module route and access boundary are live. Operational screens will appear here as their verified school workflows are implemented.</p>
+          <h2 className="text-sm font-semibold text-[var(--text-strong)]">This workspace is not available yet</h2>
+          <p className="mt-1 max-w-[55em] text-sm leading-6 text-[var(--text-muted)]">Return to All modules and choose an available workspace.</p>
         </div>
       </section>
     </div>
@@ -94,7 +94,7 @@ const ModuleIntroduction: React.FC<{ module: ModuleDefinition }> = ({ module }) 
       <div className="relative flex max-w-3xl items-start gap-4">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-[10px] bg-[var(--brand-highlight)] text-[var(--sidebar-active-fg)]"><Icon className="size-5" /></span>
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]"><CheckCircle2 className="size-3.5" />Licensed module · {stageLabel(module.stage)}</div>
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]"><CheckCircle2 className="size-3.5" />{stageLabel(module.stage)}</div>
           <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{module.label}</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">{module.description}</p>
         </div>
