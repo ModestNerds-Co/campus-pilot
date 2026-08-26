@@ -1,13 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   CalendarDays,
+  ChevronRight,
   Grid2X2,
   LogOut,
+  Menu,
   Search,
   School,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -32,6 +35,10 @@ export const CampusHome: React.FC = () => {
   const [recentModuleKey, setRecentModuleKey] = useState(() => localStorage.getItem(RECENT_MODULE_KEY));
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopNavigation, setDesktopNavigation] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -60,6 +67,68 @@ export const CampusHome: React.FC = () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const updateNavigationMode = () => setDesktopNavigation(media.matches);
+    updateNavigationMode();
+    media.addEventListener("change", updateNavigationMode);
+    return () => media.removeEventListener("change", updateNavigationMode);
+  }, []);
+
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    if (!desktopNavigation && !sidebarOpen) {
+      sidebar.setAttribute("inert", "");
+    } else {
+      sidebar.removeAttribute("inert");
+    }
+  }, [desktopNavigation, sidebarOpen]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const sidebar = sidebarRef.current;
+    const focusReturnTarget = menuButtonRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusable = () =>
+      Array.from(
+        sidebar?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.offsetParent !== null);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSidebarOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const items = focusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.requestAnimationFrame(() => focusable()[0]?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      focusReturnTarget?.focus();
+    };
+  }, [sidebarOpen]);
 
   const accessibleModules = useMemo(() => {
     if (!user) return [];
@@ -119,78 +188,212 @@ export const CampusHome: React.FC = () => {
   const firstName = user?.full_name.trim().split(/\s+/)[0] || "there";
   const hasOwnerAccess =
     user?.roles?.includes("campus_owner") || user?.permissions?.includes("*");
+  const userName = user?.full_name || "Campus user";
+  const userRole = user?.role_names?.[0] || "Campus access";
+  const sidebarModules = [
+    accessibleModules.find((module) => module.key === "administration"),
+    recentModule,
+  ].filter((module, index, modules): module is ModuleDefinition =>
+    Boolean(module) && modules.findIndex((candidate) => candidate?.key === module?.key) === index,
+  );
+  const sidebarGroups = Array.from(
+    new Set(accessibleModules.filter((module) => module.key !== "administration").map((module) => module.group)),
+  );
 
   return (
     <div className="min-h-[100dvh] bg-[var(--canvas)]">
       <a className="cp-skip-link" href="#main-content">Skip to main content</a>
-      <header className="relative overflow-hidden bg-[var(--sidebar)] text-[var(--sidebar-foreground)]">
-        <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-45" />
-        <div className="relative mx-auto flex max-w-[1480px] items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link className="flex min-w-0 items-center gap-3" to="/home">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[var(--brand-highlight)] text-[var(--sidebar-active-fg)]">
+      <aside
+        aria-label="Campus navigation"
+        aria-hidden={!desktopNavigation && !sidebarOpen}
+        className={`fixed inset-y-0 left-0 z-[70] flex w-[min(320px,calc(100vw-48px))] flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform duration-300 ease-[var(--motion-ease-default)] lg:z-[var(--z-sidebar)] lg:w-[var(--sidebar-w)] lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+        id="launcher-navigation"
+        ref={sidebarRef}
+      >
+        <div className="relative border-b border-[var(--sidebar-border)] px-5 pb-5 pt-6">
+          <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-45" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[var(--sidebar-active)] text-[var(--sidebar-active-fg)] shadow-sm">
               <img alt="" aria-hidden="true" className="size-7 rounded-full object-cover mix-blend-multiply" src="/assets/images/campus-pilot-logo.svg" />
             </span>
-            <span className="min-w-0">
-              <span className="block text-[15px] font-bold tracking-[-0.025em]">Campus Pilot</span>
-              <span className="block truncate text-[11px] text-[var(--sidebar-muted)]">{schoolName}</span>
-            </span>
-          </Link>
-          <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle variant="sidebar" />
+            <div className="min-w-0">
+              <p className="text-[15px] font-bold tracking-[-0.025em]">Campus Pilot</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">Module launcher</p>
+            </div>
             <button
-              aria-label="Sign out"
-              className="inline-flex size-10 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:ring-[var(--brand-highlight)]"
-              onClick={() => void handleLogout()}
+              aria-label="Close navigation"
+              className="ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] lg:hidden"
+              onClick={() => setSidebarOpen(false)}
               type="button"
             >
-              <LogOut className="size-[18px]" />
+              <X className="size-5" />
             </button>
           </div>
-        </div>
-      </header>
 
-      <main className="mx-auto max-w-[1280px] px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10" id="main-content" tabIndex={-1}>
-        <section className="flex flex-col gap-5 border-b border-[var(--border)] pb-7 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
-              <Grid2X2 className="size-3.5" />
-              Campus workspace
+          <div className="relative mt-5 rounded-[10px] border border-[var(--sidebar-border)] bg-white/5 p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-white/10 text-[var(--brand-highlight)]">
+                {school?.logo_dark_url || school?.logo_light_url ? (
+                  <img alt="" className="size-full object-cover" src={school.logo_dark_url || school.logo_light_url || undefined} />
+                ) : (
+                  <School className="size-4" />
+                )}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold">{schoolName}</p>
+                <p className="mt-0.5 truncate text-[11px] text-[var(--sidebar-muted)]">Active campus</p>
+              </div>
             </div>
-            <h1 className="mt-3 text-[clamp(2rem,4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--text-strong)]">
-              {greeting()}, {firstName}.
-            </h1>
-            <p className="mt-3 max-w-[42em] text-sm leading-6 text-[var(--text-muted)] sm:text-base">
-              Open a workspace for {schoolName}. Your modules follow the campus license and your assigned roles.
-            </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--text-muted)] sm:pb-1">
-            <CalendarDays className="size-4 text-[var(--brand-strong)]" />
-            {formattedDate()}
-          </div>
-        </section>
+        </div>
 
-        <section aria-labelledby="workspace-heading" className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="workspace-heading">Your workspaces</h2>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {accessibleModules.length > 0
-                ? `${accessibleModules.length} ${accessibleModules.length === 1 ? "module" : "modules"} available to you`
-                : "Your available modules will appear here"}
-            </p>
+        <nav aria-label="Primary navigation" className="cp-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          <div className="space-y-6">
+            <section aria-labelledby="launcher-workspace-nav">
+              <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="launcher-workspace-nav">Workspace</h2>
+              <Link
+                aria-current="page"
+                className="flex min-h-10 items-center gap-3 rounded-[8px] bg-[var(--sidebar-active)] px-3 text-[13px] font-medium text-[var(--sidebar-active-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]"
+                onClick={() => setSidebarOpen(false)}
+                to="/home"
+              >
+                <Grid2X2 className="size-[17px] shrink-0" />
+                <span className="min-w-0 flex-1 truncate">All modules</span>
+                <ChevronRight className="size-3.5 shrink-0" />
+              </Link>
+            </section>
+
+            {sidebarModules.length > 0 ? (
+              <section aria-labelledby="launcher-quick-nav">
+                <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="launcher-quick-nav">Quick access</h2>
+                <div className="space-y-1">
+                  {sidebarModules.map((module) => (
+                    <SidebarModuleLink
+                      key={module.key}
+                      module={module}
+                      onNavigate={() => setSidebarOpen(false)}
+                      onOpen={handleModuleOpen}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {sidebarGroups.length > 0 ? (
+              <section aria-labelledby="launcher-browse-nav">
+                <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="launcher-browse-nav">Browse by task</h2>
+                <div className="space-y-1">
+                  {sidebarGroups.map((group) => (
+                    <a
+                      className="flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]"
+                      href={`#module-group-${slug(group)}`}
+                      key={group}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <span aria-hidden="true" className="size-1.5 rounded-full bg-[var(--brand-highlight)]" />
+                      <span className="truncate">{group}</span>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
-          <label className="relative block w-full sm:max-w-[360px]" htmlFor="module-search">
-            <span className="sr-only">Search modules</span>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[17px] -translate-y-1/2 text-[var(--text-muted)]" />
-            <input
-              className="h-11 w-full rounded-[var(--radius-lg)] border border-[var(--input-border)] bg-[var(--surface)] pl-10 pr-4 text-base text-[var(--text-strong)] shadow-[var(--shadow-rest)] placeholder:text-[var(--text-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:text-sm"
-              id="module-search"
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Find a workspace"
-              type="search"
-              value={searchQuery}
-            />
-          </label>
-        </section>
+        </nav>
+
+        <div className="border-t border-[var(--sidebar-border)] p-3">
+          <ThemeToggle className="w-full" variant="sidebar" />
+          <div className="mt-3 flex items-center gap-3 px-2">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold">{initials(userName)}</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold">{userName}</p>
+              <p className="truncate text-[11px] text-[var(--sidebar-muted)]">{userRole}</p>
+            </div>
+          </div>
+          <button
+            className="mt-3 flex min-h-10 w-full items-center gap-3 rounded-[8px] px-3 text-left text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]"
+            onClick={() => void handleLogout()}
+            type="button"
+          >
+            <LogOut className="size-4" />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen ? (
+        <button aria-label="Dismiss navigation" className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] lg:hidden" onClick={() => setSidebarOpen(false)} type="button" />
+      ) : null}
+
+      <div className="min-w-0 lg:pl-[var(--sidebar-w)]">
+        <header className="fixed inset-x-0 top-0 z-[var(--z-nav)] flex h-[var(--app-bar-h)] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-4 backdrop-blur-md lg:left-[var(--sidebar-w)] lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              aria-controls="launcher-navigation"
+              aria-expanded={sidebarOpen}
+              aria-hidden={sidebarOpen}
+              aria-label="Open navigation"
+              className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] lg:hidden ${sidebarOpen ? "invisible pointer-events-none" : ""}`}
+              onClick={() => setSidebarOpen(true)}
+              ref={menuButtonRef}
+              tabIndex={sidebarOpen ? -1 : 0}
+              type="button"
+            >
+              <Menu className="size-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-semibold text-[var(--text-strong)]">All modules</p>
+              <p className="hidden truncate text-[12px] text-[var(--text-muted)] sm:block">{schoolName}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 lg:hidden">
+            <ThemeToggle />
+            <span className="hidden size-9 items-center justify-center rounded-full bg-[var(--brand-soft)] text-xs font-semibold text-[var(--brand-strong)] sm:flex">{initials(userName)}</span>
+          </div>
+        </header>
+
+        <main className="min-h-[100dvh] pt-[var(--app-bar-h)]" id="main-content" tabIndex={-1}>
+          <div className="campus-page-enter mx-auto max-w-[1280px] px-4 py-7 sm:px-6 sm:py-9 lg:px-8 lg:py-10">
+            <section className="flex flex-col gap-5 border-b border-[var(--border)] pb-7 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">
+                  <Grid2X2 className="size-3.5" />
+                  Campus workspace
+                </div>
+                <h1 className="mt-3 text-[clamp(2rem,4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--text-strong)]">
+                  {greeting()}, {firstName}.
+                </h1>
+                <p className="mt-3 max-w-[42em] text-sm leading-6 text-[var(--text-muted)] sm:text-base">
+                  Open a workspace for {schoolName}. Your modules follow the campus license and your assigned roles.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--text-muted)] sm:pb-1">
+                <CalendarDays className="size-4 text-[var(--brand-strong)]" />
+                {formattedDate()}
+              </div>
+            </section>
+
+            <section aria-labelledby="workspace-heading" className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="workspace-heading">Your workspaces</h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  {accessibleModules.length > 0
+                    ? `${accessibleModules.length} ${accessibleModules.length === 1 ? "module" : "modules"} available to you`
+                    : "Your available modules will appear here"}
+                </p>
+              </div>
+              <label className="relative block w-full sm:max-w-[360px]" htmlFor="module-search">
+                <span className="sr-only">Search modules</span>
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[17px] -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  className="h-11 w-full rounded-[var(--radius-lg)] border border-[var(--input-border)] bg-[var(--surface)] pl-10 pr-4 text-base text-[var(--text-strong)] shadow-[var(--shadow-rest)] placeholder:text-[var(--text-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] sm:text-sm"
+                  id="module-search"
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Find a workspace"
+                  type="search"
+                  value={searchQuery}
+                />
+              </label>
+            </section>
 
         {isLoading ? <ModuleLauncherSkeleton /> : null}
 
@@ -241,21 +444,48 @@ export const CampusHome: React.FC = () => {
           </section>
         ) : null}
 
-        <div className="mt-9 space-y-10">
-          {Object.entries(groupedModules).map(([group, modules]) => (
-            <section aria-labelledby={`module-group-${slug(group)}`} key={group}>
-              <div className="mb-1 flex items-center gap-3">
-                <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]" id={`module-group-${slug(group)}`}>{group}</h2>
-                <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
-              </div>
-              <div className="grid gap-x-8 md:grid-cols-2 xl:grid-cols-3">
-                {modules.map((module) => <ModuleRow key={module.key} module={module} onOpen={handleModuleOpen} />)}
-              </div>
-            </section>
-          ))}
-        </div>
-      </main>
+            <div className="mt-9 space-y-10">
+              {Object.entries(groupedModules).map(([group, modules]) => (
+                <section aria-labelledby={`module-group-${slug(group)}`} className="scroll-mt-24" key={group}>
+                  <div className="mb-1 flex items-center gap-3">
+                    <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]" id={`module-group-${slug(group)}`}>{group}</h2>
+                    <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
+                  </div>
+                  <div className="grid gap-x-8 md:grid-cols-2 xl:grid-cols-3">
+                    {modules.map((module) => <ModuleRow key={module.key} module={module} onOpen={handleModuleOpen} />)}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
+  );
+};
+
+const SidebarModuleLink: React.FC<{
+  module: ModuleDefinition;
+  onNavigate: () => void;
+  onOpen: (key: string) => void;
+}> = ({ module, onNavigate, onOpen }) => {
+  const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
+  const Icon = visual.icon;
+
+  return (
+    <ModuleDestination
+      module={module}
+      onOpen={(key) => {
+        onOpen(key);
+        onNavigate();
+      }}
+    >
+      <span className="group flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]">
+        <Icon className="size-[17px] shrink-0 text-[var(--brand-highlight)]" />
+        <span className="min-w-0 flex-1 truncate">{module.label}</span>
+        <ArrowRight className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </span>
+    </ModuleDestination>
   );
 };
 
@@ -357,4 +587,13 @@ function formattedDate() {
 
 function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
 }
