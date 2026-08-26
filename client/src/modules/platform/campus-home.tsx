@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -15,6 +15,7 @@ import {
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import { useNavigationDrawer } from "@/hooks/use-navigation-drawer";
 import { ThemeToggle } from "@/lib/theme";
 import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
@@ -36,9 +37,11 @@ export const CampusHome: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [desktopNavigation, setDesktopNavigation] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const sidebarRef = useRef<HTMLElement>(null);
+  const {
+    desktopNavigation,
+    navigationRef: sidebarRef,
+    triggerRef: menuButtonRef,
+  } = useNavigationDrawer(sidebarOpen, setSidebarOpen);
 
   useEffect(() => {
     let active = true;
@@ -67,68 +70,6 @@ export const CampusHome: React.FC = () => {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    const updateNavigationMode = () => setDesktopNavigation(media.matches);
-    updateNavigationMode();
-    media.addEventListener("change", updateNavigationMode);
-    return () => media.removeEventListener("change", updateNavigationMode);
-  }, []);
-
-  useEffect(() => {
-    const sidebar = sidebarRef.current;
-    if (!sidebar) return;
-    if (!desktopNavigation && !sidebarOpen) {
-      sidebar.setAttribute("inert", "");
-    } else {
-      sidebar.removeAttribute("inert");
-    }
-  }, [desktopNavigation, sidebarOpen]);
-
-  useEffect(() => {
-    if (!sidebarOpen) return;
-
-    const sidebar = sidebarRef.current;
-    const focusReturnTarget = menuButtonRef.current;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const focusable = () =>
-      Array.from(
-        sidebar?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter((element) => element.offsetParent !== null);
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSidebarOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const items = focusable();
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.requestAnimationFrame(() => focusable()[0]?.focus());
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-      focusReturnTarget?.focus();
-    };
-  }, [sidebarOpen]);
 
   const accessibleModules = useMemo(() => {
     if (!user) return [];
@@ -427,7 +368,7 @@ export const CampusHome: React.FC = () => {
         {!isLoading && !loadError && featuredModule && !searchQuery ? (
           <section className="mt-6" aria-label={featuredModule.key === "administration" ? "Administration workspace" : "Continue working"}>
             <FeaturedModule
-              context={featuredModule.key === "administration" ? "Administration" : recentModule ? "Continue where you left off" : "Start here"}
+              context={featuredModule.key === "administration" ? "Pinned" : recentModule ? "Continue where you left off" : "Start here"}
               module={featuredModule}
               onOpen={handleModuleOpen}
             />

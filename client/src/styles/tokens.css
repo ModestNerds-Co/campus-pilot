@@ -301,9 +301,6 @@
   --warning: var(--tone-warn);
   --warning-foreground: var(--on-brand);
 
-  --app-canvas-wash:
-    radial-gradient(circle at 86% 8%, hsl(207 82% 72% / 12%), transparent 28rem),
-    linear-gradient(180deg, hsl(210 29% 98%) 0%, var(--canvas) 100%);
 }
 
 .dark {
@@ -330,5 +327,4 @@
   --focus-ring-soft: hsl(207 82% 72% / 23%);
   --table-header-bg: hsl(212 36% 16%);
   --table-row-hover-bg: hsl(211 33% 19%);
-  --app-canvas-wash: radial-gradient(circle at 82% 5%, hsl(210 100% 34% / 16%), transparent 28rem);
 }

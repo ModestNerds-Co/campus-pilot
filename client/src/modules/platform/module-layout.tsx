@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+import { useNavigationDrawer } from "@/hooks/use-navigation-drawer";
 import { ThemeToggle } from "@/lib/theme";
 import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
@@ -69,6 +70,11 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [school, setSchool] = useState<SchoolConfiguration | null>(null);
+  const {
+    desktopNavigation,
+    navigationRef: sidebarRef,
+    triggerRef: menuButtonRef,
+  } = useNavigationDrawer(sidebarOpen, setSidebarOpen);
   const moduleKey = moduleKeyFromPath(location.pathname);
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
@@ -85,18 +91,6 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
 
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSidebarOpen(false); };
-    window.addEventListener("keydown", close);
-    return () => {
-      document.body.style.overflow = overflow;
-      window.removeEventListener("keydown", close);
-    };
-  }, [sidebarOpen]);
-
   const handleLogout = async () => {
     await logout();
     toast.success("Signed out");
@@ -111,8 +105,10 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
       <a className="cp-skip-link" href="#main-content">Skip to main content</a>
       <aside
         aria-label={`${moduleLabel} navigation`}
+        aria-hidden={!desktopNavigation && !sidebarOpen}
         className={`fixed inset-y-0 left-0 z-[70] flex w-[min(320px,calc(100vw-48px))] flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform duration-300 ease-[var(--motion-ease-default)] lg:z-[var(--z-sidebar)] lg:w-[var(--sidebar-w)] lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         id="module-navigation"
+        ref={sidebarRef}
       >
         <div className="relative border-b border-[var(--sidebar-border)] px-5 pb-5 pt-6">
           <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-40" />
@@ -122,9 +118,9 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
             </span>
             <div className="min-w-0">
               <p className="truncate text-[15px] font-bold tracking-[-0.025em]">{moduleLabel}</p>
-              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">Campus Pilot module</p>
+              <p className="truncate text-[11px] font-medium text-[var(--sidebar-muted)]">{school?.name || "Campus workspace"}</p>
             </div>
-            <button aria-label="Close navigation" className="ml-auto inline-flex size-10 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 lg:hidden" onClick={() => setSidebarOpen(false)} type="button">
+            <button aria-label="Close navigation" className="ml-auto inline-flex size-10 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] lg:hidden" onClick={() => setSidebarOpen(false)} type="button">
               <X className="size-5" />
             </button>
           </div>
@@ -142,11 +138,6 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               {localNavigation.map((item) => <LocalLink active={location.pathname === item.path} item={item} key={item.path} />)}
             </div>
           </section>
-          {localNavigation.length === 0 ? (
-            <p className="mx-3 mt-6 border-t border-[var(--sidebar-border)] pt-5 text-xs leading-5 text-[var(--sidebar-muted)]">
-              Local navigation will expand as this module’s workflows are released.
-            </p>
-          ) : null}
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] p-3">
@@ -158,7 +149,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               <p className="truncate text-[11px] text-[var(--sidebar-muted)]">{userRole}</p>
             </div>
           </div>
-          <button className="mt-2 flex min-h-10 w-full items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]" onClick={() => void handleLogout()} type="button">
+          <button className="mt-2 flex min-h-10 w-full items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]" onClick={() => void handleLogout()} type="button">
             <LogOut className="size-[17px]" /> Sign out
           </button>
         </div>
@@ -166,10 +157,10 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
 
       {sidebarOpen ? <button aria-label="Close navigation" className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] lg:hidden" onClick={() => setSidebarOpen(false)} type="button" /> : null}
 
-      <div className="lg:pl-[var(--sidebar-w)]">
-        <header className="fixed inset-x-0 top-0 z-40 flex h-[var(--app-bar-h)] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 lg:left-[var(--sidebar-w)] lg:px-8">
+      <div className="min-w-0 lg:pl-[var(--sidebar-w)]">
+        <header className="fixed inset-x-0 top-0 z-[var(--z-nav)] flex h-[var(--app-bar-h)] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-4 backdrop-blur-md lg:left-[var(--sidebar-w)] lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <button aria-controls="module-navigation" aria-expanded={sidebarOpen} aria-label="Open navigation" className="inline-flex size-10 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] lg:hidden" onClick={() => setSidebarOpen(true)} type="button">
+            <button aria-controls="module-navigation" aria-expanded={sidebarOpen} aria-hidden={sidebarOpen} aria-label="Open navigation" className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] lg:hidden ${sidebarOpen ? "invisible pointer-events-none" : ""}`} onClick={() => setSidebarOpen(true)} ref={menuButtonRef} tabIndex={sidebarOpen ? -1 : 0} type="button">
               <Menu className="size-5" />
             </button>
             <div className="min-w-0">
@@ -177,10 +168,16 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               <p className="hidden truncate text-[12px] text-[var(--text-muted)] sm:block">{school?.name || "Campus workspace"}</p>
             </div>
           </div>
-          {pageAction ? <div>{pageAction}</div> : null}
+          <div className="flex items-center gap-3">
+            {pageAction ? <div className="hidden sm:block">{pageAction}</div> : null}
+            <ThemeToggle className="lg:hidden" />
+          </div>
         </header>
         <main className="min-h-[100dvh] pt-[var(--app-bar-h)]" id="main-content" tabIndex={-1}>
-          <div className="campus-page-enter mx-auto max-w-[1480px] p-4 sm:p-6 lg:p-8">{children}</div>
+          <div className="campus-page-enter mx-auto max-w-[1480px] p-4 sm:p-6 lg:p-8">
+            {pageAction ? <div className="mb-4 sm:hidden">{pageAction}</div> : null}
+            {children}
+          </div>
         </main>
       </div>
     </div>
@@ -208,7 +205,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
 };
 
 function navClass(active: boolean) {
-  return `flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium focus-visible:ring-[var(--brand-highlight)] ${active ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-fg)]" : "text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]"}`;
+  return `flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] ${active ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-fg)]" : "text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]"}`;
 }
 
 function moduleKeyFromPath(pathname: string) {

@@ -46,6 +46,13 @@ The implementation source of truth is `client/src/styles/tokens.css`.
 - Mobile navigation is an off-canvas drawer with a scrim, Escape support, focus handling, and background scroll lock.
 - Main content uses a calm canvas, bounded readable width, and consistent page rhythm.
 
+### Agent surfaces
+
+- Agent has a full module workspace for conversations, history, approvals, and personal usage.
+- Every authenticated module may expose a compact Agent trigger. It opens the shared right-side drawer with deliberate current-module or current-record context.
+- The contextual drawer has one scrolling message region and a stable composer. Do not nest another scrolling workflow inside it; open the full Agent module for long work, history, provider administration, or approvals.
+- Provider setup, capability policy, limits, and campus-wide usage reports live in Administration. The interaction and authorization model is defined in `docs/agent-platform.md`.
+
 ### Navigation
 
 - Group links by operational task rather than technical module.
@@ -123,3 +130,4 @@ Before a UI checkpoint is deployed:
 - `client/src/modules/admin/layouts/admin-layout.tsx` — application shell and navigation.
 - `client/src/components/ui/dialog.tsx` — shared right-side drawer behavior.
 - `client/src/components/ui/data-table.tsx` — shared list states and table structure.
+- `docs/agent-platform.md` — Agent, provider, capability, approval, and usage architecture.

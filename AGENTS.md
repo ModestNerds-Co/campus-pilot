@@ -6,6 +6,7 @@ These rules apply to the whole repository. Backend-specific conventions remain i
 
 - Read `docs/design-system.md` before changing the client UI.
 - Read `docs/access-control.md` before changing sign-in, roles, permissions, module navigation, or licensing.
+- Read `docs/agent-platform.md` before changing Agent, AI providers, capability exposure, approvals, or usage reporting.
 - Keep that file current when a new durable UI rule or interaction decision is agreed.
 - Do not create another rules document unless it covers a genuinely separate concern.
 

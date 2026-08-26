@@ -29,8 +29,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    background-image: var(--app-canvas-wash);
-    background-attachment: fixed;
   }
   ::selection {
     background: var(--brand-highlight);

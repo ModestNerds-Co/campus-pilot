@@ -92,3 +92,11 @@ The final three adopt useful LADS concepts in school language. LADS route-string
 - Generation may return unresolved lessons, but a run with unresolved lessons cannot be published.
 - Publication supersedes the prior published run for the same campus; it does not delete historical runs.
 - The timetabling configuration is a self-contained scheduling source until Academics supplies equivalent verified records. Future synchronization must preserve snapshot and publication semantics.
+
+## 8. Agent access
+
+- Agent is a licensed module and follows the same login, role, permission, module-enablement, and record-scope rules as every other module.
+- Agent capabilities never outrank the signed-in person. Effective access also applies campus Agent policy and any required human approval.
+- Provider administration, capability policy, limits, and campus-wide usage reporting are Administration concerns with their own permissions.
+- Dynamic custom roles may receive Agent permissions and capability policy; seeded role names are not used as authorization shortcuts.
+- The canonical capability, provider, metering, and approval model is `docs/agent-platform.md`.

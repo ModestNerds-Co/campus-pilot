@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NotebookPen, Plus, MoreVertical, Edit, Trash2, Route, Fuel } from "lucide-react";
 import { vehicleLogService } from "../services/vehicle-log-service";
 import type { VehicleDailyLog, VehicleDailyLogsListParams } from "../types";
@@ -51,6 +51,7 @@ export const DailyLogList: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<VehicleDailyLog | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<VehicleDailyLog | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const fetchLogs = async () => {
     setIsLoading(true);
@@ -106,6 +107,20 @@ export const DailyLogList: React.FC = () => {
     setIsModalOpen(true);
     setOpenMenuId(null);
   };
+  const handleCloseLog = () => {
+    const logId = selectedLog?.id;
+    setIsModalOpen(false);
+    if (logId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[logId]?.focus({ preventScroll: true }));
+    }
+  };
+  const handleCloseDelete = () => {
+    const logId = pendingDelete?.id;
+    setPendingDelete(null);
+    if (logId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[logId]?.focus({ preventScroll: true }));
+    }
+  };
 
   usePageChrome(
     "Daily vehicle log",
@@ -153,7 +168,7 @@ export const DailyLogList: React.FC = () => {
           <TableEmpty
             icon={<NotebookPen className="size-12" />}
             title={statusFilter !== "all" ? "No trips match this status" : "No trips logged yet"}
-            description={statusFilter !== "all" ? "Try a different status filter." : "Every trip a vehicle makes — who drove it, where, and how far — starts here."}
+            description={statusFilter !== "all" ? "Try a different status filter." : "Log a trip to record the driver, route, and distance."}
           />
         ) : (
           <TableScroll>
@@ -210,16 +225,21 @@ export const DailyLogList: React.FC = () => {
                       <TD className="whitespace-nowrap text-right">
                         <div className="relative flex justify-end">
                           <button
+                            aria-controls={openMenuId === log.id ? `daily-log-actions-${log.id}` : undefined}
+                            aria-expanded={openMenuId === log.id}
+                            aria-haspopup="menu"
                             onClick={() => setOpenMenuId(openMenuId === log.id ? null : log.id)}
+                            ref={(element) => { actionButtonRefs.current[log.id] = element; }}
                             className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                             aria-label="Daily log actions"
                           >
                             <MoreVertical className="size-4" />
                           </button>
                           {openMenuId === log.id && (
-                            <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
+                            <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`daily-log-actions-${log.id}`} role="menu">
                               <button
                                 onClick={() => handleEdit(log)}
+                                role="menuitem"
                                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                               >
                                 <Edit className="size-4" /> Edit
@@ -229,6 +249,7 @@ export const DailyLogList: React.FC = () => {
                                   setPendingDelete(log);
                                   setOpenMenuId(null);
                                 }}
+                                role="menuitem"
                                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                               >
                                 <Trash2 className="size-4" /> Delete
@@ -246,12 +267,12 @@ export const DailyLogList: React.FC = () => {
         )}
       </TableWrap>
 
-      <DailyLogFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchLogs} log={selectedLog} />
+      <DailyLogFormModal isOpen={isModalOpen} onClose={handleCloseLog} onSuccess={fetchLogs} log={selectedLog} />
       <ConfirmDrawer
         confirmLabel="Delete log"
         description={`Delete the ${pendingDelete ? new Date(pendingDelete.log_date).toLocaleDateString() : "selected"} trip log for ${pendingDelete?.vehicle_registration || "this vehicle"}? This action cannot be undone.`}
         isPending={isDeleting}
-        onClose={() => setPendingDelete(null)}
+        onClose={handleCloseDelete}
         onConfirm={() => void handleDelete()}
         open={pendingDelete !== null}
         title="Delete trip log?"

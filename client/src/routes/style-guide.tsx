@@ -1,10 +1,10 @@
 //
 //  campus-pilot
 //  style-guide.tsx — Live design-system showcase (tokens + primitives)
-//  Renders at /style-guide. No auth guard — useful in Docker preview.
+//  Renders at /style-guide in development only.
 //
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -17,6 +17,9 @@ import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/component
 import { Mail, Lock, Search, Plus, Trash2, Github, Sparkles, Inbox } from "lucide-react";
 
 export const Route = createFileRoute("/style-guide")({
+  beforeLoad: () => {
+    if (!import.meta.env.DEV) throw redirect({ to: "/" });
+  },
   component: StyleGuidePage,
 });
 
@@ -69,7 +72,7 @@ function StyleGuidePage() {
         <div className="space-y-2">
           <h1 className="text-[length:var(--type-page-title-size)] font-bold leading-tight text-[var(--text-strong)]">Design system</h1>
           <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-muted)]">
-            The CCS-inspired institutional structure adapted to school operations: deep teal navigation, calm surfaces, foliage emphasis, and role tokens everywhere. Toggle the theme to verify both modes.
+            The CCS-inspired institutional structure adapted to school operations: Yale-blue navigation, calm surfaces, restrained emphasis, and role tokens throughout. Toggle the theme to verify both modes.
           </p>
         </div>
 
@@ -192,12 +195,12 @@ function StyleGuidePage() {
           <div className="grid gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader>
-                <CardTitle>Total students</CardTitle>
-                <CardDescription>Across all departments</CardDescription>
+                <CardTitle>Metric card</CardTitle>
+                <CardDescription>Developer component example</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-semibold text-[var(--text-strong)]">1,248</div>
-                <div className="text-xs text-[var(--text-muted)]">+12 this week</div>
+                <div className="text-2xl font-semibold text-[var(--text-strong)]">—</div>
+                <div className="text-xs text-[var(--text-muted)]">No operational data</div>
               </CardContent>
               <CardFooter>
                 <Button variant="ghost" size="sm">View all</Button>

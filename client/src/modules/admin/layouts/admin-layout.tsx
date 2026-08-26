@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+import { useNavigationDrawer } from "@/hooks/use-navigation-drawer";
 import { ThemeToggle } from "../../../lib/theme";
 import { bootstrapService } from "../../configs";
 import type { SchoolConfiguration } from "../../configs/types";
@@ -76,6 +77,11 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [school, setSchool] = useState<SchoolConfiguration | null>(null);
+  const {
+    desktopNavigation,
+    navigationRef: sidebarRef,
+    triggerRef: menuButtonRef,
+  } = useNavigationDrawer(sidebarOpen, setSidebarOpen);
 
   useEffect(() => {
     let active = true;
@@ -95,20 +101,6 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSidebarOpen(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [sidebarOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -134,10 +126,12 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
 
       <aside
         aria-label="Administration navigation"
+        aria-hidden={!desktopNavigation && !sidebarOpen}
         className={`fixed inset-y-0 left-0 z-[70] flex w-[min(320px,calc(100vw-48px))] flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform duration-300 ease-[var(--motion-ease-default)] lg:z-[var(--z-sidebar)] lg:w-[var(--sidebar-w)] lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         id="campus-navigation"
+        ref={sidebarRef}
       >
         <div className="relative border-b border-[var(--sidebar-border)] px-5 pb-5 pt-6">
           <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-45" />
@@ -281,6 +275,7 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
               aria-label="Open navigation"
               className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] lg:hidden ${sidebarOpen ? "invisible pointer-events-none" : ""}`}
               onClick={() => setSidebarOpen((open) => !open)}
+              ref={menuButtonRef}
               tabIndex={sidebarOpen ? -1 : 0}
               type="button"
             >

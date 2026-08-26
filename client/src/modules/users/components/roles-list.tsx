@@ -101,6 +101,13 @@ export const RolesList: React.FC = () => {
       window.requestAnimationFrame(() => actionButtonRefs.current[roleId]?.focus({ preventScroll: true }));
     }
   };
+  const handleCloseDelete = () => {
+    const roleId = pendingDelete?.id;
+    setPendingDelete(null);
+    if (roleId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[roleId]?.focus({ preventScroll: true }));
+    }
+  };
   const handleModalSuccess = () => {
     fetchRoles();
   };
@@ -200,6 +207,9 @@ export const RolesList: React.FC = () => {
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
                         {(canEdit || (canDelete && !role.is_system)) ? <button
+                          aria-controls={openMenuId === role.id ? `role-actions-${role.id}` : undefined}
+                          aria-expanded={openMenuId === role.id}
+                          aria-haspopup="menu"
                           ref={(element) => { actionButtonRefs.current[role.id] = element; }}
                           onClick={() => setOpenMenuId(openMenuId === role.id ? null : role.id)}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
@@ -208,9 +218,10 @@ export const RolesList: React.FC = () => {
                           <MoreVertical className="size-4" />
                         </button> : null}
                         {openMenuId === role.id && (
-                          <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
+                          <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`role-actions-${role.id}`} role="menu">
                             {canEdit ? <button
                               onClick={() => handleEditRole(role)}
+                              role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               <Edit className="size-4" /> Edit
@@ -220,6 +231,7 @@ export const RolesList: React.FC = () => {
                                 setPendingDelete(role);
                                 setOpenMenuId(null);
                               }}
+                              role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
                               <Trash2 className="size-4" /> Delete
@@ -241,7 +253,7 @@ export const RolesList: React.FC = () => {
         confirmLabel="Delete role"
         description={`Delete the ${pendingDelete?.name || "selected"} role? Review any assigned users first; this action cannot be undone.`}
         isPending={isDeleting}
-        onClose={() => setPendingDelete(null)}
+        onClose={handleCloseDelete}
         onConfirm={() => void handleDelete()}
         open={pendingDelete !== null}
         title="Delete role?"

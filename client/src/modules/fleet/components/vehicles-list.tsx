@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Truck, Plus, Search, MoreVertical, Edit, Trash2, Gauge, AlertTriangle } from "lucide-react";
 import { vehiclesService } from "../services/vehicles-service";
 import type { Vehicle, VehiclesListParams } from "../types";
@@ -64,6 +64,7 @@ export const VehiclesList: React.FC = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Vehicle | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const fetchVehicles = async () => {
     setIsLoading(true);
@@ -125,6 +126,20 @@ export const VehiclesList: React.FC = () => {
     setSelectedVehicle(vehicle);
     setIsModalOpen(true);
     setOpenMenuId(null);
+  };
+  const handleCloseVehicle = () => {
+    const vehicleId = selectedVehicle?.id;
+    setIsModalOpen(false);
+    if (vehicleId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[vehicleId]?.focus({ preventScroll: true }));
+    }
+  };
+  const handleCloseDelete = () => {
+    const vehicleId = pendingDelete?.id;
+    setPendingDelete(null);
+    if (vehicleId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[vehicleId]?.focus({ preventScroll: true }));
+    }
   };
 
   usePageChrome(
@@ -257,16 +272,21 @@ export const VehiclesList: React.FC = () => {
                       <TD className="whitespace-nowrap text-right">
                         <div className="relative flex justify-end">
                           <button
+                            aria-controls={openMenuId === vehicle.id ? `vehicle-actions-${vehicle.id}` : undefined}
+                            aria-expanded={openMenuId === vehicle.id}
+                            aria-haspopup="menu"
                             onClick={() => setOpenMenuId(openMenuId === vehicle.id ? null : vehicle.id)}
+                            ref={(element) => { actionButtonRefs.current[vehicle.id] = element; }}
                             className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                             aria-label="Vehicle actions"
                           >
                             <MoreVertical className="size-4" />
                           </button>
                           {openMenuId === vehicle.id && (
-                            <div className="absolute right-0 top-9 z-10 w-44 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
+                            <div className="absolute right-0 top-9 z-10 w-44 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`vehicle-actions-${vehicle.id}`} role="menu">
                               <button
                                 onClick={() => handleEdit(vehicle)}
+                                role="menuitem"
                                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                               >
                                 <Edit className="size-4" /> Edit
@@ -276,6 +296,7 @@ export const VehiclesList: React.FC = () => {
                                   setPendingDelete(vehicle);
                                   setOpenMenuId(null);
                                 }}
+                                role="menuitem"
                                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                               >
                                 <Trash2 className="size-4" /> Remove
@@ -295,7 +316,7 @@ export const VehiclesList: React.FC = () => {
 
       <VehicleFormModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseVehicle}
         onSuccess={fetchVehicles}
         vehicle={selectedVehicle}
       />
@@ -303,7 +324,7 @@ export const VehiclesList: React.FC = () => {
         confirmLabel="Remove vehicle"
         description={`Remove ${pendingDelete?.registration_number || "this vehicle"} from the fleet register? This action cannot be undone.`}
         isPending={isDeleting}
-        onClose={() => setPendingDelete(null)}
+        onClose={handleCloseDelete}
         onConfirm={() => void handleDelete()}
         open={pendingDelete !== null}
         title="Remove vehicle?"

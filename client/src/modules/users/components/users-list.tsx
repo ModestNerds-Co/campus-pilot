@@ -3,7 +3,7 @@
 //  users-list.tsx - Users List Component (token-driven)
 //
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Users as UsersIcon,
   Plus,
@@ -42,6 +42,7 @@ export const UsersList: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const canCreate = hasPermission(currentUser?.permissions, "users:create");
   const canEdit = hasPermission(currentUser?.permissions, "users:edit");
   const canDelete = hasPermission(currentUser?.permissions, "users:delete");
@@ -96,7 +97,7 @@ export const UsersList: React.FC = () => {
     try {
       const response = user.is_active ? await usersService.deactivateUser(user.id) : await usersService.activateUser(user.id);
       if (response.success) {
-        toast.success(user.is_active ? "User deactivated successfully" : "User activated successfully");
+        toast.success(user.is_active ? "User deactivated" : "User activated");
         fetchUsers();
       } else {
         toast.error(response.message || "Failed to update user status");
@@ -134,6 +135,20 @@ export const UsersList: React.FC = () => {
     setSelectedUser(user);
     setIsModalOpen(true);
     setOpenMenuId(null);
+  };
+  const handleCloseUser = () => {
+    const userId = selectedUser?.id;
+    setIsModalOpen(false);
+    if (userId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[userId]?.focus({ preventScroll: true }));
+    }
+  };
+  const handleCloseDelete = () => {
+    const userId = pendingDelete?.id;
+    setPendingDelete(null);
+    if (userId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[userId]?.focus({ preventScroll: true }));
+    }
   };
   const handleModalSuccess = () => {
     fetchUsers();
@@ -245,22 +260,28 @@ export const UsersList: React.FC = () => {
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
                         {(canEdit || (canDelete && !user.roles.includes("campus_owner"))) ? <button
+                          aria-controls={openMenuId === user.id ? `user-actions-${user.id}` : undefined}
+                          aria-expanded={openMenuId === user.id}
+                          aria-haspopup="menu"
                           onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                          ref={(element) => { actionButtonRefs.current[user.id] = element; }}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                           aria-label={`Actions for ${user.full_name}`}
                         >
                           <MoreVertical className="size-4" />
                         </button> : null}
                         {openMenuId === user.id && (
-                          <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
+                          <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`user-actions-${user.id}`} role="menu">
                             {canEdit ? <button
                               onClick={() => handleEditUser(user)}
+                              role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               <Edit className="size-4" /> Edit
                             </button> : null}
                             {canEdit ? <button
                               onClick={() => handleToggleActive(user)}
+                              role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               {user.is_active ? (
@@ -278,6 +299,7 @@ export const UsersList: React.FC = () => {
                                 setPendingDelete(user);
                                 setOpenMenuId(null);
                               }}
+                              role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
                               <Trash2 className="size-4" /> Delete
@@ -294,12 +316,12 @@ export const UsersList: React.FC = () => {
         )}
       </TableWrap>
 
-      <UserFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleModalSuccess} user={selectedUser} />
+      <UserFormModal isOpen={isModalOpen} onClose={handleCloseUser} onSuccess={handleModalSuccess} user={selectedUser} />
       <ConfirmDrawer
         confirmLabel="Delete user"
         description={`Delete ${pendingDelete?.full_name || "this user"}? Their access will be removed and this action cannot be undone.`}
         isPending={isDeleting}
-        onClose={() => setPendingDelete(null)}
+        onClose={handleCloseDelete}
         onConfirm={() => void handleDelete()}
         open={pendingDelete !== null}
         title="Delete user?"

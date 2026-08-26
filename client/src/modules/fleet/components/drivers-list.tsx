@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions
 //
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Contact, Plus, Search, MoreVertical, Edit, Trash2, Phone, AlertTriangle } from "lucide-react";
 import { driversService } from "../services/drivers-service";
 import type { Driver, DriversListParams } from "../types";
@@ -58,6 +58,7 @@ export const DriversList: React.FC = () => {
   const [selectedDriver, setSelectedDriver] = useState<Driver | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Driver | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const fetchDrivers = async () => {
     setIsLoading(true);
@@ -119,6 +120,20 @@ export const DriversList: React.FC = () => {
     setSelectedDriver(driver);
     setIsModalOpen(true);
     setOpenMenuId(null);
+  };
+  const handleCloseDriver = () => {
+    const driverId = selectedDriver?.id;
+    setIsModalOpen(false);
+    if (driverId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[driverId]?.focus({ preventScroll: true }));
+    }
+  };
+  const handleCloseDelete = () => {
+    const driverId = pendingDelete?.id;
+    setPendingDelete(null);
+    if (driverId) {
+      window.requestAnimationFrame(() => actionButtonRefs.current[driverId]?.focus({ preventScroll: true }));
+    }
   };
 
   usePageChrome(
@@ -241,16 +256,21 @@ export const DriversList: React.FC = () => {
                       <TD className="whitespace-nowrap text-right">
                         <div className="relative flex justify-end">
                           <button
+                            aria-controls={openMenuId === driver.id ? `driver-actions-${driver.id}` : undefined}
+                            aria-expanded={openMenuId === driver.id}
+                            aria-haspopup="menu"
                             onClick={() => setOpenMenuId(openMenuId === driver.id ? null : driver.id)}
+                            ref={(element) => { actionButtonRefs.current[driver.id] = element; }}
                             className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                             aria-label="Driver actions"
                           >
                             <MoreVertical className="size-4" />
                           </button>
                           {openMenuId === driver.id && (
-                            <div className="absolute right-0 top-9 z-10 w-44 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
+                            <div className="absolute right-0 top-9 z-10 w-44 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`driver-actions-${driver.id}`} role="menu">
                               <button
                                 onClick={() => handleEdit(driver)}
+                                role="menuitem"
                                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                               >
                                 <Edit className="size-4" /> Edit
@@ -260,6 +280,7 @@ export const DriversList: React.FC = () => {
                                   setPendingDelete(driver);
                                   setOpenMenuId(null);
                                 }}
+                                role="menuitem"
                                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                               >
                                 <Trash2 className="size-4" /> Remove
@@ -279,7 +300,7 @@ export const DriversList: React.FC = () => {
 
       <DriverFormModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseDriver}
         onSuccess={fetchDrivers}
         driver={selectedDriver}
       />
@@ -287,7 +308,7 @@ export const DriversList: React.FC = () => {
         confirmLabel="Remove driver"
         description={`Remove ${pendingDelete?.full_name || "this driver"} from the roster? This action cannot be undone.`}
         isPending={isDeleting}
-        onClose={() => setPendingDelete(null)}
+        onClose={handleCloseDelete}
         onConfirm={() => void handleDelete()}
         open={pendingDelete !== null}
         title="Remove driver?"
