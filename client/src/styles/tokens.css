@@ -1,6 +1,6 @@
 /* Campus Pilot — institutional operations design tokens.
    The structure follows CCS: a calm work canvas, high-contrast navigation rail,
-   restrained surfaces, and a single bright navigation highlight. */
+   restrained surfaces, and a distinctly Campus Pilot blue palette. */
 
 @layer theme, base, tokens, app, components, utilities;
 
@@ -8,12 +8,12 @@
   color-scheme: light;
 
   /* Surfaces */
-  --canvas: #f4f6f2;
-  --surface: #fcfdfb;
-  --surface-muted: #eef2ec;
-  --surface-sunken: #e4eae2;
-  --surface-deep: #d7dfd4;
-  --surface-overlay: rgb(9 33 42 / 48%);
+  --canvas: hsl(210 24% 97%);
+  --surface: hsl(210 25% 99%);
+  --surface-muted: hsl(210 22% 95%);
+  --surface-sunken: hsl(210 19% 91%);
+  --surface-deep: hsl(211 16% 85%);
+  --surface-overlay: hsl(212 48% 13% / 50%);
   --surface-app: var(--canvas);
   --surface-canvas: var(--canvas);
   --surface-base: var(--surface);
@@ -26,12 +26,12 @@
   --surface-active: var(--brand-soft);
 
   /* Ink */
-  --text-strong: #102f3a;
-  --text-body: #29434b;
-  --text-muted: #60757a;
-  --text-subtle: #78898d;
-  --text-inverse: #f7fbf7;
-  --text-link: #1d6571;
+  --text-strong: hsl(211 56% 16%);
+  --text-body: hsl(211 32% 27%);
+  --text-muted: hsl(210 16% 44%);
+  --text-subtle: hsl(210 13% 55%);
+  --text-inverse: hsl(210 33% 98%);
+  --text-link: hsl(210 100% 27%);
   --text-primary: var(--text-strong);
   --text-secondary: var(--text-body);
   --text-tertiary: var(--text-muted);
@@ -41,47 +41,47 @@
   --ink-soft: var(--text-body);
 
   /* Brand */
-  --brand: #1f6470;
-  --brand-strong: #174f5b;
-  --brand-deeper: #103b46;
-  --brand-soft: #e0edef;
-  --brand-tint: rgb(31 100 112 / 9%);
-  --brand-50: #edf5f5;
-  --brand-100: #cfe3e5;
-  --brand-200: #aed0d4;
-  --brand-300: #7fb5bb;
-  --brand-400: #4f929b;
+  --brand: hsl(210 100% 21%);
+  --brand-strong: hsl(211 100% 16%);
+  --brand-deeper: hsl(212 100% 12%);
+  --brand-soft: hsl(209 55% 92%);
+  --brand-tint: hsl(210 100% 21% / 8%);
+  --brand-50: hsl(210 55% 97%);
+  --brand-100: hsl(209 58% 91%);
+  --brand-200: hsl(208 62% 83%);
+  --brand-300: hsl(207 68% 72%);
+  --brand-400: hsl(208 75% 55%);
   --brand-500: var(--brand);
   --brand-700: var(--brand-strong);
-  --brand-900: #0f3641;
+  --brand-900: hsl(213 100% 10%);
   --brand-primary: var(--brand);
-  --brand-highlight: #d4e27e;
-  --brand-highlight-hover: #e0eb9c;
-  --on-brand: #f6fbfb;
-  --on-brand-muted: #c9dadd;
+  --brand-highlight: hsl(207 82% 72%);
+  --brand-highlight-hover: hsl(207 82% 78%);
+  --on-brand: hsl(210 40% 98%);
+  --on-brand-muted: hsl(208 35% 80%);
   --on-brand-hover: rgb(255 255 255 / 11%);
 
-  /* CCS-style navigation rail */
-  --sidebar: #143e4d;
-  --sidebar-deep: #0f3240;
-  --sidebar-foreground: #f6faf7;
-  --sidebar-muted: #aec5c8;
-  --sidebar-border: rgb(236 246 242 / 14%);
+  /* Yale-blue institutional navigation rail */
+  --sidebar: hsl(213 72% 18%);
+  --sidebar-deep: hsl(215 78% 13%);
+  --sidebar-foreground: hsl(210 33% 98%);
+  --sidebar-muted: hsl(209 24% 73%);
+  --sidebar-border: hsl(208 66% 96% / 14%);
   --sidebar-hover: rgb(255 255 255 / 9%);
   --sidebar-active: var(--brand-highlight);
-  --sidebar-active-fg: #173944;
+  --sidebar-active-fg: hsl(213 80% 15%);
 
   /* Tinted neutrals */
-  --gray-50: #f4f6f2;
-  --gray-100: #eef2ec;
-  --gray-200: #e1e7de;
-  --gray-300: #cbd5c8;
-  --gray-400: #a5b4a9;
-  --gray-500: #7d9085;
-  --gray-600: #60736a;
-  --gray-700: #46594f;
-  --gray-800: #2c4038;
-  --gray-900: #182b24;
+  --gray-50: hsl(210 24% 97%);
+  --gray-100: hsl(210 22% 95%);
+  --gray-200: hsl(210 18% 90%);
+  --gray-300: hsl(210 15% 82%);
+  --gray-400: hsl(210 12% 68%);
+  --gray-500: hsl(210 12% 54%);
+  --gray-600: hsl(211 14% 43%);
+  --gray-700: hsl(212 19% 33%);
+  --gray-800: hsl(213 29% 23%);
+  --gray-900: hsl(214 45% 15%);
   --neutral-0: var(--surface);
   --neutral-50: var(--gray-50);
   --neutral-100: var(--gray-100);
@@ -95,11 +95,11 @@
   --neutral-900: var(--gray-900);
 
   /* Borders */
-  --border: #dce4db;
-  --border-strong: #c6d1c4;
-  --border-subtle: #e8ede6;
-  --border-hover: #aebcad;
-  --hairline: rgb(16 47 58 / 9%);
+  --border: hsl(210 18% 87%);
+  --border-strong: hsl(210 17% 79%);
+  --border-subtle: hsl(210 20% 92%);
+  --border-hover: hsl(210 16% 70%);
+  --hairline: hsl(211 56% 16% / 9%);
   --chrome-edge: var(--border-strong);
   --chrome-shadow: 0 1px 0 var(--hairline);
   --edge-subtle: var(--border-subtle);
@@ -107,14 +107,14 @@
   --edge-strong: var(--border-strong);
   --border-default: var(--border);
   --border-soft: var(--border-subtle);
-  --input-border: #c8d3c6;
-  --input-bg: #fbfcfa;
+  --input-border: hsl(210 18% 78%);
+  --input-bg: hsl(210 25% 98%);
 
   /* Semantic tones */
-  --tone-info: #2d7482;
-  --tone-info-bg: #e2f0f2;
-  --tone-info-bd: #bad9de;
-  --tone-info-strong: #174f5b;
+  --tone-info: hsl(207 77% 39%);
+  --tone-info-bg: hsl(207 60% 94%);
+  --tone-info-bd: hsl(207 55% 82%);
+  --tone-info-strong: hsl(211 100% 21%);
   --tone-success: #3f7f50;
   --tone-success-bg: #e4f0e4;
   --tone-success-bd: #bfd8c2;
@@ -131,10 +131,10 @@
   --tone-neutral-bg: var(--surface-muted);
   --tone-neutral-bd: var(--border);
 
-  --accent-50: #f5f8df;
-  --accent-100: #e8efb8;
-  --accent-500: #96a83f;
-  --accent-700: #697624;
+  --accent-50: hsl(207 65% 96%);
+  --accent-100: hsl(207 68% 90%);
+  --accent-500: hsl(207 79% 44%);
+  --accent-700: hsl(211 100% 25%);
 
   /* Actions */
   --action-primary-bg: var(--brand);
@@ -202,10 +202,10 @@
   --input-height: var(--h-control-md);
   --button-height: var(--h-control-md);
   --shadow-none: none;
-  --shadow-rest: 0 1px 2px rgb(16 47 58 / 4%);
-  --shadow-hover: 0 8px 24px rgb(16 47 58 / 9%);
-  --shadow-popover: 0 16px 42px rgb(8 32 41 / 14%);
-  --shadow-modal: 0 24px 64px rgb(8 32 41 / 20%);
+  --shadow-rest: 0 1px 2px hsl(211 56% 16% / 4%);
+  --shadow-hover: 0 8px 24px hsl(211 56% 16% / 9%);
+  --shadow-popover: 0 16px 42px hsl(213 60% 12% / 14%);
+  --shadow-modal: 0 24px 64px hsl(213 60% 12% / 20%);
   --shadow-card: var(--shadow-rest);
   --card-divider: var(--border-subtle);
   --button-shadow-rest: inset 0 0 0 1px var(--border);
@@ -258,8 +258,8 @@
   --table-head-min-h: 40px;
 
   /* Focus, motion and stacking */
-  --focus-ring: #4c8992;
-  --focus-ring-soft: rgb(76 137 146 / 24%);
+  --focus-ring: hsl(207 79% 44%);
+  --focus-ring-soft: hsl(207 79% 44% / 24%);
   --focus-ring-offset: var(--canvas);
   --ring: var(--focus-ring);
   --motion-ease-default: cubic-bezier(0.25, 1, 0.5, 1);
@@ -272,11 +272,11 @@
   --z-toast: 200;
 
   /* Tables */
-  --table-header-bg: #f0f3ee;
+  --table-header-bg: hsl(210 21% 95%);
   --table-header-text: var(--text-muted);
   --table-divider: var(--border-subtle);
   --table-row-bg: var(--surface);
-  --table-row-hover-bg: #f4f7f2;
+  --table-row-hover-bg: hsl(210 24% 97%);
 
   /* Tailwind/shadcn compatibility — real colors, never raw HSL tuples. */
   --background: var(--canvas);
@@ -302,33 +302,33 @@
   --warning-foreground: var(--on-brand);
 
   --app-canvas-wash:
-    radial-gradient(circle at 86% 8%, rgb(212 226 126 / 13%), transparent 28rem),
-    linear-gradient(180deg, #f7f8f4 0%, var(--canvas) 100%);
+    radial-gradient(circle at 86% 8%, hsl(207 82% 72% / 12%), transparent 28rem),
+    linear-gradient(180deg, hsl(210 29% 98%) 0%, var(--canvas) 100%);
 }
 
 .dark {
   color-scheme: dark;
-  --canvas: #0b1b21;
-  --surface: #11262e;
-  --surface-muted: #172f37;
-  --surface-sunken: #1f3941;
-  --surface-deep: #28454c;
-  --text-strong: #edf4f1;
-  --text-body: #d8e5e1;
-  --text-muted: #9eb4b5;
-  --text-subtle: #829a9c;
-  --border: #244049;
-  --border-strong: #35545c;
-  --border-subtle: #1a343c;
-  --input-border: #36545c;
-  --input-bg: #10242c;
-  --brand: #69aeb8;
-  --brand-strong: #83c0c7;
-  --brand-deeper: #4a8e99;
-  --brand-soft: #173942;
-  --focus-ring: #a2d0d4;
-  --focus-ring-soft: rgb(162 208 212 / 23%);
-  --table-header-bg: #162d35;
-  --table-row-hover-bg: #173039;
-  --app-canvas-wash: radial-gradient(circle at 82% 5%, rgb(103 126 65 / 15%), transparent 28rem);
+  --canvas: hsl(214 49% 9%);
+  --surface: hsl(213 42% 13%);
+  --surface-muted: hsl(212 34% 18%);
+  --surface-sunken: hsl(211 29% 23%);
+  --surface-deep: hsl(210 25% 29%);
+  --text-strong: hsl(210 32% 95%);
+  --text-body: hsl(210 23% 84%);
+  --text-muted: hsl(209 16% 68%);
+  --text-subtle: hsl(209 13% 58%);
+  --border: hsl(211 26% 24%);
+  --border-strong: hsl(210 24% 33%);
+  --border-subtle: hsl(212 29% 19%);
+  --input-border: hsl(210 23% 34%);
+  --input-bg: hsl(213 39% 12%);
+  --brand: hsl(210 100% 34%);
+  --brand-strong: hsl(209 100% 41%);
+  --brand-deeper: hsl(211 100% 27%);
+  --brand-soft: hsl(211 55% 19%);
+  --focus-ring: hsl(207 82% 72%);
+  --focus-ring-soft: hsl(207 82% 72% / 23%);
+  --table-header-bg: hsl(212 36% 16%);
+  --table-row-hover-bg: hsl(211 33% 19%);
+  --app-canvas-wash: radial-gradient(circle at 82% 5%, hsl(210 100% 34% / 16%), transparent 28rem);
 }

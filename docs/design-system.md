@@ -15,9 +15,10 @@ Campus Pilot should feel like a confident institutional operations product: calm
 The implementation source of truth is `client/src/styles/tokens.css`.
 
 - Typography: Geist Variable through `--font-sans`; sentence case throughout.
-- Canvas: calm warm-neutral `--canvas`; primary surfaces use `--surface`.
-- Navigation: deep institutional teal via the `--sidebar-*` tokens.
-- Accent: foliage/lime for selected navigation and deliberate emphasis, not general decoration.
+- Canvas: calm cool-neutral `--canvas`; primary surfaces use `--surface`.
+- Navigation: deep institutional navy via the `--sidebar-*` tokens.
+- Brand: Yale-inspired blue anchors primary actions and focus; a lighter blue tint marks selected navigation and deliberate emphasis.
+- Semantic success remains green. Do not reuse success green as product branding.
 - Surfaces: border-first, restrained shadows, compact radii, and no ornamental gradients.
 - Color: use semantic or role tokens such as `--text-muted`, `--border`, and `--tone-danger`; do not introduce parallel hard-coded palettes.
 - Dark mode must use the same hierarchy and semantic roles as light mode.
