@@ -122,7 +122,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
 
   return (
     <DialogShell open={isOpen} onClose={onClose}>
-      <DialogHeader title={role ? "Edit Role" : "Add New Role"} onClose={onClose} />
+      <DialogHeader title={role ? "Edit role" : "Add role"} onClose={onClose} />
       <form onSubmit={handleSubmit}>
         <DialogBody className="space-y-4">
           <div>
@@ -193,10 +193,10 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                {role ? "Updating..." : "Creating..."}
+                {role ? "Updating…" : "Creating…"}
               </>
             ) : (
-              <>{role ? "Update Role" : "Create Role"}</>
+              <>{role ? "Save changes" : "Create role"}</>
             )}
           </Button>
         </DialogFooter>

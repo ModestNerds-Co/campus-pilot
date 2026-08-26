@@ -1,6 +1,6 @@
 //
 //  campus-pilot
-//  SchoolSetupScreen.tsx - School Configuration Screen (token-driven, huchu elegance)
+//  SchoolSetupScreen.tsx - School configuration screen.
 //
 //  Created by Ngonidzashe Mangudya on 26/09/2025.
 //  Copyright (c) 2025 Codecraft Solutions
@@ -12,11 +12,8 @@ import {
   ArrowRight,
   Upload,
   X,
-  Eye,
-  EyeOff,
   Loader2,
   AlertCircle,
-  School,
 } from "lucide-react";
 import { bootstrapService } from "../../services/bootstrap-service";
 import { storageService } from "../../../../lib/storage-service";
@@ -34,8 +31,8 @@ import {
   validateImage,
   fileToBase64,
 } from "../../../../lib/validation";
-import { ThemeToggle } from "../../../../lib/theme";
 import { SearchableSelect } from "../../../../components/searchable-select";
+import { SetupScaffold } from "../ui/setup-scaffold";
 import toast from "react-hot-toast";
 
 export const SchoolSetupScreen: React.FC = () => {
@@ -269,33 +266,18 @@ export const SchoolSetupScreen: React.FC = () => {
     errors.find((err) => err.field === field)?.message;
 
   return (
-    <div className="min-h-screen bg-[var(--canvas)]" style={{ backgroundImage: "var(--app-canvas-wash)" }}>
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-10">
-        <ThemeToggle />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 mx-auto mb-4 bg-[var(--brand-soft)] border border-[var(--brand-100)] rounded-full flex items-center justify-center">
-            <School className="w-8 h-8 text-[var(--brand)]" />
-          </div>
-          <h1 className="text-3xl font-bold text-[var(--text-strong)] mb-4">
-            Set up your school
-          </h1>
-          <p className="text-lg text-[var(--text-muted)] max-w-xl mx-auto">
-            We'll use this to personalize receipts, reports, and the login
-            screen.
-          </p>
-        </div>
-
+    <SetupScaffold
+      description="Add the identity and operating details Campus Pilot will use across sign-in, reports, receipts, and school records."
+      maxWidth="wide"
+      step={1}
+      title="Set up your school"
+    >
         <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
           {/* Form */}
           <div className="flex-1">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Branding Section */}
-              <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
+              <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 sm:p-8 shadow-[var(--shadow-rest)]">
                 <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-6">
                   Branding
                 </h2>
@@ -307,7 +289,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="name"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      School Name *
+                      School name *
                     </label>
                     <input
                       id="name"
@@ -338,7 +320,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="legal_name"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      Registered / Legal Name
+                      Registered or legal name
                     </label>
                     <input
                       id="legal_name"
@@ -357,7 +339,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     {/* Light Logo */}
                     <div>
                       <label className="block text-sm font-medium text-[var(--text-strong)] mb-2">
-                        Logo (Light)
+                        Light logo
                       </label>
                       <div className="space-y-3">
                         <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-[var(--border)] rounded-[var(--radius-xl)] hover:border-[var(--border-strong)] bg-[var(--surface)] transition-colors">
@@ -407,7 +389,7 @@ export const SchoolSetupScreen: React.FC = () => {
                     {/* Dark Logo */}
                     <div>
                       <label className="block text-sm font-medium text-[var(--text-strong)] mb-2">
-                        Logo (Dark)
+                        Dark logo
                       </label>
                       <div className="space-y-3">
                         <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-[var(--border)] rounded-[var(--radius-xl)] hover:border-[var(--border-strong)] bg-[var(--surface-sunken)] transition-colors">
@@ -458,9 +440,9 @@ export const SchoolSetupScreen: React.FC = () => {
               </div>
 
               {/* Contact Information */}
-              <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
+              <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 sm:p-8 shadow-[var(--shadow-rest)]">
                 <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-6">
-                  Contact Information
+                  Contact information
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -470,7 +452,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="emap_code"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      EMAP Code
+                      EMAP code
                     </label>
                     <input
                       id="emap_code"
@@ -488,7 +470,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="email"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      Official Email
+                      Official email
                     </label>
                     <input
                       id="email"
@@ -516,7 +498,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="phone"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      Main Phone Number
+                      Main phone number
                     </label>
                     <input
                       id="phone"
@@ -541,9 +523,9 @@ export const SchoolSetupScreen: React.FC = () => {
               </div>
 
               {/* Address */}
-              <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
+              <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 sm:p-8 shadow-[var(--shadow-rest)]">
                 <h2 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-6">
-                  Address & Location
+                  Address and location
                 </h2>
 
                 <div className="space-y-6">
@@ -552,7 +534,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="address_line1"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      Address Line 1
+                      Address line 1
                     </label>
                     <input
                       id="address_line1"
@@ -571,7 +553,7 @@ export const SchoolSetupScreen: React.FC = () => {
                       htmlFor="address_line2"
                       className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                     >
-                      Address Line 2
+                      Address line 2
                     </label>
                     <input
                       id="address_line2"
@@ -591,7 +573,7 @@ export const SchoolSetupScreen: React.FC = () => {
                         htmlFor="city"
                         className="block text-sm font-medium text-[var(--text-strong)] mb-2"
                       >
-                        City/Town
+                        City or town
                       </label>
                       <input
                         id="city"
@@ -699,11 +681,11 @@ export const SchoolSetupScreen: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Saving...
+                      Saving…
                     </>
                   ) : (
                     <>
-                      Save & Continue
+                      Save and continue
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -722,7 +704,6 @@ export const SchoolSetupScreen: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </SetupScaffold>
   );
 };

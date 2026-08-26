@@ -13,7 +13,6 @@ import {
   Trash2,
   UserCheck,
   UserX,
-  Loader2,
 } from "lucide-react";
 import { usersService } from "../services/users-service";
 import type { User, UsersListParams } from "../types";
@@ -22,12 +21,14 @@ import { UserFormModal } from "./user-form-modal";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
+import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableLoading, TableError, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
 
 export const UsersList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,9 +36,12 @@ export const UsersList: React.FC = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const params: UsersListParams = { page: currentPage, per_page: 20 };
       if (searchQuery) params.search = searchQuery;
@@ -46,9 +50,11 @@ export const UsersList: React.FC = () => {
       if (response.success && response.data) {
         setUsers(response.data.users);
         setTotalPages(response?.pagination?.total_pages ?? 1);
+      } else {
+        setLoadError(response.message || "The user directory could not be read.");
       }
     } catch (error) {
-      toast.error("Failed to load users");
+      setLoadError("Campus Pilot could not reach the user directory. Check the connection and try again.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -80,20 +86,23 @@ export const UsersList: React.FC = () => {
     setOpenMenuId(null);
   };
 
-  const handleDelete = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+  const handleDelete = async () => {
+    if (!pendingDelete || isDeleting) return;
+    setIsDeleting(true);
     try {
-      const response = await usersService.deleteUser(userId);
+      const response = await usersService.deleteUser(pendingDelete.id);
       if (response.success) {
-        toast.success("User deleted successfully");
-        fetchUsers();
+        toast.success("User deleted");
+        setPendingDelete(null);
+        void fetchUsers();
       } else {
         toast.error(response.message || "Failed to delete user");
       }
     } catch {
       toast.error("Failed to delete user");
+    } finally {
+      setIsDeleting(false);
     }
-    setOpenMenuId(null);
   };
 
   const handleAddUser = () => {
@@ -113,13 +122,13 @@ export const UsersList: React.FC = () => {
     "Users",
     <Button onClick={handleAddUser}>
       <Plus className="size-4" />
-      Add User
+      Add user
     </Button>,
   );
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-[var(--text-muted)]">Manage user accounts and permissions</p>
+      <p className="text-sm text-[var(--text-muted)]">Manage school accounts, access status and assigned roles.</p>
 
       <TableControlsBar>
         <TableControlsSearch onSubmit={handleSearch}>
@@ -140,7 +149,7 @@ export const UsersList: React.FC = () => {
           className="sm:w-[180px]"
           aria-label="Status filter"
         >
-          <option value="all">All Status</option>
+          <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </Select>
@@ -156,11 +165,15 @@ export const UsersList: React.FC = () => {
 
       <TableWrap>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="size-8 animate-spin text-[var(--brand)]" />
-          </div>
+          <TableLoading columns={6} label="Loading users…" />
+        ) : loadError ? (
+          <TableError description={loadError} onRetry={() => void fetchUsers()} title="Users could not be loaded" />
         ) : users.length === 0 ? (
-          <TableEmpty icon={<UsersIcon className="size-12" />} title="No users found" />
+          <TableEmpty
+            description={searchQuery || statusFilter !== "all" ? "Try a different search or status filter." : "Create the first account when a staff member needs access."}
+            icon={<UsersIcon className="size-12" />}
+            title={searchQuery || statusFilter !== "all" ? "No users match these filters" : "No users yet"}
+          />
         ) : (
           <TableScroll>
             <Table>
@@ -170,7 +183,7 @@ export const UsersList: React.FC = () => {
                   <TH>Contact</TH>
                   <TH>Roles</TH>
                   <TH>Status</TH>
-                  <TH>Last Login</TH>
+                  <TH>Last login</TH>
                   <TH className="text-right">Actions</TH>
                 </tr>
               </THead>
@@ -211,7 +224,7 @@ export const UsersList: React.FC = () => {
                         <button
                           onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                          aria-label="User actions"
+                          aria-label={`Actions for ${user.full_name}`}
                         >
                           <MoreVertical className="size-4" />
                         </button>
@@ -238,7 +251,10 @@ export const UsersList: React.FC = () => {
                               )}
                             </button>
                             <button
-                              onClick={() => handleDelete(user.id)}
+                              onClick={() => {
+                                setPendingDelete(user);
+                                setOpenMenuId(null);
+                              }}
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
                               <Trash2 className="size-4" /> Delete
@@ -256,6 +272,15 @@ export const UsersList: React.FC = () => {
       </TableWrap>
 
       <UserFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleModalSuccess} user={selectedUser} />
+      <ConfirmDrawer
+        confirmLabel="Delete user"
+        description={`Delete ${pendingDelete?.full_name || "this user"}? Their access will be removed and this action cannot be undone.`}
+        isPending={isDeleting}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => void handleDelete()}
+        open={pendingDelete !== null}
+        title="Delete user?"
+      />
     </div>
   );
 };

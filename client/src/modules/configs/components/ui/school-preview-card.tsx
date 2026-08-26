@@ -1,6 +1,6 @@
 //
 //  campus-pilot
-//  SchoolPreviewCard.tsx - Live Preview Component (token-driven, huchu elegance)
+//  SchoolPreviewCard.tsx - Live school identity preview.
 //  Canvas-neutral chrome, token surfaces/borders/text/brand. No literal grays/blues.
 //
 
@@ -45,7 +45,7 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
       {/* Preview Header */}
       <div className="text-center">
         <h3 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)] mb-2">
-          Live Preview
+          Live preview
         </h3>
         <p className="text-sm text-[var(--text-muted)]">
           See how your school information will appear
@@ -57,7 +57,7 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
       </div>
 
       {/* Login Screen Preview */}
-      <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-popover)]">
+      <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-rest)]">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto bg-[var(--brand-soft)] border border-[var(--brand-100)] rounded-full flex items-center justify-center">
             {logoPreview.light ? (
@@ -77,7 +77,7 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
 
           <div>
             <h4 className="text-xl font-bold text-[var(--text-strong)]">
-              {schoolData.name || "Your School Name"}
+              {schoolData.name || "Your school name"}
             </h4>
             {schoolData.legal_name && (
               <p className="text-sm text-[var(--text-muted)] mt-1">
@@ -88,31 +88,25 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
 
           <div className="bg-[var(--surface-muted)] rounded-[var(--radius-lg)] p-4 space-y-3">
             <h5 className="text-sm font-medium text-[var(--text-body)]">
-              Login Preview
+              Login preview
             </h5>
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Email"
-                className="w-full px-3 h-[var(--h-control-md)] border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] rounded-[var(--radius-md)] text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                disabled
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full px-3 h-[var(--h-control-md)] border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--text-strong)] placeholder:text-[var(--text-subtle)] rounded-[var(--radius-md)] text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                disabled
-              />
-              <button className="w-full px-3 h-[var(--h-control-md)] bg-[var(--action-primary-bg)] hover:bg-[var(--action-primary-bg-hover)] active:bg-[var(--action-primary-bg-pressed)] text-[var(--action-primary-fg)] rounded-[var(--radius-md)] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2">
-                Sign In
-              </button>
+            <div aria-hidden="true" className="space-y-2">
+              <div className="flex h-[var(--h-control-md)] w-full items-center rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 text-left text-sm text-[var(--text-subtle)]">
+                Email
+              </div>
+              <div className="flex h-[var(--h-control-md)] w-full items-center rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 text-left text-sm text-[var(--text-subtle)]">
+                Password
+              </div>
+              <div className="flex h-[var(--h-control-md)] w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--action-primary-bg)] px-3 text-sm font-medium text-[var(--action-primary-fg)]">
+                Sign in
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Receipt Header Preview */}
-      <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-popover)]">
+      <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-rest)]">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -133,10 +127,10 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
               </div>
               <div>
                 <h5 className="font-semibold text-[var(--text-strong)] text-sm">
-                  {schoolData.name || "Your School Name"}
+                  {schoolData.name || "Your school name"}
                 </h5>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Receipt Preview
+                  Receipt preview
                 </p>
               </div>
             </div>
@@ -182,7 +176,7 @@ export const SchoolPreviewCard: React.FC<SchoolPreviewCardProps> = ({
       </div>
 
       {/* Configuration Summary */}
-      <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-popover)]">
+      <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-rest)]">
         <h5 className="font-semibold text-[var(--text-strong)] mb-4 text-sm">
           Configuration
         </h5>

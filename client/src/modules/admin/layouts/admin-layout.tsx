@@ -1,93 +1,101 @@
 //
 //  campus-pilot
-//  admin-layout.tsx - Admin Layout with Sidebar
-//  Slice 1: token-driven shell (design system v1.0)
-//
-//  Created by Ngonidzashe Mangudya on 02/10/2025.
-//  Copyright (c) 2025 Codecraft Solutions
+//  admin-layout.tsx - CCS-inspired school operations shell
 //
 
-import React, { useState } from "react";
-import { Link, useNavigate, useLocation } from "@tanstack/react-router";
-import { useAuthStore } from "../../../stores/auth-store";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  Users,
-  Building2,
-  GraduationCap,
   BookOpen,
-  Settings,
+  BriefcaseBusiness,
+  Building2,
+  ChevronRight,
+  ClipboardList,
+  GraduationCap,
+  HeartPulse,
+  Landmark,
+  LayoutDashboard,
+  Library,
   LogOut,
   Menu,
+  MessageSquareText,
+  PackageSearch,
+  ReceiptText,
+  School,
+  Settings2,
+  ShieldCheck,
+  Truck,
+  UserRoundCog,
+  UsersRound,
   X,
-  ChevronDown,
-  User,
 } from "lucide-react";
-import { ThemeToggle } from "../../../lib/theme";
 import toast from "react-hot-toast";
+
+import { ThemeToggle } from "../../../lib/theme";
+import { bootstrapService } from "../../configs";
+import type { SchoolConfiguration } from "../../configs/types";
+import { useAuthStore } from "../../../stores/auth-store";
 import { PageChromeProvider, usePageChromeContext } from "./page-chrome";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-interface NavItem {
+type NavItem = {
   label: string;
+  href: string;
   icon: React.ComponentType<{ className?: string }>;
-  href?: string;
-  children?: {
-    label: string;
-    href: string;
-  }[];
-}
+};
 
-const navigationItems: NavItem[] = [
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const navigationGroups: NavGroup[] = [
   {
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/admin",
+    label: "Workspace",
+    items: [{ label: "Overview", href: "/admin", icon: LayoutDashboard }],
   },
   {
-    label: "User Management",
-    icon: Users,
-    children: [
-      { label: "Users", href: "/admin/users" },
-      { label: "Roles", href: "/admin/roles" },
+    label: "People & learning",
+    items: [
+      { label: "Students", href: "/admin/students", icon: GraduationCap },
+      { label: "Users", href: "/admin/users", icon: UsersRound },
+      { label: "Roles & access", href: "/admin/roles", icon: ShieldCheck },
+      { label: "Departments", href: "/admin/departments", icon: Building2 },
+      { label: "Grades & classes", href: "/admin/classes", icon: School },
+      { label: "Subjects", href: "/admin/subjects", icon: BookOpen },
+      { label: "Staff", href: "/admin/staff", icon: UserRoundCog },
     ],
   },
   {
-    label: "School Structure",
-    icon: Building2,
-    children: [
-      { label: "Departments", href: "/admin/departments" },
-      { label: "Grades & Classes", href: "/admin/classes" },
-      { label: "Staff", href: "/admin/staff" },
+    label: "Campus operations",
+    items: [
+      { label: "Vehicles", href: "/admin/fleet", icon: Truck },
+      { label: "Drivers", href: "/admin/fleet/drivers", icon: ClipboardList },
+      { label: "Daily vehicle log", href: "/admin/fleet/daily-log", icon: ReceiptText },
+      { label: "Finance", href: "/admin/finance", icon: Landmark },
+      { label: "Fees & payment plans", href: "/admin/fees", icon: ReceiptText },
+      { label: "HR & payroll", href: "/admin/hr-payroll", icon: BriefcaseBusiness },
+      { label: "Procurement", href: "/admin/procurement", icon: PackageSearch },
+      { label: "Library", href: "/admin/library", icon: Library },
+      { label: "Hostel & boarding", href: "/admin/hostel", icon: Building2 },
+      { label: "Messaging", href: "/admin/messaging", icon: MessageSquareText },
+      { label: "Health & clinic", href: "/admin/health", icon: HeartPulse },
     ],
   },
   {
-    label: "Students",
-    icon: GraduationCap,
-    href: "/admin/students",
-  },
-  {
-    label: "Subjects",
-    icon: BookOpen,
-    href: "/admin/subjects",
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    href: "/admin/settings",
+    label: "System",
+    items: [{ label: "Settings", href: "/admin/settings", icon: Settings2 }],
   },
 ];
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  return (
-    <PageChromeProvider>
-      <AdminLayoutShell>{children}</AdminLayoutShell>
-    </PageChromeProvider>
-  );
-};
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => (
+  <PageChromeProvider>
+    <AdminLayoutShell>{children}</AdminLayoutShell>
+  </PageChromeProvider>
+);
 
 const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
   const { title: pageTitle, action: pageAction } = usePageChromeContext();
@@ -95,206 +103,234 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [school, setSchool] = useState<SchoolConfiguration | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void bootstrapService
+      .checkStatus()
+      .then((response) => {
+        if (active && response.success && response.data?.school) {
+          setSchool(response.data.school);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [sidebarOpen]);
 
   const handleLogout = async () => {
     await logout();
-    toast.success("Logged out successfully");
-    navigate({ to: "/login" });
+    toast.success("Signed out");
+    navigate({ to: "/login", replace: true });
   };
 
-  const toggleExpanded = (label: string) => {
-    setExpandedItems((prev) =>
-      prev.includes(label)
-        ? prev.filter((item) => item !== label)
-        : [...prev, label],
-    );
-  };
-
-  const isActive = (href: string) => {
-    return location.pathname === href;
-  };
-
-  const isParentActive = (item: NavItem) => {
-    if (item.href) {
-      return isActive(item.href);
-    }
-    if (item.children) {
-      return item.children.some((child) => isActive(child.href));
-    }
-    return false;
-  };
+  const schoolName = school?.name || "Campus Pilot School";
+  const userName = user?.full_name || "Administrator";
+  const userRole = user?.roles[0] || "Administrator";
 
   return (
-    <div className="min-h-screen bg-[var(--canvas)]">
-      {/* Top Navigation Bar */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-[var(--z-nav)] bg-[var(--surface)] border-b border-[var(--border)]"
-        style={{
-          height: "var(--app-bar-h)",
-          boxShadow: "var(--chrome-shadow)",
-        }}
+    <div className="min-h-[100dvh] bg-[var(--canvas)]">
+      <a className="cp-skip-link" href="#main-content">
+        Skip to main content
+      </a>
+
+      <aside
+        aria-label="Campus navigation"
+        className={`fixed inset-y-0 left-0 z-[70] flex w-[min(320px,calc(100vw-48px))] flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform duration-300 ease-[var(--motion-ease-default)] lg:z-[var(--z-sidebar)] lg:w-[var(--sidebar-w)] lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        id="campus-navigation"
       >
-        <div className="px-4 sm:px-6 lg:px-8 h-full">
-          <div className="flex justify-between h-full items-center">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
-                aria-expanded={sidebarOpen}
-                className="lg:hidden inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] border border-transparent text-[var(--text-body)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 transition-colors"
-              >
-                {sidebarOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
-              <div className="flex min-w-0 items-center gap-3">
-                <img
-                  src="/assets/images/campus-pilot-logo.svg"
-                  alt="CampusPilot"
-                  className="h-7 shrink-0"
-                />
-                <span className="hidden h-5 w-px shrink-0 bg-[var(--border)] sm:block" />
-                <span className="truncate text-[15px] font-semibold tracking-tight text-[var(--text-strong)]">
-                  {pageTitle}
-                </span>
-              </div>
+        <div className="relative border-b border-[var(--sidebar-border)] px-5 pb-5 pt-6">
+          <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-45" />
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[var(--sidebar-active)] text-[var(--sidebar-active-fg)] shadow-sm">
+              <img
+                alt=""
+                aria-hidden="true"
+                className="size-7 rounded-full object-cover mix-blend-multiply"
+                src="/assets/images/campus-pilot-logo.svg"
+              />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[15px] font-bold tracking-[-0.025em] text-[var(--sidebar-foreground)]">
+                Campus Pilot
+              </p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">
+                School operations
+              </p>
             </div>
+            <button
+              aria-label="Close navigation"
+              className="ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+              type="button"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              {pageAction}
-              <ThemeToggle />
-
-              <div className="hidden sm:flex items-center gap-3 pl-3 pr-3 py-1.5 rounded-full bg-[var(--surface-muted)] border border-[var(--border-subtle)]">
-                <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-[var(--surface)] border border-[var(--border)]">
-                  <User className="w-4 h-4 text-[var(--text-muted)]" />
-                </span>
-                <div className="pr-1">
-                  <p className="text-[13px] font-medium leading-none text-[var(--text-strong)]">
-                    {user?.full_name}
-                  </p>
-                  <p className="text-[11px] leading-none text-[var(--text-muted)] mt-0.5">
-                    {user?.roles[0]}
-                  </p>
-                </div>
+          <div className="relative mt-5 rounded-[10px] border border-[var(--sidebar-border)] bg-white/5 p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-white/10 text-[var(--brand-highlight)]">
+                {school?.logo_dark_url || school?.logo_light_url ? (
+                  <img
+                    alt=""
+                    className="size-full object-cover"
+                    src={school.logo_dark_url || school.logo_light_url || undefined}
+                  />
+                ) : (
+                  <School className="size-4" />
+                )}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold text-[var(--sidebar-foreground)]">
+                  {schoolName}
+                </p>
+                <p className="mt-0.5 truncate text-[11px] text-[var(--sidebar-muted)]">
+                  Active campus
+                </p>
               </div>
-
-              {/* Mobile user avatar */}
-              <div className="sm:hidden inline-flex items-center justify-center h-8 w-8 rounded-full bg-[var(--surface-muted)] border border-[var(--border)]">
-                <User className="w-4 h-4 text-[var(--text-muted)]" />
-              </div>
-
-              <button
-                onClick={handleLogout}
-                aria-label="Log out"
-                title="Log out"
-                className="inline-flex items-center justify-center h-9 w-9 rounded-[var(--radius-md)] border border-transparent text-[var(--text-muted)] hover:bg-[var(--tone-danger-bg)] hover:text-[var(--tone-danger)] hover:border-[var(--tone-danger-bd)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>
-      </nav>
 
-      {/* Sidebar */}
-      <aside
-        aria-label="Admin navigation"
-        className={`cp-sidebar-desktop fixed left-0 bottom-0 z-[var(--z-sidebar)] w-64 bg-[var(--surface)] border-r border-[var(--border)] transform transition-transform duration-200 ease-[var(--motion-ease-default)] lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        style={{ top: "var(--app-bar-h)" }}
-      >
-        <div className="h-full overflow-y-auto px-3 py-5">
-          <nav className="space-y-1" aria-label="Primary">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isItemActive = isParentActive(item);
-              const isExpanded = expandedItems.includes(item.label);
-
-              if (item.children) {
-                return (
-                  <div key={item.label}>
-                    <button
-                      onClick={() => toggleExpanded(item.label)}
-                      aria-expanded={isExpanded}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 ${
-                        isItemActive
-                          ? "bg-[var(--surface-muted)] text-[var(--text-strong)]"
-                          : "text-[var(--text-body)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Icon className="w-[18px] h-[18px] shrink-0" />
-                        <span>{item.label}</span>
-                      </span>
-                      <ChevronDown
-                        className={`w-4 h-4 shrink-0 text-[var(--text-muted)] transition-transform duration-200 ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                    {isExpanded && (
-                      <div className="mt-1 ml-3 pl-6 space-y-1 border-l border-[var(--border-subtle)]">
-                        {item.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            to={child.href}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`block px-3 py-1.5 rounded-[var(--radius-md)] text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] ${
-                              isActive(child.href)
-                                ? "bg-[var(--surface-muted)] text-[var(--text-strong)] font-medium"
-                                : "text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-body)]"
-                            }`}
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href!}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 ${
-                    isItemActive
-                      ? "bg-[var(--surface-muted)] text-[var(--text-strong)]"
-                      : "text-[var(--text-body)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
-                  }`}
+        <nav className="cp-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Primary navigation">
+          <div className="space-y-6">
+            {navigationGroups.map((group) => (
+              <section aria-labelledby={`nav-${group.label}`} key={group.label}>
+                <h2
+                  className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]"
+                  id={`nav-${group.label}`}
                 >
-                  <Icon className="w-[18px] h-[18px] shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                  {group.label}
+                </h2>
+                <div className="space-y-1">
+                  {group.items.map(({ href, icon: Icon, label }) => {
+                    const active =
+                      href === "/admin"
+                        ? location.pathname === href
+                        : location.pathname === href || location.pathname.startsWith(`${href}/`);
+                    return (
+                      <Link
+                        aria-current={active ? "page" : undefined}
+                        className={`group flex min-h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] ${
+                          active
+                            ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-fg)]"
+                            : "text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]"
+                        }`}
+                        key={href}
+                        to={href}
+                      >
+                        <Icon className="size-[17px] shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                        {active ? <ChevronRight className="size-3.5 shrink-0" /> : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        </nav>
+
+        <div className="border-t border-[var(--sidebar-border)] p-3">
+          <ThemeToggle className="w-full" variant="sidebar" />
+          <div className="mt-3 flex items-center gap-3 px-2">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold text-[var(--sidebar-foreground)]">
+              {initials(userName)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold text-[var(--sidebar-foreground)]">{userName}</p>
+              <p className="truncate text-[11px] text-[var(--sidebar-muted)]">{userRole}</p>
+            </div>
+          </div>
+          <button
+            className="mt-3 flex min-h-10 w-full items-center gap-3 rounded-[8px] px-3 text-left text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]"
+            onClick={() => void handleLogout()}
+            type="button"
+          >
+            <LogOut className="size-4" />
+            Sign out
+          </button>
         </div>
       </aside>
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-[var(--surface-overlay)] backdrop-blur-[2px] lg:hidden"
-          style={{ top: "var(--app-bar-h)" }}
+      {sidebarOpen ? (
+        <button
+          aria-label="Dismiss navigation"
+          className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] lg:hidden"
           onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
+          type="button"
         />
-      )}
+      ) : null}
 
-      {/* Main Content */}
-      <main
-        className="pt-[var(--app-bar-h)] lg:pl-64"
-        style={{ minHeight: "100dvh" }}
-      >
-        <div className="mx-auto max-w-[1280px] p-4 sm:p-6 lg:p-8">{children}</div>
-      </main>
+      <div className="min-w-0 lg:pl-[var(--sidebar-w)]">
+        <header className="fixed inset-x-0 top-0 z-[var(--z-nav)] flex h-[var(--app-bar-h)] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-4 backdrop-blur-md lg:left-[var(--sidebar-w)] lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              aria-controls="campus-navigation"
+              aria-expanded={sidebarOpen}
+              aria-hidden={sidebarOpen}
+              aria-label="Open navigation"
+              className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] lg:hidden ${sidebarOpen ? "invisible pointer-events-none" : ""}`}
+              onClick={() => setSidebarOpen((open) => !open)}
+              tabIndex={sidebarOpen ? -1 : 0}
+              type="button"
+            >
+              <Menu className="size-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-semibold text-[var(--text-strong)]">{pageTitle}</p>
+              <p className="hidden truncate text-[12px] text-[var(--text-muted)] sm:block">{schoolName}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {pageAction ? <div className="hidden sm:block">{pageAction}</div> : null}
+            <ThemeToggle className="lg:hidden" />
+            <span className="hidden size-9 items-center justify-center rounded-full bg-[var(--brand-soft)] text-xs font-semibold text-[var(--brand-strong)] sm:flex lg:hidden">
+              {initials(userName)}
+            </span>
+          </div>
+        </header>
+
+        <main className="min-h-[100dvh] pt-[var(--app-bar-h)]" id="main-content" tabIndex={-1}>
+          <div className="campus-page-enter mx-auto max-w-[1480px] p-4 sm:p-6 lg:p-8">
+            {pageAction ? <div className="mb-4 sm:hidden">{pageAction}</div> : null}
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
+
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}

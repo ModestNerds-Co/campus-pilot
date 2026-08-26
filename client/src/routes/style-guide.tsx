@@ -5,6 +5,7 @@
 //
 
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge, BadgeGroup } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { StatusChip, StatusDot } from "@/components/ui/status";
 import { Input, Textarea, Select, Label } from "@/components/ui/input";
 import { Skeleton, Empty } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/lib/theme";
+import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Mail, Lock, Search, Plus, Trash2, Github, Sparkles, Inbox } from "lucide-react";
 
 export const Route = createFileRoute("/style-guide")({
@@ -41,6 +43,8 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
 }
 
 function StyleGuidePage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-[var(--canvas)]">
       {/* Top bar */}
@@ -50,12 +54,12 @@ function StyleGuidePage() {
             <Sparkles className="size-4" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-[var(--text-strong)]">Campus Pilot — Style Guide</div>
+            <div className="text-sm font-semibold text-[var(--text-strong)]">Campus Pilot — Style guide</div>
             <div className="text-xs text-[var(--text-muted)]">Tokens · primitives · patterns</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/login" className="text-sm text-[var(--text-link)] hover:underline">Login</a>
+          <a href="/login" className="text-sm text-[var(--text-link)] hover:underline">Sign in</a>
           <a href="/admin" className="text-sm text-[var(--text-link)] hover:underline">Admin</a>
           <ThemeToggle />
         </div>
@@ -65,8 +69,7 @@ function StyleGuidePage() {
         <div className="space-y-2">
           <h1 className="text-[length:var(--type-page-title-size)] font-bold leading-tight text-[var(--text-strong)]">Design system</h1>
           <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-muted)]">
-            Elegance from huchu, adapted to Campus Pilot. Neutral chrome, brand as action, role tokens everywhere. Toggle theme top-right to
-            verify light + dark. This page is the proof — if it renders in <code className="rounded bg-[var(--surface-muted)] px-1 py-0.5 font-mono text-xs">vite build</code> and in Docker, the system ships.
+            The CCS-inspired institutional structure adapted to school operations: deep teal navigation, calm surfaces, foliage emphasis, and role tokens everywhere. Toggle the theme to verify both modes.
           </p>
         </div>
 
@@ -96,7 +99,7 @@ function StyleGuidePage() {
         </Section>
 
         {/* Typography */}
-        <Section title="Typography" desc="Inter var. huchu strict 3-tier scale — page title / section title / body, plus table + caption steps.">
+        <Section title="Typography" desc="Geist Variable with a compact operational hierarchy for headings, body copy, labels, tables, and captions.">
           <div className="space-y-3">
             <div className="text-[length:var(--type-page-title-size)] font-bold leading-tight text-[var(--text-strong)]">Page title 32/700 — Departments</div>
             <div className="text-[length:var(--type-section-title-size)] font-bold leading-tight text-[var(--text-strong)]">Section title 20/700 — Recent activity</div>
@@ -110,7 +113,7 @@ function StyleGuidePage() {
         </Section>
 
         {/* Radii + shadows + spacing */}
-        <Section title="Shape · elevation · spacing">
+        <Section title="Shape, elevation and spacing">
           <div className="grid gap-6 lg:grid-cols-3">
             <div>
               <div className="mb-2 text-xs font-medium text-[var(--text-muted)]">Radii</div>
@@ -168,6 +171,22 @@ function StyleGuidePage() {
           </div>
         </Section>
 
+        <Section title="Right-side drawers" desc="Forms, confirmations, previews, and secondary workflows enter from the right; centered modals are not used.">
+          <Button onClick={() => setDrawerOpen(true)}>Open example drawer</Button>
+          <DialogShell onClose={() => setDrawerOpen(false)} open={drawerOpen}>
+            <DialogHeader onClose={() => setDrawerOpen(false)} title="Example workflow" />
+            <DialogBody>
+              <p className="text-sm leading-6 text-[var(--text-muted)]">
+                The panel is full-width on small screens and bounded on desktop. Escape closes it, focus stays inside, and returns to the trigger afterward.
+              </p>
+            </DialogBody>
+            <DialogFooter>
+              <Button data-autofocus="true" onClick={() => setDrawerOpen(false)} variant="secondary">Cancel</Button>
+              <Button onClick={() => setDrawerOpen(false)}>Save example</Button>
+            </DialogFooter>
+          </DialogShell>
+        </Section>
+
         {/* Cards */}
         <Section title="Cards" desc="Single chrome: border + radius-xl + shadow-card. Compound API.">
           <div className="grid gap-4 lg:grid-cols-3">
@@ -202,7 +221,7 @@ function StyleGuidePage() {
         </Section>
 
         {/* Badges + status */}
-        <Section title="Badges & status">
+        <Section title="Badges and status">
           <div className="space-y-4">
             <BadgeGroup>
               <Badge tone="neutral">Neutral</Badge>
@@ -269,7 +288,7 @@ function StyleGuidePage() {
         </Section>
 
         {/* Skeletons / empty / table mock */}
-        <Section title="Lists & tables (preview)">
+        <Section title="Lists and tables (preview)">
           <div className="space-y-4">
             <div className="space-y-2">
               <Skeleton className="h-4 w-1/3" />

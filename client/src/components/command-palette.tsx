@@ -25,6 +25,8 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useUIStore } from "../../app/stores/uiStore";
 import { cn } from "../lib/utils";
+import toast from "react-hot-toast";
+import { DialogShell } from "@/components/ui/dialog";
 
 interface Command {
   id: string;
@@ -73,10 +75,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         if (activeTabId) {
           const tab = tabs.find((t: any) => t.id === activeTabId);
           if (tab?.isDirty) {
-            const confirmed = window.confirm(
-              "You have unsaved changes. Are you sure you want to close this tab?",
-            );
-            if (!confirmed) return;
+            toast.error("Save or discard the tab's changes before closing it.");
+            return;
           }
           removeTab(activeTabId);
         }
@@ -193,9 +193,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     return (
       command.label.toLowerCase().includes(searchText) ||
       command.description?.toLowerCase().includes(searchText) ||
-      command.keywords?.some((keyword) =>
-        (keyword: string) => keyword.toLowerCase().includes(searchText),
-      )
+      command.keywords?.some((keyword) => keyword.toLowerCase().includes(searchText))
     );
   });
 
@@ -219,6 +217,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
+          if (filteredCommands.length === 0) break;
           setSelectedIndex((prev) => {
             const newIndex = (prev + 1) % filteredCommands.length;
             // Scroll to selected item
@@ -233,6 +232,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           break;
         case "ArrowUp":
           e.preventDefault();
+          if (filteredCommands.length === 0) break;
           setSelectedIndex((prev) => {
             const newIndex =
               prev === 0 ? filteredCommands.length - 1 : prev - 1;
@@ -289,10 +289,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[var(--surface-overlay)] pt-32">
-      <div className="w-full max-w-2xl max-h-96 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)]">
+    <DialogShell onClose={onClose} open={isOpen} panelClassName="max-w-[520px]">
+        <h2 className="sr-only" id="dialog-title">Command palette</h2>
         {/* Search Input */}
-        <div className="flex items-center gap-3 border-b border-[var(--border)] p-4">
+        <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] p-4">
           <Search className="size-5 text-[var(--text-muted)]" />
           <input
             ref={inputRef}
@@ -303,13 +303,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             className="flex-1 bg-transparent text-sm text-[var(--text-strong)] outline-none placeholder:text-[var(--text-subtle)]"
             style={{ boxShadow: "none", border: "none" }}
           />
-          <button onClick={onClose} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]">
+          <button aria-label="Close command palette" onClick={onClose} className="inline-flex size-10 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)]">
             <X className="size-4 text-[var(--text-muted)]" />
           </button>
         </div>
 
         {/* Commands List */}
-        <div className="overflow-y-auto max-h-80">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {Object.keys(groupedCommands).length === 0 ? (
             <div className="p-8 text-center text-[var(--text-muted)]">
               <Search className="mx-auto mb-2 size-8 text-[var(--text-subtle)]" />
@@ -364,13 +364,12 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
+        <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs text-[var(--text-muted)]">
           <div className="flex items-center justify-between">
             <span>Use ↑↓ to navigate, Enter to select</span>
             <span>ESC to close</span>
           </div>
         </div>
-      </div>
-    </div>
+    </DialogShell>
   );
 }

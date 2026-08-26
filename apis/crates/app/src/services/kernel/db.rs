@@ -19,6 +19,20 @@ impl KernelDbOps {
         Self { pool }
     }
 
+    /// The single tenant every on-prem / not-yet-multi-tenant install provisions
+    /// during bootstrap (seeded by migration 004). A future "create additional
+    /// school" flow will provision further tenants outside this bootstrap path.
+    async fn default_tenant_id(&self) -> ApiResult<Uuid> {
+        let id = sqlx::query_scalar!(
+            r#"SELECT id FROM tenants WHERE slug = 'default' AND deleted_at IS NULL"#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to load default tenant")?;
+
+        Ok(id)
+    }
+
     pub async fn get_kernel_status(&self) -> ApiResult<KernelStatus> {
         let state_str: String =
             sqlx::query_scalar("SELECT state::TEXT FROM system_state WHERE id='singleton'")
@@ -74,26 +88,41 @@ impl KernelDbOps {
     }
 
     pub async fn setup_school(&self, req: SetupSchoolRequest) -> ApiResult<()> {
+        let tenant_id = self.default_tenant_id().await?;
+        let timezone = req.timezone.unwrap_or_else(|| "Africa/Harare".to_string());
+
         let mut tx = self
             .pool
             .begin()
             .await
             .context("Failed to start transaction")?;
 
+        // Keep the tenant record's own name/timezone in sync with the school profile.
+        sqlx::query!(
+            r#"UPDATE tenants SET name = $1, timezone = $2, updated_at = NOW() WHERE id = $3"#,
+            req.name,
+            timezone,
+            tenant_id
+        )
+        .execute(&mut *tx)
+        .await
+        .context("Failed to update tenant record")?;
+
         // Insert or update school profile
         sqlx::query!(
             r#"
             INSERT INTO school_profile (
-                id, name, legal_name, emap_code, phone, email,
+                id, tenant_id, name, legal_name, emap_code, phone, email,
                 address_line1, address_line2, city, province, country,
                 timezone, locale, logo_light_url, logo_dark_url
             )
             VALUES (
-                'singleton', $1, $2, $3, $4, $5,
-                $6, $7, $8, $9, $10,
-                $11, $12, $13, $14
+                'singleton', $1, $2, $3, $4, $5, $6,
+                $7, $8, $9, $10, $11,
+                $12, $13, $14, $15
             )
             ON CONFLICT (id) DO UPDATE SET
+                tenant_id = EXCLUDED.tenant_id,
                 name = EXCLUDED.name,
                 legal_name = EXCLUDED.legal_name,
                 emap_code = EXCLUDED.emap_code,
@@ -110,6 +139,7 @@ impl KernelDbOps {
                 logo_dark_url = EXCLUDED.logo_dark_url,
                 updated_at = NOW()
             "#,
+            tenant_id,
             req.name,
             req.legal_name,
             req.emap_code,
@@ -120,7 +150,7 @@ impl KernelDbOps {
             req.city,
             req.province,
             req.country.unwrap_or_else(|| "Zimbabwe".to_string()),
-            req.timezone.unwrap_or_else(|| "Africa/Harare".to_string()),
+            timezone,
             req.locale.unwrap_or_else(|| "en-ZW".to_string()),
             req.logo_light_url,
             req.logo_dark_url
@@ -145,18 +175,22 @@ impl KernelDbOps {
         phone: Option<&str>,
         password_hash: &str,
     ) -> ApiResult<Uuid> {
+        let tenant_id = self.default_tenant_id().await?;
+
         let mut tx = self
             .pool
             .begin()
             .await
             .context("Failed to start transaction")?;
 
-        // Check if user already exists
+        // Check if user already exists (within this tenant)
         let existing_user: Option<(Uuid,)> = sqlx::query_as(
             r#"
-            SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND deleted_at IS NULL
+            SELECT id FROM users
+            WHERE tenant_id = $1 AND LOWER(email) = LOWER($2) AND deleted_at IS NULL
             "#,
         )
+        .bind(tenant_id)
         .bind(email)
         .fetch_optional(&mut *tx)
         .await
@@ -169,11 +203,12 @@ impl KernelDbOps {
         // Create admin user
         let user_id: Uuid = sqlx::query_scalar(
             r#"
-            INSERT INTO users (full_name, email, phone, password_hash, roles, is_active)
-            VALUES ($1, $2, $3, $4, $5, true)
+            INSERT INTO users (tenant_id, full_name, email, phone, password_hash, roles, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, true)
             RETURNING id
             "#,
         )
+        .bind(tenant_id)
         .bind(full_name)
         .bind(email)
         .bind(phone)

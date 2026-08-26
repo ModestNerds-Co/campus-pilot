@@ -1,105 +1,89 @@
-/* ─────────────────────────────────────────────────────────────────────
-   Campus Pilot — Design Tokens
-   Exact Huchu (iamngoni/huchu) — @corelithzw/react 0.4.1
-   Single source of truth. No literals outside this file.
-   Dump: awk '/^:root/,/^}/' node_modules/@corelithzw/react/dist/styles.css
-
-   Principles:
-   1. Saturated colour = action/state only. Chrome neutral #F7F8FA/#FFF.
-   2. Role tokens, not swatches.
-   3. Sentence case, verb-led buttons.
-   4. Border-first, shadow only for floating overlays.
-   5. 36px touch floor, focus 2px + 3px halo, reduced-motion.
-   ───────────────────────────────────────────────────────────────────── */
+/* Campus Pilot — institutional operations design tokens.
+   The structure follows CCS: a calm work canvas, high-contrast navigation rail,
+   restrained surfaces, and a single bright navigation highlight. */
 
 @layer theme, base, tokens, app, components, utilities;
 
 :root {
   color-scheme: light;
 
-  /* ── Surfaces — Huchu exact ─────────────────────────────── */
-  --canvas:           #F7F8FA;
-  --surface:          #FFFFFF;
-  --surface-muted:    #F1F3F6;
-  --surface-sunken:   #E8EBF0;
-  --surface-deep:     #DDE1E7;
+  /* Surfaces */
+  --canvas: #f4f6f2;
+  --surface: #fcfdfb;
+  --surface-muted: #eef2ec;
+  --surface-sunken: #e4eae2;
+  --surface-deep: #d7dfd4;
+  --surface-overlay: rgb(9 33 42 / 48%);
+  --surface-app: var(--canvas);
+  --surface-canvas: var(--canvas);
+  --surface-base: var(--surface);
+  --surface-panel: var(--surface);
+  --surface-raised: var(--surface);
+  --surface-elevated: var(--surface);
+  --surface-subtle: var(--surface-muted);
+  --surface-soft: var(--surface-sunken);
+  --surface-hover: var(--surface-muted);
+  --surface-active: var(--brand-soft);
 
-  --surface-app:            var(--canvas);
-  --surface-canvas:         var(--canvas);
-  --surface-base:           var(--surface);
-  --surface-panel:          var(--surface);
-  --surface-raised:         var(--surface);
-  --surface-elevated:       var(--surface);
-  --surface-subtle:         var(--surface-muted);
-  --surface-soft:           var(--surface-sunken);
-  --surface-hover:          var(--surface-muted);
-  --surface-active:         var(--brand-soft);
-  --surface-overlay:        rgba(22, 24, 29, 0.14);
-
-  /* ── Text — Huchu exact ──────────────────────────────── */
-  --text-strong:    #16181D;
-  --text-body:      #262A33;
-  --text-muted:     #565C69;
-  --text-subtle:    #5E6573;
-  --text-inverse:   #FFFFFF;
-  --text-link:      #0944C2;
-  --text-primary:   var(--text-strong);
+  /* Ink */
+  --text-strong: #102f3a;
+  --text-body: #29434b;
+  --text-muted: #60757a;
+  --text-subtle: #78898d;
+  --text-inverse: #f7fbf7;
+  --text-link: #1d6571;
+  --text-primary: var(--text-strong);
   --text-secondary: var(--text-body);
-  --text-tertiary:  var(--text-muted);
-  --icon-default:   var(--text-muted);
-  --icon-strong:    var(--text-strong);
-  --ink:            #16181D;
-  --ink-soft:       #262A33;
+  --text-tertiary: var(--text-muted);
+  --icon-default: var(--text-muted);
+  --icon-strong: var(--text-strong);
+  --ink: var(--text-strong);
+  --ink-soft: var(--text-body);
 
-  /* ── Borders — Huchu exact ───────────────────────────── */
-  --border:          #E5E8EE;
-  --border-strong:   #D2D7E0;
-  --border-subtle:   #EEF0F4;
-  --border-hover:    #BFB9A8;
-  --hairline:        rgba(22,24,29,.08);
-  --chrome-edge:     var(--border-strong);
-  --chrome-shadow:   0 1px 0 0 var(--hairline);
-  --edge-subtle:     var(--border-subtle);
-  --edge-default:    var(--border);
-  --edge-strong:     var(--border-strong);
-  --border-default:  var(--border);
-  --border-soft:     var(--border-subtle);
-  --input-border:    var(--border);
-  --input-bg:        var(--surface);
+  /* Brand */
+  --brand: #1f6470;
+  --brand-strong: #174f5b;
+  --brand-deeper: #103b46;
+  --brand-soft: #e0edef;
+  --brand-tint: rgb(31 100 112 / 9%);
+  --brand-50: #edf5f5;
+  --brand-100: #cfe3e5;
+  --brand-200: #aed0d4;
+  --brand-300: #7fb5bb;
+  --brand-400: #4f929b;
+  --brand-500: var(--brand);
+  --brand-700: var(--brand-strong);
+  --brand-900: #0f3641;
+  --brand-primary: var(--brand);
+  --brand-highlight: #d4e27e;
+  --brand-highlight-hover: #e0eb9c;
+  --on-brand: #f6fbfb;
+  --on-brand-muted: #c9dadd;
+  --on-brand-hover: rgb(255 255 255 / 11%);
 
-  /* ── Brand — Huchu #0B5DF0 (not #4C64D4) ──────────────── */
-  --brand:           #0B5DF0;
-  --brand-strong:    #0944C2;
-  --brand-deeper:    #08379C;
-  --brand-soft:      #E8EFFE;
-  --brand-tint:      rgba(11,93,240,.08);
-  --brand-50:        #E8EFFE;
-  --brand-100:       #D2E0FE;
-  --brand-200:       #B3C6FE;
-  --brand-300:       #86A8F7;
-  --brand-400:       #4B86F5;
-  --brand-500:       var(--brand);
-  --brand-700:       var(--brand-strong);
-  --brand-900:       #082A6B;
-  --brand-primary:   var(--brand);
-  --on-brand:        #FFFFFF;
-  --on-brand-muted:  rgba(255, 255, 255, 0.8);
-  --on-brand-hover:  rgba(255, 255, 255, 0.2);
+  /* CCS-style navigation rail */
+  --sidebar: #143e4d;
+  --sidebar-deep: #0f3240;
+  --sidebar-foreground: #f6faf7;
+  --sidebar-muted: #aec5c8;
+  --sidebar-border: rgb(236 246 242 / 14%);
+  --sidebar-hover: rgb(255 255 255 / 9%);
+  --sidebar-active: var(--brand-highlight);
+  --sidebar-active-fg: #173944;
 
-  /* Gray ramp — cool slate exact */
-  --gray-50:   #F7F8FA;
-  --gray-100:  #F1F3F6;
-  --gray-200:  #E5E8EE;
-  --gray-300:  #D2D7E0;
-  --gray-400:  #B9C0CF;
-  --gray-500:  #8B92A8;
-  --gray-600:  #565C69;
-  --gray-700:  #3E4350;
-  --gray-800:  #262A33;
-  --gray-900:  #16181D;
-
-  --neutral-0:   var(--surface);
-  --neutral-50:  var(--gray-50);
+  /* Tinted neutrals */
+  --gray-50: #f4f6f2;
+  --gray-100: #eef2ec;
+  --gray-200: #e1e7de;
+  --gray-300: #cbd5c8;
+  --gray-400: #a5b4a9;
+  --gray-500: #7d9085;
+  --gray-600: #60736a;
+  --gray-700: #46594f;
+  --gray-800: #2c4038;
+  --gray-900: #182b24;
+  --neutral-0: var(--surface);
+  --neutral-50: var(--gray-50);
   --neutral-100: var(--gray-100);
   --neutral-200: var(--gray-200);
   --neutral-300: var(--gray-300);
@@ -110,286 +94,241 @@
   --neutral-800: var(--gray-800);
   --neutral-900: var(--gray-900);
 
-  /* ── Tones — Huchu exact ──────────────────────────────── */
-  --tone-info:             var(--brand);
-  --tone-info-bg:          #E8EFFE;
-  --tone-info-bd:          #D2E0FE;
-  --tone-info-strong:      #0944C2;
+  /* Borders */
+  --border: #dce4db;
+  --border-strong: #c6d1c4;
+  --border-subtle: #e8ede6;
+  --border-hover: #aebcad;
+  --hairline: rgb(16 47 58 / 9%);
+  --chrome-edge: var(--border-strong);
+  --chrome-shadow: 0 1px 0 var(--hairline);
+  --edge-subtle: var(--border-subtle);
+  --edge-default: var(--border);
+  --edge-strong: var(--border-strong);
+  --border-default: var(--border);
+  --border-soft: var(--border-subtle);
+  --input-border: #c8d3c6;
+  --input-bg: #fbfcfa;
 
-  --tone-success:          #5E8E54;
-  --tone-success-bg:       #E7EFE0;
-  --tone-success-bd:       #C9DDC2;
-  --tone-success-strong:   #2E5526;
+  /* Semantic tones */
+  --tone-info: #2d7482;
+  --tone-info-bg: #e2f0f2;
+  --tone-info-bd: #bad9de;
+  --tone-info-strong: #174f5b;
+  --tone-success: #3f7f50;
+  --tone-success-bg: #e4f0e4;
+  --tone-success-bd: #bfd8c2;
+  --tone-success-strong: #285d36;
+  --tone-warn: #a66a1f;
+  --tone-warn-bg: #f6ebd5;
+  --tone-warn-bd: #ead2a5;
+  --tone-warn-strong: #75450f;
+  --tone-danger: #b44a3b;
+  --tone-danger-bg: #f7e5e1;
+  --tone-danger-bd: #ebc5be;
+  --tone-danger-strong: #802f24;
+  --tone-neutral: var(--gray-600);
+  --tone-neutral-bg: var(--surface-muted);
+  --tone-neutral-bd: var(--border);
 
-  --tone-warn:             #B07626;
-  --tone-warn-bg:          #F4E6C5;
-  --tone-warn-bd:          #EAD6A4;
-  --tone-warn-strong:      #7A4E1A;
+  --accent-50: #f5f8df;
+  --accent-100: #e8efb8;
+  --accent-500: #96a83f;
+  --accent-700: #697624;
 
-  --tone-danger:           #B83A2A;
-  --tone-danger-bg:        #F6E2DD;
-  --tone-danger-bd:        #E8C4BD;
-  --tone-danger-strong:    #7A2419;
-
-  --tone-neutral:          var(--gray-600);
-  --tone-neutral-bg:       var(--surface-muted);
-  --tone-neutral-bd:       var(--border);
-
-  --success-50:  var(--tone-success-bg);
-  --success-100: var(--tone-success-bd);
-  --success-500: var(--tone-success);
-  --success-700: var(--tone-success-strong);
-  --warning-50:  var(--tone-warn-bg);
-  --warning-100: var(--tone-warn-bd);
-  --warning-500: var(--tone-warn);
-  --warning-700: var(--tone-warn-strong);
-  --danger-50:   var(--tone-danger-bg);
-  --danger-100:  var(--tone-danger-bd);
-  --danger-500:  var(--tone-danger);
-  --danger-700:  var(--tone-danger-strong);
-  --info-50:     var(--tone-info-bg);
-  --info-100:    var(--tone-info-bd);
-  --info-500:    var(--tone-info);
-  --info-700:    var(--tone-info-strong);
-  --dot-attention: var(--brand);
-  --dot-progress:  var(--brand);
-  --dot-ok:        var(--tone-success);
-  --dot-idle:      var(--text-subtle);
-
-  /* ── Actions — Huchu exact ────────────────────────────── */
-  --action-primary-bg:        var(--brand);
-  --action-primary-fg:        #FFFFFF;
-  --action-primary-bg-hover:  var(--brand-strong);
-  --action-primary-bg-pressed:var(--brand-deeper);
-  --action-secondary-bg:      var(--surface);
-  --action-secondary-fg:      var(--text-strong);
-  --action-secondary-bg-h:    var(--surface-muted);
-  --action-outline-bg:        var(--surface);
-  --action-outline-hover-bg:  var(--surface-muted);
-  --action-disabled-bg:       var(--surface-muted);
-  --action-disabled-fg:       var(--text-subtle);
-  --action-destructive-bg:    #B83A2A;
-  --action-destructive-bg-hover: #A33324;
-  --action-destructive-soft-bg: #6B655A;
-  --action-destructive-soft-hover:#57524A;
-  --interactive-primary:      var(--brand);
-  --interactive-danger:       var(--tone-danger);
-
-  /* ── Elevation — Huchu soft ───────────────────────────── */
-  --shadow-none:    none;
-  --shadow-rest:    none;
-  --shadow-hover:   0 1px 2px rgba(22,24,29,0.06), 0 1px 3px rgba(22,24,29,0.08);
-  --shadow-popover: 0 4px 12px rgba(22,24,29,0.08), 0 8px 24px rgba(22,24,29,0.10);
-  --shadow-modal:   0 8px 24px rgba(22,24,29,0.12), 0 16px 48px rgba(22,24,29,0.14);
-  --shadow-card:    var(--shadow-rest);
-  --elevation-0: var(--shadow-none);
-  --elevation-1: inset 0 0 0 1px var(--border);
-  --elevation-2: inset 0 0 0 1px var(--border), var(--shadow-hover);
-  --elevation-3: inset 0 0 0 1px var(--border), var(--shadow-popover);
-  --elevation-4: inset 0 0 0 1px var(--border-strong), var(--shadow-modal);
-  --card-shadow-rest: var(--shadow-rest);
-  --card-divider:     var(--border-subtle);
-  --button-shadow-rest:    inset 0 0 0 1px var(--border);
-  --button-shadow-hover:   inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
+  /* Actions */
+  --action-primary-bg: var(--brand);
+  --action-primary-fg: var(--on-brand);
+  --action-primary-bg-hover: var(--brand-strong);
+  --action-primary-bg-pressed: var(--brand-deeper);
+  --action-secondary-bg: var(--surface);
+  --action-secondary-fg: var(--text-strong);
+  --action-secondary-bg-h: var(--surface-muted);
+  --action-outline-bg: var(--surface);
+  --action-outline-hover-bg: var(--surface-muted);
+  --action-disabled-bg: var(--surface-sunken);
+  --action-disabled-fg: var(--text-subtle);
+  --action-destructive-bg: var(--tone-danger);
+  --action-destructive-bg-hover: var(--tone-danger-strong);
   --button-ghost-hover-bg: var(--surface-muted);
-  --surface-frame-shadow:       inset 0 0 0 1px var(--border);
-  --surface-frame-shadow-hover: inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
 
-  /* ── Focus — Huchu ───────────────────────────────────── */
-  --focus-ring:      #0B5DF0;
-  --focus-ring-soft: rgba(11,93,240,.22);
-  --focus-ring-offset: var(--canvas);
-  --ring: var(--focus-ring);
+  /* Badges and statuses */
+  --badge-neutral-bg: var(--tone-neutral-bg);
+  --badge-neutral-text: var(--text-body);
+  --badge-brand-bg: var(--brand-soft);
+  --badge-brand-text: var(--brand-strong);
+  --badge-info-bg: var(--tone-info-bg);
+  --badge-info-text: var(--tone-info-strong);
+  --badge-success-bg: var(--tone-success-bg);
+  --badge-success-text: var(--tone-success-strong);
+  --badge-warning-bg: var(--tone-warn-bg);
+  --badge-warning-text: var(--tone-warn-strong);
+  --badge-danger-bg: var(--tone-danger-bg);
+  --badge-danger-text: var(--tone-danger-strong);
+  --status-success-bg: var(--tone-success-bg);
+  --status-success-border: var(--tone-success-bd);
+  --status-success-text: var(--tone-success-strong);
+  --status-warning-bg: var(--tone-warn-bg);
+  --status-warning-border: var(--tone-warn-bd);
+  --status-warning-text: var(--tone-warn-strong);
+  --status-error-bg: var(--tone-danger-bg);
+  --status-error-border: var(--tone-danger-bd);
+  --status-error-text: var(--tone-danger-strong);
+  --status-info-bg: var(--tone-info-bg);
+  --status-info-border: var(--tone-info-bd);
+  --status-info-text: var(--tone-info-strong);
+  --status-pending-bg: var(--surface-muted);
+  --status-pending-border: var(--border-strong);
+  --status-pending-text: var(--text-muted);
 
-  /* ── Shape — Huchu 4/6/8/10/14/18 ─────────────────────── */
-  --radius:       8px;
-  --radius-xs:    4px;
-  --radius-sm:    6px;
-  --radius-md:    8px;
-  --radius-lg:    10px;
-  --radius-xl:    14px;
-  --radius-2xl:   18px;
-  --radius-3xl:   18px;
-  --radius-4xl:   18px;
-  --radius-full:  9999px;
-  --radius-pill:  9999px;
+  /* Shape, controls and elevation */
+  --radius: 0.7rem;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+  --radius-4xl: 26px;
+  --radius-full: 9999px;
+  --radius-pill: 9999px;
   --button-radius: var(--radius-md);
-  --card-radius:   var(--radius-xl);
-  --control-height-sm: 32px;
-  --control-height-md: 36px;
-  --h-control-sm: 32px;
-  --h-control-md: 36px;
+  --card-radius: var(--radius-xl);
+  --h-control-sm: 34px;
+  --h-control-md: 40px;
+  --control-height-sm: var(--h-control-sm);
+  --control-height-md: var(--h-control-md);
   --input-height: var(--h-control-md);
   --button-height: var(--h-control-md);
+  --shadow-none: none;
+  --shadow-rest: 0 1px 2px rgb(16 47 58 / 4%);
+  --shadow-hover: 0 8px 24px rgb(16 47 58 / 9%);
+  --shadow-popover: 0 16px 42px rgb(8 32 41 / 14%);
+  --shadow-modal: 0 24px 64px rgb(8 32 41 / 20%);
+  --shadow-card: var(--shadow-rest);
+  --card-divider: var(--border-subtle);
+  --button-shadow-rest: inset 0 0 0 1px var(--border);
+  --button-shadow-hover: inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
+  --surface-frame-shadow: inset 0 0 0 1px var(--border);
+  --surface-frame-shadow-hover: inset 0 0 0 1px var(--border-strong), var(--shadow-hover);
 
-  /* ── Typography — Huchu Atkinson ──────────────────────── */
-  --font-sans: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Code", monospace;
+  /* Type */
+  --font-sans: "Geist Variable", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-sans);
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
   --font-family: var(--font-sans);
   --font-weight-regular: 400;
-  --font-weight-medium:  500;
-  --font-weight-semibold:600;
-  --font-weight-bold:    700;
-  --leading-tight:   1.3;
-  --leading-normal:  1.4;
-  --leading-relaxed: 1.55;
-  --type-size-12: 12px;
-  --type-size-13: 13px;
-  --type-size-14: 14px;
-  --type-size-16: 16px;
-  --type-size-20: 20px;
-  --type-size-22: 22px;
-  --type-size-24: 24px;
-  --type-size-32: 32px;
-  --text-xs:  var(--type-size-12);
-  --text-sm:  var(--type-size-13);
-  --text-md:  var(--type-size-14);
-  --text-lg:  var(--type-size-16);
-  --text-xl:  var(--type-size-22);
-  --text-2xl: var(--type-size-32);
-  --type-display-size:       var(--type-size-32);
-  --type-page-title-size:    var(--type-size-32);
-  --type-page-title-weight:  var(--font-weight-bold);
-  --type-section-title-size:   var(--type-size-20);
-  --type-section-title-weight: var(--font-weight-bold);
-  --type-label-size:   var(--type-size-13);
-  --type-label-weight: var(--font-weight-semibold);
-  --type-body-size:    var(--type-size-14);
-  --type-body-weight:  var(--font-weight-regular);
-  --type-table-header-size:   var(--type-size-12);
-  --type-table-header-weight: var(--font-weight-semibold);
-  --type-table-cell-size:     var(--type-size-14);
-  --type-table-cell-weight:   var(--font-weight-medium);
-  --type-caption-size:   var(--type-size-12);
-  --type-caption-weight: var(--font-weight-medium);
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --type-size-12: 0.75rem;
+  --type-size-13: 0.8125rem;
+  --type-size-14: 0.875rem;
+  --type-size-16: 1rem;
+  --type-size-20: 1.25rem;
+  --type-size-22: 1.375rem;
+  --type-size-24: 1.5rem;
+  --type-size-32: clamp(1.85rem, 3vw, 2.4rem);
+  --type-page-title-size: var(--type-size-32);
+  --type-section-title-size: var(--type-size-20);
+  --type-label-size: var(--type-size-13);
+  --type-body-size: var(--type-size-14);
+  --type-table-header-size: var(--type-size-12);
+  --type-table-cell-size: var(--type-size-14);
+  --type-caption-size: var(--type-size-12);
 
-  /* ── Spacing — 8pt Huchu ──────────────────────────────── */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
+  /* Rhythm */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
-  --content-gutter-x: var(--space-4);
-  --content-gutter-y: var(--space-6);
-  --section-gutter-x: var(--space-4);
-  --table-gutter-x:   var(--space-3);
-  --app-bar-h:        64px;
-  --list-toolbar-h:   52px;
-  --table-row-min-h:  48px;
+  --app-bar-h: 64px;
+  --sidebar-w: 252px;
+  --list-toolbar-h: 52px;
+  --table-row-min-h: 48px;
   --table-head-min-h: 40px;
 
-  /* ── Motion ───────────────────────────────────────────── */
-  --motion-ease-default: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --motion-duration-fast:   150ms;
-  --motion-duration-default:200ms;
-  --motion-duration-slow:   300ms;
-
-  /* ── Z ────────────────────────────────────────────────── */
+  /* Focus, motion and stacking */
+  --focus-ring: #4c8992;
+  --focus-ring-soft: rgb(76 137 146 / 24%);
+  --focus-ring-offset: var(--canvas);
+  --ring: var(--focus-ring);
+  --motion-ease-default: cubic-bezier(0.25, 1, 0.5, 1);
+  --motion-duration-fast: 140ms;
+  --motion-duration-default: 220ms;
+  --motion-duration-slow: 360ms;
   --z-sidebar: 50;
-  --z-nav:     60;
+  --z-nav: 60;
   --z-overlay: 100;
-  --z-toast:   200;
+  --z-toast: 200;
 
-  /* ── Shadcn compat ────────────────────────────────────── */
-  --background: 220 14% 96%;
-  --foreground: 222 13% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 13% 10%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 13% 10%;
-  --primary: 221 89% 49%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 222 13% 10%;
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 9% 38%;
-  --accent: 220 14% 96%;
-  --accent-foreground: 222 13% 10%;
-  --destructive: 8 64% 43%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 220 14% 91%;
-  --input: 220 14% 91%;
-  --ring: 221 89% 49%;
-  --success: 118 19% 44%;
-  --success-foreground: 0 0% 100%;
-  --warning: 38 64% 42%;
-  --warning-foreground: 0 0% 100%;
-  --chart-1: var(--brand);
-  --chart-2: #2E7D32;
-  --chart-3: var(--tone-success);
-  --chart-4: var(--tone-warn);
-  --chart-5: var(--tone-danger);
-  --chart-grid: var(--border-subtle);
-  --chart-text: var(--text-muted);
-  --sidebar: var(--surface);
-  --sidebar-foreground: var(--text-body);
-  --sidebar-primary: var(--brand);
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: var(--surface-muted);
-  --sidebar-accent-foreground: var(--text-strong);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--focus-ring);
+  /* Tables */
+  --table-header-bg: #f0f3ee;
+  --table-header-text: var(--text-muted);
+  --table-divider: var(--border-subtle);
+  --table-row-bg: var(--surface);
+  --table-row-hover-bg: #f4f7f2;
 
-  --badge-neutral-bg:   var(--tone-neutral-bg);
-  --badge-neutral-text: var(--text-body);
-  --badge-brand-bg:     var(--brand-soft);
-  --badge-brand-text:   var(--brand-strong);
-  --badge-info-bg:      var(--tone-info-bg);
-  --badge-info-text:    var(--brand-strong);
-  --badge-success-bg:   var(--tone-success-bg);
-  --badge-success-text: var(--tone-success-strong);
-  --badge-warning-bg:   var(--tone-warn-bg);
-  --badge-warning-text: var(--tone-warn-strong);
-  --badge-danger-bg:    var(--tone-danger-bg);
-  --badge-danger-text:  var(--tone-danger-strong);
+  /* Tailwind/shadcn compatibility — real colors, never raw HSL tuples. */
+  --background: var(--canvas);
+  --foreground: var(--text-strong);
+  --card: var(--surface);
+  --card-foreground: var(--text-strong);
+  --popover: var(--surface);
+  --popover-foreground: var(--text-strong);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--text-strong);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-sunken);
+  --accent-foreground: var(--text-strong);
+  --destructive: var(--tone-danger);
+  --destructive-foreground: var(--on-brand);
+  --input: var(--input-border);
+  --success: var(--tone-success);
+  --success-foreground: var(--on-brand);
+  --warning: var(--tone-warn);
+  --warning-foreground: var(--on-brand);
 
-  --status-success-bg:     var(--tone-success-bg);
-  --status-success-border: var(--tone-success-bd);
-  --status-success-text:   var(--tone-success-strong);
-  --status-warning-bg:     var(--tone-warn-bg);
-  --status-warning-border: var(--tone-warn-bd);
-  --status-warning-text:   var(--tone-warn-strong);
-  --status-error-bg:       var(--tone-danger-bg);
-  --status-error-border:   var(--tone-danger-bd);
-  --status-error-text:     var(--tone-danger-strong);
-  --status-info-bg:        var(--tone-info-bg);
-  --status-info-border:    var(--tone-info-bd);
-  --status-info-text:      var(--brand-strong);
-  --status-pending-bg:     var(--surface-muted);
-  --status-pending-border: var(--border-strong);
-  --status-pending-text:   var(--text-muted);
-
-  --table-header-bg:    var(--surface-muted);
-  --table-header-text:  var(--text-subtle);
-  --table-divider:      var(--border-subtle);
-  --table-row-bg:       var(--surface);
-  --table-row-hover-bg: var(--surface-muted);
-
-  --app-canvas-wash: none;
+  --app-canvas-wash:
+    radial-gradient(circle at 86% 8%, rgb(212 226 126 / 13%), transparent 28rem),
+    linear-gradient(180deg, #f7f8f4 0%, var(--canvas) 100%);
 }
 
-/* ── Dark — Huchu dark is system, keep minimal ────────────── */
 .dark {
   color-scheme: dark;
-  --canvas:           #0F1114;
-  --surface:          #1A1D21;
-  --surface-muted:    #242830;
-  --surface-sunken:   #2E333E;
-  --surface-deep:     #353C4A;
-  --text-strong:      #F1F3F6;
-  --text-body:        #E5E8EE;
-  --text-muted:       #8B92A8;
-  --text-subtle:      #6B7285;
-  --border:           #2E333E;
-  --border-strong:    #3E4452;
-  --border-subtle:    #242830;
-  --brand:            #3B82F6;
-  --brand-strong:     #2563EB;
-  --brand-soft:       rgba(59,130,246,0.14);
-  --app-canvas-wash: none;
+  --canvas: #0b1b21;
+  --surface: #11262e;
+  --surface-muted: #172f37;
+  --surface-sunken: #1f3941;
+  --surface-deep: #28454c;
+  --text-strong: #edf4f1;
+  --text-body: #d8e5e1;
+  --text-muted: #9eb4b5;
+  --text-subtle: #829a9c;
+  --border: #244049;
+  --border-strong: #35545c;
+  --border-subtle: #1a343c;
+  --input-border: #36545c;
+  --input-bg: #10242c;
+  --brand: #69aeb8;
+  --brand-strong: #83c0c7;
+  --brand-deeper: #4a8e99;
+  --brand-soft: #173942;
+  --focus-ring: #a2d0d4;
+  --focus-ring-soft: rgb(162 208 212 / 23%);
+  --table-header-bg: #162d35;
+  --table-row-hover-bg: #173039;
+  --app-canvas-wash: radial-gradient(circle at 82% 5%, rgb(103 126 65 / 15%), transparent 28rem);
 }

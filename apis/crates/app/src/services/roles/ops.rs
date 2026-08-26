@@ -14,6 +14,7 @@ pub struct RoleOps;
 impl RoleOps {
     pub async fn list_roles(
         pool: &PgPool,
+        tenant_id: Uuid,
         page: u32,
         limit: u32,
         query: Option<&str>,
@@ -25,13 +26,14 @@ impl RoleOps {
             let roles = sqlx::query_as!(
                 Role,
                 r#"
-                SELECT id, name, description, permissions, is_system, created_at, updated_at, deleted_at
+                SELECT id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at
                 FROM roles
-                WHERE deleted_at IS NULL
-                  AND (name ILIKE $1 OR description ILIKE $1)
+                WHERE tenant_id = $1 AND deleted_at IS NULL
+                  AND (name ILIKE $2 OR description ILIKE $2)
                 ORDER BY created_at DESC
-                LIMIT $2 OFFSET $3
+                LIMIT $3 OFFSET $4
                 "#,
+                tenant_id,
                 search_pattern,
                 limit as i64,
                 offset as i64
@@ -43,9 +45,10 @@ impl RoleOps {
                 r#"
                 SELECT COUNT(*) as "count!"
                 FROM roles
-                WHERE deleted_at IS NULL
-                  AND (name ILIKE $1 OR description ILIKE $1)
+                WHERE tenant_id = $1 AND deleted_at IS NULL
+                  AND (name ILIKE $2 OR description ILIKE $2)
                 "#,
+                tenant_id,
                 search_pattern
             )
             .fetch_one(pool)
@@ -56,12 +59,13 @@ impl RoleOps {
             let roles = sqlx::query_as!(
                 Role,
                 r#"
-                SELECT id, name, description, permissions, is_system, created_at, updated_at, deleted_at
+                SELECT id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at
                 FROM roles
-                WHERE deleted_at IS NULL
+                WHERE tenant_id = $1 AND deleted_at IS NULL
                 ORDER BY created_at DESC
-                LIMIT $1 OFFSET $2
+                LIMIT $2 OFFSET $3
                 "#,
+                tenant_id,
                 limit as i64,
                 offset as i64
             )
@@ -72,8 +76,9 @@ impl RoleOps {
                 r#"
                 SELECT COUNT(*) as "count!"
                 FROM roles
-                WHERE deleted_at IS NULL
-                "#
+                WHERE tenant_id = $1 AND deleted_at IS NULL
+                "#,
+                tenant_id
             )
             .fetch_one(pool)
             .await?;
@@ -84,15 +89,16 @@ impl RoleOps {
         Ok((roles, total))
     }
 
-    pub async fn get_role_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Role>> {
+    pub async fn get_role_by_id(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<Option<Role>> {
         let role = sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, permissions, is_system, created_at, updated_at, deleted_at
+            SELECT id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at
             FROM roles
-            WHERE id = $1 AND deleted_at IS NULL
+            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
             "#,
-            id
+            id,
+            tenant_id
         )
         .fetch_optional(pool)
         .await?;
@@ -100,15 +106,20 @@ impl RoleOps {
         Ok(role)
     }
 
-    pub async fn get_role_by_name(pool: &PgPool, name: &str) -> Result<Option<Role>> {
+    pub async fn get_role_by_name(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        name: &str,
+    ) -> Result<Option<Role>> {
         let role = sqlx::query_as!(
             Role,
             r#"
-            SELECT id, name, description, permissions, is_system, created_at, updated_at, deleted_at
+            SELECT id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at
             FROM roles
-            WHERE name = $1 AND deleted_at IS NULL
+            WHERE name = $1 AND tenant_id = $2 AND deleted_at IS NULL
             "#,
-            name
+            name,
+            tenant_id
         )
         .fetch_optional(pool)
         .await?;
@@ -116,14 +127,19 @@ impl RoleOps {
         Ok(role)
     }
 
-    pub async fn create_role(pool: &PgPool, req: &CreateRoleRequest) -> Result<Role> {
+    pub async fn create_role(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        req: &CreateRoleRequest,
+    ) -> Result<Role> {
         let role = sqlx::query_as!(
             Role,
             r#"
-            INSERT INTO roles (name, description, permissions, is_system)
-            VALUES ($1, $2, $3, false)
-            RETURNING id, name, description, permissions, is_system, created_at, updated_at, deleted_at
+            INSERT INTO roles (tenant_id, name, description, permissions, is_system)
+            VALUES ($1, $2, $3, $4, false)
+            RETURNING id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at
             "#,
+            tenant_id,
             req.name,
             req.description,
             &req.permissions
@@ -136,6 +152,7 @@ impl RoleOps {
 
     pub async fn update_role(
         pool: &PgPool,
+        tenant_id: Uuid,
         id: Uuid,
         req: &UpdateRoleRequest,
     ) -> Result<Option<Role>> {
@@ -147,13 +164,14 @@ impl RoleOps {
                 description = COALESCE($2, description),
                 permissions = COALESCE($3, permissions),
                 updated_at = NOW()
-            WHERE id = $4 AND deleted_at IS NULL AND is_system = false
-            RETURNING id, name, description, permissions, is_system, created_at, updated_at, deleted_at
+            WHERE id = $4 AND tenant_id = $5 AND deleted_at IS NULL AND is_system = false
+            RETURNING id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at
             "#,
             req.name,
             req.description,
             req.permissions.as_deref(),
-            id
+            id,
+            tenant_id
         )
         .fetch_optional(pool)
         .await?;
@@ -161,14 +179,15 @@ impl RoleOps {
         Ok(role)
     }
 
-    pub async fn delete_role(pool: &PgPool, id: Uuid) -> Result<bool> {
+    pub async fn delete_role(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<bool> {
         let result = sqlx::query!(
             r#"
             UPDATE roles
             SET deleted_at = NOW()
-            WHERE id = $1 AND deleted_at IS NULL AND is_system = false
+            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL AND is_system = false
             "#,
-            id
+            id,
+            tenant_id
         )
         .execute(pool)
         .await?;

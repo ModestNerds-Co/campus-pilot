@@ -42,17 +42,23 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           toastOptions={{
             duration: 4000,
             className: "",
-            style: {},
+            style: {
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-popover)",
+              color: "var(--text-strong)",
+            },
             success: {
               iconTheme: {
-                primary: "#10b981",
-                secondary: "#ffffff",
+                primary: "var(--tone-success)",
+                secondary: "var(--surface)",
               },
             },
             error: {
               iconTheme: {
-                primary: "#ef4444",
-                secondary: "#ffffff",
+                primary: "var(--tone-danger)",
+                secondary: "var(--surface)",
               },
             },
           }}

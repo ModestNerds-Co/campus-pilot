@@ -17,8 +17,9 @@ import {
   Tag,
 } from "lucide-react";
 import { ChangelogEntry } from "../lib/version";
+import { DialogShell } from "@/components/ui/dialog";
 
-interface ChangelogModalProps {
+interface ChangelogDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   entries: ChangelogEntry[];
@@ -57,7 +58,7 @@ const ChangeTypeColors = {
   breaking: "border-l-[var(--tone-danger)] bg-[var(--tone-danger-bg)]",
 };
 
-export const ChangelogModal: React.FC<ChangelogModalProps> = ({
+export const ChangelogDrawer: React.FC<ChangelogDrawerProps> = ({
   isOpen,
   onClose,
   entries,
@@ -65,30 +66,21 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-[var(--surface-overlay)] p-4"
-      onClick={handleBackdropClick}
-    >
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)]">
+    <DialogShell onClose={onClose} open={isOpen} panelClassName="max-w-[720px]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--action-primary-bg)] p-6 text-[var(--action-primary-fg)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--action-primary-bg)] p-6 text-[var(--action-primary-fg)]">
           <div className="flex items-center gap-3">
             <Tag className="w-6 h-6" />
             <div>
-              <h2 className="text-[length:var(--type-section-title-size)] font-bold">What's New</h2>
+              <h2 className="text-[length:var(--type-section-title-size)] font-bold" id="dialog-title">What's new</h2>
               <p className="text-[var(--on-brand-muted)] text-sm">
-                TGPatcher v{currentVersion}
+                Campus Pilot v{currentVersion}
               </p>
             </div>
           </div>
           <button
+            aria-label="Close changelog"
             onClick={onClose}
             className="p-1 hover:bg-[var(--on-brand-hover)] rounded-[var(--radius-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--action-primary-bg)]"
           >
@@ -97,7 +89,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {entries.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-[var(--text-muted)]">No new changes to display.</p>
@@ -165,7 +157,6 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </DialogShell>
   );
 };

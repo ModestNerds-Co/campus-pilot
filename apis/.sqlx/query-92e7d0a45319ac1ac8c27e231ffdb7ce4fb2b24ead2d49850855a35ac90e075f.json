@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*) as \"count!\"\n            FROM vehicles\n            WHERE tenant_id = $1 AND deleted_at IS NULL\n              AND ($2::TEXT IS NULL OR registration_number ILIKE $2 OR make ILIKE $2 OR model ILIKE $2)\n              AND ($3::TEXT IS NULL OR status = $3)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "92e7d0a45319ac1ac8c27e231ffdb7ce4fb2b24ead2d49850855a35ac90e075f"
+}

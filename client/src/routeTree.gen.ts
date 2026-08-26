@@ -19,7 +19,24 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as SetupSchoolRouteImport } from './routes/setup.school'
 import { Route as SetupAdminRouteImport } from './routes/setup.admin'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminSubjectsRouteImport } from './routes/admin/subjects'
+import { Route as AdminStudentsRouteImport } from './routes/admin/students'
+import { Route as AdminStaffRouteImport } from './routes/admin/staff'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
+import { Route as AdminProcurementRouteImport } from './routes/admin/procurement'
+import { Route as AdminMessagingRouteImport } from './routes/admin/messaging'
+import { Route as AdminLibraryRouteImport } from './routes/admin/library'
+import { Route as AdminHrPayrollRouteImport } from './routes/admin/hr-payroll'
+import { Route as AdminHostelRouteImport } from './routes/admin/hostel'
+import { Route as AdminHealthRouteImport } from './routes/admin/health'
+import { Route as AdminFinanceRouteImport } from './routes/admin/finance'
+import { Route as AdminFeesRouteImport } from './routes/admin/fees'
+import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments'
+import { Route as AdminClassesRouteImport } from './routes/admin/classes'
+import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
+import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
+import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -71,9 +88,94 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSubjectsRoute = AdminSubjectsRouteImport.update({
+  id: '/subjects',
+  path: '/subjects',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStudentsRoute = AdminStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStaffRoute = AdminStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminRolesRoute = AdminRolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProcurementRoute = AdminProcurementRouteImport.update({
+  id: '/procurement',
+  path: '/procurement',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMessagingRoute = AdminMessagingRouteImport.update({
+  id: '/messaging',
+  path: '/messaging',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLibraryRoute = AdminLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHrPayrollRoute = AdminHrPayrollRouteImport.update({
+  id: '/hr-payroll',
+  path: '/hr-payroll',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHostelRoute = AdminHostelRouteImport.update({
+  id: '/hostel',
+  path: '/hostel',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHealthRoute = AdminHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinanceRoute = AdminFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFeesRoute = AdminFeesRouteImport.update({
+  id: '/fees',
+  path: '/fees',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
+  id: '/departments',
+  path: '/departments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClassesRoute = AdminClassesRouteImport.update({
+  id: '/classes',
+  path: '/classes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFleetIndexRoute = AdminFleetIndexRouteImport.update({
+  id: '/fleet/',
+  path: '/fleet/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFleetDriversRoute = AdminFleetDriversRouteImport.update({
+  id: '/fleet/drivers',
+  path: '/fleet/drivers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFleetDailyLogRoute = AdminFleetDailyLogRouteImport.update({
+  id: '/fleet/daily-log',
+  path: '/fleet/daily-log',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -84,11 +186,28 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
+  '/admin/classes': typeof AdminClassesRoute
+  '/admin/departments': typeof AdminDepartmentsRoute
+  '/admin/fees': typeof AdminFeesRoute
+  '/admin/finance': typeof AdminFinanceRoute
+  '/admin/health': typeof AdminHealthRoute
+  '/admin/hostel': typeof AdminHostelRoute
+  '/admin/hr-payroll': typeof AdminHrPayrollRoute
+  '/admin/library': typeof AdminLibraryRoute
+  '/admin/messaging': typeof AdminMessagingRoute
+  '/admin/procurement': typeof AdminProcurementRoute
   '/admin/roles': typeof AdminRolesRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/staff': typeof AdminStaffRoute
+  '/admin/students': typeof AdminStudentsRoute
+  '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
+  '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -96,11 +215,28 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
+  '/admin/classes': typeof AdminClassesRoute
+  '/admin/departments': typeof AdminDepartmentsRoute
+  '/admin/fees': typeof AdminFeesRoute
+  '/admin/finance': typeof AdminFinanceRoute
+  '/admin/health': typeof AdminHealthRoute
+  '/admin/hostel': typeof AdminHostelRoute
+  '/admin/hr-payroll': typeof AdminHrPayrollRoute
+  '/admin/library': typeof AdminLibraryRoute
+  '/admin/messaging': typeof AdminMessagingRoute
+  '/admin/procurement': typeof AdminProcurementRoute
   '/admin/roles': typeof AdminRolesRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/staff': typeof AdminStaffRoute
+  '/admin/students': typeof AdminStudentsRoute
+  '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
+  '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -110,11 +246,28 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/style-guide': typeof StyleGuideRoute
+  '/admin/classes': typeof AdminClassesRoute
+  '/admin/departments': typeof AdminDepartmentsRoute
+  '/admin/fees': typeof AdminFeesRoute
+  '/admin/finance': typeof AdminFinanceRoute
+  '/admin/health': typeof AdminHealthRoute
+  '/admin/hostel': typeof AdminHostelRoute
+  '/admin/hr-payroll': typeof AdminHrPayrollRoute
+  '/admin/library': typeof AdminLibraryRoute
+  '/admin/messaging': typeof AdminMessagingRoute
+  '/admin/procurement': typeof AdminProcurementRoute
   '/admin/roles': typeof AdminRolesRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/staff': typeof AdminStaffRoute
+  '/admin/students': typeof AdminStudentsRoute
+  '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
+  '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/admin/fleet/': typeof AdminFleetIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -125,11 +278,28 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/style-guide'
+    | '/admin/classes'
+    | '/admin/departments'
+    | '/admin/fees'
+    | '/admin/finance'
+    | '/admin/health'
+    | '/admin/hostel'
+    | '/admin/hr-payroll'
+    | '/admin/library'
+    | '/admin/messaging'
+    | '/admin/procurement'
     | '/admin/roles'
+    | '/admin/settings'
+    | '/admin/staff'
+    | '/admin/students'
+    | '/admin/subjects'
     | '/admin/users'
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
+    | '/admin/fleet/daily-log'
+    | '/admin/fleet/drivers'
+    | '/admin/fleet'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -137,11 +307,28 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/style-guide'
+    | '/admin/classes'
+    | '/admin/departments'
+    | '/admin/fees'
+    | '/admin/finance'
+    | '/admin/health'
+    | '/admin/hostel'
+    | '/admin/hr-payroll'
+    | '/admin/library'
+    | '/admin/messaging'
+    | '/admin/procurement'
     | '/admin/roles'
+    | '/admin/settings'
+    | '/admin/staff'
+    | '/admin/students'
+    | '/admin/subjects'
     | '/admin/users'
     | '/setup/admin'
     | '/setup/school'
     | '/admin'
+    | '/admin/fleet/daily-log'
+    | '/admin/fleet/drivers'
+    | '/admin/fleet'
   id:
     | '__root__'
     | '/'
@@ -150,11 +337,28 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/style-guide'
+    | '/admin/classes'
+    | '/admin/departments'
+    | '/admin/fees'
+    | '/admin/finance'
+    | '/admin/health'
+    | '/admin/hostel'
+    | '/admin/hr-payroll'
+    | '/admin/library'
+    | '/admin/messaging'
+    | '/admin/procurement'
     | '/admin/roles'
+    | '/admin/settings'
+    | '/admin/staff'
+    | '/admin/students'
+    | '/admin/subjects'
     | '/admin/users'
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
+    | '/admin/fleet/daily-log'
+    | '/admin/fleet/drivers'
+    | '/admin/fleet/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -240,6 +444,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/subjects': {
+      id: '/admin/subjects'
+      path: '/subjects'
+      fullPath: '/admin/subjects'
+      preLoaderRoute: typeof AdminSubjectsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/students': {
+      id: '/admin/students'
+      path: '/students'
+      fullPath: '/admin/students'
+      preLoaderRoute: typeof AdminStudentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/staff': {
+      id: '/admin/staff'
+      path: '/staff'
+      fullPath: '/admin/staff'
+      preLoaderRoute: typeof AdminStaffRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/roles': {
       id: '/admin/roles'
       path: '/roles'
@@ -247,19 +479,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRolesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/procurement': {
+      id: '/admin/procurement'
+      path: '/procurement'
+      fullPath: '/admin/procurement'
+      preLoaderRoute: typeof AdminProcurementRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/messaging': {
+      id: '/admin/messaging'
+      path: '/messaging'
+      fullPath: '/admin/messaging'
+      preLoaderRoute: typeof AdminMessagingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/library': {
+      id: '/admin/library'
+      path: '/library'
+      fullPath: '/admin/library'
+      preLoaderRoute: typeof AdminLibraryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/hr-payroll': {
+      id: '/admin/hr-payroll'
+      path: '/hr-payroll'
+      fullPath: '/admin/hr-payroll'
+      preLoaderRoute: typeof AdminHrPayrollRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/hostel': {
+      id: '/admin/hostel'
+      path: '/hostel'
+      fullPath: '/admin/hostel'
+      preLoaderRoute: typeof AdminHostelRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/health': {
+      id: '/admin/health'
+      path: '/health'
+      fullPath: '/admin/health'
+      preLoaderRoute: typeof AdminHealthRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/finance': {
+      id: '/admin/finance'
+      path: '/finance'
+      fullPath: '/admin/finance'
+      preLoaderRoute: typeof AdminFinanceRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/fees': {
+      id: '/admin/fees'
+      path: '/fees'
+      fullPath: '/admin/fees'
+      preLoaderRoute: typeof AdminFeesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/departments': {
+      id: '/admin/departments'
+      path: '/departments'
+      fullPath: '/admin/departments'
+      preLoaderRoute: typeof AdminDepartmentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/classes': {
+      id: '/admin/classes'
+      path: '/classes'
+      fullPath: '/admin/classes'
+      preLoaderRoute: typeof AdminClassesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/fleet/': {
+      id: '/admin/fleet/'
+      path: '/fleet'
+      fullPath: '/admin/fleet'
+      preLoaderRoute: typeof AdminFleetIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/fleet/drivers': {
+      id: '/admin/fleet/drivers'
+      path: '/fleet/drivers'
+      fullPath: '/admin/fleet/drivers'
+      preLoaderRoute: typeof AdminFleetDriversRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/fleet/daily-log': {
+      id: '/admin/fleet/daily-log'
+      path: '/fleet/daily-log'
+      fullPath: '/admin/fleet/daily-log'
+      preLoaderRoute: typeof AdminFleetDailyLogRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminClassesRoute: typeof AdminClassesRoute
+  AdminDepartmentsRoute: typeof AdminDepartmentsRoute
+  AdminFeesRoute: typeof AdminFeesRoute
+  AdminFinanceRoute: typeof AdminFinanceRoute
+  AdminHealthRoute: typeof AdminHealthRoute
+  AdminHostelRoute: typeof AdminHostelRoute
+  AdminHrPayrollRoute: typeof AdminHrPayrollRoute
+  AdminLibraryRoute: typeof AdminLibraryRoute
+  AdminMessagingRoute: typeof AdminMessagingRoute
+  AdminProcurementRoute: typeof AdminProcurementRoute
   AdminRolesRoute: typeof AdminRolesRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStaffRoute: typeof AdminStaffRoute
+  AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminSubjectsRoute: typeof AdminSubjectsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminFleetDailyLogRoute: typeof AdminFleetDailyLogRoute
+  AdminFleetDriversRoute: typeof AdminFleetDriversRoute
+  AdminFleetIndexRoute: typeof AdminFleetIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminClassesRoute: AdminClassesRoute,
+  AdminDepartmentsRoute: AdminDepartmentsRoute,
+  AdminFeesRoute: AdminFeesRoute,
+  AdminFinanceRoute: AdminFinanceRoute,
+  AdminHealthRoute: AdminHealthRoute,
+  AdminHostelRoute: AdminHostelRoute,
+  AdminHrPayrollRoute: AdminHrPayrollRoute,
+  AdminLibraryRoute: AdminLibraryRoute,
+  AdminMessagingRoute: AdminMessagingRoute,
+  AdminProcurementRoute: AdminProcurementRoute,
   AdminRolesRoute: AdminRolesRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminStaffRoute: AdminStaffRoute,
+  AdminStudentsRoute: AdminStudentsRoute,
+  AdminSubjectsRoute: AdminSubjectsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminFleetDailyLogRoute: AdminFleetDailyLogRoute,
+  AdminFleetDriversRoute: AdminFleetDriversRoute,
+  AdminFleetIndexRoute: AdminFleetIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

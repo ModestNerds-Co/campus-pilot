@@ -8,21 +8,28 @@
   - Add test scripts to auto-save tokens for auth endpoints
 
 ## Commands
-- Build: `cargo build`
-- Test all: `cargo test`
+- Build (whole workspace): `cargo build --workspace`
+- Test all: `cargo test --workspace`
 - Test single: `cargo test test_name`
-- Check/lint: `cargo check`
-- Run server: `cargo run`
-- SQLx prepare (after query changes): `DATABASE_URL=postgresql://127.0.0.1:5432/campus_pilot cargo sqlx prepare`
-  - **IMPORTANT**: Always run this command after adding or modifying `query!` or `query_as!` macros
+- Check/lint: `cargo check --workspace`
+- Run server: `cargo run -p campus-pilot`
+- SQLx prepare (after query changes, from `apis/`): `DATABASE_URL=postgresql://127.0.0.1:5432/campus_pilot cargo sqlx prepare --workspace`
+  - **IMPORTANT**: Always run this command (with `--workspace`, so every module crate's queries get checked) after adding or modifying `query!` or `query_as!` macros anywhere in the workspace
   - Commit the `.sqlx/` directory to version control
 
 ## Architecture
-- Actix-web REST API with PostgreSQL database
-- Entry point: `src/main.rs` (binary), `src/lib.rs` (library)
-- Structure: handlers/ (controllers), services/ (business logic), models/ (data types), routes/ (routing), db/ (database), dtos/ (data transfer objects)
-- Database: PostgreSQL with SQLX migrations in `migrations/`
-- Testing: Integration tests in `tests/`, unit tests use `#[actix_web::test]`
+- Cargo workspace, one crate per ERP module, rooted at `apis/Cargo.toml`:
+  - `crates/common` (package `cp-common`) — shared types with zero business logic: `ApiResponse`/`PaginationMeta`, `TenantId`, `Roles`, the `RequirePermission` middleware, `flatten_validation_errors`. Depends on nothing else in the workspace.
+  - `crates/app` (package `campus-pilot`, binary + lib) — the platform layer: kernel bootstrap, auth, users, roles, storage, `AuthMiddleware`, `AppState`, `main.rs`. Depends on `cp-common` and every module crate (it's the only crate that mounts everything into one `actix_web::App`).
+  - `crates/modules/<name>` (packages `cp-<name>`) — one ERP module each (`fleet`, `vehicle-log`, `sis`, `academics`, `finance`, `fees`, `hr-payroll`, `procurement`, `library`, `messaging`, `hostel`, `health`). Each follows the same `mod.rs`/`models.rs`/`dtos.rs`/`ops.rs`/`routes.rs` split as `app`'s own services. **Module crates depend on `cp-common` only, never on `app`** — this is what lets `app` depend on all of them without a cycle. A module crate MAY depend on a sibling module crate when there's a genuine domain relationship (e.g. `cp-vehicle-log` depends on `cp-fleet` to validate vehicle/driver IDs and reuse their read structs).
+  - Module route handlers take `web::Data<sqlx::PgPool>` (registered as its own `app_data` in `main.rs`, alongside the full `AppState`) and `web::ReqData<TenantId>` — never `AppState` directly, so they stay decoupled from `app`.
+- Auth vs. permissions split, mount order matters: `AuthMiddleware` (verifies the JWT, loads the `User` row, inserts `User`/`TenantId`/`Roles` into request extensions) lives only in `app` and is applied at the OUTER scope when a module is mounted (see `crates/app/src/routes.rs`). `RequirePermission::new("<module>")` lives in `cp-common`, is applied by each module's own `routes()` on its resource scope(s), and derives the required `"<module>:<action>"` permission from the HTTP method (GET→view, POST→create, PUT/PATCH→edit, DELETE→delete) — so one `.wrap()` covers a whole CRUD resource. **When a scope needs both**, `AuthMiddleware` must be the LAST `.wrap()` call (outermost, runs first) so `RequirePermission` sees populated `Roles`; e.g. `.wrap(RequirePermission::new("users")).wrap(AuthMiddleware)`.
+- **Never nest multiple `web::scope("")` (or any identically-patterned scopes) under the same parent scope** to apply different middleware per HTTP method — actix-web only honors the first such nested scope and silently 404s the routes registered in the others. This was a real, previously-shipped bug in `users`/`roles`; the fix was the single `RequirePermission` wrap described above.
+- Entry point: `crates/app/src/main.rs` (binary), `crates/app/src/lib.rs` (library)
+- Structure per service/module: `models.rs` (data types), `dtos.rs` (request/response types), `ops.rs` (business logic / queries), `routes.rs` (actix handlers + `routes(cfg)`)
+- Database: PostgreSQL with SQLX migrations in `migrations/` (still centralized, not per-crate); reserved numbering: 001-003 core, 004-009 tenancy, 010-011 fleet/vehicle-log, 020s SIS, 030s academics, 040s finance, 050s fees, 060s HR/payroll, 070s procurement, 080s library, 090s messaging, 100s hostel, 110s health (see `ROADMAP.md`)
+- Multi-tenancy: every ERP table carries `tenant_id`; a single-tenant on-prem install is just a deployment that only ever provisions one tenant (seeded by migration 004, used by kernel bootstrap) — same schema and code path as multi-tenant SaaS, no special-cased mode
+- Testing: Integration tests in `crates/app/src/tests/`, unit tests use `#[actix_web::test]`. Known issue: several tests in `test_kernel.rs`/`test_auth.rs`/`test_users.rs` hardcode the same bootstrap email (`admin@test.com`) and share one process-wide `AppState` (see `tests/helpers.rs`'s `OnceCell`), so running the full suite with default parallel test threads is flaky by design (not tenant-related) — this predates the ERP module work and is unfixed.
 
 ## Code Style
 - File headers: Include copyright header with creation date and author

@@ -1,0 +1,154 @@
+- generic [ref=f8e3]:
+  - link "Skip to main content" [ref=f8e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "Campus navigation" [ref=f8e5]:
+    - generic [ref=f8e6]:
+      - generic [ref=f8e11]:
+        - paragraph [ref=f8e12]: Campus Pilot
+        - paragraph [ref=f8e13]: School operations
+      - generic [ref=f8e17]:
+        - paragraph [ref=f8e18]: Gamenight School of Tomfoolery
+        - paragraph [ref=f8e19]: Active campus
+    - navigation "Primary navigation" [ref=f8e20]:
+      - generic [ref=f8e21]:
+        - region [ref=f8e22]:
+          - heading "Workspace" [level=2] [ref=f8e23]
+          - link "Overview" [ref=f8e25] [cursor=pointer]:
+            - /url: /admin
+        - region [ref=f8e32]:
+          - heading "People & learning" [level=2] [ref=f8e33]
+          - generic [ref=f8e34]:
+            - link "Students" [ref=f8e35] [cursor=pointer]:
+              - /url: /admin/students
+            - link "Users" [ref=f8e40] [cursor=pointer]:
+              - /url: /admin/users
+            - link "Roles & access" [ref=f8e48] [cursor=pointer]:
+              - /url: /admin/roles
+            - link "Departments" [ref=f8e53] [cursor=pointer]:
+              - /url: /admin/departments
+            - link "Grades & classes" [ref=f8e59] [cursor=pointer]:
+              - /url: /admin/classes
+            - link "Subjects" [ref=f8e66] [cursor=pointer]:
+              - /url: /admin/subjects
+            - link "Staff" [ref=f8e71] [cursor=pointer]:
+              - /url: /admin/staff
+        - region [ref=f8e85]:
+          - heading "Campus operations" [level=2] [ref=f8e86]
+          - generic [ref=f8e87]:
+            - link "Vehicles" [ref=f8e88] [cursor=pointer]:
+              - /url: /admin/fleet
+            - link "Drivers" [ref=f8e95] [cursor=pointer]:
+              - /url: /admin/fleet/drivers
+            - link "Daily vehicle log" [ref=f8e100] [cursor=pointer]:
+              - /url: /admin/fleet/daily-log
+            - link "Finance" [ref=f8e104] [cursor=pointer]:
+              - /url: /admin/finance
+            - link "Fees & payment plans" [ref=f8e108] [cursor=pointer]:
+              - /url: /admin/fees
+            - link "HR & payroll" [ref=f8e112] [cursor=pointer]:
+              - /url: /admin/hr-payroll
+            - link "Procurement" [ref=f8e118] [cursor=pointer]:
+              - /url: /admin/procurement
+            - link "Library" [ref=f8e126] [cursor=pointer]:
+              - /url: /admin/library
+            - link "Hostel & boarding" [ref=f8e130] [cursor=pointer]:
+              - /url: /admin/hostel
+            - link "Messaging" [ref=f8e136] [cursor=pointer]:
+              - /url: /admin/messaging
+            - link "Health & clinic" [ref=f8e140] [cursor=pointer]:
+              - /url: /admin/health
+        - region [ref=f8e145]:
+          - heading "System" [level=2] [ref=f8e146]
+          - link "Settings" [ref=f8e148] [cursor=pointer]:
+            - /url: /admin/settings
+    - generic [ref=f8e153]:
+      - 'button "Theme: System. Click to change." [ref=f8e154] [cursor=pointer]':
+        - generic [ref=f8e157]: System
+      - generic [ref=f8e158]:
+        - generic [ref=f8e159]: CA
+        - generic [ref=f8e160]:
+          - paragraph [ref=f8e161]: Campus Administrator
+          - paragraph [ref=f8e162]: Super Admin
+      - button "Sign out" [ref=f8e163] [cursor=pointer]
+  - generic [ref=f8e167]:
+    - banner [ref=f8e168]:
+      - generic [ref=f8e170]:
+        - paragraph [ref=f8e171]: Users
+        - paragraph [ref=f8e172]: Gamenight School of Tomfoolery
+      - button "Add user" [ref=f8e175] [cursor=pointer]
+    - main [ref=f8e177]:
+      - generic [ref=f8e179]:
+        - paragraph [ref=f8e180]: Manage school accounts, access status and assigned roles.
+        - generic [ref=f8e181]:
+          - generic [ref=f8e182]:
+            - textbox "Search users" [ref=f8e184]:
+              - /placeholder: Search users...
+            - button "Search" [ref=f8e185] [cursor=pointer]
+          - combobox "Status filter" [ref=f8e186]:
+            - option "All statuses" [selected]
+            - option "Active"
+            - option "Inactive"
+          - generic [ref=f8e187]:
+            - generic [ref=f8e188]: Page 1 of 1
+            - generic [ref=f8e189]:
+              - button "Previous" [disabled]
+              - button "Next" [disabled]
+        - table [ref=f8e192]:
+          - rowgroup [ref=f8e193]:
+            - row [ref=f8e194]:
+              - columnheader "User" [ref=f8e195]
+              - columnheader "Contact" [ref=f8e196]
+              - columnheader "Roles" [ref=f8e197]
+              - columnheader "Status" [ref=f8e198]
+              - columnheader "Last login" [ref=f8e199]
+              - columnheader "Actions" [ref=f8e200]
+          - rowgroup [ref=f8e201]:
+            - row [ref=f8e202]:
+              - cell "L Lindiwe Moyo lindiwe@example.test" [ref=f8e203]:
+                - generic [ref=f8e204]:
+                  - generic [ref=f8e205]: L
+                  - generic [ref=f8e207]:
+                    - generic [ref=f8e208]: Lindiwe Moyo
+                    - generic [ref=f8e209]: lindiwe@example.test
+              - cell "+27 10 000 0000" [ref=f8e210]
+              - cell "School Administrator" [ref=f8e211]
+              - cell "Active" [ref=f8e214]
+              - cell "Never" [ref=f8e216]
+              - cell [ref=f8e217]:
+                - button "Actions for Lindiwe Moyo" [ref=f8e219] [cursor=pointer]
+        - dialog [ref=f8e227]:
+          - generic [ref=f8e228]:
+            - heading "Add New User" [level=2] [ref=f8e229]
+            - button "Close drawer" [active] [ref=f8e230] [cursor=pointer]
+          - generic [ref=f8e234]:
+            - generic [ref=f8e235]:
+              - generic [ref=f8e236]:
+                - generic [ref=f8e237]: Email *
+                - textbox "user@example.com" [ref=f8e238]
+              - generic [ref=f8e239]:
+                - generic [ref=f8e240]: Full Name *
+                - textbox "John Doe" [ref=f8e241]
+              - generic [ref=f8e242]:
+                - text: Phone
+                - textbox "+123****7890" [ref=f8e243]
+              - generic [ref=f8e244]:
+                - generic [ref=f8e245]: Password *
+                - generic [ref=f8e246]:
+                  - textbox "Enter password" [ref=f8e247]
+                  - button "Show password" [ref=f8e248] [cursor=pointer]
+              - generic [ref=f8e252]:
+                - generic [ref=f8e253]: Roles *
+                - generic [ref=f8e255] [cursor=pointer]:
+                  - checkbox "School Administrator Manages campus setup and people." [ref=f8e256]
+                  - generic [ref=f8e257]:
+                    - text: School Administrator
+                    - paragraph [ref=f8e258]: Manages campus setup and people.
+                - paragraph [ref=f8e259]: 0 roles selected
+              - generic [ref=f8e260]:
+                - generic [ref=f8e261] [cursor=pointer]:
+                  - checkbox "Active user" [checked] [ref=f8e262]
+                  - generic [ref=f8e263]: Active user
+                - paragraph [ref=f8e264]: Inactive users cannot log in to the system
+            - generic [ref=f8e265]:
+              - button "Cancel" [ref=f8e266] [cursor=pointer]
+              - button "Create User" [ref=f8e267] [cursor=pointer]

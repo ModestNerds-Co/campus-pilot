@@ -17,6 +17,8 @@ use std::{
     rc::Rc,
 };
 
+use cp_common::{Roles, TenantId};
+
 use crate::{
     models::api_response::ApiResponse, services::auth::models::User, state::AppState,
     utils::verify_access_token,
@@ -145,7 +147,7 @@ where
             let user = match sqlx::query_as!(
                 User,
                 r#"
-                SELECT id, email, full_name, phone, password_hash, roles, is_active,
+                SELECT id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                        last_login_at, last_login_ip, failed_login_attempts,
                        locked_until, created_at, updated_at, deleted_at
                 FROM users
@@ -191,8 +193,12 @@ where
                     .map_into_right_body());
             }
 
-            // Attach user to request extensions
+            // Attach user (and their tenant + roles) to request extensions
+            let tenant_id = TenantId(user.tenant_id);
+            let roles = Roles(user.roles.clone());
             req.extensions_mut().insert(user);
+            req.extensions_mut().insert(tenant_id);
+            req.extensions_mut().insert(roles);
 
             // Continue to next middleware/handler
             service.call(req).await.map(|res| res.map_into_left_body())

@@ -1,6 +1,6 @@
 //
 //  campus-pilot
-//  AdminSetupScreen.tsx - Administrator Creation Screen (token-driven, huchu elegance)
+//  AdminSetupScreen.tsx - Administrator creation screen.
 //
 //  Created by Ngonidzashe Mangudya on 26/09/2025.
 //  Copyright (c) 2025 Codecraft Solutions
@@ -35,8 +35,8 @@ import {
   PASSWORD_STRENGTH_COLORS,
   PASSWORD_STRENGTH_LABELS,
 } from "../../constants";
-import { ThemeToggle } from "../../../../lib/theme";
 import toast from "react-hot-toast";
+import { SetupScaffold } from "../ui/setup-scaffold";
 
 export const AdminSetupScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -193,28 +193,14 @@ export const AdminSetupScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--canvas)]" style={{ backgroundImage: "var(--app-canvas-wash)" }}>
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-10">
-        <ThemeToggle />
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 mx-auto mb-4 bg-[var(--tone-success-bg)] border border-[var(--tone-success-bd)] rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-[var(--tone-success)]" />
-          </div>
-          <h1 className="text-3xl font-bold text-[var(--text-strong)] mb-4">
-            Create the first administrator
-          </h1>
-          <p className="text-lg text-[var(--text-muted)] max-w-xl mx-auto">
-            This account manages users, classes, fees, and more.
-          </p>
-        </div>
-
+    <SetupScaffold
+      description="Create the accountable owner for school configuration, user access, classes, fees, and daily operations."
+      maxWidth="narrow"
+      step={2}
+      title="Create the first administrator"
+    >
         {/* Form */}
-        <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
+        <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] p-6 shadow-[var(--shadow-rest)] sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name */}
             <div>
@@ -222,7 +208,7 @@ export const AdminSetupScreen: React.FC = () => {
                 htmlFor="full_name"
                 className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
-                Full Name *
+                Full name *
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-subtle)] pointer-events-none" />
@@ -253,7 +239,7 @@ export const AdminSetupScreen: React.FC = () => {
                 htmlFor="email"
                 className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
-                Admin Email (will be your login) *
+                Administrator email *
               </label>
               <input
                 id="email"
@@ -281,7 +267,7 @@ export const AdminSetupScreen: React.FC = () => {
                 htmlFor="phone"
                 className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
-                Phone Number
+                Phone number
               </label>
               <input
                 id="phone"
@@ -399,7 +385,7 @@ export const AdminSetupScreen: React.FC = () => {
                 htmlFor="password_confirm"
                 className="block text-sm font-medium text-[var(--text-strong)] mb-2"
               >
-                Confirm Password *
+                Confirm password *
               </label>
               <div className="relative">
                 <input
@@ -467,7 +453,7 @@ export const AdminSetupScreen: React.FC = () => {
                 className="flex items-center gap-2 px-6 h-[var(--h-control-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-strong)] rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Back to School Details
+                Back to school details
               </button>
 
               <button
@@ -478,11 +464,11 @@ export const AdminSetupScreen: React.FC = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating Admin...
+                    Creating administrator…
                   </>
                 ) : (
                   <>
-                    Create Admin & Finish
+                    Create administrator
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -497,7 +483,7 @@ export const AdminSetupScreen: React.FC = () => {
             <Shield className="w-5 h-5 text-[var(--tone-info-strong)] mt-0.5 flex-shrink-0" />
             <div>
               <h4 className="text-sm font-medium text-[var(--tone-info-strong)] mb-1">
-                Security Notice
+                Security notice
               </h4>
               <p className="text-sm text-[var(--tone-info-strong)] opacity-90">
                 This administrator account will have full access to the system.
@@ -507,7 +493,6 @@ export const AdminSetupScreen: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </SetupScaffold>
   );
 };

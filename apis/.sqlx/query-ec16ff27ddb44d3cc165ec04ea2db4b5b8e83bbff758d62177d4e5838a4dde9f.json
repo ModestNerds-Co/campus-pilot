@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*) as \"count!\"\n            FROM vehicle_daily_logs l\n            WHERE l.tenant_id = $1 AND l.deleted_at IS NULL\n              AND ($2::UUID IS NULL OR l.vehicle_id = $2)\n              AND ($3::UUID IS NULL OR l.driver_id = $3)\n              AND ($4::TEXT IS NULL OR l.status = $4)\n              AND ($5::DATE IS NULL OR l.log_date >= $5)\n              AND ($6::DATE IS NULL OR l.log_date <= $6)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ec16ff27ddb44d3cc165ec04ea2db4b5b8e83bbff758d62177d4e5838a4dde9f"
+}

@@ -55,7 +55,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (metaThemeColor) {
         metaThemeColor.setAttribute(
           'content',
-          newActualTheme === 'dark' ? '#1f2937' : '#ffffff'
+          newActualTheme === 'dark' ? '#0b1b21' : '#f4f6f2'
         );
       }
     };
@@ -100,7 +100,13 @@ export function useTheme() {
 }
 
 // Theme toggle component — token-driven, 36px floor
-export function ThemeToggle({ className = '' }: { className?: string }) {
+export function ThemeToggle({
+  className = '',
+  variant = 'surface',
+}: {
+  className?: string;
+  variant?: 'surface' | 'sidebar';
+}) {
   const { theme, setTheme } = useTheme();
 
   const handleToggle = () => {
@@ -148,16 +154,16 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       className={`
         inline-flex items-center justify-center gap-2
         h-9 px-3 rounded-[var(--radius-md)] border text-[13px] font-medium
-        bg-[var(--surface)] text-[var(--text-body)] border-[var(--border)]
-        hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] hover:border-[var(--border-strong)]
-        active:bg-[var(--surface-sunken)]
+        ${variant === 'sidebar'
+          ? 'bg-white/5 text-[var(--sidebar-muted)] border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]'
+          : 'bg-[var(--surface)] text-[var(--text-body)] border-[var(--border)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] hover:border-[var(--border-strong)] active:bg-[var(--surface-sunken)]'}
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2
         transition-colors duration-200 ease-[var(--motion-ease-default)]
         ${className}
       `}
     >
       {getIcon()}
-      <span>{getLabel()}</span>
+      <span className="hidden sm:inline">{getLabel()}</span>
     </button>
   );
 }

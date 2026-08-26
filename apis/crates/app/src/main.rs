@@ -12,7 +12,6 @@ use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::web::JsonConfig;
 use actix_web::{App, HttpResponse, HttpServer, web};
-use campus_pilot::db::DatabaseOperations;
 use dotenv::dotenv;
 use log::info;
 use sentry::integrations::log::LogFilter;
@@ -98,6 +97,9 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::from(app_state.clone()))
+            // ERP module crates take a bare PgPool rather than the full
+            // AppState, so they never need to depend on the `app` crate.
+            .app_data(web::Data::new(app_state.db.clone()))
             .app_data(JsonConfig::default().error_handler(|err, _req| {
                 let message: String = match &err {
                     actix_web::error::JsonPayloadError::ContentType => {

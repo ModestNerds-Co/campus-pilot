@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 
 export function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -79,7 +80,7 @@ export function TableToolbar({ className, ...props }: React.ComponentProps<"div"
   );
 }
 
-/** Unified DataTable controls row (huchu platform-ux-playbook): search+submit,
+/** Unified DataTable controls row: search+submit,
  * filters, and pagination share one aligned row and one control height —
  * never a detached toolbar plus a separate footer. */
 export function TableControlsBar({ className, ...props }: React.ComponentProps<"div">) {
@@ -148,3 +149,59 @@ export function TableEmpty({
   );
 }
 
+export function TableLoading({
+  columns = 5,
+  rows = 5,
+  label = "Loading records…",
+}: {
+  columns?: number;
+  rows?: number;
+  label?: string;
+}) {
+  return (
+    <div aria-busy="true" aria-label={label} className="p-4 sm:p-5" role="status">
+      <span className="sr-only">{label}</span>
+      <div className="mb-4 grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(columns, 4)}, minmax(0, 1fr))` }}>
+        {Array.from({ length: Math.min(columns, 4) }).map((_, index) => (
+          <div className="h-3 animate-pulse rounded-full bg-[var(--surface-sunken)]" key={index} />
+        ))}
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: rows }).map((_, row) => (
+          <div className="flex items-center gap-3 border-t border-[var(--border-subtle)] pt-3" key={row}>
+            <div className="size-9 shrink-0 animate-pulse rounded-[8px] bg-[var(--surface-sunken)]" />
+            <div className="h-3 flex-1 animate-pulse rounded-full bg-[var(--surface-muted)]" />
+            <div className="hidden h-3 w-28 animate-pulse rounded-full bg-[var(--surface-muted)] sm:block" />
+            <div className="h-7 w-16 animate-pulse rounded-full bg-[var(--surface-sunken)]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function TableError({
+  description,
+  onRetry,
+  title = "Records could not be loaded",
+}: {
+  description: string;
+  onRetry: () => void;
+  title?: string;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:p-8" role="alert">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-[9px] bg-[var(--tone-danger-bg)] text-[var(--tone-danger)]">
+        <AlertTriangle className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-[var(--text-strong)]">{title}</p>
+        <p className="mt-1 max-w-xl text-sm leading-5 text-[var(--text-muted)]">{description}</p>
+      </div>
+      <Button onClick={onRetry} type="button" variant="secondary">
+        <RotateCcw className="size-4" />
+        Try again
+      </Button>
+    </div>
+  );
+}

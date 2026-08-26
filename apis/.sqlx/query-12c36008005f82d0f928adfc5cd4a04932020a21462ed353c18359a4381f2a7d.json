@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE vehicle_daily_logs\n            SET deleted_at = NOW()\n            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "12c36008005f82d0f928adfc5cd4a04932020a21462ed353c18359a4381f2a7d"
+}

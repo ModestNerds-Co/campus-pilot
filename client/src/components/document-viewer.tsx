@@ -13,6 +13,7 @@ import {
   createDownloadLinkFromBase64,
 } from "../lib/utils";
 import toast from "react-hot-toast";
+import { DialogShell } from "@/components/ui/dialog";
 
 interface DocumentViewerProps {
   isOpen: boolean;
@@ -126,16 +127,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-[2px] flex items-center justify-center z-[var(--z-overlay)] p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[var(--surface)] rounded-[var(--radius-xl)] border border-[var(--border)] shadow-[var(--shadow-modal)] max-w-6xl w-full h-full m-4 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <DialogShell onClose={onClose} open={isOpen} panelClassName="max-w-[960px]">
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-          <h3 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)]">
+          <h3 className="text-[length:var(--type-section-title-size)] font-bold text-[var(--text-strong)]" id="dialog-title">
             {documentId ? `${title} - ID: ${documentId}` : title}
           </h3>
           <div className="flex items-center gap-2">
@@ -149,6 +143,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               </button>
             )}
             <button
+              aria-label="Close document viewer"
               onClick={onClose}
               className="p-2 hover:bg-[var(--surface-muted)] rounded-full text-[var(--text-muted)] hover:text-[var(--text-strong)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
@@ -157,7 +152,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
         </div>
         <div className="flex-1 overflow-hidden">{renderDocumentContent()}</div>
-      </div>
-    </div>
+    </DialogShell>
   );
 };

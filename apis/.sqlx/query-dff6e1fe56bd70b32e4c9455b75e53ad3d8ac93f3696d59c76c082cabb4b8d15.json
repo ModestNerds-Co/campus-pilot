@@ -1,0 +1,130 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO vehicles (\n                tenant_id, registration_number, make, model, year, vehicle_type,\n                capacity, fuel_type, status, current_odometer, insurance_expiry,\n                license_expiry, notes\n            )\n            VALUES (\n                $1, $2, $3, $4, $5, COALESCE($6, 'bus'),\n                $7, COALESCE($8, 'diesel'), COALESCE($9, 'active'), COALESCE($10, 0), $11,\n                $12, $13\n            )\n            RETURNING id, tenant_id, registration_number, make, model, year, vehicle_type,\n                      capacity, fuel_type, status, current_odometer, insurance_expiry,\n                      license_expiry, notes, created_at, updated_at, deleted_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "registration_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "make",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "model",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "vehicle_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "capacity",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "fuel_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "current_odometer",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "insurance_expiry",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 12,
+        "name": "license_expiry",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 13,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Int4",
+        "Date",
+        "Date",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "dff6e1fe56bd70b32e4c9455b75e53ad3d8ac93f3696d59c76c082cabb4b8d15"
+}

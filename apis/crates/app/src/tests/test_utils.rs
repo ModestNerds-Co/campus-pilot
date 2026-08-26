@@ -45,11 +45,12 @@ mod tests {
     #[test]
     fn test_generate_access_token() {
         let user_id = Uuid::new_v4();
+        let tenant_id = Uuid::new_v4();
         let email = "test@example.com";
         let roles = vec!["Admin".to_string()];
         let secret = "test-secret-key";
 
-        let token = generate_access_token(user_id, email, roles.clone(), secret)
+        let token = generate_access_token(user_id, tenant_id, email, roles.clone(), secret)
             .expect("Failed to generate access token");
 
         assert!(!token.is_empty());
@@ -57,6 +58,7 @@ mod tests {
         // Verify the token
         let claims = verify_token(&token, secret).expect("Failed to verify token");
         assert_eq!(claims.sub, user_id);
+        assert_eq!(claims.tenant_id, tenant_id);
         assert_eq!(claims.email, email);
         assert_eq!(claims.roles, roles);
     }
@@ -64,11 +66,12 @@ mod tests {
     #[test]
     fn test_generate_refresh_token() {
         let user_id = Uuid::new_v4();
+        let tenant_id = Uuid::new_v4();
         let email = "test@example.com";
         let roles = vec!["Admin".to_string()];
         let secret = "test-secret-key";
 
-        let token = generate_refresh_token(user_id, email, roles.clone(), secret)
+        let token = generate_refresh_token(user_id, tenant_id, email, roles.clone(), secret)
             .expect("Failed to generate refresh token");
 
         assert!(!token.is_empty());
@@ -76,6 +79,7 @@ mod tests {
         // Verify the token
         let claims = verify_token(&token, secret).expect("Failed to verify token");
         assert_eq!(claims.sub, user_id);
+        assert_eq!(claims.tenant_id, tenant_id);
         assert_eq!(claims.email, email);
         assert_eq!(claims.roles, roles);
     }
@@ -83,12 +87,13 @@ mod tests {
     #[test]
     fn test_verify_token_with_wrong_secret() {
         let user_id = Uuid::new_v4();
+        let tenant_id = Uuid::new_v4();
         let email = "test@example.com";
         let roles = vec!["Admin".to_string()];
         let secret = "test-secret-key";
         let wrong_secret = "wrong-secret-key";
 
-        let token = generate_access_token(user_id, email, roles, secret)
+        let token = generate_access_token(user_id, tenant_id, email, roles, secret)
             .expect("Failed to generate access token");
 
         let result = verify_token(&token, wrong_secret);

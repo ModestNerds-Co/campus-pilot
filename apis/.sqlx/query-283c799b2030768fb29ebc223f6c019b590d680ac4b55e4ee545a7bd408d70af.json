@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO vehicle_daily_logs (\n                tenant_id, vehicle_id, driver_id, log_date, start_odometer, end_odometer,\n                start_time, end_time, destination, purpose, fuel_added_liters, fuel_cost, status\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, COALESCE($13, 'draft'))\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Date",
+        "Int4",
+        "Int4",
+        "Time",
+        "Time",
+        "Text",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "283c799b2030768fb29ebc223f6c019b590d680ac4b55e4ee545a7bd408d70af"
+}

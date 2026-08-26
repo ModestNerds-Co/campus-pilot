@@ -1110,6 +1110,19 @@ dependencies = [
  "aws-sdk-s3",
  "base64 0.21.7",
  "chrono",
+ "cp-academics",
+ "cp-common",
+ "cp-fees",
+ "cp-finance",
+ "cp-fleet",
+ "cp-health",
+ "cp-hostel",
+ "cp-hr-payroll",
+ "cp-library",
+ "cp-messaging",
+ "cp-procurement",
+ "cp-sis",
+ "cp-vehicle-log",
  "dotenv",
  "env_logger",
  "futures",
@@ -1275,6 +1288,143 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+
+[[package]]
+name = "cp-academics"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-common"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "uuid",
+ "validator",
+]
+
+[[package]]
+name = "cp-fees"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-finance"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-fleet"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-common",
+ "log",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
+]
+
+[[package]]
+name = "cp-health"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-hostel"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-hr-payroll"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-library"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-messaging"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-procurement"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-sis"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "cp-common",
+ "serde_json",
+]
+
+[[package]]
+name = "cp-vehicle-log"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-common",
+ "cp-fleet",
+ "log",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
+]
 
 [[package]]
 name = "cpufeatures"

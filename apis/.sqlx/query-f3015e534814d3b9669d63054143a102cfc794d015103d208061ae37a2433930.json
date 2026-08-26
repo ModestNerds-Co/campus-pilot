@@ -1,0 +1,119 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, tenant_id, registration_number, make, model, year, vehicle_type,\n                   capacity, fuel_type, status, current_odometer, insurance_expiry,\n                   license_expiry, notes, created_at, updated_at, deleted_at\n            FROM vehicles\n            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "registration_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "make",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "model",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "vehicle_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "capacity",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "fuel_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "current_odometer",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "insurance_expiry",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 12,
+        "name": "license_expiry",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 13,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "f3015e534814d3b9669d63054143a102cfc794d015103d208061ae37a2433930"
+}

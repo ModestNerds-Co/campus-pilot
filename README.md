@@ -46,5 +46,20 @@ pnpm dev  # http://localhost:5173
 - `client/` — pnpm workspace, build output in `client/dist/`
 
 ## Deploy
-`gh` will be configured for `ModestNerds-Co/campus-pilot` after first push.
+
+This host serves `campus.antonlabs.cc` through an external Traefik + cloudflared tunnel that
+is **not** part of this repo's own `docker-compose.yml`. Routing labels, the
+`media-server_default` network attachment, and the production `VITE_API_BASE_URL` build arg
+all live in `docker-compose.prod.yml`. **Always include both files when building or
+(re)starting `apis`/`client` on this host:**
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build apis client
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d apis client
+```
+
+Running plain `docker compose build/up` (base file only) on these two services silently
+strips the Traefik labels and network on recreate, and bakes `localhost:8000` into the
+client's JS bundle instead of the public URL — the container stays "healthy" locally while
+the public site 502s. `gh` will be configured for `ModestNerds-Co/campus-pilot` after first push.
 

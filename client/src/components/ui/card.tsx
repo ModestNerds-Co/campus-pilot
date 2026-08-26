@@ -1,6 +1,6 @@
 //
 //  campus-pilot — Card compound
-//  Mirrors huchu's .card / .card-head / .card-title contract
+//  Shared Campus Pilot card composition.
 //
 
 import * as React from "react";

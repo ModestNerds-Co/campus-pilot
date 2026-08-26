@@ -13,6 +13,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub email: String,
     pub full_name: String,
     pub phone: Option<String>,
@@ -31,6 +32,7 @@ pub struct User {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RefreshToken {
     pub id: Uuid,
+    pub tenant_id: Uuid,
     pub user_id: Uuid,
     pub token: String,
     pub ip_address: Option<String>,

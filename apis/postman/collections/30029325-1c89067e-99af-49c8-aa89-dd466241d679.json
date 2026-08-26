@@ -727,6 +727,561 @@
       ]
     },
     {
+      "name": "Fleet",
+      "item": [
+        {
+          "name": "Vehicles",
+          "item": [
+            {
+              "name": "List Vehicles",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/vehicles?page=1&per_page=20&search=&status=",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "vehicles"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Vehicle",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/vehicles/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "vehicles",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000",
+                      "description": "id UUID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Vehicle",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"registration_number\": \"ADX 1234\",\n  \"make\": \"Toyota\",\n  \"model\": \"Quantum\",\n  \"year\": 2019,\n  \"vehicle_type\": \"bus\",\n  \"capacity\": 18,\n  \"fuel_type\": \"diesel\",\n  \"current_odometer\": 45210\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/fleet/vehicles",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "vehicles"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Vehicle",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"current_odometer\": 45300,\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/fleet/vehicles/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "vehicles",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000",
+                      "description": "id UUID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Vehicle",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/vehicles/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "vehicles",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000",
+                      "description": "id UUID"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Drivers",
+          "item": [
+            {
+              "name": "List Drivers",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/drivers?page=1&per_page=20&search=&status=",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "drivers"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Driver",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/drivers/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "drivers",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000",
+                      "description": "id UUID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Driver",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Tendai Moyo\",\n  \"license_number\": \"DL-99213\",\n  \"license_class\": \"Class 2\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/fleet/drivers",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "drivers"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Driver",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+263771234567\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/fleet/drivers/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "drivers",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000",
+                      "description": "id UUID"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Driver",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/drivers/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "drivers",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000",
+                      "description": "id UUID"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Vehicle Daily Log",
+      "item": [
+        {
+          "name": "List Daily Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicle-logs?page=1&per_page=20&vehicle_id=&driver_id=&status=&from_date=&to_date=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicle-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "vehicle_id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "driver_id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "from_date",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "to_date",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Daily Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicle-logs/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicle-logs",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "description": "id UUID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Daily Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"driver_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"log_date\": \"2026-08-21\",\n  \"start_odometer\": 45210,\n  \"purpose\": \"School run - Chinhoyi to Karoi\",\n  \"destination\": \"Karoi\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/vehicle-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicle-logs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Daily Log",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end_odometer\": 45340,\n  \"status\": \"submitted\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/vehicle-logs/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicle-logs",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "description": "id UUID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Daily Log",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/vehicle-logs/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "vehicle-logs",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-0000-0000-000000000000",
+                  "description": "id UUID"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",

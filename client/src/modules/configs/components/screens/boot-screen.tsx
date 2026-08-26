@@ -1,6 +1,6 @@
 //
 //  campus-pilot
-//  BootScreen.tsx - Bootstrap Loading Screen (token-driven, huchu elegance)
+//  BootScreen.tsx - Bootstrap workspace check.
 //  Canvas-neutral chrome, token surfaces/borders/text/tones. No literal grays/blues.
 //  Created by Ngonidzashe Mangudya on 26/09/2025.
 //  Copyright (c) 2025 Codecraft Solutions
@@ -95,16 +95,16 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
     switch (status) {
       case "loading":
         return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto">
+          <div className="space-y-6">
+            <div className="w-14 h-14">
               <Loader2 className="w-full h-full text-[var(--brand)] animate-spin" />
             </div>
             <div className="space-y-2">
               <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
-                CampusPilot
+                Preparing Campus Pilot
               </h1>
               <p className="text-[var(--text-muted)]">
-                Checking configuration...
+                Checking this school's workspace configuration…
               </p>
             </div>
           </div>
@@ -112,33 +112,32 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
 
       case "offline":
         return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto bg-[var(--tone-warn-bg)] border border-[var(--tone-warn-bd)] rounded-full flex items-center justify-center">
+          <div className="space-y-6">
+            <div className="w-14 h-14 bg-[var(--tone-warn-bg)] border border-[var(--tone-warn-bd)] rounded-[var(--radius-xl)] flex items-center justify-center">
               <WifiOff className="w-8 h-8 text-[var(--tone-warn)]" />
             </div>
             <div className="space-y-4">
               <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
                 You're offline
               </h1>
-              <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
-                Setup can proceed offline. Changes will sync when internet
-                becomes available.
+              <p className="text-[var(--text-muted)] max-w-md leading-relaxed">
+                Campus Pilot cannot reach the school service. Reconnect, then try the workspace check again.
               </p>
               <div className="pt-2">
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-warn)] hover:bg-[var(--tone-warn-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
+                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-warn)] hover:bg-[var(--tone-warn-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
                 >
                   {isRetrying ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Retrying...
+                      Retrying…
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4" />
-                      Retry Connection
+                      Retry connection
                     </>
                   )}
                 </button>
@@ -149,32 +148,32 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
 
       case "error":
         return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto bg-[var(--tone-danger-bg)] border border-[var(--tone-danger-bd)] rounded-full flex items-center justify-center">
+          <div className="space-y-6">
+            <div className="w-14 h-14 bg-[var(--tone-danger-bg)] border border-[var(--tone-danger-bd)] rounded-[var(--radius-xl)] flex items-center justify-center">
               <AlertTriangle className="w-8 h-8 text-[var(--tone-danger)]" />
             </div>
             <div className="space-y-4">
               <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
-                Configuration Error
+                Configuration error
               </h1>
-              <p className="text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
+              <p className="text-[var(--text-muted)] max-w-md leading-relaxed">
                 {error || "Unable to determine system configuration status."}
               </p>
               <div className="pt-2">
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-danger)] hover:bg-[var(--tone-danger-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 mx-auto disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
+                  className="px-6 h-[var(--h-control-md)] min-h-[var(--h-control-md)] bg-[var(--tone-danger)] hover:bg-[var(--tone-danger-strong)] disabled:bg-[var(--action-disabled-bg)] disabled:text-[var(--action-disabled-fg)] text-[var(--on-brand)] font-semibold rounded-[var(--radius-md)] transition-colors flex items-center gap-2 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 text-sm"
                 >
                   {isRetrying ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Retrying...
+                      Retrying…
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4" />
-                      Try Again
+                      Try again
                     </>
                   )}
                 </button>
@@ -185,13 +184,13 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
 
       case "success":
         return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto">
+          <div className="space-y-6">
+            <div className="w-14 h-14">
               <Loader2 className="w-full h-full text-[var(--tone-success)] animate-spin" />
             </div>
             <div className="space-y-2">
               <h1 className="text-[length:var(--type-page-title-size)] font-bold text-[var(--text-strong)]">
-                CampusPilot
+                Campus Pilot is ready
               </h1>
               <p className="text-[var(--tone-success)] font-medium">Configuration loaded</p>
             </div>
@@ -204,30 +203,51 @@ export const BootScreen: React.FC<BootScreenProps> = ({ className = "" }) => {
   };
 
   return (
-    <div
-      className={`min-h-screen bg-[var(--canvas)] flex items-center justify-center p-4 ${className}`}
-      style={{ backgroundImage: "var(--app-canvas-wash)" }}
-    >
-      {/* Theme Toggle */}
-      <div className="absolute top-6 right-6 z-10">
-        <ThemeToggle />
-      </div>
+    <main className={`grid min-h-[100dvh] bg-[var(--canvas)] lg:grid-cols-[minmax(360px,38%)_1fr] ${className}`}>
+      <section className="relative hidden overflow-hidden bg-[var(--sidebar)] px-12 py-10 text-[var(--sidebar-foreground)] lg:flex lg:flex-col xl:px-16">
+        <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-60" />
+        <div className="relative z-10 flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-[10px] bg-[var(--brand-highlight)]">
+            <img alt="" aria-hidden="true" className="size-8 rounded-full object-cover mix-blend-multiply" src="/assets/images/campus-pilot-logo.svg" />
+          </span>
+          <div>
+            <p className="text-base font-bold tracking-[-0.03em]">Campus Pilot</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">School operations</p>
+          </div>
+        </div>
+        <div className="relative z-10 my-auto max-w-md py-12">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--brand-highlight)]">WORKSPACE CHECK</p>
+          <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-[-0.05em]">One dependable place to start the school day.</h2>
+          <p className="mt-5 text-base leading-7 text-[var(--sidebar-muted)]">Campus Pilot verifies the school, administrator, and service connection before anyone enters the workspace.</p>
+        </div>
+        <p className="relative z-10 text-sm text-[var(--sidebar-muted)]">Private campus workspace · Invite only</p>
+      </section>
 
-      <div className="w-full max-w-md">
-        <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] border border-[var(--border)] p-8 shadow-[var(--shadow-popover)]">
-          {renderContent()}
+      <section className="flex min-h-[100dvh] flex-col bg-[var(--surface)]">
+        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--sidebar)] px-5 py-4 text-[var(--sidebar-foreground)] lg:border-0 lg:bg-transparent lg:px-8 lg:py-6">
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <span className="flex size-9 items-center justify-center rounded-[8px] bg-[var(--brand-highlight)]">
+              <img alt="" aria-hidden="true" className="size-7 rounded-full object-cover mix-blend-multiply" src="/assets/images/campus-pilot-logo.svg" />
+            </span>
+            <span className="text-sm font-bold">Campus Pilot</span>
+          </div>
+          <span className="hidden text-xs font-medium text-[var(--text-muted)] lg:block">Secure school workspace</span>
+          <ThemeToggle />
         </div>
 
-        {/* Offline indicator */}
-        {status === "offline" && (
-          <div className="mt-6 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--tone-warn-bg)] border border-[var(--tone-warn-bd)] rounded-[var(--radius-lg)] text-sm text-[var(--tone-warn-strong)]">
-              <div className="w-2 h-2 bg-[var(--tone-warn)] rounded-full"></div>
-              Works offline
-            </div>
+        <div className="flex flex-1 items-center px-5 py-12 sm:px-10 lg:px-16">
+          <div className="w-full max-w-[480px]">
+            {renderContent()}
+
+            {status === "offline" && (
+              <div className="mt-8 inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--tone-warn-bd)] bg-[var(--tone-warn-bg)] px-4 py-2 text-sm text-[var(--tone-warn-strong)]">
+                <div className="size-2 rounded-full bg-[var(--tone-warn)]" />
+                Connection required
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </section>
+    </main>
   );
 };

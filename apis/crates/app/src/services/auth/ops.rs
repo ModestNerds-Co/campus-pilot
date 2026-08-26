@@ -21,7 +21,7 @@ impl AuthOps {
     pub async fn find_user_by_email(pool: &PgPool, email: &str) -> ApiResult<Option<User>> {
         let user = sqlx::query_as::<_, User>(
             r#"
-            SELECT id, email, full_name, phone, password_hash, roles, is_active,
+            SELECT id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                    last_login_at, last_login_ip, failed_login_attempts, locked_until,
                    created_at, updated_at, deleted_at
             FROM users
@@ -40,7 +40,7 @@ impl AuthOps {
     pub async fn find_user_by_id(pool: &PgPool, user_id: Uuid) -> ApiResult<Option<User>> {
         let user = sqlx::query_as::<_, User>(
             r#"
-            SELECT id, email, full_name, phone, password_hash, roles, is_active,
+            SELECT id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                    last_login_at, last_login_ip, failed_login_attempts, locked_until,
                    created_at, updated_at, deleted_at
             FROM users
@@ -105,6 +105,7 @@ impl AuthOps {
     /// Store refresh token
     pub async fn store_refresh_token(
         pool: &PgPool,
+        tenant_id: Uuid,
         user_id: Uuid,
         token: &str,
         ip_address: Option<&str>,
@@ -114,11 +115,12 @@ impl AuthOps {
 
         let refresh_token = sqlx::query_as::<_, RefreshToken>(
             r#"
-            INSERT INTO refresh_tokens (user_id, token, ip_address, user_agent, expires_at)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, user_id, token, ip_address, user_agent, expires_at, revoked_at, created_at, updated_at
+            INSERT INTO refresh_tokens (tenant_id, user_id, token, ip_address, user_agent, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, tenant_id, user_id, token, ip_address, user_agent, expires_at, revoked_at, created_at, updated_at
             "#,
         )
+        .bind(tenant_id)
         .bind(user_id)
         .bind(token)
         .bind(ip_address)
@@ -135,7 +137,7 @@ impl AuthOps {
     pub async fn find_refresh_token(pool: &PgPool, token: &str) -> ApiResult<Option<RefreshToken>> {
         let refresh_token = sqlx::query_as::<_, RefreshToken>(
             r#"
-            SELECT id, user_id, token, ip_address, user_agent, expires_at, revoked_at, created_at, updated_at
+            SELECT id, tenant_id, user_id, token, ip_address, user_agent, expires_at, revoked_at, created_at, updated_at
             FROM refresh_tokens
             WHERE token = $1
             "#,

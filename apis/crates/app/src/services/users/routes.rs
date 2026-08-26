@@ -8,6 +8,7 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, delete, get, post, put, web};
+use cp_common::TenantId;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -29,13 +30,16 @@ use super::{
 #[get("")]
 async fn list_users(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     query: web::Query<ListUsersQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let page = query.page.unwrap_or(1).max(1);
     let per_page = query.per_page.unwrap_or(20).clamp(1, 100);
 
     let (users, total) = match UserOps::list_users(
         &state.db,
+        tenant_id,
         page,
         per_page,
         query.search.as_deref(),
@@ -75,11 +79,13 @@ async fn list_users(
 #[get("/{id}")]
 async fn get_user(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
 
-    let user = match UserOps::get_user_by_id(&state.db, user_id).await {
+    let user = match UserOps::get_user_by_id(&state.db, tenant_id, user_id).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
@@ -112,8 +118,11 @@ async fn get_user(
 #[post("")]
 async fn create_user(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     body: web::Json<CreateUserRequest>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
+
     // Validate request
     if let Err(e) = body.validate() {
         let errors = flatten_validation_errors(&e);
@@ -125,7 +134,7 @@ async fn create_user(
     }
 
     // Check if email already exists
-    match UserOps::email_exists(&state.db, &body.email, None).await {
+    match UserOps::email_exists(&state.db, tenant_id, &body.email, None).await {
         Ok(true) => {
             return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                 StatusCode::CONFLICT,
@@ -164,6 +173,7 @@ async fn create_user(
     // Create user
     let user = match UserOps::create_user(
         &state.db,
+        tenant_id,
         &body.email,
         &body.full_name,
         &password_hash,
@@ -198,10 +208,12 @@ async fn create_user(
 #[put("/{id}")]
 async fn update_user(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     path: web::Path<Uuid>,
     body: web::Json<UpdateUserRequest>,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
 
     // Validate request
@@ -215,7 +227,7 @@ async fn update_user(
     }
 
     // Check if user exists
-    if UserOps::get_user_by_id(&state.db, user_id)
+    if UserOps::get_user_by_id(&state.db, tenant_id, user_id)
         .await
         .map_err(|e| {
             log::error!("Failed to check user existence: {:?}", e);
@@ -232,7 +244,7 @@ async fn update_user(
 
     // Check if email is being updated and already exists
     if let Some(ref email) = body.email {
-        match UserOps::email_exists(&state.db, email, Some(user_id)).await {
+        match UserOps::email_exists(&state.db, tenant_id, email, Some(user_id)).await {
             Ok(true) => {
                 return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                     StatusCode::CONFLICT,
@@ -268,6 +280,7 @@ async fn update_user(
     // Update user
     let user = match UserOps::update_user(
         &state.db,
+        tenant_id,
         user_id,
         body.email.as_deref(),
         body.full_name.as_deref(),
@@ -302,13 +315,15 @@ async fn update_user(
 #[delete("/{id}")]
 async fn delete_user(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     path: web::Path<Uuid>,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
 
     // Check if user exists
-    let target_user = match UserOps::get_user_by_id(&state.db, user_id).await {
+    let target_user = match UserOps::get_user_by_id(&state.db, tenant_id, user_id).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
@@ -350,7 +365,7 @@ async fn delete_user(
     }
 
     // Delete user
-    if let Err(e) = UserOps::delete_user(&state.db, user_id).await {
+    if let Err(e) = UserOps::delete_user(&state.db, tenant_id, user_id).await {
         log::error!("Failed to delete user: {:?}", e);
         return Ok(
             HttpResponse::InternalServerError().json(ApiResponse::from_status(
@@ -371,11 +386,13 @@ async fn delete_user(
 #[put("/{id}/activate")]
 async fn activate_user(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
 
-    let user = match UserOps::activate_user(&state.db, user_id).await {
+    let user = match UserOps::activate_user(&state.db, tenant_id, user_id).await {
         Ok(user) => user,
         Err(e) => {
             log::error!("Failed to activate user: {:?}", e);
@@ -401,11 +418,13 @@ async fn activate_user(
 #[put("/{id}/deactivate")]
 async fn deactivate_user(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
 
-    let user = match UserOps::deactivate_user(&state.db, user_id).await {
+    let user = match UserOps::deactivate_user(&state.db, tenant_id, user_id).await {
         Ok(user) => user,
         Err(e) => {
             log::error!("Failed to deactivate user: {:?}", e);
@@ -433,29 +452,17 @@ async fn deactivate_user(
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/users")
+            // actix composes `.wrap()` calls outside-in in reverse registration
+            // order, so AuthMiddleware (which populates Roles) must be
+            // registered LAST to actually run FIRST, ahead of RequirePermission.
+            .wrap(RequirePermission::new("users"))
             .wrap(AuthMiddleware)
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("users:view"))
-                    .service(list_users)
-                    .service(get_user),
-            )
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("users:create"))
-                    .service(create_user),
-            )
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("users:edit"))
-                    .service(update_user)
-                    .service(activate_user)
-                    .service(deactivate_user),
-            )
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("users:delete"))
-                    .service(delete_user),
-            ),
+            .service(list_users)
+            .service(get_user)
+            .service(create_user)
+            .service(update_user)
+            .service(activate_user)
+            .service(deactivate_user)
+            .service(delete_user),
     );
 }

@@ -2,7 +2,7 @@
 //  campus-pilot
 //  page-chrome.tsx - Per-page title + primary action registered into the app-bar
 //
-//  huchu platform-ux-playbook, "Shell Patterns": the top app bar always carries
+//  Campus Pilot shell rule: the top app bar always carries
 //  the page title and its primary action — a page that draws its own title
 //  and action below the bar states the title twice and buries the action
 //  under the title/description/search box on a phone. Pages call usePageChrome()

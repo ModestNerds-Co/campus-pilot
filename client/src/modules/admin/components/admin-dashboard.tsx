@@ -1,175 +1,223 @@
 //
 //  campus-pilot
-//  admin-dashboard.tsx - Admin Dashboard Component (token-driven)
+//  admin-dashboard.tsx - Campus operations overview
 //
 
 import React from "react";
-import { useAuthStore } from "../../../stores/auth-store";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { Link } from "@tanstack/react-router";
 import {
-  Users,
-  Building2,
-  GraduationCap,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  UserCheck,
+  ArrowRight,
   BookOpen,
-  Clock,
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
+  GraduationCap,
+  ShieldCheck,
+  Truck,
+  UserCheck,
+  UsersRound,
 } from "lucide-react";
 
-type Tone = "brand" | "success" | "accent" | "warn";
+import { useAuthStore } from "../../../stores/auth-store";
+import { usePageChrome } from "../layouts/page-chrome";
 
-const toneMap: Record<Tone, { bg: string; fg: string }> = {
-  brand: { bg: "bg-[var(--surface-sunken)]", fg: "text-[var(--brand)]" },
-  success: { bg: "bg-[var(--surface-sunken)]", fg: "text-[var(--tone-success)]" },
-  accent: { bg: "bg-[var(--surface-sunken)]", fg: "text-[var(--text-muted)]" },
-  warn: { bg: "bg-[var(--surface-sunken)]", fg: "text-[var(--tone-warn)]" },
-};
+const measures = [
+  { label: "Students", value: "0", detail: "No roster imported", icon: GraduationCap },
+  { label: "Staff", value: "0", detail: "Directory ready", icon: UserCheck },
+  { label: "Departments", value: "0", detail: "Structure not configured", icon: Building2 },
+  { label: "Active users", value: "1", detail: "Administrator access", icon: UsersRound },
+];
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  trend?: { value: string; isPositive: boolean };
-  tone?: Tone;
-}
+const focusAreas = [
+  {
+    title: "Build the school structure",
+    detail: "Define departments, grades and classes before enrolment begins.",
+    href: "/admin/departments",
+    icon: Building2,
+    meta: "Academic foundation",
+  },
+  {
+    title: "Prepare your people directory",
+    detail: "Add staff and users, then assign the right level of access.",
+    href: "/admin/users",
+    icon: UsersRound,
+    meta: "People & permissions",
+  },
+  {
+    title: "Put daily operations in motion",
+    detail: "Register vehicles and drivers before recording campus trips.",
+    href: "/admin/fleet",
+    icon: Truck,
+    meta: "Fleet operations",
+  },
+];
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, trend, tone = "brand" }) => {
-  const t = toneMap[tone];
-  return (
-    <div className="rounded-[12px] border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-[14px_16px]">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">{title}</span>
-        <div className={`flex size-8 items-center justify-center rounded-[8px] bg-[var(--surface)] border border-[var(--border-subtle)] ${t.fg}`}>
-          <Icon className="size-4" />
-        </div>
-      </div>
-      <div className="text-[18px] font-bold tracking-tight text-[var(--text-strong)] leading-none">{value}</div>
-      {trend && (
-        <div className="flex items-center gap-1 mt-2">
-          {trend.isPositive ? <TrendingUp className="size-3.5 text-[var(--tone-success)]" /> : <TrendingDown className="size-3.5 text-[var(--tone-danger)]" />}
-          <span className={`text-xs font-medium ${trend.isPositive ? "text-[var(--tone-success)]" : "text-[var(--tone-danger)]"}`}>{trend.value}</span>
-          <span className="text-xs text-[var(--text-subtle)]">vs last period</span>
-        </div>
-      )}
-    </div>
-  );
-};
+const readiness = [
+  { label: "Administrator account", complete: true },
+  { label: "School structure", complete: false },
+  { label: "Staff and user directory", complete: false },
+  { label: "Student roster", complete: false },
+];
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuthStore();
+  const firstName = user?.full_name?.trim().split(/\s+/)[0] || "there";
 
-  usePageChrome("Dashboard");
+  usePageChrome("Overview");
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-[var(--text-muted)]">Welcome back, {user?.full_name}</p>
-        <div className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] shadow-sm">
-          <Calendar className="size-4" />
-          <span>
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
+    <div className="space-y-8">
+      <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-strong)]">Campus overview</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-[var(--text-strong)] sm:text-4xl">
+            {greeting()}, {firstName}.
+          </h1>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">Here is what needs attention across the school workspace.</p>
         </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total students" value="0" icon={GraduationCap} trend={{ value: "0%", isPositive: true }} tone="brand" />
-        <StatCard title="Total staff" value="0" icon={UserCheck} trend={{ value: "0%", isPositive: true }} tone="success" />
-        <StatCard title="Departments" value="0" icon={Building2} tone="accent" />
-        <StatCard title="Active users" value="1" icon={Users} trend={{ value: "0%", isPositive: true }} tone="warn" />
-      </div>
-
-      {/* Activity Chart — Huchu outer card pattern */}
-      <div className="overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[var(--surface)]" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)" }}>
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] px-5 py-3">
-          <h2 className="text-[13px] font-semibold text-[var(--text-strong)]">Student enrollment trend</h2>
-          <div className="flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] p-1">
-            <button className="rounded-full px-3 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-strong)]">Week</button>
-            <button className="rounded-full bg-[var(--text-strong)] px-3 py-1 text-xs font-medium text-[var(--text-inverse)]">Month</button>
-            <button className="rounded-full px-3 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-strong)]">Year</button>
-          </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)]">
+          <CalendarDays className="size-4 text-[var(--brand-strong)]" />
+          <span>{formattedDate()}</span>
         </div>
-        <div className="p-5">
-          <div className="flex h-56 items-center justify-center rounded-[12px] border border-dashed border-[var(--border)] bg-[var(--surface-muted)]">
-            <div className="text-center">
-              <Clock className="mx-auto mb-3 size-10 text-[var(--text-subtle)]" />
-              <p className="text-sm text-[var(--text-muted)]">Chart visualization coming soon</p>
-              <p className="mt-1 text-xs text-[var(--text-subtle)]">Activity data will be displayed here</p>
+      </section>
+
+      <section className="relative overflow-hidden rounded-[var(--radius-2xl)] bg-[var(--sidebar)] p-6 text-[var(--sidebar-foreground)] sm:p-7">
+        <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-40" />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex max-w-2xl gap-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-[10px] bg-[var(--brand-highlight)] text-[var(--sidebar-active-fg)]">
+              <ClipboardCheck className="size-5" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]">Workspace readiness</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-[-0.025em]">The foundation is ready. Add the school structure next.</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--sidebar-muted)]">
+                Your administrator account is active. Departments, classes and people will turn this into a working campus record.
+              </p>
             </div>
           </div>
+          <Link
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--brand-highlight)] px-4 text-sm font-semibold text-[var(--sidebar-active-fg)] hover:bg-[var(--brand-highlight-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            to="/admin/departments"
+          >
+            Start school setup
+            <ArrowRight className="size-4" />
+          </Link>
         </div>
-      </div>
+      </section>
 
-      {/* Two Column — Huchu detail grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[var(--surface)]" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)" }}>
-          <div className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] px-5 py-3">
-            <h2 className="text-[13px] font-semibold text-[var(--text-strong)]">Recent activity</h2>
+      <section aria-labelledby="snapshot-heading">
+        <div className="mb-3 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Current snapshot</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-[var(--text-strong)]" id="snapshot-heading">Campus records</h2>
           </div>
-          <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-            <BookOpen className="mx-auto mb-1 size-10 text-[var(--text-subtle)]" />
-            <p className="text-sm text-[var(--text-muted)]">No recent activity</p>
-            <p className="mt-1 text-xs text-[var(--text-subtle)]">Activity will appear here as you use the system</p>
-          </div>
+          <span className="text-xs text-[var(--text-subtle)]">Live workspace totals</span>
         </div>
-
-        <div className="overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[var(--surface)]" style={{ boxShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)" }}>
-          <div className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] px-5 py-3">
-            <h2 className="text-[13px] font-semibold text-[var(--text-strong)]">Quick actions</h2>
-          </div>
-          <div className="space-y-2 p-5">
-            <button className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 text-left text-[13px] font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]">
-              <span className="flex size-8 items-center justify-center rounded-[8px] bg-[var(--brand-soft)] text-[var(--brand)]"><Users className="size-4" /></span>
-              Add new user
-            </button>
-            <button className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 text-left text-[13px] font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]">
-              <span className="flex size-8 items-center justify-center rounded-[8px] bg-[var(--surface-sunken)] text-[var(--text-muted)]"><Building2 className="size-4" /></span>
-              Create department
-            </button>
-            <button className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 text-left text-[13px] font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]">
-              <span className="flex size-8 items-center justify-center rounded-[8px] bg-[var(--surface-sunken)] text-[var(--text-muted)]"><GraduationCap className="size-4" /></span>
-              Enroll student
-            </button>
-            <button className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 text-left text-[13px] font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]">
-              <span className="flex size-8 items-center justify-center rounded-[8px] bg-[var(--surface-sunken)] text-[var(--text-muted)]"><BookOpen className="size-4" /></span>
-              Create subject
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Getting Started — Huchu banner style */}
-      <div className="rounded-[16px] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-6">
-        <h2 className="mb-4 text-[13px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Getting started</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { n: 1, title: "Set up school structure", desc: "Create departments and classes" },
-            { n: 2, title: "Add staff members", desc: "Create employee records" },
-            { n: 3, title: "Enroll students", desc: "Start adding students" },
-          ].map((s) => (
-            <div key={s.n} className="flex gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold text-[var(--on-brand)]">
-                {s.n}
+        <div className="grid overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] sm:grid-cols-2 xl:grid-cols-4">
+          {measures.map(({ detail, icon: Icon, label, value }, index) => (
+            <div
+              className={`p-5 ${index > 0 ? "border-t border-[var(--border-subtle)] sm:border-l" : ""} ${index === 2 ? "sm:border-l-0 xl:border-l" : ""} ${index > 1 ? "xl:border-t-0" : "sm:border-t-0"}`}
+              key={label}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</span>
+                <Icon className="size-[18px] text-[var(--brand-strong)]" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--brand-strong)]">{s.title}</p>
-                <p className="mt-1 text-sm text-[var(--brand-strong)]/80">{s.desc}</p>
-              </div>
+              <p className="font-tabular mt-4 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-strong)]">{value}</p>
+              <p className="mt-2 text-xs text-[var(--text-subtle)]">{detail}</p>
             </div>
           ))}
         </div>
+      </section>
+
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(310px,0.65fr)]">
+        <section aria-labelledby="focus-heading">
+          <div className="border-b border-[var(--border)] pb-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Operational focus</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-[var(--text-strong)]" id="focus-heading">Set up the work in the right order</h2>
+          </div>
+          <div className="divide-y divide-[var(--border-subtle)]">
+            {focusAreas.map(({ detail, href, icon: Icon, meta, title }, index) => (
+              <Link className="group flex items-start gap-4 py-5" key={title} to={href}>
+                <span className="font-tabular mt-1 text-xs font-semibold text-[var(--text-subtle)]">{String(index + 1).padStart(2, "0")}</span>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-[9px] bg-[var(--brand-soft)] text-[var(--brand-strong)] transition-transform duration-200 ease-[var(--motion-ease-default)] group-hover:-translate-y-0.5">
+                  <Icon className="size-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">{meta}</span>
+                  <span className="mt-1 block text-sm font-semibold text-[var(--text-strong)]">{title}</span>
+                  <span className="mt-1 block text-sm leading-5 text-[var(--text-muted)]">{detail}</span>
+                </span>
+                <ArrowRight className="mt-3 size-4 shrink-0 text-[var(--text-subtle)] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" />
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <aside className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5" aria-labelledby="readiness-heading">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Getting started</p>
+              <h2 className="mt-1 text-base font-semibold text-[var(--text-strong)]" id="readiness-heading">Workspace checklist</h2>
+            </div>
+            <span className="font-tabular rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-strong)]">1 of 4</span>
+          </div>
+
+          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-sunken)]">
+            <div className="h-full w-1/4 rounded-full bg-[var(--brand)]" />
+          </div>
+
+          <ul className="mt-5 space-y-3">
+            {readiness.map(({ complete, label }) => (
+              <li className="flex items-center gap-3" key={label}>
+                {complete ? (
+                  <CheckCircle2 className="size-[18px] shrink-0 text-[var(--tone-success)]" />
+                ) : (
+                  <span className="size-[18px] shrink-0 rounded-full border border-[var(--border-strong)] bg-[var(--surface-muted)]" />
+                )}
+                <span className={`text-sm ${complete ? "text-[var(--text-muted)] line-through" : "font-medium text-[var(--text-body)]"}`}>{label}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-6 flex items-center gap-3 border-t border-[var(--border-subtle)] pt-4 text-xs leading-5 text-[var(--text-muted)]">
+            <ShieldCheck className="size-4 shrink-0 text-[var(--brand-strong)]" />
+            Your account controls which campus records you can view and change.
+          </div>
+        </aside>
       </div>
+
+      <section className="flex flex-col gap-4 rounded-[var(--radius-xl)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-muted)] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <BookOpen className="mt-0.5 size-5 shrink-0 text-[var(--brand-strong)]" />
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--text-strong)]">No recent campus activity yet</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Actions will appear here as teams begin working in Campus Pilot.</p>
+          </div>
+        </div>
+        <Link className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/admin/users">
+          Manage access
+          <ArrowRight className="size-4" />
+        </Link>
+      </section>
     </div>
   );
 };
+
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function formattedDate() {
+  return new Intl.DateTimeFormat("en-ZA", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date());
+}

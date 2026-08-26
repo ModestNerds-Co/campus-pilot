@@ -4,7 +4,7 @@
 //
 
 import React, { useState, useEffect } from "react";
-import { Shield, Plus, Search, MoreVertical, Edit, Trash2, Loader2 } from "lucide-react";
+import { Shield, Plus, Search, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { rolesService } from "../services/roles-service";
 import type { Role, RolesListParams } from "../types";
 import toast from "react-hot-toast";
@@ -12,21 +12,26 @@ import { RoleFormModal } from "./role-form-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
+import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableLoading, TableError, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
 
 export const RolesList: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | undefined>(undefined);
+  const [pendingDelete, setPendingDelete] = useState<Role | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchRoles = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const params: RolesListParams = { page: currentPage, limit: 50 };
       if (searchQuery) params.query = searchQuery;
@@ -34,9 +39,11 @@ export const RolesList: React.FC = () => {
       if (response.success && response.data) {
         setRoles(response.data.roles);
         setTotalPages(response?.pagination?.total_pages || 1);
+      } else {
+        setLoadError(response.message || "The roles directory could not be read.");
       }
     } catch (error) {
-      toast.error("Failed to load roles");
+      setLoadError("Campus Pilot could not reach the roles directory. Check the connection and try again.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -53,20 +60,23 @@ export const RolesList: React.FC = () => {
     fetchRoles();
   };
 
-  const handleDelete = async (roleId: string) => {
-    if (!confirm("Are you sure you want to delete this role?")) return;
+  const handleDelete = async () => {
+    if (!pendingDelete || isDeleting) return;
+    setIsDeleting(true);
     try {
-      const response = await rolesService.deleteRole(roleId);
+      const response = await rolesService.deleteRole(pendingDelete.id);
       if (response.success) {
-        toast.success("Role deleted successfully");
-        fetchRoles();
+        toast.success("Role deleted");
+        setPendingDelete(null);
+        void fetchRoles();
       } else {
         toast.error(response.message || "Failed to delete role");
       }
     } catch {
       toast.error("Failed to delete role");
+    } finally {
+      setIsDeleting(false);
     }
-    setOpenMenuId(null);
   };
 
   const handleAddRole = () => {
@@ -86,13 +96,13 @@ export const RolesList: React.FC = () => {
     "Roles",
     <Button onClick={handleAddRole}>
       <Plus className="size-4" />
-      Add Role
+      Add role
     </Button>,
   );
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-[var(--text-muted)]">Manage roles and permissions</p>
+      <p className="text-sm text-[var(--text-muted)]">Define reusable access profiles for school teams.</p>
 
       <TableControlsBar>
         <TableControlsSearch onSubmit={handleSearch}>
@@ -119,17 +129,21 @@ export const RolesList: React.FC = () => {
 
       <TableWrap>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="size-8 animate-spin text-[var(--brand)]" />
-          </div>
+          <TableLoading columns={5} label="Loading roles…" />
+        ) : loadError ? (
+          <TableError description={loadError} onRetry={() => void fetchRoles()} title="Roles could not be loaded" />
         ) : roles.length === 0 ? (
-          <TableEmpty icon={<Shield className="size-12" />} title="No roles found" />
+          <TableEmpty
+            description={searchQuery ? "Try a different role name." : "Create a role to group permissions for a school team."}
+            icon={<Shield className="size-12" />}
+            title={searchQuery ? "No roles match this search" : "No roles yet"}
+          />
         ) : (
           <TableScroll>
             <Table>
               <THead>
                 <tr>
-                  <TH>Role Name</TH>
+                  <TH>Role name</TH>
                   <TH>Description</TH>
                   <TH>Permissions</TH>
                   <TH>Created</TH>
@@ -170,7 +184,7 @@ export const RolesList: React.FC = () => {
                         <button
                           onClick={() => setOpenMenuId(openMenuId === role.id ? null : role.id)}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                          aria-label="Role actions"
+                          aria-label={`Actions for ${role.name}`}
                         >
                           <MoreVertical className="size-4" />
                         </button>
@@ -183,7 +197,10 @@ export const RolesList: React.FC = () => {
                               <Edit className="size-4" /> Edit
                             </button>
                             <button
-                              onClick={() => handleDelete(role.id)}
+                              onClick={() => {
+                                setPendingDelete(role);
+                                setOpenMenuId(null);
+                              }}
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
                               <Trash2 className="size-4" /> Delete
@@ -201,6 +218,15 @@ export const RolesList: React.FC = () => {
       </TableWrap>
 
       <RoleFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleModalSuccess} role={selectedRole} />
+      <ConfirmDrawer
+        confirmLabel="Delete role"
+        description={`Delete the ${pendingDelete?.name || "selected"} role? Review any assigned users first; this action cannot be undone.`}
+        isPending={isDeleting}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => void handleDelete()}
+        open={pendingDelete !== null}
+        title="Delete role?"
+      />
     </div>
   );
 };

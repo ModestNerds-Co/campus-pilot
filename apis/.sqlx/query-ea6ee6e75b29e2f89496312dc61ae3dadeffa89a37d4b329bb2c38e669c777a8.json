@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT EXISTS(\n                    SELECT 1 FROM users\n                    WHERE tenant_id = $1\n                    AND LOWER(email) = LOWER($2)\n                    AND deleted_at IS NULL\n                ) as \"exists!\"\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ea6ee6e75b29e2f89496312dc61ae3dadeffa89a37d4b329bb2c38e669c777a8"
+}

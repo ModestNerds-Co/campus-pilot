@@ -1,5 +1,28 @@
 # Backend Roadmap
 
+## ERP Module Map
+
+Campus Pilot is structured like the multi-module council ERPs this platform draws on: a core/admin platform layer (this file's original content, below) plus one Cargo workspace crate per ERP module under `apis/crates/modules/`.
+
+| Module | Crate | Status | Migration range |
+|---|---|---|---|
+| Fleet Management | `cp-fleet` | ✅ Implemented (vehicles, drivers) | 010 |
+| Vehicle Daily Log | `cp-vehicle-log` | ✅ Implemented (trip sheets against Fleet) | 011 |
+| Student Information (SIS) | `cp-sis` | 🚧 Scaffolded | 020s |
+| Academics | `cp-academics` | 🚧 Scaffolded | 030s |
+| Finance & Accounting | `cp-finance` | 🚧 Scaffolded | 040s |
+| Fees & Payment Plans | `cp-fees` | 🚧 Scaffolded | 050s |
+| HR & Payroll | `cp-hr-payroll` | 🚧 Scaffolded | 060s |
+| Procurement & Stores | `cp-procurement` | 🚧 Scaffolded | 070s |
+| Library | `cp-library` | 🚧 Scaffolded | 080s |
+| Messaging & Comms | `cp-messaging` | 🚧 Scaffolded | 090s |
+| Hostel & Boarding | `cp-hostel` | 🚧 Scaffolded | 100s |
+| Health & Clinic | `cp-health` | 🚧 Scaffolded | 110s |
+
+"Scaffolded" = the crate, route mount (`/api/1.0/<module>/status`), and client nav entry all exist end-to-end; schema and business logic are future work. See `apis/AGENTS.md` for the workspace layout and the `RequirePermission` mounting rules new modules must follow.
+
+Multi-tenancy foundation (migrations 004-005: `tenants` table, `tenant_id` on every core/module table) landed alongside Fleet — see `apis/AGENTS.md`.
+
 ## Setup & Infrastructure
 - [x] Initial Rust + Actix Web project setup
 - [x] PostgreSQL database connection with SQLx

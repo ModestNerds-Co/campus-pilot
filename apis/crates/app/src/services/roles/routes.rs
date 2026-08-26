@@ -4,6 +4,7 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
+use cp_common::TenantId;
 use validator::Validate;
 
 use crate::{
@@ -21,13 +22,22 @@ use super::{
 #[get("")]
 async fn list_roles(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     query: web::Query<ListRolesQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
     let page = query.page.unwrap_or(1).max(1);
     let limit = query.limit.unwrap_or(50).clamp(1, 100);
 
-    let (roles, total) =
-        match RoleOps::list_roles(&state.db, page, limit, query.query.as_deref()).await {
+    let (roles, total) = match RoleOps::list_roles(
+        &state.db,
+        tenant_id,
+        page,
+        limit,
+        query.query.as_deref(),
+    )
+    .await
+    {
             Ok(data) => data,
             Err(e) => {
                 log::error!("Failed to list roles: {:?}", e);
@@ -58,9 +68,11 @@ async fn list_roles(
 #[get("{id}")]
 async fn get_role(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     id: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let role = match RoleOps::get_role_by_id(&state.db, *id).await {
+    let tenant_id = tenant.into_inner().into_inner();
+    let role = match RoleOps::get_role_by_id(&state.db, tenant_id, *id).await {
         Ok(Some(role)) => role,
         Ok(None) => {
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
@@ -93,8 +105,11 @@ async fn get_role(
 #[post("")]
 async fn create_role(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     body: web::Json<CreateRoleRequest>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
+
     // Validate request
     if let Err(e) = body.validate() {
         let errors = flatten_validation_errors(&e);
@@ -106,7 +121,7 @@ async fn create_role(
     }
 
     // Check if role with same name already exists
-    match RoleOps::get_role_by_name(&state.db, &body.name).await {
+    match RoleOps::get_role_by_name(&state.db, tenant_id, &body.name).await {
         Ok(Some(_)) => {
             return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                 StatusCode::CONFLICT,
@@ -128,7 +143,7 @@ async fn create_role(
     }
 
     // Create role
-    let role = match RoleOps::create_role(&state.db, &body).await {
+    let role = match RoleOps::create_role(&state.db, tenant_id, &body).await {
         Ok(role) => role,
         Err(e) => {
             log::error!("Failed to create role: {:?}", e);
@@ -154,9 +169,12 @@ async fn create_role(
 #[put("{id}")]
 async fn update_role(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     id: web::Path<uuid::Uuid>,
     body: web::Json<UpdateRoleRequest>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let tenant_id = tenant.into_inner().into_inner();
+
     // Validate request
     if let Err(e) = body.validate() {
         let errors = flatten_validation_errors(&e);
@@ -169,7 +187,7 @@ async fn update_role(
 
     // Check if updating name and if new name already exists
     if let Some(ref new_name) = body.name {
-        match RoleOps::get_role_by_name(&state.db, new_name).await {
+        match RoleOps::get_role_by_name(&state.db, tenant_id, new_name).await {
             Ok(Some(existing_role)) if existing_role.id != *id => {
                 return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                     StatusCode::CONFLICT,
@@ -192,7 +210,7 @@ async fn update_role(
     }
 
     // Update role
-    let role = match RoleOps::update_role(&state.db, *id, &body).await {
+    let role = match RoleOps::update_role(&state.db, tenant_id, *id, &body).await {
         Ok(Some(role)) => role,
         Ok(None) => {
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
@@ -227,9 +245,11 @@ async fn update_role(
 #[delete("{id}")]
 async fn delete_role(
     state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     id: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    match RoleOps::delete_role(&state.db, *id).await {
+    let tenant_id = tenant.into_inner().into_inner();
+    match RoleOps::delete_role(&state.db, tenant_id, *id).await {
         Ok(true) => Ok(HttpResponse::Ok().json(ApiResponse::from_status(
             StatusCode::OK,
             Some(serde_json::json!({ "success": true })),
@@ -258,27 +278,14 @@ async fn delete_role(
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/roles")
+            // See users::routes::routes — AuthMiddleware must be registered
+            // LAST so it runs FIRST (outermost), ahead of RequirePermission.
+            .wrap(RequirePermission::new("roles"))
             .wrap(AuthMiddleware)
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("roles:view"))
-                    .service(list_roles)
-                    .service(get_role),
-            )
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("roles:create"))
-                    .service(create_role),
-            )
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("roles:edit"))
-                    .service(update_role),
-            )
-            .service(
-                web::scope("")
-                    .wrap(RequirePermission::new("roles:delete"))
-                    .service(delete_role),
-            ),
+            .service(list_roles)
+            .service(get_role)
+            .service(create_role)
+            .service(update_role)
+            .service(delete_role),
     );
 }

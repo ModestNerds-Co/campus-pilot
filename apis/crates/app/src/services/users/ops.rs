@@ -15,9 +15,10 @@ use crate::services::auth::models::User;
 pub struct UserOps;
 
 impl UserOps {
-    /// List users with pagination and filtering
+    /// List users with pagination and filtering, scoped to a tenant
     pub async fn list_users(
         pool: &PgPool,
+        tenant_id: Uuid,
         page: i64,
         per_page: i64,
         search: Option<&str>,
@@ -32,55 +33,84 @@ impl UserOps {
             _ => "created_at",
         };
 
-        let mut query = format!(
+        // tenant_id is always $1; remaining filters get the next free placeholder,
+        // bound in the same order below, so param numbering and bind order must stay in sync.
+        let mut where_clause = "tenant_id = $1 AND deleted_at IS NULL".to_string();
+        let mut next_param = 2;
+
+        let search_param = search.map(|_| {
+            let p = next_param;
+            next_param += 1;
+            p
+        });
+        if let Some(p) = search_param {
+            where_clause.push_str(&format!(" AND (email ILIKE ${p} OR full_name ILIKE ${p})"));
+        }
+
+        let role_param = role.map(|_| {
+            let p = next_param;
+            next_param += 1;
+            p
+        });
+        if let Some(p) = role_param {
+            where_clause.push_str(&format!(" AND ${p} = ANY(roles)"));
+        }
+
+        let status_param = status.map(|_| {
+            let p = next_param;
+            next_param += 1;
+            p
+        });
+        if let Some(p) = status_param {
+            where_clause.push_str(&format!(" AND is_active = ${p}"));
+        }
+
+        let limit_param = next_param;
+        let offset_param = next_param + 1;
+
+        let query = format!(
             r#"
-            SELECT id, email, full_name, phone, password_hash, roles, is_active,
+            SELECT id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                    last_login_at, last_login_ip, failed_login_attempts,
                    locked_until, created_at, updated_at, deleted_at
             FROM users
-            WHERE deleted_at IS NULL
+            WHERE {where_clause}
+            ORDER BY {sort_column} DESC
+            LIMIT ${limit_param} OFFSET ${offset_param}
             "#
         );
 
-        let mut conditions = Vec::new();
-
-        if let Some(search_term) = search {
-            conditions.push(format!(
-                "(email ILIKE '%{}%' OR full_name ILIKE '%{}%')",
-                search_term, search_term
-            ));
+        let mut builder = sqlx::query_as::<_, User>(&query).bind(tenant_id);
+        if let Some(term) = search {
+            builder = builder.bind(format!("%{}%", term));
         }
-
-        if let Some(role_filter) = role {
-            conditions.push(format!("'{}' = ANY(roles)", role_filter));
+        if let Some(r) = role {
+            builder = builder.bind(r);
         }
-
-        if let Some(status_filter) = status {
-            let is_active = status_filter == "active";
-            conditions.push(format!("is_active = {}", is_active));
+        if let Some(s) = status {
+            builder = builder.bind(s == "active");
         }
+        builder = builder.bind(per_page).bind(offset);
 
-        if !conditions.is_empty() {
-            query.push_str(" AND ");
-            query.push_str(&conditions.join(" AND "));
-        }
-
-        query.push_str(&format!(" ORDER BY {} DESC", sort_column));
-        query.push_str(&format!(" LIMIT {} OFFSET {}", per_page, offset));
-
-        let users = sqlx::query_as::<_, User>(&query)
+        let users = builder
             .fetch_all(pool)
             .await
             .context("Failed to fetch users")?;
 
-        // Get total count
-        let mut count_query = "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL".to_string();
-        if !conditions.is_empty() {
-            count_query.push_str(" AND ");
-            count_query.push_str(&conditions.join(" AND "));
+        // Count query mirrors the same WHERE clause, minus LIMIT/OFFSET.
+        let count_query = format!("SELECT COUNT(*) FROM users WHERE {where_clause}");
+        let mut count_builder = sqlx::query_as::<_, (i64,)>(&count_query).bind(tenant_id);
+        if let Some(term) = search {
+            count_builder = count_builder.bind(format!("%{}%", term));
+        }
+        if let Some(r) = role {
+            count_builder = count_builder.bind(r);
+        }
+        if let Some(s) = status {
+            count_builder = count_builder.bind(s == "active");
         }
 
-        let total: (i64,) = sqlx::query_as(&count_query)
+        let total: (i64,) = count_builder
             .fetch_one(pool)
             .await
             .context("Failed to count users")?;
@@ -88,18 +118,23 @@ impl UserOps {
         Ok((users, total.0))
     }
 
-    /// Get user by ID
-    pub async fn get_user_by_id(pool: &PgPool, user_id: Uuid) -> ApiResult<Option<User>> {
+    /// Get user by ID, scoped to a tenant
+    pub async fn get_user_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        user_id: Uuid,
+    ) -> ApiResult<Option<User>> {
         let user = sqlx::query_as!(
             User,
             r#"
-            SELECT id, email, full_name, phone, password_hash, roles, is_active,
+            SELECT id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                    last_login_at, last_login_ip, failed_login_attempts,
                    locked_until, created_at, updated_at, deleted_at
             FROM users
-            WHERE id = $1 AND deleted_at IS NULL
+            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
             "#,
-            user_id
+            user_id,
+            tenant_id
         )
         .fetch_optional(pool)
         .await
@@ -108,9 +143,10 @@ impl UserOps {
         Ok(user)
     }
 
-    /// Create a new user
+    /// Create a new user within a tenant
     pub async fn create_user(
         pool: &PgPool,
+        tenant_id: Uuid,
         email: &str,
         full_name: &str,
         password_hash: &str,
@@ -121,12 +157,13 @@ impl UserOps {
         let user = sqlx::query_as!(
             User,
             r#"
-            INSERT INTO users (email, full_name, password_hash, phone, roles, is_active)
-            VALUES (LOWER($1), $2, $3, $4, $5, $6)
-            RETURNING id, email, full_name, phone, password_hash, roles, is_active,
+            INSERT INTO users (tenant_id, email, full_name, password_hash, phone, roles, is_active)
+            VALUES ($1, LOWER($2), $3, $4, $5, $6, $7)
+            RETURNING id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                       last_login_at, last_login_ip, failed_login_attempts,
                       locked_until, created_at, updated_at, deleted_at
             "#,
+            tenant_id,
             email,
             full_name,
             password_hash,
@@ -141,9 +178,10 @@ impl UserOps {
         Ok(user)
     }
 
-    /// Update user
+    /// Update user, scoped to a tenant
     pub async fn update_user(
         pool: &PgPool,
+        tenant_id: Uuid,
         user_id: Uuid,
         email: Option<&str>,
         full_name: Option<&str>,
@@ -151,7 +189,8 @@ impl UserOps {
         roles: Option<Vec<String>>,
         is_active: Option<bool>,
     ) -> ApiResult<User> {
-        // Build dynamic update query
+        // Build dynamic update query. Column names below are a fixed, hardcoded set —
+        // only the placeholder *numbers* are interpolated, values are always bound.
         let mut updates = Vec::new();
         let mut param_count = 1;
 
@@ -177,22 +216,26 @@ impl UserOps {
         }
 
         if updates.is_empty() {
-            return Self::get_user_by_id(pool, user_id)
+            return Self::get_user_by_id(pool, tenant_id, user_id)
                 .await?
                 .ok_or_else(|| anyhow::anyhow!("User not found"));
         }
+
+        let id_param = param_count;
+        let tenant_param = param_count + 1;
 
         let query = format!(
             r#"
             UPDATE users
             SET {}
-            WHERE id = ${} AND deleted_at IS NULL
-            RETURNING id, email, full_name, phone, password_hash, roles, is_active,
+            WHERE id = ${} AND tenant_id = ${} AND deleted_at IS NULL
+            RETURNING id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                       last_login_at, last_login_ip, failed_login_attempts,
                       locked_until, created_at, updated_at, deleted_at
             "#,
             updates.join(", "),
-            param_count
+            id_param,
+            tenant_param
         );
 
         let mut query_builder = sqlx::query_as::<_, User>(&query);
@@ -212,7 +255,7 @@ impl UserOps {
         if let Some(a) = is_active {
             query_builder = query_builder.bind(a);
         }
-        query_builder = query_builder.bind(user_id);
+        query_builder = query_builder.bind(user_id).bind(tenant_id);
 
         let user = query_builder
             .fetch_one(pool)
@@ -222,15 +265,16 @@ impl UserOps {
         Ok(user)
     }
 
-    /// Soft delete user
-    pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> ApiResult<()> {
+    /// Soft delete user, scoped to a tenant
+    pub async fn delete_user(pool: &PgPool, tenant_id: Uuid, user_id: Uuid) -> ApiResult<()> {
         sqlx::query!(
             r#"
             UPDATE users
             SET deleted_at = NOW()
-            WHERE id = $1 AND deleted_at IS NULL
+            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
             "#,
-            user_id
+            user_id,
+            tenant_id
         )
         .execute(pool)
         .await
@@ -239,9 +283,10 @@ impl UserOps {
         Ok(())
     }
 
-    /// Check if email exists (excluding specific user ID)
+    /// Check if email exists within a tenant (excluding a specific user ID)
     pub async fn email_exists(
         pool: &PgPool,
+        tenant_id: Uuid,
         email: &str,
         exclude_user_id: Option<Uuid>,
     ) -> ApiResult<bool> {
@@ -250,11 +295,13 @@ impl UserOps {
                 r#"
                 SELECT EXISTS(
                     SELECT 1 FROM users
-                    WHERE LOWER(email) = LOWER($1)
-                    AND id != $2
+                    WHERE tenant_id = $1
+                    AND LOWER(email) = LOWER($2)
+                    AND id != $3
                     AND deleted_at IS NULL
                 ) as "exists!"
                 "#,
+                tenant_id,
                 email,
                 user_id
             )
@@ -266,10 +313,12 @@ impl UserOps {
                 r#"
                 SELECT EXISTS(
                     SELECT 1 FROM users
-                    WHERE LOWER(email) = LOWER($1)
+                    WHERE tenant_id = $1
+                    AND LOWER(email) = LOWER($2)
                     AND deleted_at IS NULL
                 ) as "exists!"
                 "#,
+                tenant_id,
                 email
             )
             .fetch_one(pool)
@@ -280,19 +329,20 @@ impl UserOps {
         Ok(exists)
     }
 
-    /// Activate user
-    pub async fn activate_user(pool: &PgPool, user_id: Uuid) -> ApiResult<User> {
+    /// Activate user, scoped to a tenant
+    pub async fn activate_user(pool: &PgPool, tenant_id: Uuid, user_id: Uuid) -> ApiResult<User> {
         let user = sqlx::query_as!(
             User,
             r#"
             UPDATE users
             SET is_active = TRUE
-            WHERE id = $1 AND deleted_at IS NULL
-            RETURNING id, email, full_name, phone, password_hash, roles, is_active,
+            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+            RETURNING id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                       last_login_at, last_login_ip, failed_login_attempts,
                       locked_until, created_at, updated_at, deleted_at
             "#,
-            user_id
+            user_id,
+            tenant_id
         )
         .fetch_one(pool)
         .await
@@ -301,19 +351,24 @@ impl UserOps {
         Ok(user)
     }
 
-    /// Deactivate user
-    pub async fn deactivate_user(pool: &PgPool, user_id: Uuid) -> ApiResult<User> {
+    /// Deactivate user, scoped to a tenant
+    pub async fn deactivate_user(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        user_id: Uuid,
+    ) -> ApiResult<User> {
         let user = sqlx::query_as!(
             User,
             r#"
             UPDATE users
             SET is_active = FALSE
-            WHERE id = $1 AND deleted_at IS NULL
-            RETURNING id, email, full_name, phone, password_hash, roles, is_active,
+            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+            RETURNING id, tenant_id, email, full_name, phone, password_hash, roles, is_active,
                       last_login_at, last_login_ip, failed_login_attempts,
                       locked_until, created_at, updated_at, deleted_at
             "#,
-            user_id
+            user_id,
+            tenant_id
         )
         .fetch_one(pool)
         .await

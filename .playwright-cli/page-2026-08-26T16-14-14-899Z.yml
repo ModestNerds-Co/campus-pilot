@@ -1,0 +1,141 @@
+- main [ref=f10e3]:
+  - complementary [ref=f10e4]:
+    - generic [ref=f10e9]:
+      - paragraph [ref=f10e10]: Campus Pilot
+      - paragraph [ref=f10e11]: Workspace setup
+    - generic [ref=f10e12]:
+      - paragraph [ref=f10e13]: SETUP 01 OF 02
+      - heading "Build the campus foundation." [level=2] [ref=f10e14]
+      - paragraph [ref=f10e15]: Two focused steps establish the school identity and the account responsible for it.
+      - list "Setup progress" [ref=f10e16]:
+        - listitem [ref=f10e17]:
+          - generic [ref=f10e24]:
+            - generic [ref=f10e25]: Step 1
+            - generic [ref=f10e26]: School profile
+        - listitem [ref=f10e27]:
+          - generic [ref=f10e32]:
+            - generic [ref=f10e33]: Step 2
+            - generic [ref=f10e34]: First administrator
+    - 'button "Theme: System. Click to change." [ref=f10e36] [cursor=pointer]':
+      - generic [ref=f10e39]: System
+  - generic [ref=f10e41]:
+    - generic [ref=f10e42]:
+      - paragraph [ref=f10e43]: Workspace setup · Step 1 of 2
+      - heading "Set up your school" [level=1] [ref=f10e44]
+      - paragraph [ref=f10e45]: Add the identity and operating details Campus Pilot will use across sign-in, reports, receipts, and school records.
+    - generic [ref=f10e46]:
+      - generic [ref=f10e48]:
+        - generic [ref=f10e49]:
+          - heading "Branding" [level=2] [ref=f10e50]
+          - generic [ref=f10e51]:
+            - generic [ref=f10e52]:
+              - generic [ref=f10e53]: School name *
+              - textbox "School name *" [ref=f10e54]:
+                - /placeholder: Enter your school's name
+              - paragraph [ref=f10e55]: Shown on login, receipts, and reports.
+            - generic [ref=f10e56]:
+              - generic [ref=f10e57]: Registered or legal name
+              - textbox "Registered or legal name" [ref=f10e58]:
+                - /placeholder: Official registered name (if different)
+            - generic [ref=f10e59]:
+              - generic [ref=f10e60]:
+                - generic [ref=f10e61]: Light logo
+                - generic [ref=f10e62]:
+                  - generic [ref=f10e63]: Upload light logo
+                  - paragraph [ref=f10e68]: PNG, JPG, SVG • Max 2MB • Used on light backgrounds
+              - generic [ref=f10e69]:
+                - generic [ref=f10e70]: Dark logo
+                - generic [ref=f10e71]:
+                  - generic [ref=f10e72]: Upload dark logo
+                  - paragraph [ref=f10e77]: PNG, JPG, SVG • Max 2MB • Used on dark backgrounds
+        - generic [ref=f10e78]:
+          - heading "Contact information" [level=2] [ref=f10e79]
+          - generic [ref=f10e80]:
+            - generic [ref=f10e81]:
+              - generic [ref=f10e82]: EMAP code
+              - textbox "EMAP code" [ref=f10e83]:
+                - /placeholder: Ministry registration code
+            - generic [ref=f10e84]:
+              - generic [ref=f10e85]: Official email
+              - textbox "Official email" [ref=f10e86]:
+                - /placeholder: school@example.com
+            - generic [ref=f10e87]:
+              - generic [ref=f10e88]: Main phone number
+              - textbox "Main phone number" [ref=f10e89]:
+                - /placeholder: +263 123 456 789
+        - generic [ref=f10e90]:
+          - heading "Address and location" [level=2] [ref=f10e91]
+          - generic [ref=f10e92]:
+            - generic [ref=f10e93]:
+              - generic [ref=f10e94]: Address line 1
+              - textbox "Address line 1" [ref=f10e95]:
+                - /placeholder: Street address
+            - generic [ref=f10e96]:
+              - generic [ref=f10e97]: Address line 2
+              - textbox "Address line 2" [ref=f10e98]:
+                - /placeholder: Apartment, suite, etc.
+            - generic [ref=f10e99]:
+              - generic [ref=f10e100]:
+                - generic [ref=f10e101]: City or town
+                - textbox "City or town" [ref=f10e102]:
+                  - /placeholder: Harare
+              - generic [ref=f10e103]:
+                - generic [ref=f10e104]: Province
+                - textbox "Province" [ref=f10e105]:
+                  - /placeholder: Harare
+              - generic [ref=f10e106]:
+                - generic [ref=f10e107]: Country
+                - button "Zimbabwe Clear selection" [ref=f10e109] [cursor=pointer]:
+                  - generic [ref=f10e110]: Zimbabwe
+                  - button "Clear selection" [ref=f10e113]: ×
+            - generic [ref=f10e116]:
+              - generic [ref=f10e117]:
+                - generic [ref=f10e118]: Timezone
+                - button "Africa/Harare Clear selection" [ref=f10e120] [cursor=pointer]:
+                  - generic [ref=f10e121]: Africa/Harare
+                  - button "Clear selection" [ref=f10e124]: ×
+              - generic [ref=f10e127]:
+                - generic [ref=f10e128]: Language
+                - button "en-ZW Clear selection" [ref=f10e130] [cursor=pointer]:
+                  - generic [ref=f10e131]: en-ZW
+                  - button "Clear selection" [ref=f10e134]: ×
+        - generic [ref=f10e137]:
+          - button "Skip logos for now" [ref=f10e138] [cursor=pointer]
+          - button "Save and continue" [ref=f10e139] [cursor=pointer]
+      - generic [ref=f10e144]:
+        - generic [ref=f10e145]:
+          - heading "Live preview" [level=3] [ref=f10e146]
+          - paragraph [ref=f10e147]: See how your school information will appear
+          - generic [ref=f10e148]: Works offline
+        - generic [ref=f10e157]:
+          - heading "Your school name" [level=4] [ref=f10e165]
+          - generic [ref=f10e166]:
+            - heading "Login preview" [level=5] [ref=f10e167]
+            - generic [ref=f10e168]:
+              - textbox "Email" [disabled] [ref=f10e169]
+              - textbox "Password" [disabled] [ref=f10e170]
+              - button "Sign in" [ref=f10e171] [cursor=pointer]
+        - generic [ref=f10e173]:
+          - generic [ref=f10e182]:
+            - heading "Your school name" [level=5] [ref=f10e183]
+            - paragraph [ref=f10e184]: Receipt preview
+          - generic [ref=f10e185]: Zimbabwe
+          - generic [ref=f10e192]:
+            - generic [ref=f10e193]:
+              - generic [ref=f10e194]: "Date:"
+              - generic [ref=f10e195]: 26 Sep 2025
+            - generic [ref=f10e196]:
+              - generic [ref=f10e197]: "Receipt #:"
+              - generic [ref=f10e198]: REC-001
+        - generic [ref=f10e199]:
+          - heading "Configuration" [level=5] [ref=f10e200]
+          - generic [ref=f10e201]:
+            - generic [ref=f10e202]:
+              - generic [ref=f10e203]: "Timezone:"
+              - generic [ref=f10e204]: Africa/Harare
+            - generic [ref=f10e205]:
+              - generic [ref=f10e206]: "Language:"
+              - generic [ref=f10e207]: en-ZW
+            - generic [ref=f10e208]:
+              - generic [ref=f10e209]: "Logos:"
+              - generic [ref=f10e210]: None

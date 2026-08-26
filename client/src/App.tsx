@@ -8,7 +8,7 @@
 
 import React from "react";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { ChangelogModal } from "./components/changelog-modal";
+import { ChangelogDrawer } from "./components/changelog-modal";
 import { useVersionCheck } from "./hooks/use-version-check";
 
 // Import the generated route tree
@@ -41,7 +41,7 @@ export const App: React.FC = () => {
   return (
     <>
       <RouterProvider router={router} />
-      <ChangelogModal
+      <ChangelogDrawer
         isOpen={showChangelog}
         onClose={handleCloseChangelog}
         entries={newChanges}

@@ -1,6 +1,6 @@
 //
 //  campus-pilot — Button primitive
-//  Token-driven, no literals. Inspired by huchu's @corelithzw button.
+//  Token-driven Campus Pilot button variants.
 //  Variants: primary / secondary / ghost / outline / destructive
 //  Sizes: sm / md / lg / icon
 //

@@ -157,7 +157,7 @@ export const PASSWORD_STRENGTH_LABELS = [
   "Strong",
 ] as const;
 
-// Password Strength Colors — token-driven (huchu: saturated = state)
+// Password strength colors — semantic state tokens.
 export const PASSWORD_STRENGTH_COLORS = [
   "bg-[var(--tone-danger)]", // Very Weak
   "bg-[var(--tone-warn)]", // Weak

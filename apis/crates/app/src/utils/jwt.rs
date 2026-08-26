@@ -15,6 +15,7 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: Uuid,          // Subject (user ID)
+    pub tenant_id: Uuid,    // Tenant the user belongs to
     pub email: String,      // User email
     pub roles: Vec<String>, // User roles
     pub exp: i64,           // Expiration timestamp
@@ -25,6 +26,7 @@ pub struct Claims {
 /// Generate an access token (15 minutes expiry)
 pub fn generate_access_token(
     user_id: Uuid,
+    tenant_id: Uuid,
     email: &str,
     roles: Vec<String>,
     secret: &str,
@@ -34,6 +36,7 @@ pub fn generate_access_token(
 
     let claims = Claims {
         sub: user_id,
+        tenant_id,
         email: email.to_string(),
         roles,
         exp: expiration.timestamp(),
@@ -52,6 +55,7 @@ pub fn generate_access_token(
 /// Generate a refresh token (7 days expiry)
 pub fn generate_refresh_token(
     user_id: Uuid,
+    tenant_id: Uuid,
     email: &str,
     roles: Vec<String>,
     secret: &str,
@@ -61,6 +65,7 @@ pub fn generate_refresh_token(
 
     let claims = Claims {
         sub: user_id,
+        tenant_id,
         email: email.to_string(),
         roles,
         exp: expiration.timestamp(),

@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE vehicle_daily_logs\n            SET vehicle_id = COALESCE($1, vehicle_id),\n                driver_id = COALESCE($2, driver_id),\n                log_date = COALESCE($3, log_date),\n                start_odometer = COALESCE($4, start_odometer),\n                end_odometer = COALESCE($5, end_odometer),\n                start_time = COALESCE($6, start_time),\n                end_time = COALESCE($7, end_time),\n                destination = COALESCE($8, destination),\n                purpose = COALESCE($9, purpose),\n                fuel_added_liters = COALESCE($10, fuel_added_liters),\n                fuel_cost = COALESCE($11, fuel_cost),\n                status = COALESCE($12, status),\n                updated_at = NOW()\n            WHERE id = $13 AND tenant_id = $14 AND deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Date",
+        "Int4",
+        "Int4",
+        "Time",
+        "Time",
+        "Text",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e6ee1491b7ed63c09a577f8f720c0ccfed5bfce02577b89bdae9445cc257f856"
+}

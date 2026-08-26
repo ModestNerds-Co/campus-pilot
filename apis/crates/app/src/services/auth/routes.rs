@@ -112,6 +112,7 @@ async fn login(
     // Generate tokens
     let access_token = match generate_access_token(
         user.id,
+        user.tenant_id,
         &user.email,
         user.roles.clone(),
         &state.config.jwt.secret,
@@ -131,6 +132,7 @@ async fn login(
 
     let refresh_token = match generate_refresh_token(
         user.id,
+        user.tenant_id,
         &user.email,
         user.roles.clone(),
         &state.config.jwt.secret,
@@ -164,6 +166,7 @@ async fn login(
     // Store refresh token
     if let Err(e) = AuthOps::store_refresh_token(
         &state.db,
+        user.tenant_id,
         user.id,
         &refresh_token,
         ip_address.as_deref(),
@@ -294,6 +297,7 @@ async fn refresh(
     // Generate new tokens
     let new_access_token = match generate_access_token(
         user.id,
+        user.tenant_id,
         &user.email,
         user.roles.clone(),
         &state.config.jwt.secret,
@@ -313,6 +317,7 @@ async fn refresh(
 
     let new_refresh_token = match generate_refresh_token(
         user.id,
+        user.tenant_id,
         &user.email,
         user.roles.clone(),
         &state.config.jwt.secret,
@@ -337,6 +342,7 @@ async fn refresh(
 
     if let Err(e) = AuthOps::store_refresh_token(
         &state.db,
+        user.tenant_id,
         user.id,
         &new_refresh_token,
         db_token.ip_address.as_deref(),

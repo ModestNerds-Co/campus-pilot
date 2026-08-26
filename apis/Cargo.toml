@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/common",
+    "crates/app",
+    "crates/modules/fleet",
+    "crates/modules/vehicle-log",
+    "crates/modules/sis",
+    "crates/modules/academics",
+    "crates/modules/finance",
+    "crates/modules/fees",
+    "crates/modules/hr-payroll",
+    "crates/modules/procurement",
+    "crates/modules/library",
+    "crates/modules/messaging",
+    "crates/modules/hostel",
+    "crates/modules/health",
+]
+
+[workspace.dependencies]
+sqlx = { version = "0.8.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "macros", "uuid", "bigdecimal"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.140"
+anyhow = "1.0.97"
+actix-web = "4.11.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+validator = { version = "0.20.0", features = ["derive"] }
+log = "0.4"
+futures-util = "0.3.31"
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3

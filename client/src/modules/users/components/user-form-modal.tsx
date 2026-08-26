@@ -139,7 +139,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
 
   return (
     <DialogShell open={isOpen} onClose={onClose}>
-      <DialogHeader title={user ? "Edit User" : "Add New User"} onClose={onClose} />
+      <DialogHeader title={user ? "Edit user" : "Add user"} onClose={onClose} />
       <form onSubmit={handleSubmit}>
         <DialogBody className="space-y-4">
           <div>
@@ -158,7 +158,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
 
           <div>
             <Label>
-              Full Name <span className="text-[var(--tone-danger)]">*</span>
+              Full name <span className="text-[var(--tone-danger)]">*</span>
             </Label>
             <Input
               type="text"
@@ -261,10 +261,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                {user ? "Updating..." : "Creating..."}
+                {user ? "Updating…" : "Creating…"}
               </>
             ) : (
-              <>{user ? "Update User" : "Create User"}</>
+              <>{user ? "Save changes" : "Create user"}</>
             )}
           </Button>
         </DialogFooter>

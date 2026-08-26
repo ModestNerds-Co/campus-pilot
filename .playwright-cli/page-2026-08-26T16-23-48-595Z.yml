@@ -1,0 +1,164 @@
+- generic [ref=f44e3]:
+  - link "Skip to main content" [ref=f44e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "Campus navigation" [ref=f44e5]:
+    - generic [ref=f44e6]:
+      - generic [ref=f44e11]:
+        - paragraph [ref=f44e12]: Campus Pilot
+        - paragraph [ref=f44e13]: School operations
+      - generic [ref=f44e22]:
+        - paragraph [ref=f44e23]: Gamenight School of Tomfoolery
+        - paragraph [ref=f44e24]: Active campus
+    - navigation "Primary navigation" [ref=f44e25]:
+      - generic [ref=f44e26]:
+        - region [ref=f44e27]:
+          - heading "Workspace" [level=2] [ref=f44e28]
+          - link "Overview" [ref=f44e30] [cursor=pointer]:
+            - /url: /admin
+        - region [ref=f44e39]:
+          - heading "People & learning" [level=2] [ref=f44e40]
+          - generic [ref=f44e41]:
+            - link "Students" [ref=f44e42] [cursor=pointer]:
+              - /url: /admin/students
+            - link "Users" [ref=f44e47] [cursor=pointer]:
+              - /url: /admin/users
+            - link "Roles & access" [ref=f44e53] [cursor=pointer]:
+              - /url: /admin/roles
+            - link "Departments" [ref=f44e58] [cursor=pointer]:
+              - /url: /admin/departments
+            - link "Grades & classes" [ref=f44e64] [cursor=pointer]:
+              - /url: /admin/classes
+            - link "Subjects" [ref=f44e71] [cursor=pointer]:
+              - /url: /admin/subjects
+            - link "Staff" [ref=f44e76] [cursor=pointer]:
+              - /url: /admin/staff
+        - region [ref=f44e90]:
+          - heading "Campus operations" [level=2] [ref=f44e91]
+          - generic [ref=f44e92]:
+            - link "Vehicles" [ref=f44e93] [cursor=pointer]:
+              - /url: /admin/fleet
+            - link "Drivers" [ref=f44e100] [cursor=pointer]:
+              - /url: /admin/fleet/drivers
+            - link "Daily vehicle log" [ref=f44e105] [cursor=pointer]:
+              - /url: /admin/fleet/daily-log
+            - link "Finance" [ref=f44e109] [cursor=pointer]:
+              - /url: /admin/finance
+            - link "Fees & payment plans" [ref=f44e113] [cursor=pointer]:
+              - /url: /admin/fees
+            - link "HR & payroll" [ref=f44e117] [cursor=pointer]:
+              - /url: /admin/hr-payroll
+            - link "Procurement" [ref=f44e123] [cursor=pointer]:
+              - /url: /admin/procurement
+            - link "Library" [ref=f44e131] [cursor=pointer]:
+              - /url: /admin/library
+            - link "Hostel & boarding" [ref=f44e135] [cursor=pointer]:
+              - /url: /admin/hostel
+            - link "Messaging" [ref=f44e141] [cursor=pointer]:
+              - /url: /admin/messaging
+            - link "Health & clinic" [ref=f44e145] [cursor=pointer]:
+              - /url: /admin/health
+        - region [ref=f44e150]:
+          - heading "System" [level=2] [ref=f44e151]
+          - link "Settings" [ref=f44e153] [cursor=pointer]:
+            - /url: /admin/settings
+    - generic [ref=f44e158]:
+      - 'button "Theme: System. Click to change." [ref=f44e159] [cursor=pointer]'
+      - generic [ref=f44e162]:
+        - generic [ref=f44e163]: CA
+        - generic [ref=f44e164]:
+          - paragraph [ref=f44e165]: Campus Administrator
+          - paragraph [ref=f44e166]: Super Admin
+      - button "Sign out" [ref=f44e167] [cursor=pointer]
+  - generic [ref=f44e171]:
+    - banner [ref=f44e172]:
+      - generic [ref=f44e173]:
+        - button "Open navigation" [ref=f44e174] [cursor=pointer]
+        - paragraph [ref=f44e177]: Overview
+      - 'button "Theme: System. Click to change." [ref=f44e179] [cursor=pointer]'
+    - main [ref=f44e182]:
+      - generic [ref=f44e184]:
+        - generic [ref=f44e185]:
+          - generic [ref=f44e186]:
+            - paragraph [ref=f44e187]: Campus overview
+            - heading "Good evening, Campus." [level=1] [ref=f44e188]
+            - paragraph [ref=f44e189]: Here is what needs attention across the school workspace.
+          - generic [ref=f44e190]: Wed, 26 Aug 2026
+        - generic [ref=f44e196]:
+          - generic [ref=f44e203]:
+            - paragraph [ref=f44e204]: Workspace readiness
+            - heading "The foundation is ready. Add the school structure next." [level=2] [ref=f44e205]
+            - paragraph [ref=f44e206]: Your administrator account is active. Departments, classes and people will turn this into a working campus record.
+          - link "Start school setup" [ref=f44e207] [cursor=pointer]:
+            - /url: /admin/departments
+        - region [ref=f44e210]:
+          - generic [ref=f44e211]:
+            - generic [ref=f44e212]:
+              - paragraph [ref=f44e213]: Current snapshot
+              - heading "Campus records" [level=2] [ref=f44e214]
+            - generic [ref=f44e215]: Live workspace totals
+          - generic [ref=f44e216]:
+            - generic [ref=f44e217]:
+              - generic [ref=f44e218]: Students
+              - paragraph [ref=f44e223]: "0"
+              - paragraph [ref=f44e224]: No roster imported
+            - generic [ref=f44e225]:
+              - generic [ref=f44e226]: Staff
+              - paragraph [ref=f44e232]: "0"
+              - paragraph [ref=f44e233]: Directory ready
+            - generic [ref=f44e234]:
+              - generic [ref=f44e235]: Departments
+              - paragraph [ref=f44e241]: "0"
+              - paragraph [ref=f44e242]: Structure not configured
+            - generic [ref=f44e243]:
+              - generic [ref=f44e244]: Active users
+              - paragraph [ref=f44e250]: "1"
+              - paragraph [ref=f44e251]: Administrator access
+        - generic [ref=f44e252]:
+          - region [ref=f44e253]:
+            - generic [ref=f44e254]:
+              - paragraph [ref=f44e255]: Operational focus
+              - heading "Set up the work in the right order" [level=2] [ref=f44e256]
+            - generic [ref=f44e257]:
+              - link "01 Academic foundation Build the school structure Define departments, grades and classes before enrolment begins." [ref=f44e258] [cursor=pointer]:
+                - /url: /admin/departments
+                - generic [ref=f44e259]: "01"
+                - generic [ref=f44e265]:
+                  - text: Academic foundation
+                  - generic [ref=f44e266]: Build the school structure
+                  - generic [ref=f44e267]: Define departments, grades and classes before enrolment begins.
+              - link "02 People & permissions Prepare your people directory Add staff and users, then assign the right level of access." [ref=f44e270] [cursor=pointer]:
+                - /url: /admin/users
+                - generic [ref=f44e271]: "02"
+                - generic [ref=f44e277]:
+                  - text: People & permissions
+                  - generic [ref=f44e278]: Prepare your people directory
+                  - generic [ref=f44e279]: Add staff and users, then assign the right level of access.
+              - link "03 Fleet operations Put daily operations in motion Register vehicles and drivers before recording campus trips." [ref=f44e282] [cursor=pointer]:
+                - /url: /admin/fleet
+                - generic [ref=f44e283]: "03"
+                - generic [ref=f44e290]:
+                  - text: Fleet operations
+                  - generic [ref=f44e291]: Put daily operations in motion
+                  - generic [ref=f44e292]: Register vehicles and drivers before recording campus trips.
+          - complementary [ref=f44e295]:
+            - generic [ref=f44e296]:
+              - generic [ref=f44e297]:
+                - paragraph [ref=f44e298]: Getting started
+                - heading "Workspace checklist" [level=2] [ref=f44e299]
+              - generic [ref=f44e300]: 1 of 4
+            - list [ref=f44e303]:
+              - listitem [ref=f44e304]:
+                - generic [ref=f44e308]: Administrator account
+              - listitem [ref=f44e309]:
+                - generic [ref=f44e311]: School structure
+              - listitem [ref=f44e312]:
+                - generic [ref=f44e314]: Staff and user directory
+              - listitem [ref=f44e315]:
+                - generic [ref=f44e317]: Student roster
+            - generic [ref=f44e318]: Your account controls which campus records you can view and change.
+        - generic [ref=f44e322]:
+          - generic [ref=f44e327]:
+            - heading "No recent campus activity yet" [level=2] [ref=f44e328]
+            - paragraph [ref=f44e329]: Actions will appear here as teams begin working in Campus Pilot.
+          - link "Manage access" [ref=f44e330] [cursor=pointer]:
+            - /url: /admin/users

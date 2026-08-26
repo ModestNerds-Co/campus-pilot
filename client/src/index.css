@@ -1,13 +1,5 @@
-/* ─────────────────────────────────────────────────────────────────
-   Campus Pilot — Global Styles
-   Layer order mirrors huchu's globals.css. Tokens come from
-   src/styles/tokens.css which is imported first.
-   Atkinson Hyperlegible is Huchu's typeface — hoisted here so it
-   loads even though @corelithzw/react re-imports it inside a layer.
-   ───────────────────────────────────────────────────────────────── */
-
-@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Atkinson+Hyperlegible+Mono:wght@400..700&display=swap");
-
+/* Campus Pilot — global application styles. */
+@import "@fontsource-variable/geist";
 @import "./styles/tokens.css";
 @tailwind base;
 @tailwind components;
@@ -26,8 +18,11 @@
   }
   html {
     scrollbar-gutter: stable;
+    min-width: 320px;
+    background: var(--canvas);
   }
   body {
+    min-height: 100dvh;
     background: var(--canvas);
     color: var(--text-body);
     font-family: var(--font-sans);
@@ -36,6 +31,13 @@
     text-rendering: optimizeLegibility;
     background-image: var(--app-canvas-wash);
     background-attachment: fixed;
+  }
+  ::selection {
+    background: var(--brand-highlight);
+    color: var(--sidebar-active-fg);
+  }
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
   }
   /* Scoped transitions — not universal * */
   a, button, [role="button"], input, select, textarea {
@@ -70,7 +72,7 @@
   .toaster-light { background: var(--surface); color: var(--text-strong); border: 1px solid var(--border); box-shadow: var(--shadow-popover); }
   .toaster-dark  { background: var(--surface); color: var(--text-strong); border: 1px solid var(--border); box-shadow: var(--shadow-popover); }
 
-  /* Card primitive (mirrors huchu .card) */
+  /* Shared Campus Pilot card primitive */
   .cp-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -144,14 +146,68 @@
   .cp-z-overlay { z-index: var(--z-overlay); }
   .cp-z-toast   { z-index: var(--z-toast); }
 
-  /* Hide desktop rail on mobile until hydration */
-  @media (max-width: 767.98px) {
-    .cp-sidebar-desktop { display: none; }
+  .cp-skip-link {
+    position: fixed;
+    left: var(--space-4);
+    top: var(--space-4);
+    z-index: calc(var(--z-toast) + 1);
+    transform: translateY(-180%);
+    border-radius: var(--radius-md);
+    background: var(--sidebar-active);
+    color: var(--sidebar-active-fg);
+    padding: 0.65rem 0.9rem;
+    font-size: var(--type-size-13);
+    font-weight: 650;
+  }
+  .cp-skip-link:focus { transform: translateY(0); }
+
+  .campus-grid-pattern {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 7%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 7%) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom right, rgb(0 0 0 / 92%), transparent 86%);
+  }
+
+  .campus-page-enter {
+    animation: campus-page-enter 460ms var(--motion-ease-default) both;
+  }
+
+  /* The rail still scrolls with wheel, touch, and keyboard; only the bright
+     browser scrollbar chrome is suppressed against the dark sidebar. */
+  .cp-sidebar-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .cp-sidebar-scroll::-webkit-scrollbar { display: none; }
+
+  .cp-drawer-panel {
+    animation: cp-drawer-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .cp-drawer-panel > form {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  @keyframes cp-drawer-enter {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes campus-page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @media (max-width: 640px) {
     html { font-size: 16px; }
     input, select, textarea { font-size: 16px; }
+  }
+
+  @media (pointer: coarse) {
+    button, a, [role="button"] { min-height: 44px; }
   }
 }
 

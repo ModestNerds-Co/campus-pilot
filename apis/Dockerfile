@@ -2,11 +2,14 @@
 FROM rust:1.91-bookworm AS builder
 WORKDIR /app
 ENV SQLX_OFFLINE=true
+
+# Cargo workspace (common + app + one crate per ERP module) — copied as a
+# whole rather than manifests-first, since with 14 member crates the
+# per-crate dependency-caching trick trades most of its benefit for a lot
+# of Dockerfile noise. Deps still cache across builds that don't touch
+# Cargo.toml/Cargo.lock, just not as granularly as a single-crate app.
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs && printf "" > src/lib.rs
-RUN cargo build --release
-RUN rm -rf src target/release/.fingerprint/campus-pilot-* target/release/campus-pilot* 2>/dev/null; true
-COPY src ./src
+COPY crates ./crates
 COPY migrations ./migrations
 COPY .sqlx ./.sqlx
 RUN cargo build --release

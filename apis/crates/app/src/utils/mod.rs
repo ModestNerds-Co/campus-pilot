@@ -12,4 +12,6 @@ mod utils;
 pub use jwt::{
     Claims, generate_access_token, generate_refresh_token, verify_access_token, verify_token,
 };
-pub use utils::{flatten_validation_errors, hash_password, status_meaning, verify_password};
+pub use utils::{hash_password, verify_password};
+
+pub use cp_common::flatten_validation_errors;

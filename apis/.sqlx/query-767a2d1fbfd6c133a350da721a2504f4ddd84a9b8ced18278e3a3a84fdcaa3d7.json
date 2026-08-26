@@ -1,0 +1,131 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE vehicles\n            SET registration_number = COALESCE($1, registration_number),\n                make = COALESCE($2, make),\n                model = COALESCE($3, model),\n                year = COALESCE($4, year),\n                vehicle_type = COALESCE($5, vehicle_type),\n                capacity = COALESCE($6, capacity),\n                fuel_type = COALESCE($7, fuel_type),\n                status = COALESCE($8, status),\n                current_odometer = COALESCE($9, current_odometer),\n                insurance_expiry = COALESCE($10, insurance_expiry),\n                license_expiry = COALESCE($11, license_expiry),\n                notes = COALESCE($12, notes),\n                updated_at = NOW()\n            WHERE id = $13 AND tenant_id = $14 AND deleted_at IS NULL\n            RETURNING id, tenant_id, registration_number, make, model, year, vehicle_type,\n                      capacity, fuel_type, status, current_odometer, insurance_expiry,\n                      license_expiry, notes, created_at, updated_at, deleted_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "registration_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "make",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "model",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "year",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "vehicle_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "capacity",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "fuel_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "current_odometer",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "insurance_expiry",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 12,
+        "name": "license_expiry",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 13,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Int4",
+        "Date",
+        "Date",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "767a2d1fbfd6c133a350da721a2504f4ddd84a9b8ced18278e3a3a84fdcaa3d7"
+}

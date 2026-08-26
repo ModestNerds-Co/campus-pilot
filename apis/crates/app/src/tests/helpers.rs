@@ -57,7 +57,9 @@ pub fn create_test_app(
         InitError = (),
     >,
 > {
+    let pool = app_state.db.clone();
     App::new()
         .app_data(web::Data::from(app_state))
+        .app_data(web::Data::new(pool))
         .configure(crate::routes::init)
 }
