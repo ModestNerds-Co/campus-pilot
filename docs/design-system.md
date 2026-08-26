@@ -25,9 +25,18 @@ The implementation source of truth is `client/src/styles/tokens.css`.
 
 ## 3. Application structure
 
+### Campus module launcher
+
+- Successful sign-in opens `/home`, the permission-aware campus module launcher.
+- The launcher shows enabled and authorized modules only, with recent modules first and the remainder grouped by school task.
+- Administration is one module in this launcher; it is never the default post-login destination.
+- Operational modules own their local navigation and provide an “All modules” return path.
+- Access, licensing, role, and module semantics are defined in `docs/access-control.md`.
+
 ### Admin shell
 
 - Desktop uses a fixed, full-height left rail and a contextual top header.
+- Its navigation is limited to administration concerns; campus operations do not live in the Administration rail.
 - The rail owns school identity, grouped navigation, theme control, user identity, and sign-out.
 - The rail remains scrollable with wheel, touch, and keyboard, but native scrollbar chrome stays hidden through `.cp-sidebar-scroll`.
 - Mobile navigation is an off-canvas drawer with a scrim, Escape support, focus handling, and background scroll lock.
@@ -69,6 +78,7 @@ The current shared implementation is `client/src/components/ui/dialog.tsx`; its 
 - Destructive actions require a drawer confirmation and a visible pending state.
 - Long provider or operational option sets should use searchable dropdowns rather than raw HTML selects; short fixed enums may use the shared `Select`.
 - Status is communicated with text and, when useful, an icon or dot—not color alone.
+- Multi-stage operational work such as timetable generation keeps setup and review in the page, with focused create/edit actions in drawers. A drawer must not become an entire module inside an overlay.
 
 ## 6. Responsive and accessible behavior
 

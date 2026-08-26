@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO roles (tenant_id, name, description, permissions, is_system)\n            VALUES ($1, $2, $3, $4, false)\n            RETURNING id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            ",
+  "query": "\n            UPDATE roles\n            SET name = COALESCE($1, name),\n                description = COALESCE($2, description),\n                permissions = COALESCE($3, permissions),\n                updated_at = NOW()\n            WHERE id = $4 AND tenant_id = $5 AND deleted_at IS NULL\n            RETURNING id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            ",
   "describe": {
     "columns": [
       {
@@ -15,49 +15,56 @@
       },
       {
         "ordinal": 2,
-        "name": "name",
+        "name": "key",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "description",
+        "name": "name",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
         "name": "permissions",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "is_system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "TextArray",
         "Uuid",
-        "Text",
-        "Text",
-        "TextArray"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -69,5 +76,5 @@
       true
     ]
   },
-  "hash": "9733122ffe45d61e17013d021eb2f5ec8f05ad5f3375925810abd022985b2e4d"
+  "hash": "91c587a061594faddcf1fe36ccde7aa5a274fe176e4f69487033b34a29e1603b"
 }

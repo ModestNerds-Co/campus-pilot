@@ -65,7 +65,7 @@ async fn test_list_users_success() {
 
     let body: serde_json::Value = test::read_body_json(resp).await;
     assert!(body["data"]["users"].is_array());
-    assert!(body["data"]["total"].as_i64().unwrap() >= 1);
+    assert!(body["pagination"]["total"].as_i64().unwrap() >= 1);
 }
 
 #[actix_web::test]
@@ -92,7 +92,7 @@ async fn test_create_user_success() {
             "full_name": "New User",
             "password": "SecureP@ssw0rd123",
             "phone": "+1234567890",
-            "roles": ["Student"],
+            "roles": ["student"],
             "is_active": true
         }))
         .to_request();
@@ -118,7 +118,7 @@ async fn test_create_user_invalid_email() {
             "email": "invalid-email",
             "full_name": "Test User",
             "password": "SecureP@ssw0rd123",
-            "roles": ["Student"]
+            "roles": ["student"]
         }))
         .to_request();
 
@@ -138,7 +138,7 @@ async fn test_create_user_weak_password() {
             "email": "user@testuniversity.edu",
             "full_name": "Test User",
             "password": "weak",
-            "roles": ["Student"]
+            "roles": ["student"]
         }))
         .to_request();
 
@@ -159,7 +159,7 @@ async fn test_get_user_success() {
             "email": "getuser@testuniversity.edu",
             "full_name": "Get User Test",
             "password": "SecureP@ssw0rd123",
-            "roles": ["Student"]
+            "roles": ["student"]
         }))
         .to_request();
     let create_resp = test::call_service(&app, create_req).await;
@@ -207,7 +207,7 @@ async fn test_update_user_success() {
             "email": "updateuser@testuniversity.edu",
             "full_name": "Update User Test",
             "password": "SecureP@ssw0rd123",
-            "roles": ["Student"]
+            "roles": ["student"]
         }))
         .to_request();
     let create_resp = test::call_service(&app, create_req).await;
@@ -245,7 +245,7 @@ async fn test_deactivate_user_success() {
             "email": "deactivate@testuniversity.edu",
             "full_name": "Deactivate Test",
             "password": "SecureP@ssw0rd123",
-            "roles": ["Student"]
+            "roles": ["student"]
         }))
         .to_request();
     let create_resp = test::call_service(&app, create_req).await;
@@ -278,7 +278,7 @@ async fn test_activate_user_success() {
             "email": "activate@testuniversity.edu",
             "full_name": "Activate Test",
             "password": "SecureP@ssw0rd123",
-            "roles": ["Student"],
+            "roles": ["student"],
             "is_active": false
         }))
         .to_request();
@@ -312,7 +312,7 @@ async fn test_delete_user_success() {
             "email": "delete@testuniversity.edu",
             "full_name": "Delete Test",
             "password": "SecureP@ssw0rd123",
-            "roles": ["Student"]
+            "roles": ["student"]
         }))
         .to_request();
     let create_resp = test::call_service(&app, create_req).await;

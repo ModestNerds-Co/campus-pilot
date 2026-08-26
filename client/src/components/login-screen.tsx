@@ -77,7 +77,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ className = "" }) => {
       const success = await login(email.trim(), password);
       if (success) {
         toast.success("Welcome back");
-        navigate({ to: "/admin", replace: true });
+        navigate({ to: "/home", replace: true });
       } else {
         const message = authError || "The email address or password does not match an active account.";
         setError(message);

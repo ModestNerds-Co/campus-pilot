@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at\n                FROM roles\n                WHERE tenant_id = $1 AND deleted_at IS NULL\n                ORDER BY created_at DESC\n                LIMIT $2 OFFSET $3\n                ",
+  "query": "\n            SELECT id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            FROM roles\n            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL\n            ",
   "describe": {
     "columns": [
       {
@@ -15,36 +15,41 @@
       },
       {
         "ordinal": 2,
-        "name": "name",
+        "name": "key",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "description",
+        "name": "name",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
         "name": "permissions",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "is_system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       }
@@ -52,11 +57,11 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Int8",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -68,5 +73,5 @@
       true
     ]
   },
-  "hash": "013b3118090e4b1d0de48454d0bd1f0545ba037c608386e8a509546a3e7a35d7"
+  "hash": "7b71c0abb93eccae20589e2642541e23389ce58a26880c190238c6ec36eb3812"
 }

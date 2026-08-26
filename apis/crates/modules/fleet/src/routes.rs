@@ -10,14 +10,16 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
-use cp_common::{ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors};
+use cp_common::{
+    ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
+};
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::dtos::{
-    CreateDriverRequest, CreateVehicleRequest, DriverResponse, ListDriversQuery,
-    ListVehiclesQuery, PaginatedDriversResponse, PaginatedVehiclesResponse, UpdateDriverRequest,
-    UpdateVehicleRequest, VehicleResponse,
+    CreateDriverRequest, CreateVehicleRequest, DriverResponse, ListDriversQuery, ListVehiclesQuery,
+    PaginatedDriversResponse, PaginatedVehiclesResponse, UpdateDriverRequest, UpdateVehicleRequest,
+    VehicleResponse,
 };
 use crate::ops::{DriverOps, VehicleOps};
 
@@ -120,13 +122,14 @@ async fn create_vehicle(
         )));
     }
 
-    match VehicleOps::registration_exists(&pool, tenant_id, &body.registration_number, None).await
-    {
+    match VehicleOps::registration_exists(&pool, tenant_id, &body.registration_number, None).await {
         Ok(true) => {
             return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                 StatusCode::CONFLICT,
                 None::<()>,
-                Some(vec!["A vehicle with this registration number already exists".to_string()]),
+                Some(vec![
+                    "A vehicle with this registration number already exists".to_string(),
+                ]),
             )));
         }
         Ok(false) => {}
@@ -369,7 +372,9 @@ async fn create_driver(
             return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                 StatusCode::CONFLICT,
                 None::<()>,
-                Some(vec!["A driver with this license number already exists".to_string()]),
+                Some(vec![
+                    "A driver with this license number already exists".to_string(),
+                ]),
             )));
         }
         Ok(false) => {}

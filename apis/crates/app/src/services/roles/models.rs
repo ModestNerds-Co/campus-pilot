@@ -11,6 +11,7 @@ use uuid::Uuid;
 pub struct Role {
     pub id: Uuid,
     pub tenant_id: Uuid,
+    pub key: String,
     pub name: String,
     pub description: Option<String>,
     pub permissions: Vec<String>,

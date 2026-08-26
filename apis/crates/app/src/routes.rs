@@ -8,7 +8,7 @@
 
 use crate::middleware::AuthMiddleware;
 use crate::models::api_response::ApiResponse;
-use crate::services::{auth, kernel, roles, storage, users};
+use crate::services::{access, auth, kernel, roles, storage, users};
 use actix_web::http::StatusCode;
 use actix_web::web::{ServiceConfig, scope};
 use actix_web::{HttpResponse, Responder, get};
@@ -33,6 +33,7 @@ pub fn init(cfg: &mut ServiceConfig) {
         scope("/api/1.0")
             .service(health_check)
             .configure(auth::routes)
+            .configure(access::routes::routes)
             .configure(roles::routes::routes)
             .configure(users::routes::routes)
             .service(scope("/kernel").configure(kernel::routes::init))
@@ -52,6 +53,11 @@ pub fn init(cfg: &mut ServiceConfig) {
             )
             .service(scope("/sis").configure(cp_sis::routes::routes))
             .service(scope("/academics").configure(cp_academics::routes::routes))
+            .service(
+                scope("/timetabling")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_timetabling::routes::routes),
+            )
             .service(scope("/finance").configure(cp_finance::routes::routes))
             .service(scope("/fees").configure(cp_fees::routes::routes))
             .service(scope("/hr-payroll").configure(cp_hr_payroll::routes::routes))

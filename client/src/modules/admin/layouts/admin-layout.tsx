@@ -6,26 +6,15 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
-  BookOpen,
-  BriefcaseBusiness,
-  Building2,
   ChevronRight,
-  ClipboardList,
-  GraduationCap,
-  HeartPulse,
-  Landmark,
+  Grid2X2,
+  KeyRound,
   LayoutDashboard,
-  Library,
   LogOut,
   Menu,
-  MessageSquareText,
-  PackageSearch,
-  ReceiptText,
   School,
   Settings2,
   ShieldCheck,
-  Truck,
-  UserRoundCog,
   UsersRound,
   X,
 } from "lucide-react";
@@ -44,6 +33,7 @@ interface AdminLayoutProps {
 type NavItem = {
   label: string;
   href: string;
+  permission: string;
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -55,39 +45,21 @@ type NavGroup = {
 const navigationGroups: NavGroup[] = [
   {
     label: "Workspace",
-    items: [{ label: "Overview", href: "/admin", icon: LayoutDashboard }],
+    items: [{ label: "Overview", href: "/admin", permission: "administration:view", icon: LayoutDashboard }],
   },
   {
-    label: "People & learning",
+    label: "People & access",
     items: [
-      { label: "Students", href: "/admin/students", icon: GraduationCap },
-      { label: "Users", href: "/admin/users", icon: UsersRound },
-      { label: "Roles & access", href: "/admin/roles", icon: ShieldCheck },
-      { label: "Departments", href: "/admin/departments", icon: Building2 },
-      { label: "Grades & classes", href: "/admin/classes", icon: School },
-      { label: "Subjects", href: "/admin/subjects", icon: BookOpen },
-      { label: "Staff", href: "/admin/staff", icon: UserRoundCog },
+      { label: "Users", href: "/admin/users", permission: "users:view", icon: UsersRound },
+      { label: "Roles and access", href: "/admin/roles", permission: "roles:view", icon: ShieldCheck },
     ],
   },
   {
-    label: "Campus operations",
+    label: "Configuration",
     items: [
-      { label: "Vehicles", href: "/admin/fleet", icon: Truck },
-      { label: "Drivers", href: "/admin/fleet/drivers", icon: ClipboardList },
-      { label: "Daily vehicle log", href: "/admin/fleet/daily-log", icon: ReceiptText },
-      { label: "Finance", href: "/admin/finance", icon: Landmark },
-      { label: "Fees & payment plans", href: "/admin/fees", icon: ReceiptText },
-      { label: "HR & payroll", href: "/admin/hr-payroll", icon: BriefcaseBusiness },
-      { label: "Procurement", href: "/admin/procurement", icon: PackageSearch },
-      { label: "Library", href: "/admin/library", icon: Library },
-      { label: "Hostel & boarding", href: "/admin/hostel", icon: Building2 },
-      { label: "Messaging", href: "/admin/messaging", icon: MessageSquareText },
-      { label: "Health & clinic", href: "/admin/health", icon: HeartPulse },
+      { label: "Licensing", href: "/admin/licensing", permission: "licensing:view", icon: KeyRound },
+      { label: "School settings", href: "/admin/settings", permission: "school_settings:view", icon: Settings2 },
     ],
-  },
-  {
-    label: "System",
-    items: [{ label: "Settings", href: "/admin/settings", icon: Settings2 }],
   },
 ];
 
@@ -146,7 +118,13 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
 
   const schoolName = school?.name || "Campus Pilot School";
   const userName = user?.full_name || "Administrator";
-  const userRole = user?.roles[0] || "Administrator";
+  const userRole = user?.role_names?.[0] || "Campus administrator";
+  const visibleNavigationGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => hasPermission(user?.permissions, item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="min-h-[100dvh] bg-[var(--canvas)]">
@@ -155,7 +133,7 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
       </a>
 
       <aside
-        aria-label="Campus navigation"
+        aria-label="Administration navigation"
         className={`fixed inset-y-0 left-0 z-[70] flex w-[min(320px,calc(100vw-48px))] flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform duration-300 ease-[var(--motion-ease-default)] lg:z-[var(--z-sidebar)] lg:w-[var(--sidebar-w)] lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
@@ -174,10 +152,10 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
             </span>
             <div className="min-w-0">
               <p className="text-[15px] font-bold tracking-[-0.025em] text-[var(--sidebar-foreground)]">
-                Campus Pilot
+                Administration
               </p>
               <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">
-                School operations
+                Campus management
               </p>
             </div>
             <button
@@ -213,11 +191,19 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
               </div>
             </div>
           </div>
+
+          <Link
+            className="relative mt-3 flex min-h-10 items-center gap-2 rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]"
+            to="/home"
+          >
+            <Grid2X2 className="size-4" />
+            All modules
+          </Link>
         </div>
 
         <nav className="cp-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Primary navigation">
           <div className="space-y-6">
-            {navigationGroups.map((group) => (
+            {visibleNavigationGroups.map((group) => (
               <section aria-labelledby={`nav-${group.label}`} key={group.label}>
                 <h2
                   className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]"
@@ -333,4 +319,8 @@ function initials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
+}
+
+function hasPermission(permissions: string[] | undefined, permission: string) {
+  return permissions?.includes("*") || permissions?.includes(permission) || false;
 }

@@ -70,9 +70,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/api/1.0/kernel/setup-school")
-            .set_json(json!({
-                "name": "Test School"
-            }))
+            .set_json(json!({ "name": "" }))
             .to_request();
 
         let resp = test::call_service(&app, req).await;

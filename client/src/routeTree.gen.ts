@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StyleGuideRouteImport } from './routes/style-guide'
+import { Route as ModulesRouteImport } from './routes/modules'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BootRouteImport } from './routes/boot'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -18,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as SetupSchoolRouteImport } from './routes/setup.school'
 import { Route as SetupAdminRouteImport } from './routes/setup.admin'
+import { Route as ModulesModuleKeyRouteImport } from './routes/modules/$moduleKey'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSubjectsRouteImport } from './routes/admin/subjects'
 import { Route as AdminStudentsRouteImport } from './routes/admin/students'
@@ -26,6 +29,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminRolesRouteImport } from './routes/admin/roles'
 import { Route as AdminProcurementRouteImport } from './routes/admin/procurement'
 import { Route as AdminMessagingRouteImport } from './routes/admin/messaging'
+import { Route as AdminLicensingRouteImport } from './routes/admin/licensing'
 import { Route as AdminLibraryRouteImport } from './routes/admin/library'
 import { Route as AdminHrPayrollRouteImport } from './routes/admin/hr-payroll'
 import { Route as AdminHostelRouteImport } from './routes/admin/hostel'
@@ -35,6 +39,9 @@ import { Route as AdminFeesRouteImport } from './routes/admin/fees'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments'
 import { Route as AdminClassesRouteImport } from './routes/admin/classes'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
+import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
+import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
+import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
 import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
 
@@ -43,9 +50,19 @@ const StyleGuideRoute = StyleGuideRouteImport.update({
   path: '/style-guide',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModulesRoute = ModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -82,6 +99,11 @@ const SetupAdminRoute = SetupAdminRouteImport.update({
   id: '/setup/admin',
   path: '/setup/admin',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ModulesModuleKeyRoute = ModulesModuleKeyRouteImport.update({
+  id: '/$moduleKey',
+  path: '/$moduleKey',
+  getParentRoute: () => ModulesRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
@@ -121,6 +143,11 @@ const AdminProcurementRoute = AdminProcurementRouteImport.update({
 const AdminMessagingRoute = AdminMessagingRouteImport.update({
   id: '/messaging',
   path: '/messaging',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLicensingRoute = AdminLicensingRouteImport.update({
+  id: '/licensing',
+  path: '/licensing',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminLibraryRoute = AdminLibraryRouteImport.update({
@@ -168,6 +195,21 @@ const AdminFleetIndexRoute = AdminFleetIndexRouteImport.update({
   path: '/fleet/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesFleetVehiclesRoute = ModulesFleetVehiclesRouteImport.update({
+  id: '/fleet/vehicles',
+  path: '/fleet/vehicles',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesFleetDriversRoute = ModulesFleetDriversRouteImport.update({
+  id: '/fleet/drivers',
+  path: '/fleet/drivers',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesFleetDailyLogRoute = ModulesFleetDailyLogRouteImport.update({
+  id: '/fleet/daily-log',
+  path: '/fleet/daily-log',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const AdminFleetDriversRoute = AdminFleetDriversRouteImport.update({
   id: '/fleet/drivers',
   path: '/fleet/drivers',
@@ -184,7 +226,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/boot': typeof BootRoute
   '/dashboard': typeof DashboardRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/modules': typeof ModulesRouteWithChildren
   '/style-guide': typeof StyleGuideRoute
   '/admin/classes': typeof AdminClassesRoute
   '/admin/departments': typeof AdminDepartmentsRoute
@@ -194,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/admin/hostel': typeof AdminHostelRoute
   '/admin/hr-payroll': typeof AdminHrPayrollRoute
   '/admin/library': typeof AdminLibraryRoute
+  '/admin/licensing': typeof AdminLicensingRoute
   '/admin/messaging': typeof AdminMessagingRoute
   '/admin/procurement': typeof AdminProcurementRoute
   '/admin/roles': typeof AdminRolesRoute
@@ -202,18 +247,24 @@ export interface FileRoutesByFullPath {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/modules/$moduleKey': typeof ModulesModuleKeyRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
+  '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
+  '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/boot': typeof BootRoute
   '/dashboard': typeof DashboardRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/modules': typeof ModulesRouteWithChildren
   '/style-guide': typeof StyleGuideRoute
   '/admin/classes': typeof AdminClassesRoute
   '/admin/departments': typeof AdminDepartmentsRoute
@@ -223,6 +274,7 @@ export interface FileRoutesByTo {
   '/admin/hostel': typeof AdminHostelRoute
   '/admin/hr-payroll': typeof AdminHrPayrollRoute
   '/admin/library': typeof AdminLibraryRoute
+  '/admin/licensing': typeof AdminLicensingRoute
   '/admin/messaging': typeof AdminMessagingRoute
   '/admin/procurement': typeof AdminProcurementRoute
   '/admin/roles': typeof AdminRolesRoute
@@ -231,11 +283,15 @@ export interface FileRoutesByTo {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/modules/$moduleKey': typeof ModulesModuleKeyRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin': typeof AdminIndexRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
+  '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
+  '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesById {
@@ -244,7 +300,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/boot': typeof BootRoute
   '/dashboard': typeof DashboardRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/modules': typeof ModulesRouteWithChildren
   '/style-guide': typeof StyleGuideRoute
   '/admin/classes': typeof AdminClassesRoute
   '/admin/departments': typeof AdminDepartmentsRoute
@@ -254,6 +312,7 @@ export interface FileRoutesById {
   '/admin/hostel': typeof AdminHostelRoute
   '/admin/hr-payroll': typeof AdminHrPayrollRoute
   '/admin/library': typeof AdminLibraryRoute
+  '/admin/licensing': typeof AdminLicensingRoute
   '/admin/messaging': typeof AdminMessagingRoute
   '/admin/procurement': typeof AdminProcurementRoute
   '/admin/roles': typeof AdminRolesRoute
@@ -262,11 +321,15 @@ export interface FileRoutesById {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/modules/$moduleKey': typeof ModulesModuleKeyRoute
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
+  '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
+  '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
 }
 export interface FileRouteTypes {
@@ -276,7 +339,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/boot'
     | '/dashboard'
+    | '/home'
     | '/login'
+    | '/modules'
     | '/style-guide'
     | '/admin/classes'
     | '/admin/departments'
@@ -286,6 +351,7 @@ export interface FileRouteTypes {
     | '/admin/hostel'
     | '/admin/hr-payroll'
     | '/admin/library'
+    | '/admin/licensing'
     | '/admin/messaging'
     | '/admin/procurement'
     | '/admin/roles'
@@ -294,18 +360,24 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/subjects'
     | '/admin/users'
+    | '/modules/$moduleKey'
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
+    | '/modules/fleet/daily-log'
+    | '/modules/fleet/drivers'
+    | '/modules/fleet/vehicles'
     | '/admin/fleet'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/boot'
     | '/dashboard'
+    | '/home'
     | '/login'
+    | '/modules'
     | '/style-guide'
     | '/admin/classes'
     | '/admin/departments'
@@ -315,6 +387,7 @@ export interface FileRouteTypes {
     | '/admin/hostel'
     | '/admin/hr-payroll'
     | '/admin/library'
+    | '/admin/licensing'
     | '/admin/messaging'
     | '/admin/procurement'
     | '/admin/roles'
@@ -323,11 +396,15 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/subjects'
     | '/admin/users'
+    | '/modules/$moduleKey'
     | '/setup/admin'
     | '/setup/school'
     | '/admin'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
+    | '/modules/fleet/daily-log'
+    | '/modules/fleet/drivers'
+    | '/modules/fleet/vehicles'
     | '/admin/fleet'
   id:
     | '__root__'
@@ -335,7 +412,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/boot'
     | '/dashboard'
+    | '/home'
     | '/login'
+    | '/modules'
     | '/style-guide'
     | '/admin/classes'
     | '/admin/departments'
@@ -345,6 +424,7 @@ export interface FileRouteTypes {
     | '/admin/hostel'
     | '/admin/hr-payroll'
     | '/admin/library'
+    | '/admin/licensing'
     | '/admin/messaging'
     | '/admin/procurement'
     | '/admin/roles'
@@ -353,11 +433,15 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/subjects'
     | '/admin/users'
+    | '/modules/$moduleKey'
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
+    | '/modules/fleet/daily-log'
+    | '/modules/fleet/drivers'
+    | '/modules/fleet/vehicles'
     | '/admin/fleet/'
   fileRoutesById: FileRoutesById
 }
@@ -366,7 +450,9 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   BootRoute: typeof BootRoute
   DashboardRoute: typeof DashboardRoute
+  HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
+  ModulesRoute: typeof ModulesRouteWithChildren
   StyleGuideRoute: typeof StyleGuideRoute
   SetupAdminRoute: typeof SetupAdminRoute
   SetupSchoolRoute: typeof SetupSchoolRoute
@@ -381,11 +467,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StyleGuideRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/modules': {
+      id: '/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof ModulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -436,6 +536,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/setup/admin'
       preLoaderRoute: typeof SetupAdminRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/modules/$moduleKey': {
+      id: '/modules/$moduleKey'
+      path: '/$moduleKey'
+      fullPath: '/modules/$moduleKey'
+      preLoaderRoute: typeof ModulesModuleKeyRouteImport
+      parentRoute: typeof ModulesRoute
     }
     '/admin/users': {
       id: '/admin/users'
@@ -491,6 +598,13 @@ declare module '@tanstack/react-router' {
       path: '/messaging'
       fullPath: '/admin/messaging'
       preLoaderRoute: typeof AdminMessagingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/licensing': {
+      id: '/admin/licensing'
+      path: '/licensing'
+      fullPath: '/admin/licensing'
+      preLoaderRoute: typeof AdminLicensingRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/library': {
@@ -556,6 +670,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/fleet/vehicles': {
+      id: '/modules/fleet/vehicles'
+      path: '/fleet/vehicles'
+      fullPath: '/modules/fleet/vehicles'
+      preLoaderRoute: typeof ModulesFleetVehiclesRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/fleet/drivers': {
+      id: '/modules/fleet/drivers'
+      path: '/fleet/drivers'
+      fullPath: '/modules/fleet/drivers'
+      preLoaderRoute: typeof ModulesFleetDriversRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/fleet/daily-log': {
+      id: '/modules/fleet/daily-log'
+      path: '/fleet/daily-log'
+      fullPath: '/modules/fleet/daily-log'
+      preLoaderRoute: typeof ModulesFleetDailyLogRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/admin/fleet/drivers': {
       id: '/admin/fleet/drivers'
       path: '/fleet/drivers'
@@ -582,6 +717,7 @@ interface AdminRouteChildren {
   AdminHostelRoute: typeof AdminHostelRoute
   AdminHrPayrollRoute: typeof AdminHrPayrollRoute
   AdminLibraryRoute: typeof AdminLibraryRoute
+  AdminLicensingRoute: typeof AdminLicensingRoute
   AdminMessagingRoute: typeof AdminMessagingRoute
   AdminProcurementRoute: typeof AdminProcurementRoute
   AdminRolesRoute: typeof AdminRolesRoute
@@ -605,6 +741,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminHostelRoute: AdminHostelRoute,
   AdminHrPayrollRoute: AdminHrPayrollRoute,
   AdminLibraryRoute: AdminLibraryRoute,
+  AdminLicensingRoute: AdminLicensingRoute,
   AdminMessagingRoute: AdminMessagingRoute,
   AdminProcurementRoute: AdminProcurementRoute,
   AdminRolesRoute: AdminRolesRoute,
@@ -621,12 +758,31 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ModulesRouteChildren {
+  ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
+  ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
+  ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
+  ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
+}
+
+const ModulesRouteChildren: ModulesRouteChildren = {
+  ModulesModuleKeyRoute: ModulesModuleKeyRoute,
+  ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
+  ModulesFleetDriversRoute: ModulesFleetDriversRoute,
+  ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,
+}
+
+const ModulesRouteWithChildren =
+  ModulesRoute._addFileChildren(ModulesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   BootRoute: BootRoute,
   DashboardRoute: DashboardRoute,
+  HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
+  ModulesRoute: ModulesRouteWithChildren,
   StyleGuideRoute: StyleGuideRoute,
   SetupAdminRoute: SetupAdminRoute,
   SetupSchoolRoute: SetupSchoolRoute,

@@ -9,6 +9,8 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../migrations");
+
 pub struct DatabaseOperations {
     pool: PgPool,
 }
@@ -20,45 +22,24 @@ impl DatabaseOperations {
 
     /// Run database migrations
     pub async fn run_migrations(&self) -> Result<()> {
-        // Read and execute the migration files in order
-        let migration_001 = include_str!("../../../../migrations/001_create_tables.sql");
+        // Core migrations call these functions, so install them before the
+        // tracked migrator runs. CREATE OR REPLACE keeps this safe on restart.
         let functions_migration = include_str!("../../../../migrations/functions.sql");
-        let triggers_migration = include_str!("../../../../migrations/triggers.sql");
-        let migration_002 = include_str!("../../../../migrations/002_create_auth_tables.sql");
-        let migration_003 = include_str!("../../../../migrations/003_create_roles_table.sql");
-        let migration_004 = include_str!("../../../../migrations/004_create_tenants_table.sql");
-        let migration_005 =
-            include_str!("../../../../migrations/005_add_tenant_id_to_core_tables.sql");
-        let migration_010 = include_str!("../../../../migrations/010_create_fleet_tables.sql");
-        let migration_011 =
-            include_str!("../../../../migrations/011_create_vehicle_daily_log_tables.sql");
-
-        // Execute table creations
-        sqlx::raw_sql(migration_001).execute(&self.pool).await?;
-
-        // Execute function creations
         sqlx::raw_sql(functions_migration)
             .execute(&self.pool)
             .await?;
 
-        // Execute trigger creations
+        // Numbered migrations are applied exactly once and recorded in
+        // _sqlx_migrations. This is essential for editable seeded roles: a
+        // restart must never replay seed labels or permissions over user edits.
+        MIGRATOR.run(&self.pool).await?;
+
+        // Legacy audit trigger definitions are intentionally idempotent and
+        // remain outside the numbered sequence.
+        let triggers_migration = include_str!("../../../../migrations/triggers.sql");
         sqlx::raw_sql(triggers_migration)
             .execute(&self.pool)
             .await?;
-
-        // Execute auth tables migration
-        sqlx::raw_sql(migration_002).execute(&self.pool).await?;
-
-        // Execute roles table migration
-        sqlx::raw_sql(migration_003).execute(&self.pool).await?;
-
-        // Execute tenancy migrations
-        sqlx::raw_sql(migration_004).execute(&self.pool).await?;
-        sqlx::raw_sql(migration_005).execute(&self.pool).await?;
-
-        // Execute fleet + vehicle daily log migrations
-        sqlx::raw_sql(migration_010).execute(&self.pool).await?;
-        sqlx::raw_sql(migration_011).execute(&self.pool).await?;
 
         Ok(())
     }

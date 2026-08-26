@@ -17,10 +17,12 @@ use std::{
     rc::Rc,
 };
 
-use cp_common::{Roles, TenantId};
+use cp_common::{AccessContext, Roles, TenantId};
 
 use crate::{
-    models::api_response::ApiResponse, services::auth::models::User, state::AppState,
+    models::api_response::ApiResponse,
+    services::{access::ops::AccessOps, auth::models::User},
+    state::AppState,
     utils::verify_access_token,
 };
 
@@ -193,12 +195,35 @@ where
                     .map_into_right_body());
             }
 
+            let effective_access =
+                match AccessOps::effective_access(&app_state.db, user.tenant_id, &user.roles).await
+                {
+                    Ok(access) => access,
+                    Err(error) => {
+                        log::error!("Failed to load authenticated access context: {:?}", error);
+                        let response = ApiResponse::<()>::from_status(
+                            actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            None,
+                            Some(vec!["Account access could not be loaded".to_string()]),
+                        );
+                        return Ok(req
+                            .into_response(HttpResponse::InternalServerError().json(response))
+                            .map_into_right_body());
+                    }
+                };
+
             // Attach user (and their tenant + roles) to request extensions
             let tenant_id = TenantId(user.tenant_id);
             let roles = Roles(user.roles.clone());
+            let access_context = AccessContext {
+                role_keys: user.roles.clone(),
+                permissions: effective_access.permissions,
+                enabled_modules: effective_access.enabled_modules,
+            };
             req.extensions_mut().insert(user);
             req.extensions_mut().insert(tenant_id);
             req.extensions_mut().insert(roles);
+            req.extensions_mut().insert(access_context);
 
             // Continue to next middleware/handler
             service.call(req).await.map(|res| res.map_into_left_body())

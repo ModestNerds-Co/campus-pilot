@@ -1122,6 +1122,7 @@ dependencies = [
  "cp-messaging",
  "cp-procurement",
  "cp-sis",
+ "cp-timetabling",
  "cp-vehicle-log",
  "dotenv",
  "env_logger",
@@ -1138,6 +1139,7 @@ dependencies = [
  "sentry-actix",
  "serde",
  "serde_json",
+ "sha2",
  "sqlx",
  "tokio",
  "tracing",
@@ -1407,6 +1409,21 @@ dependencies = [
  "actix-web",
  "cp-common",
  "serde_json",
+]
+
+[[package]]
+name = "cp-timetabling"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-common",
+ "log",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
 ]
 
 [[package]]

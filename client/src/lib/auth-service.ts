@@ -22,11 +22,14 @@ export interface LoginResponse {
 }
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   full_name: string;
   phone: string | null;
   roles: string[];
+  role_names: string[];
+  permissions: string[];
+  modules: string[];
   is_active: boolean;
   last_login_at: string | null;
 }
@@ -45,7 +48,7 @@ export interface LogoutRequest {
   refresh_token?: string;
 }
 
-export interface ApiEnvelope<T = any> {
+export interface ApiEnvelope<T = unknown> {
   success: boolean;
   message: string | null;
   data: T | null;
@@ -124,7 +127,7 @@ class AuthService {
     }
   }
 
-  private handleError(error: any): Error {
+  private handleError(error: unknown): Error {
     if (error instanceof AxiosError) {
       if (error.code === "ECONNABORTED") {
         return new Error("Request timed out. Please try again.");

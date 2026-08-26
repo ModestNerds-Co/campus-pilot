@@ -10,7 +10,9 @@ use anyhow::{Context, Result as OpsResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::dtos::{CreateDriverRequest, CreateVehicleRequest, UpdateDriverRequest, UpdateVehicleRequest};
+use super::dtos::{
+    CreateDriverRequest, CreateVehicleRequest, UpdateDriverRequest, UpdateVehicleRequest,
+};
 use super::models::{Driver, Vehicle};
 
 pub struct VehicleOps;

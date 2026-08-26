@@ -1,3 +1,4 @@
+pub mod access;
 pub mod auth;
 pub mod kernel;
 pub mod roles;

@@ -24,9 +24,13 @@ import { Badge } from "@/components/ui/badge";
 import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableLoading, TableError, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
+import { rolesService } from "../services/roles-service";
+import { useAuthStore } from "@/stores/auth-store";
 
 export const UsersList: React.FC = () => {
+  const currentUser = useAuthStore((state) => state.user);
   const [users, setUsers] = useState<User[]>([]);
+  const [roleNames, setRoleNames] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +42,9 @@ export const UsersList: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const canCreate = hasPermission(currentUser?.permissions, "users:create");
+  const canEdit = hasPermission(currentUser?.permissions, "users:edit");
+  const canDelete = hasPermission(currentUser?.permissions, "users:delete");
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -64,6 +71,20 @@ export const UsersList: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, [currentPage, statusFilter]);
+
+  useEffect(() => {
+    let active = true;
+    void rolesService
+      .listRoles({ limit: 100 })
+      .then((response) => {
+        if (!active || !response.success || !response.data) return;
+        setRoleNames(Object.fromEntries(response.data.roles.map((role) => [role.key, role.name])));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,10 +141,12 @@ export const UsersList: React.FC = () => {
 
   usePageChrome(
     "Users",
-    <Button onClick={handleAddUser}>
-      <Plus className="size-4" />
-      Add user
-    </Button>,
+    canCreate ? (
+      <Button onClick={handleAddUser}>
+        <Plus className="size-4" />
+        Add user
+      </Button>
+    ) : null,
   );
 
   return (
@@ -145,7 +168,7 @@ export const UsersList: React.FC = () => {
         </TableControlsSearch>
         <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
           className="sm:w-[180px]"
           aria-label="Status filter"
         >
@@ -207,8 +230,8 @@ export const UsersList: React.FC = () => {
                     <TD>
                       <div className="flex flex-wrap gap-1">
                         {user.roles.map((role, index) => (
-                          <Badge key={index} tone="brand" className="capitalize">
-                            {role}
+                          <Badge key={index} tone="brand">
+                            {roleNames[role] || humanizeKey(role)}
                           </Badge>
                         ))}
                       </div>
@@ -221,22 +244,22 @@ export const UsersList: React.FC = () => {
                     </TD>
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
-                        <button
+                        {(canEdit || (canDelete && !user.roles.includes("campus_owner"))) ? <button
                           onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                           aria-label={`Actions for ${user.full_name}`}
                         >
                           <MoreVertical className="size-4" />
-                        </button>
+                        </button> : null}
                         {openMenuId === user.id && (
                           <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
-                            <button
+                            {canEdit ? <button
                               onClick={() => handleEditUser(user)}
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               <Edit className="size-4" /> Edit
-                            </button>
-                            <button
+                            </button> : null}
+                            {canEdit ? <button
                               onClick={() => handleToggleActive(user)}
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
@@ -249,8 +272,8 @@ export const UsersList: React.FC = () => {
                                   <UserCheck className="size-4" /> Activate
                                 </>
                               )}
-                            </button>
-                            <button
+                            </button> : null}
+                            {canDelete && !user.roles.includes("campus_owner") ? <button
                               onClick={() => {
                                 setPendingDelete(user);
                                 setOpenMenuId(null);
@@ -258,7 +281,7 @@ export const UsersList: React.FC = () => {
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
                               <Trash2 className="size-4" /> Delete
-                            </button>
+                            </button> : null}
                           </div>
                         )}
                       </div>
@@ -284,3 +307,13 @@ export const UsersList: React.FC = () => {
     </div>
   );
 };
+
+function humanizeKey(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character: string) => character.toUpperCase());
+}
+
+function hasPermission(permissions: string[] | undefined, permission: string) {
+  return permissions?.includes("*") || permissions?.includes(permission) || false;
+}

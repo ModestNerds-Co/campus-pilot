@@ -40,6 +40,7 @@ pub struct UpdateRoleRequest {
 #[derive(Debug, Serialize)]
 pub struct RoleResponse {
     pub id: Uuid,
+    pub key: String,
     pub name: String,
     pub description: Option<String>,
     pub permissions: Vec<String>,
@@ -64,6 +65,7 @@ impl From<super::models::Role> for RoleResponse {
     fn from(role: super::models::Role) -> Self {
         Self {
             id: role.id,
+            key: role.key,
             name: role.name,
             description: role.description,
             permissions: role.permissions,

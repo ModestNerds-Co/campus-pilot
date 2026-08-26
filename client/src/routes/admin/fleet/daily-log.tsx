@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DailyLogList } from "@/modules/vehicle-log";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/fleet/daily-log")({
-  component: DailyLogList,
+  beforeLoad: () => {
+    throw redirect({ to: "/modules/fleet/daily-log", replace: true });
+  },
 });

@@ -403,7 +403,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Teacher\",\n  \"description\": \"Teaching staff with classroom management permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\"\n  ]\n}"
+          "raw": "{\n  \"name\": \"Head of Department\",\n  \"description\": \"Academic leadership with teaching and timetable access\",\n  \"permissions\": [\n    \"academics:view\",\n    \"academics:create\",\n    \"academics:edit\",\n    \"timetabling:view\",\n    \"timetabling:edit\"\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/roles",
@@ -433,7 +433,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Senior Teacher\",\n  \"description\": \"Senior teaching staff with additional permissions\",\n  \"permissions\": [\n    \"users:view\",\n    \"users:create\",\n    \"courses:create\",\n    \"courses:edit\",\n    \"courses:view\",\n    \"courses:delete\"\n  ]\n}"
+          "raw": "{\n  \"name\": \"Academic Director\",\n  \"description\": \"Academic leadership with timetable publishing access\",\n  \"permissions\": [\n    \"academics:view\",\n    \"academics:create\",\n    \"academics:edit\",\n    \"timetabling:view\",\n    \"timetabling:edit\",\n    \"timetabling:manage\"\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/roles/:id",
@@ -578,7 +578,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"full_name\": \"New User\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"roles\": [\"Teacher\"],\n  \"is_active\": true\n}"
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"full_name\": \"New User\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"roles\": [\"teacher\"],\n  \"is_active\": true\n}"
             },
             "url": {
               "raw": "{{base_url}}/users",
@@ -607,7 +607,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+9876543210\",\n  \"roles\": [\"Teacher\", \"Admin\"]\n}"
+              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+9876543210\",\n  \"roles\": [\"teacher\", \"school_administrator\"]\n}"
             },
             "url": {
               "raw": "{{base_url}}/users/{{user_id}}",
@@ -1277,6 +1277,124 @@
                 }
               ]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Access and Licensing",
+      "item": [
+        {
+          "name": "Get Access Catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/access/catalog",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "catalog"
+              ]
+            },
+            "description": "Returns the canonical module and permission catalog used by the launcher and role editor."
+          }
+        },
+        {
+          "name": "List Tenant Modules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/access/modules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "modules"
+              ]
+            },
+            "description": "Lists core, grandfathered, and signed-license module entitlement states for the current tenant."
+          }
+        },
+        {
+          "name": "Activate Signed License",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"license_key\": \"<signed-license-key>\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/access/licenses/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "licenses",
+                "activate"
+              ]
+            },
+            "description": "Verifies an EdDSA-signed campus license and stores only its fingerprint and entitlement claims."
+          }
+        },
+        {
+          "name": "Disable Tenant Module",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/access/modules/:module_key",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "modules",
+                ":module_key"
+              ],
+              "variable": [
+                {
+                  "key": "module_key",
+                  "value": "fleet",
+                  "description": "Non-core module key from the access catalog"
+                }
+              ]
+            },
+            "description": "Disables a non-core module for the current tenant."
           }
         }
       ]

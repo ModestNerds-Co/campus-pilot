@@ -10,10 +10,15 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRoles?: string[];
+  requiredPermission?: string;
+  requiredModule?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles = [] }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredPermission,
+  requiredModule,
+}) => {
   const navigate = useNavigate();
   const { isAuthenticated, user, accessToken } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
@@ -24,24 +29,28 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
         navigate({ to: "/login" });
         return;
       }
-      if (requiredRoles.length > 0 && user) {
-        const hasRequiredRole = requiredRoles.some((role) => user.roles.includes(role));
-        if (!hasRequiredRole) {
-          navigate({ to: "/" });
+      if (user) {
+        const hasPermission =
+          !requiredPermission ||
+          user.permissions?.includes("*") ||
+          user.permissions?.includes(requiredPermission);
+        const hasModule = !requiredModule || user.modules?.includes(requiredModule);
+        if (!hasPermission || !hasModule) {
+          navigate({ to: "/home", replace: true });
           return;
         }
       }
       setIsChecking(false);
     };
     verifyAuth();
-  }, [isAuthenticated, user, accessToken, navigate, requiredRoles]);
+  }, [isAuthenticated, user, accessToken, navigate, requiredPermission, requiredModule]);
 
   if (isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--canvas)]">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 size-8 animate-spin text-[var(--brand)]" />
-          <p className="text-sm text-[var(--text-muted)]">Verifying authentication...</p>
+          <p className="text-sm text-[var(--text-muted)]">Checking your access…</p>
         </div>
       </div>
     );

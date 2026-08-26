@@ -19,7 +19,13 @@ pub struct StorageOps {
 }
 
 impl StorageOps {
-    pub fn new(client: S3Client, presign_client: Option<S3Client>, bucket: String, endpoint: String, public_endpoint: Option<String>) -> Self {
+    pub fn new(
+        client: S3Client,
+        presign_client: Option<S3Client>,
+        bucket: String,
+        endpoint: String,
+        public_endpoint: Option<String>,
+    ) -> Self {
         Self {
             client,
             presign_client,

@@ -200,7 +200,8 @@ impl KernelDbOps {
             return Err(anyhow::anyhow!("User with this email already exists"));
         }
 
-        // Create admin user
+        // Create the campus owner. Role assignments use immutable keys so the
+        // human-facing seeded role name can be edited later without breaking access.
         let user_id: Uuid = sqlx::query_scalar(
             r#"
             INSERT INTO users (tenant_id, full_name, email, phone, password_hash, roles, is_active)
@@ -213,7 +214,7 @@ impl KernelDbOps {
         .bind(email)
         .bind(phone)
         .bind(password_hash)
-        .bind(vec!["Super Admin"])
+        .bind(vec!["campus_owner"])
         .fetch_one(&mut *tx)
         .await
         .context("Failed to create admin user")?;

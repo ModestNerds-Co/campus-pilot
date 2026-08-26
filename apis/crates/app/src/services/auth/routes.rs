@@ -11,6 +11,7 @@ use validator::Validate;
 
 use crate::{
     models::api_response::ApiResponse,
+    services::access::ops::AccessOps,
     state::AppState,
     utils::{
         flatten_validation_errors, generate_access_token, generate_refresh_token, verify_password,
@@ -189,12 +190,26 @@ async fn login(
         log::error!("Failed to update login info: {:?}", e);
     }
 
+    let access = match AccessOps::effective_access(&state.db, user.tenant_id, &user.roles).await {
+        Ok(access) => access,
+        Err(error) => {
+            log::error!("Failed to load user access: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["Account access could not be loaded".to_string()]),
+                )),
+            );
+        }
+    };
+
     let response = LoginResponse {
         access_token,
         refresh_token,
         token_type: "Bearer".to_string(),
         expires_in: 900, // 15 minutes in seconds
-        user: user.into(),
+        user: UserInfo::with_access(user, access),
     };
 
     Ok(HttpResponse::Ok().json(ApiResponse::from_status(
@@ -464,7 +479,20 @@ async fn me(
         )));
     }
 
-    let user_info: UserInfo = user.into();
+    let access = match AccessOps::effective_access(&state.db, user.tenant_id, &user.roles).await {
+        Ok(access) => access,
+        Err(error) => {
+            log::error!("Failed to load user access: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["Account access could not be loaded".to_string()]),
+                )),
+            );
+        }
+    };
+    let user_info = UserInfo::with_access(user, access);
 
     Ok(HttpResponse::Ok().json(ApiResponse::from_status(
         StatusCode::OK,

@@ -352,11 +352,7 @@ impl UserOps {
     }
 
     /// Deactivate user, scoped to a tenant
-    pub async fn deactivate_user(
-        pool: &PgPool,
-        tenant_id: Uuid,
-        user_id: Uuid,
-    ) -> ApiResult<User> {
+    pub async fn deactivate_user(pool: &PgPool, tenant_id: Uuid, user_id: Uuid) -> ApiResult<User> {
         let user = sqlx::query_as!(
             User,
             r#"

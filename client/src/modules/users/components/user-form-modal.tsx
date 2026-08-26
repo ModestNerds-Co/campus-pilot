@@ -128,10 +128,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
     }
   };
 
-  const toggleRole = (roleName: string) => {
+  const toggleRole = (roleKey: string) => {
     setFormData((prev) => ({
       ...prev,
-      roles: prev.roles.includes(roleName) ? prev.roles.filter((r) => r !== roleName) : [...prev.roles, roleName],
+      roles: prev.roles.includes(roleKey) ? prev.roles.filter((key) => key !== roleKey) : [...prev.roles, roleKey],
     }));
   };
 
@@ -223,13 +223,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
                   >
                     <input
                       type="checkbox"
-                      checked={formData.roles.includes(role.name)}
-                      onChange={() => toggleRole(role.name)}
+                      checked={formData.roles.includes(role.key)}
+                      onChange={() => toggleRole(role.key)}
                       className="size-4 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--focus-ring)]"
                     />
                     <div>
                       <span className="text-sm font-medium text-[var(--text-strong)]">{role.name}</span>
-                      {role.description && <p className="text-xs text-[var(--text-muted)]">{role.description}</p>}
+                      {role.description && <p className="text-xs leading-5 text-[var(--text-muted)]">{role.description}</p>}
                     </div>
                   </label>
                 ))}

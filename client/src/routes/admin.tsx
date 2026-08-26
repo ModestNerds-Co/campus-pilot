@@ -12,7 +12,7 @@ import { AdminLayout } from "../modules/admin";
 
 export const Route = createFileRoute("/admin")({
   component: () => (
-    <ProtectedRoute requiredRoles={["Super Admin", "Admin"]}>
+    <ProtectedRoute requiredModule="administration" requiredPermission="administration:view">
       <AdminLayout>
         <Outlet />
       </AdminLayout>

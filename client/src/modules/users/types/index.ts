@@ -59,12 +59,12 @@ export interface UsersListResponse {
   pagination: PaginationMeta;
 }
 
-export interface ApiEnvelope<T = any> {
+export interface ApiEnvelope<T = unknown> {
   success: boolean;
   message: string | null;
   data: T | null;
   pagination: PaginationMeta | null;
-  issues: ValidationIssue[] | null;
+  issues: Array<ValidationIssue | string> | null;
   version: number;
   by: string;
 }
@@ -77,9 +77,11 @@ export interface ValidationIssue {
 
 export interface Role {
   id: string;
+  key: string;
   name: string;
   description: string | null;
   permissions: string[];
+  is_system: boolean;
   created_at: string;
   updated_at: string;
 }

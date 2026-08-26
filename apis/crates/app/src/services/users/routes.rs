@@ -15,7 +15,7 @@ use validator::Validate;
 use crate::{
     middleware::{AuthMiddleware, RequirePermission},
     models::api_response::{ApiResponse, PaginationMeta},
-    services::auth::models::User,
+    services::{auth::models::User, roles::ops::RoleOps},
     state::AppState,
     utils::{flatten_validation_errors, hash_password},
 };
@@ -133,6 +133,29 @@ async fn create_user(
         )));
     }
 
+    match RoleOps::role_keys_exist(&state.db, tenant_id, &body.roles).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+                StatusCode::BAD_REQUEST,
+                None::<()>,
+                Some(vec![
+                    "One or more selected roles are no longer available".to_string(),
+                ]),
+            )));
+        }
+        Err(error) => {
+            log::error!("Failed to validate role assignments: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["Role assignments could not be validated".to_string()]),
+                )),
+            );
+        }
+    }
+
     // Check if email already exists
     match UserOps::email_exists(&state.db, tenant_id, &body.email, None).await {
         Ok(true) => {
@@ -224,6 +247,31 @@ async fn update_user(
             None::<()>,
             Some(errors),
         )));
+    }
+
+    if let Some(role_keys) = body.roles.as_ref() {
+        match RoleOps::role_keys_exist(&state.db, tenant_id, role_keys).await {
+            Ok(true) => {}
+            Ok(false) => {
+                return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+                    StatusCode::BAD_REQUEST,
+                    None::<()>,
+                    Some(vec![
+                        "One or more selected roles are no longer available".to_string(),
+                    ]),
+                )));
+            }
+            Err(error) => {
+                log::error!("Failed to validate role assignments: {:?}", error);
+                return Ok(
+                    HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        None::<()>,
+                        Some(vec!["Role assignments could not be validated".to_string()]),
+                    )),
+                );
+            }
+        }
     }
 
     // Check if user exists
@@ -355,12 +403,14 @@ async fn delete_user(
         }
     }
 
-    // Prevent deleting Super Admin
-    if target_user.roles.contains(&"Super Admin".to_string()) {
+    // The campus must always retain its owner account.
+    if target_user.roles.contains(&"campus_owner".to_string()) {
         return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
             StatusCode::FORBIDDEN,
             None::<()>,
-            Some(vec!["Cannot delete Super Admin account".to_string()]),
+            Some(vec![
+                "The Campus Owner account cannot be deleted".to_string(),
+            ]),
         )));
     }
 

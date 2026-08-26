@@ -50,18 +50,27 @@ pub struct UserInfo {
     pub full_name: String,
     pub phone: Option<String>,
     pub roles: Vec<String>,
+    pub role_names: Vec<String>,
+    pub permissions: Vec<String>,
+    pub modules: Vec<String>,
     pub is_active: bool,
     pub last_login_at: Option<DateTime<Utc>>,
 }
 
-impl From<User> for UserInfo {
-    fn from(user: User) -> Self {
+impl UserInfo {
+    pub fn with_access(
+        user: User,
+        access: crate::services::access::models::EffectiveAccess,
+    ) -> Self {
         UserInfo {
             id: user.id,
             email: user.email,
             full_name: user.full_name,
             phone: user.phone,
             roles: user.roles,
+            role_names: access.role_names,
+            permissions: access.permissions,
+            modules: access.enabled_modules,
             is_active: user.is_active,
             last_login_at: user.last_login_at,
         }

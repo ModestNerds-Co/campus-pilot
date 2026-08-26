@@ -15,8 +15,10 @@ import { Badge } from "@/components/ui/badge";
 import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, TableLoading, TableError, TableControlsBar, TableControlsSearch, TableControlsPagination } from "@/components/ui/data-table";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
+import { useAuthStore } from "@/stores/auth-store";
 
 export const RolesList: React.FC = () => {
+  const currentUser = useAuthStore((state) => state.user);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -28,6 +30,9 @@ export const RolesList: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<Role | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<Role | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const canCreate = hasPermission(currentUser?.permissions, "roles:create");
+  const canEdit = hasPermission(currentUser?.permissions, "roles:edit");
+  const canDelete = hasPermission(currentUser?.permissions, "roles:delete");
 
   const fetchRoles = async () => {
     setIsLoading(true);
@@ -93,16 +98,20 @@ export const RolesList: React.FC = () => {
   };
 
   usePageChrome(
-    "Roles",
-    <Button onClick={handleAddRole}>
-      <Plus className="size-4" />
-      Add role
-    </Button>,
+    "Roles and access",
+    canCreate ? (
+      <Button onClick={handleAddRole}>
+        <Plus className="size-4" />
+        Create role
+      </Button>
+    ) : null,
   );
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-[var(--text-muted)]">Define reusable access profiles for school teams.</p>
+      <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
+        Seeded roles provide a dependable starting point. Their names and access can evolve, while stable keys keep assignments intact.
+      </p>
 
       <TableControlsBar>
         <TableControlsSearch onSubmit={handleSearch}>
@@ -145,7 +154,7 @@ export const RolesList: React.FC = () => {
                 <tr>
                   <TH>Role name</TH>
                   <TH>Description</TH>
-                  <TH>Permissions</TH>
+                  <TH>Access profile</TH>
                   <TH>Created</TH>
                   <TH className="text-right">Actions</TH>
                 </tr>
@@ -158,22 +167,28 @@ export const RolesList: React.FC = () => {
                         <div className="flex size-10 items-center justify-center rounded-full bg-[var(--accent-100)]">
                           <Shield className="size-5 text-[var(--accent-700)]" />
                         </div>
-                        <div className="text-sm font-medium text-[var(--text-strong)]">{role.name}</div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium text-[var(--text-strong)]">{role.name}</span>
+                            {role.is_system ? <Badge tone="neutral">Seeded</Badge> : <Badge tone="outline">Custom</Badge>}
+                          </div>
+                          <p className="mt-1 font-mono text-[11px] text-[var(--text-subtle)]">{role.key}</p>
+                        </div>
                       </div>
                     </TD>
                     <TD>
                       <div className="max-w-xs truncate text-sm text-[var(--text-muted)]">{role.description || "—"}</div>
                     </TD>
                     <TD>
-                      <div className="flex flex-wrap gap-1">
-                        {role.permissions.slice(0, 3).map((permission, index) => (
-                          <Badge key={index} tone="info">
-                            {permission}
-                          </Badge>
-                        ))}
-                        {role.permissions.length > 3 && (
-                          <Badge tone="neutral">+{role.permissions.length - 3} more</Badge>
-                        )}
+                      <div>
+                        <p className="text-sm font-medium text-[var(--text-strong)]">
+                          {role.permissions.includes("*") ? "Full access" : `${permissionNamespaces(role.permissions).length} access areas`}
+                        </p>
+                        <p className="mt-1 max-w-sm truncate text-xs text-[var(--text-muted)]">
+                          {role.permissions.includes("*")
+                            ? "All actions in licensed modules"
+                            : permissionNamespaces(role.permissions).map(humanizeKey).join(", ")}
+                        </p>
                       </div>
                     </TD>
                     <TD className="whitespace-nowrap text-sm text-[var(--text-muted)]">
@@ -181,22 +196,22 @@ export const RolesList: React.FC = () => {
                     </TD>
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
-                        <button
+                        {(canEdit || (canDelete && !role.is_system)) ? <button
                           onClick={() => setOpenMenuId(openMenuId === role.id ? null : role.id)}
                           className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                           aria-label={`Actions for ${role.name}`}
                         >
                           <MoreVertical className="size-4" />
-                        </button>
+                        </button> : null}
                         {openMenuId === role.id && (
                           <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
-                            <button
+                            {canEdit ? <button
                               onClick={() => handleEditRole(role)}
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               <Edit className="size-4" /> Edit
-                            </button>
-                            <button
+                            </button> : null}
+                            {canDelete && !role.is_system ? <button
                               onClick={() => {
                                 setPendingDelete(role);
                                 setOpenMenuId(null);
@@ -204,7 +219,7 @@ export const RolesList: React.FC = () => {
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                             >
                               <Trash2 className="size-4" /> Delete
-                            </button>
+                            </button> : null}
                           </div>
                         )}
                       </div>
@@ -230,3 +245,17 @@ export const RolesList: React.FC = () => {
     </div>
   );
 };
+
+function permissionNamespaces(permissions: string[]) {
+  return Array.from(new Set(permissions.map((permission) => permission.split(":")[0])));
+}
+
+function humanizeKey(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character: string) => character.toUpperCase());
+}
+
+function hasPermission(permissions: string[] | undefined, permission: string) {
+  return permissions?.includes("*") || permissions?.includes(permission) || false;
+}

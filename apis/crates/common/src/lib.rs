@@ -9,6 +9,7 @@
 //  module crate. This crate never depends on `app` or on any module crate.
 //
 
+pub mod access;
 pub mod api_response;
 pub mod attachment_file;
 pub mod permissions;
@@ -18,6 +19,7 @@ pub mod tenant;
 pub mod typedefs;
 pub mod validation;
 
+pub use access::{AccessContext, module_key_for_namespace};
 pub use api_response::{ApiResponse, PaginationMeta};
 pub use attachment_file::AttachmentFile;
 pub use permissions::RequirePermission;

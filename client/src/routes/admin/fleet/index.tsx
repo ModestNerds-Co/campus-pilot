@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { VehiclesList } from "@/modules/fleet";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/fleet/")({
-  component: VehiclesList,
+  beforeLoad: () => {
+    throw redirect({ to: "/modules/$moduleKey", params: { moduleKey: "fleet" }, replace: true });
+  },
 });

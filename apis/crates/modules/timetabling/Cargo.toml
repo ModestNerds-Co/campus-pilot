@@ -1,0 +1,16 @@
+[package]
+name = "cp-timetabling"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+cp-common = { path = "../../common" }
+
+actix-web = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }

@@ -25,7 +25,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{ApiResponse, roles::Roles};
+use crate::{AccessContext, ApiResponse, module_key_for_namespace};
 
 /// Gates every request in a scope with a `"<module>:<action>"` permission,
 /// deriving `<action>` from the HTTP method (GET -> view, POST -> create,
@@ -93,15 +93,27 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = Rc::clone(&self.service);
         let permission = format!("{}:{}", self.module, action_for(req.method()));
+        let module_key = module_key_for_namespace(&self.module).to_string();
 
         Box::pin(async move {
-            // Roles are set by AuthMiddleware (in the app crate) before routing
-            // descends into a module's own scopes.
-            let roles = req.extensions().get::<Roles>().cloned();
+            // AccessContext is set by AuthMiddleware (in the app crate) before
+            // routing descends into a module's own scopes.
+            let access = req.extensions().get::<AccessContext>().cloned();
 
-            match roles {
-                Some(roles) => {
-                    if has_permission(&roles, &permission) {
+            match access {
+                Some(access) => {
+                    if !access.has_module(&module_key) {
+                        let response = ApiResponse::<()>::from_status(
+                            actix_web::http::StatusCode::FORBIDDEN,
+                            None,
+                            Some(vec![format!("Module is not enabled: {}", module_key)]),
+                        );
+                        return Ok(req
+                            .into_response(HttpResponse::Forbidden().json(response))
+                            .map_into_right_body());
+                    }
+
+                    if access.has_permission(&permission) {
                         service.call(req).await.map(|res| res.map_into_left_body())
                     } else {
                         let response = ApiResponse::<()>::from_status(
@@ -130,25 +142,4 @@ where
             }
         })
     }
-}
-
-/// Check if the caller's roles satisfy a "module:action" permission.
-/// Super Admin has all permissions.
-/// TODO: back this with a real role -> permission lookup once the roles
-/// table's `permissions` column is consulted here instead of role-name matching.
-fn has_permission(roles: &Roles, permission: &str) -> bool {
-    if roles.contains("Super Admin") {
-        return true;
-    }
-
-    let parts: Vec<&str> = permission.split(':').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-
-    let module = parts[0];
-    roles
-        .0
-        .iter()
-        .any(|role| role.to_lowercase().contains(module))
 }

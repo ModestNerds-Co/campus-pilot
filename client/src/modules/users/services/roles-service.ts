@@ -96,7 +96,7 @@ class RolesService {
     }
   }
 
-  private handleError(error: any): Error {
+  private handleError(error: unknown): Error {
     if (error instanceof AxiosError) {
       if (error.code === "ECONNABORTED") {
         return new Error("Request timed out. Please try again.");

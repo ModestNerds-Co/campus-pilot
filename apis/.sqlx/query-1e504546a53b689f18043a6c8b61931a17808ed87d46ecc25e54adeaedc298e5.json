@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE roles\n            SET deleted_at = NOW()\n            WHERE id = $1\n              AND tenant_id = $2\n              AND deleted_at IS NULL\n              AND is_system = FALSE\n              AND NOT EXISTS (\n                  SELECT 1\n                  FROM users\n                  WHERE users.tenant_id = $2\n                    AND roles.key = ANY(users.roles)\n                    AND users.deleted_at IS NULL\n              )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1e504546a53b689f18043a6c8b61931a17808ed87d46ecc25e54adeaedc298e5"
+}

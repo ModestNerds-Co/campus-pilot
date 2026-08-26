@@ -10,7 +10,9 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
-use cp_common::{ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors};
+use cp_common::{
+    ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
+};
 use cp_fleet::ops::{DriverOps, VehicleOps};
 use uuid::Uuid;
 use validator::Validate;
@@ -25,9 +27,9 @@ use crate::ops::VehicleDailyLogOps;
 /// when an end odometer reading is present and lower than the start reading.
 fn odometer_issue(start: i32, end: Option<i32>) -> Option<Vec<String>> {
     match end {
-        Some(end) if end < start => {
-            Some(vec!["End odometer can't be less than the start odometer".to_string()])
-        }
+        Some(end) if end < start => Some(vec![
+            "End odometer can't be less than the start odometer".to_string(),
+        ]),
         _ => None,
     }
 }
@@ -56,7 +58,11 @@ async fn validate_vehicle_and_driver(
         issues.push("Driver not found for this school".to_string());
     }
 
-    Ok(if issues.is_empty() { None } else { Some(issues) })
+    Ok(if issues.is_empty() {
+        None
+    } else {
+        Some(issues)
+    })
 }
 
 #[get("")]
@@ -118,8 +124,7 @@ async fn get_log(
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let tenant_id = tenant.into_inner().into_inner();
-    let log_entry = match VehicleDailyLogOps::get_by_id(&pool, tenant_id, path.into_inner()).await
-    {
+    let log_entry = match VehicleDailyLogOps::get_by_id(&pool, tenant_id, path.into_inner()).await {
         Ok(Some(l)) => l,
         Ok(None) => {
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(

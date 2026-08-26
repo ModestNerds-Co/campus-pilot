@@ -7,6 +7,7 @@ use actix_web::{HttpResponse, delete, get, post, put, web};
 use cp_common::TenantId;
 use validator::Validate;
 
+use crate::services::access::catalog::all_permission_keys;
 use crate::{
     middleware::{AuthMiddleware, RequirePermission},
     models::api_response::{ApiResponse, PaginationMeta},
@@ -38,18 +39,18 @@ async fn list_roles(
     )
     .await
     {
-            Ok(data) => data,
-            Err(e) => {
-                log::error!("Failed to list roles: {:?}", e);
-                return Ok(
-                    HttpResponse::InternalServerError().json(ApiResponse::from_status(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        None::<()>,
-                        None,
-                    )),
-                );
-            }
-        };
+        Ok(data) => data,
+        Err(e) => {
+            log::error!("Failed to list roles: {:?}", e);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    None,
+                )),
+            );
+        }
+    };
 
     let pagination = PaginationMeta::new(page, limit, total);
 
@@ -120,6 +121,22 @@ async fn create_role(
         )));
     }
 
+    let known_permissions = all_permission_keys();
+    let invalid_permissions: Vec<&String> = body
+        .permissions
+        .iter()
+        .filter(|permission| !known_permissions.contains(permission))
+        .collect();
+    if !invalid_permissions.is_empty() {
+        return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+            StatusCode::BAD_REQUEST,
+            None::<()>,
+            Some(vec![
+                "One or more permissions are not part of the Campus Pilot catalog".to_string(),
+            ]),
+        )));
+    }
+
     // Check if role with same name already exists
     match RoleOps::get_role_by_name(&state.db, tenant_id, &body.name).await {
         Ok(Some(_)) => {
@@ -185,6 +202,22 @@ async fn update_role(
         )));
     }
 
+    if let Some(permissions) = body.permissions.as_ref() {
+        let known_permissions = all_permission_keys();
+        if permissions
+            .iter()
+            .any(|permission| !known_permissions.contains(permission))
+        {
+            return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+                StatusCode::BAD_REQUEST,
+                None::<()>,
+                Some(vec![
+                    "One or more permissions are not part of the Campus Pilot catalog".to_string(),
+                ]),
+            )));
+        }
+    }
+
     // Check if updating name and if new name already exists
     if let Some(ref new_name) = body.name {
         match RoleOps::get_role_by_name(&state.db, tenant_id, new_name).await {
@@ -216,9 +249,7 @@ async fn update_role(
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
                 StatusCode::NOT_FOUND,
                 None::<()>,
-                Some(vec![
-                    "Role not found or is a system role that cannot be modified".to_string(),
-                ]),
+                Some(vec!["Role was not found".to_string()]),
             )));
         }
         Err(e) => {

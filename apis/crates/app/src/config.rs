@@ -16,6 +16,7 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub storage: StorageConfig,
     pub jwt: JwtConfig,
+    pub license: LicenseConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,12 @@ pub struct AppConfig {
 #[derive(Debug, Clone)]
 pub struct JwtConfig {
     pub secret: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LicenseConfig {
+    pub public_key_base64: Option<String>,
+    pub issuer: String,
 }
 
 #[derive(Debug, Clone)]
@@ -50,12 +57,14 @@ impl Config {
         let database = DatabaseConfig::from_env()?;
         let storage = StorageConfig::from_env()?;
         let jwt = JwtConfig::from_env()?;
+        let license = LicenseConfig::from_env();
 
         Ok(Config {
             app,
             database,
             storage,
             jwt,
+            license,
         })
     }
 }
@@ -122,5 +131,17 @@ impl JwtConfig {
     fn from_env() -> Result<Self> {
         let secret = env::var("JWT_SECRET").context("JWT_SECRET must be set")?;
         Ok(JwtConfig { secret })
+    }
+}
+
+impl LicenseConfig {
+    fn from_env() -> Self {
+        Self {
+            public_key_base64: env::var("LICENSE_PUBLIC_KEY_BASE64")
+                .ok()
+                .filter(|value| !value.trim().is_empty()),
+            issuer: env::var("LICENSE_ISSUER")
+                .unwrap_or_else(|_| "campus-pilot-licensing".to_string()),
+        }
     }
 }

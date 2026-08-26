@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, tenant_id, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            FROM roles\n            WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL\n            ",
+  "query": "\n            SELECT id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            FROM roles\n            WHERE name = $1 AND tenant_id = $2 AND deleted_at IS NULL\n            ",
   "describe": {
     "columns": [
       {
@@ -15,47 +15,53 @@
       },
       {
         "ordinal": 2,
-        "name": "name",
+        "name": "key",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "description",
+        "name": "name",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
         "name": "permissions",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "is_system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
+        "Text",
         "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -67,5 +73,5 @@
       true
     ]
   },
-  "hash": "1c768fde87699b3b8a624103b7999d53841a6aedc8777596319a2b605e7f4303"
+  "hash": "23c7f81a971ef7b858f32fed8b9e8adbe740871e8a803621d0b145f5c7dd8dc9"
 }
