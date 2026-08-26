@@ -30,6 +30,8 @@ The implementation source of truth is `client/src/styles/tokens.css`.
 - Successful sign-in opens `/home`, the permission-aware campus module launcher.
 - The launcher shows enabled and authorized modules only, with recent modules first and the remainder grouped by school task.
 - Administration is one module in this launcher; it is never the default post-login destination.
+- Campus Owners see the core Administration workspace pinned first. Never show an owner copy that tells them to contact an administrator.
+- Protected routes refresh the authenticated access profile before rendering so persisted browser state cannot hide newly granted roles or modules.
 - Operational modules own their local navigation and provide an “All modules” return path.
 - Access, licensing, role, and module semantics are defined in `docs/access-control.md`.
 

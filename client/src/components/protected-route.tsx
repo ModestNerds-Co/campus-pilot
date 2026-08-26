@@ -20,30 +20,46 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredModule,
 }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, accessToken } = useAuthStore();
+  const { isAuthenticated, accessToken, checkAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     const verifyAuth = async () => {
       if (!isAuthenticated || !accessToken) {
         navigate({ to: "/login" });
         return;
       }
-      if (user) {
-        const hasPermission =
-          !requiredPermission ||
-          user.permissions?.includes("*") ||
-          user.permissions?.includes(requiredPermission);
-        const hasModule = !requiredModule || user.modules?.includes(requiredModule);
-        if (!hasPermission || !hasModule) {
-          navigate({ to: "/home", replace: true });
-          return;
-        }
+
+      const isCurrent = await checkAuth();
+      if (!active) return;
+
+      if (!isCurrent) {
+        navigate({ to: "/login", replace: true });
+        return;
       }
+
+      const currentUser = useAuthStore.getState().user;
+      const hasPermission =
+        !requiredPermission ||
+        currentUser?.permissions?.includes("*") ||
+        currentUser?.permissions?.includes(requiredPermission);
+      const hasModule = !requiredModule || currentUser?.modules?.includes(requiredModule);
+
+      if (!hasPermission || !hasModule) {
+        navigate({ to: "/home", replace: true });
+        return;
+      }
+
       setIsChecking(false);
     };
-    verifyAuth();
-  }, [isAuthenticated, user, accessToken, navigate, requiredPermission, requiredModule]);
+
+    void verifyAuth();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, accessToken, checkAuth, navigate, requiredPermission, requiredModule]);
 
   if (isChecking) {
     return (
