@@ -225,7 +225,6 @@ impl VehicleOps {
         Ok(result.rows_affected() > 0)
     }
 }
-
 pub struct DriverOps;
 
 impl DriverOps {
@@ -414,4 +413,3 @@ impl DriverOps {
         Ok(result.rows_affected() > 0)
     }
 }
-

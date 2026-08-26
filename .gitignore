@@ -7,3 +7,7 @@ target/
 coverage/
 !apis/.sqlx/
 client/tsconfig.tsbuildinfo
+
+# Local browser verification artifacts
+.playwright-cli/
+output/playwright/
