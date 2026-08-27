@@ -5,9 +5,11 @@ This is the canonical product and engineering reference for Agent, contextual ch
 ## 1. Product outcome
 
 - Agent is a licensed, first-class campus module with stable key `agent` and canonical route `/modules/agent`.
-- Its full workspace owns conversations, search and history, run status, approvals awaiting the person, and personal usage.
-- Every authenticated operational module exposes one compact Agent trigger when Agent is enabled and the signed-in person has `agent:view`. The trigger opens a right-side contextual drawer; it is not a floating control over operational content.
-- The contextual drawer is for focused work. It has one scrolling message region and a fixed composer. Long conversations, history, approvals, and run inspection open in the full Agent module.
+- **Session** is the user-facing conversation container. A session contains messages, context references, approvals, and one or more Agent runs. **Run** means one queued or executing response inside a session.
+- Its full workspace owns new-session creation, session search and history, resume, rename, archive, sharing, run status, approvals awaiting the person, and personal usage.
+- The authenticated application shell exposes one persistent global Agent widget on Home, Administration, and operational modules when Agent is enabled and the signed-in person has `agent:view`. It is anchored to shared shell navigation, not rendered as a draggable chat bubble over operational content.
+- The widget opens the right-side contextual drawer. It can start a session, resume the active or most recent session, show a short recent-session list, and display active-run or approval state.
+- The contextual drawer is for focused work. It has one scrolling message region and a fixed composer. Complete history, long sessions, approvals, and run inspection open in the full Agent module.
 - Provider setup, routing, capability policy, limits, campus-wide usage, and run audit live in Administration. They are not hidden inside the Agent conversation workspace.
 
 “All functionality is available to Agent” has a precise meaning: every server-owned operation that reads or changes campus state has a stable operation key and an explicit Agent exposure classification. Every safe automatable operation is callable through the capability broker. Operations involving credentials, authentication, raw license keys, unrestricted privilege escalation, or unsupported irreversible effects remain human-only or prohibited, but still appear in the coverage registry with a reason. Full coverage means no operation is unclassified; it does not mean a model may execute unsafe operations.
@@ -78,8 +80,8 @@ Agent permissions:
 
 - `agent:view` — open the Agent module and contextual drawer.
 - `agent:run` — submit runs and use capabilities allowed by the underlying permissions and policy.
-- `agent:history` — view the person's own conversations and runs.
-- `agent:share` — share a thread with explicitly selected people.
+- `agent:history` — view, search, resume, rename, and archive the person's own sessions and runs.
+- `agent:share` — share a session with explicitly selected people.
 - `agent:approve` — approve an eligible proposal when the approver also holds the underlying operation permission and record scope.
 
 Administration permissions:
@@ -112,6 +114,20 @@ The broker rejects tenant or user IDs supplied by a model. Resource identifiers 
 An optional remote MCP/API adapter may be added later. It is disabled by default and uses expiring, revocable, hashed personal tokens with per-capability allowlists. Token access is intersected with the person's current roles on every call; a token never becomes a service superuser.
 
 ## 6. Conversation and contextual execution
+
+### Sessions, runs, and history
+
+- The product calls the durable conversation container a **Session**. The internal persistence model may retain the `agent_threads` name, but the UI does not alternate between “thread”, “chat”, and “session”.
+- A session belongs to one campus and one owner, with explicit membership for shared sessions. It retains its title, active or archived state, creation and last-activity times, message history, context references, approvals, and runs.
+- A run is one execution caused by a submitted message. A session may contain many completed runs, but only one run may be `queued`, `running`, or `awaiting_approval` in that session at a time. Other sessions may run independently.
+- Session history is durable across navigation, sign-out, browser reload, and supported devices. The full Agent module can search and filter the person's own and explicitly shared sessions by title or content, module context, status, participant, and date.
+- People can start, resume, rename, and archive sessions. Archive removes a session from the default list without destroying its audit, usage, approval, or run records. Permanent deletion, if later supported, follows campus retention policy rather than behaving like casual chat deletion.
+- The global widget shows only the active session and a short recent list. Full history and management remain in the Agent module.
+- Navigating to another module or record never silently adds that context to the active session. The drawer shows the available context as a chip and requires the person to attach, replace, or dismiss it. Starting a new contextual session may attach the visible context explicitly.
+
+### Global widget and contextual drawer
+
+The widget is a shared authenticated-shell control, so it is available from Home, Administration, and operational modules without duplicating Agent state in each module. Its collapsed state may show queued, running, or approval attention, but it must not obscure operational controls or render conversation content over the page.
 
 The contextual drawer sends only:
 
@@ -213,7 +229,7 @@ Keep these concerns separate:
 - `ai_task_routes`;
 - code-owned product operation and Agent capability catalogues;
 - `agent_policy_rules`, `agent_limits`, and transactional limit reservations/counters;
-- `agent_threads`, explicit thread membership, and user-visible messages;
+- `agent_threads` (presented as Sessions), explicit session membership, and user-visible messages;
 - `agent_runs`, run steps, and capability calls;
 - `agent_approvals`;
 - append-only `agent_usage_events`;
@@ -245,7 +261,7 @@ The code catalogue contains the exact operation list. This planning map defines 
 | Assets and inventory | assets, stores, stock movement, custodianship | Stock movement is idempotent and approval-aware. |
 | Document registry | filing, classification, retention, retrieval | Documents are untrusted input; retention/destruction is restricted. |
 | Internal audit | plans, findings, evidence, remediation | Preserve independence and immutable finding history. |
-| Agent | threads, sharing, runs, approvals, personal usage | No cross-person history without explicit sharing/report permission. |
+| Agent | sessions, sharing, runs, approvals, personal usage | No cross-person history without explicit sharing/report permission. |
 
 ## 13. Rust workspace integration
 
@@ -272,14 +288,15 @@ CI must prove:
 - unknown tokens/cost remain unknown;
 - approval replay is idempotent and stale proposals cannot execute;
 - contextual record hydration cannot read a record the person cannot open directly;
-- desktop and mobile Agent workspace/drawer pass focus trap, Escape, focus return, background scroll lock, and single-scroll-region checks.
+- desktop and mobile Agent workspace/global-widget drawer pass focus trap, Escape, focus return, background scroll lock, and single-scroll-region checks;
+- session history survives reload and navigation, archived sessions leave default history without losing audit/run records, and module navigation never silently changes a session's attached context.
 
 ## 15. Delivery sequence
 
 1. **Operation inventory and broker foundation** — classify every current server operation, add exact operation permissions and CI coverage, introduce actor-aware audit events, and build the broker with no provider execution.
 2. **Provider administration and metering** — encrypted connections, model catalogues, server-validated routing, safe provider attempts, and normalized attempt usage.
-3. **Durable read-only Agent module** — licensed `/modules/agent`, worker-backed runs, durable threads, run history, and genuine authorized read capabilities.
-4. **Contextual module drawer** — server-rehydrated module/record context, context chips, full accessibility behaviour, and a clear path to the full Agent workspace.
+3. **Durable read-only Agent module** — licensed `/modules/agent`, durable sessions and history, worker-backed runs, and genuine authorized read capabilities.
+4. **Global widget and contextual drawer** — one shared-shell widget, recent-session handoff, server-rehydrated module/record context, explicit context chips, full accessibility behaviour, and a clear path to the full Agent workspace.
 5. **Governance and reporting** — capability/policy inventory, person/module/capability usage, transactional limits, run/audit inspection, and filtered export.
 6. **Proposals, approvals, and executable coverage** — immutable proposals, stale checks, designated/dual approvals, then safe write capability expansion module by module.
 

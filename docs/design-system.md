@@ -48,8 +48,10 @@ The implementation source of truth is `client/src/styles/tokens.css`.
 
 ### Agent surfaces
 
-- Agent has a full module workspace for conversations, history, approvals, and personal usage.
-- Every authenticated operational module exposes a compact Agent trigger when Agent is enabled and the person has access. It opens the shared right-side drawer with deliberate current-module or current-record context.
+- Agent has a full module workspace for Sessions, searchable history, approvals, run inspection, and personal usage. “Session” is the user-facing conversation term; a “run” is one Agent execution inside it.
+- The authenticated shell exposes one persistent global Agent widget on Home, Administration, and operational modules when Agent is enabled and the person has access. Anchor it to shared shell navigation; do not use a draggable chat bubble that covers page controls.
+- The widget can start a Session, resume the active or most recent Session, show a short recent list, and indicate a running or approval-waiting state. Complete history and Session management stay in the full Agent module.
+- The widget opens the shared right-side drawer with deliberate current-module or current-record context. Navigating to another page never silently changes the context attached to an existing Session.
 - The contextual drawer has one scrolling message region and a stable composer. Do not nest another scrolling workflow inside it; open the full Agent module for long work, history, provider administration, or approvals.
 - Provider setup, capability policy, limits, and campus-wide usage reports live in Administration. The interaction and authorization model is defined in `docs/agent-platform.md`.
 - Usage reports, capability matrices, and run trails use full pages, not drawers. Drawers remain focused on connect, edit, approval, limit, and confirmation workflows.
