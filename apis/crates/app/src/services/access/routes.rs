@@ -24,15 +24,16 @@ use super::{
     catalog::{administration_permissions, is_core_module, is_known_module, module_catalog},
     dtos::{
         ActivateLicenseRequest, ActivateLicenseResponse, ConnectLicenseRequest, ImportLeaseRequest,
-        LeaseStateResponse, LicensingStateResponse, ModuleCatalogResponse, TenantModulesResponse,
+        ModuleCatalogResponse, TenantModulesResponse,
     },
     license::{
         ControlPlaneActivationResponse, ControlPlaneRenewalResponse, OfflineLeaseBundle,
-        SignedLeaseClaims, protect_installation_credential, reveal_installation_credential,
-        verify_license, verify_signed_lease,
+        protect_installation_credential, reveal_installation_credential, verify_license,
+        verify_signed_lease,
     },
-    models::{LicenseLimitResponse, TenantModuleResponse},
+    models::TenantModuleResponse,
     ops::AccessOps,
+    read_model::LicensingReadModel,
 };
 
 #[derive(Debug, Deserialize)]
@@ -84,63 +85,10 @@ async fn licensing_state(
     tenant: web::ReqData<TenantId>,
 ) -> HttpResponse {
     let tenant_id = tenant.into_inner().into_inner();
-    let installation = match AccessOps::ensure_license_installation(&state.db, tenant_id).await {
+    let response = match LicensingReadModel::load(&state.db, tenant_id, &state.config.license).await
+    {
         Ok(value) => value,
         Err(error) => return internal_error("License status could not be loaded", error),
-    };
-    let lease = match AccessOps::latest_license_lease(&state.db, tenant_id).await {
-        Ok(value) => value,
-        Err(error) => return internal_error("License status could not be loaded", error),
-    };
-    let lease = match lease.map(|value| {
-        let claims = serde_json::from_value::<SignedLeaseClaims>(value.claims)
-            .context("Stored license claims are invalid")?;
-        Ok::<_, anyhow::Error>(LeaseStateResponse {
-            id: value.lease_id.to_string(),
-            status: value.status,
-            source: value.source,
-            catalog_version: value.catalog_version,
-            issued_at: value.issued_at,
-            refresh_after: value.refresh_after,
-            lease_expires_at: value.lease_expires_at,
-            grace_until: value.grace_until,
-            modules: claims.modules,
-            features: claims.features,
-            limits: claims
-                .limits
-                .into_iter()
-                .map(|limit| LicenseLimitResponse {
-                    key: limit.key,
-                    unit: limit.unit,
-                    period: limit.period,
-                    value: limit.value,
-                    enforcement: limit.enforcement,
-                })
-                .collect(),
-        })
-    }) {
-        Some(Ok(value)) => Some(value),
-        Some(Err(error)) => return internal_error("License status could not be loaded", error),
-        None => None,
-    };
-    let configured = state.config.license.control_plane_url.is_some()
-        && state.config.license.verification_is_configured()
-        && state.config.license.credential_key_base64.is_some();
-    let response = LicensingStateResponse {
-        configured,
-        connected: installation.remote_installation_id.is_some(),
-        status: installation.status,
-        deployment_id: installation.deployment_id.to_string(),
-        installation_id: installation
-            .remote_installation_id
-            .map(|value| value.to_string()),
-        credential_hint: installation.credential_hint,
-        portal_url: state.config.license.control_plane_url.clone(),
-        latest_sequence: installation.latest_lease_sequence,
-        last_refresh_attempt_at: installation.last_refresh_attempt_at,
-        last_refresh_success_at: installation.last_refresh_success_at,
-        last_error_code: installation.last_error_code,
-        lease,
     };
     HttpResponse::Ok().json(ApiResponse::from_status(
         StatusCode::OK,
@@ -677,11 +625,14 @@ mod lifecycle_tests {
     use serde_json::json;
     use uuid::Uuid;
 
-    use crate::{state::AppState, tests::helpers::create_test_app_state};
+    use crate::{
+        services::access::license::SignedLeaseClaims, state::AppState,
+        tests::helpers::create_test_app_state,
+    };
 
     use super::{
-        AccessOps, SignedLeaseClaims, connect_license_inner, import_license_inner,
-        refresh_license_inner, reveal_installation_credential,
+        AccessOps, connect_license_inner, import_license_inner, refresh_license_inner,
+        reveal_installation_credential,
     };
 
     const KEY_ID: &str = "lifecycle-test-key";

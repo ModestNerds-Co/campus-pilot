@@ -6,14 +6,22 @@ mod administration_access;
 use cp_agent::CapabilityRegistry;
 use sqlx::PgPool;
 
-use administration::{AdministrationCatalogCapability, AdministrationModulesCapability};
+use crate::config::LicenseConfig;
+
+use administration::{
+    AdministrationCatalogCapability, AdministrationLicensingCapability,
+    AdministrationModulesCapability, AdministrationSchoolSettingsCapability,
+};
 use administration_access::{
     AdministrationRoleReadCapability, AdministrationRolesListCapability,
     AdministrationUserReadCapability, AdministrationUsersListCapability,
 };
 
 #[must_use]
-pub fn build_capability_registry(pool: PgPool) -> CapabilityRegistry {
+pub fn build_capability_registry(
+    pool: PgPool,
+    license_config: LicenseConfig,
+) -> CapabilityRegistry {
     let mut registry = CapabilityRegistry::from_product_catalog()
         .unwrap_or_else(|error| panic!("invalid product operation catalogue: {error}"));
     registry
@@ -32,8 +40,16 @@ pub fn build_capability_registry(pool: PgPool) -> CapabilityRegistry {
         .register(AdministrationUsersListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Administration users-list capability: {error}"));
     registry
-        .register(AdministrationUserReadCapability::new(pool))
+        .register(AdministrationUserReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Administration user-read capability: {error}"));
+    registry
+        .register(AdministrationSchoolSettingsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Administration school-settings capability: {error}")
+        });
+    registry
+        .register(AdministrationLicensingCapability::new(pool, license_config))
+        .unwrap_or_else(|error| panic!("invalid Administration licensing capability: {error}"));
     registry
 }
 
@@ -54,7 +70,10 @@ mod tests {
     };
     use serde_json::json;
     use sqlx::postgres::PgPoolOptions;
+    use std::collections::BTreeMap;
     use uuid::Uuid;
+
+    use crate::config::LicenseConfig;
 
     use super::build_capability_registry;
 
@@ -102,6 +121,8 @@ mod tests {
                 "administration:view".to_string(),
                 "roles:view".to_string(),
                 "users:view".to_string(),
+                "school_settings:view".to_string(),
+                "licensing:view".to_string(),
             ],
             enabled_modules: vec!["agent".to_string(), "administration".to_string()],
             entitlements: EntitlementSnapshot::new(
@@ -119,12 +140,23 @@ mod tests {
         })
     }
 
+    fn license_config() -> LicenseConfig {
+        LicenseConfig {
+            trusted_public_keys: BTreeMap::new(),
+            issuer: "campus-pilot-control-plane".to_string(),
+            audience: "campus-pilot".to_string(),
+            control_plane_url: Some("https://licensing.invalid".to_string()),
+            credential_key_base64: Some("test-key".to_string()),
+            installation_name: "Test installation".to_string(),
+        }
+    }
+
     #[tokio::test]
     async fn production_registry_executes_the_real_administration_catalogue_read() {
         let pool = PgPoolOptions::new()
             .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
             .unwrap_or_else(|_| unreachable!());
-        let registry = build_capability_registry(pool);
+        let registry = build_capability_registry(pool, license_config());
         let keys = registry
             .descriptors()
             .into_iter()
@@ -134,9 +166,11 @@ mod tests {
             keys,
             vec![
                 "administration.catalog.read",
+                "administration.licensing.read",
                 "administration.modules.list",
                 "administration.roles.list",
                 "administration.roles.read",
+                "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read"
             ]
@@ -173,7 +207,7 @@ mod tests {
             .unwrap_or_else(|_| unreachable!());
         pool.close().await;
         let broker = CapabilityBroker::new(
-            build_capability_registry(pool),
+            build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
             Arc::new(TestAudit),
@@ -207,7 +241,7 @@ mod tests {
             .unwrap_or_else(|_| unreachable!());
         pool.close().await;
         let broker = CapabilityBroker::new(
-            build_capability_registry(pool),
+            build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
             Arc::new(TestAudit),
@@ -261,5 +295,41 @@ mod tests {
             .err()
             .unwrap_or_else(|| unreachable!());
         assert_eq!(invalid.code(), BrokerErrorCode::InvalidInput);
+    }
+
+    #[tokio::test]
+    async fn production_school_and_licensing_capabilities_fail_safely() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        pool.close().await;
+        let broker = CapabilityBroker::new(
+            build_capability_registry(pool, license_config()),
+            Arc::new(TestAuthorityLoader(authority())),
+            Arc::new(TenantWideScope),
+            Arc::new(TestAudit),
+        );
+        let principal =
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4());
+        for key in [
+            "administration.school_settings.read",
+            "administration.licensing.read",
+        ] {
+            let error = broker
+                .invoke(
+                    principal,
+                    CapabilityCall::parse(
+                        key,
+                        1,
+                        json!({}),
+                        RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4()),
+                    )
+                    .unwrap_or_else(|_| unreachable!()),
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| unreachable!());
+            assert_eq!(error.code(), BrokerErrorCode::ExecutionFailed, "{key}");
+        }
     }
 }

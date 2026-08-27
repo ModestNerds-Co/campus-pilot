@@ -8,15 +8,22 @@ use cp_agent::{
     DataSensitivity, IdempotencyMode, ObjectSchema, ProviderDataClass, RedactionProjection,
     Reversibility, StaleDataStrategy,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
-use crate::services::access::{
-    catalog::{administration_permissions, module_catalog},
-    dtos::{ModuleCatalogResponse, TenantModulesResponse},
-    models::TenantModuleResponse,
-    ops::AccessOps,
+use crate::{
+    config::LicenseConfig,
+    services::{
+        access::{
+            catalog::{administration_permissions, module_catalog},
+            dtos::{LicensingStateResponse, ModuleCatalogResponse, TenantModulesResponse},
+            models::TenantModuleResponse,
+            ops::AccessOps,
+            read_model::LicensingReadModel,
+        },
+        kernel::{db::KernelDbOps, dtos::SchoolProfileResponse},
+    },
 };
 
 #[derive(Debug, Deserialize)]
@@ -126,6 +133,122 @@ impl Capability for AdministrationModulesCapability {
                 .collect(),
         })
     }
+}
+
+#[derive(Serialize)]
+pub(super) struct SchoolSettingsOutput {
+    profile: SchoolProfileResponse,
+}
+
+pub(super) struct AdministrationSchoolSettingsCapability {
+    kernel_db: KernelDbOps,
+    descriptor: CapabilityDescriptor,
+}
+
+impl AdministrationSchoolSettingsCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            kernel_db: KernelDbOps::new(pool),
+            descriptor: read_descriptor(
+                "administration.school_settings.read",
+                "Read school settings",
+                "Returns the current school profile and locale settings.",
+                json!({}),
+                json!({ "profile": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "administration.school_settings",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for AdministrationSchoolSettingsCapability {
+    type Input = EmptyInput;
+    type Output = SchoolSettingsOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        _context: AuthorizedCapabilityContext,
+        _input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let profile = self
+            .kernel_db
+            .get_school_profile()
+            .await
+            .map_err(|_| dependency_failure("School settings could not be loaded."))?;
+        Ok(SchoolSettingsOutput { profile })
+    }
+}
+
+#[derive(Serialize)]
+pub(super) struct LicensingStateOutput {
+    licensing: LicensingStateResponse,
+}
+
+pub(super) struct AdministrationLicensingCapability {
+    pool: PgPool,
+    license_config: LicenseConfig,
+    descriptor: CapabilityDescriptor,
+}
+
+impl AdministrationLicensingCapability {
+    pub(super) fn new(pool: PgPool, license_config: LicenseConfig) -> Self {
+        Self {
+            pool,
+            license_config,
+            descriptor: read_descriptor(
+                "administration.licensing.read",
+                "Read licensing state",
+                "Returns the current installation, lease, module, feature, and limit state.",
+                json!({}),
+                json!({ "licensing": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "administration.licensing",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for AdministrationLicensingCapability {
+    type Input = EmptyInput;
+    type Output = LicensingStateOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        _input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let licensing = LicensingReadModel::load(
+            &self.pool,
+            context.principal().tenant_id(),
+            &self.license_config,
+        )
+        .await
+        .map_err(|_| dependency_failure("Licensing state could not be loaded."))?;
+        Ok(LicensingStateOutput { licensing })
+    }
+}
+
+fn dependency_failure(message: &str) -> CapabilityExecutionError {
+    CapabilityExecutionError::new(CapabilityExecutionErrorCode::DependencyUnavailable, message)
 }
 
 pub(super) fn read_descriptor(

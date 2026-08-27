@@ -384,7 +384,19 @@ mod tests {
     use cp_agent::{ModuleCoverageRegistry, ModuleCoverageSource};
     use cp_common::{ProductOperation, operation_catalog};
 
+    use crate::config::LicenseConfig;
     use crate::services::agent::build_capability_registry;
+
+    fn license_config() -> LicenseConfig {
+        LicenseConfig {
+            trusted_public_keys: Default::default(),
+            issuer: "campus-pilot-control-plane".to_string(),
+            audience: "campus-pilot".to_string(),
+            control_plane_url: None,
+            credential_key_base64: None,
+            installation_name: "Test installation".to_string(),
+        }
+    }
 
     use super::{all_permission_keys, module_catalog};
 
@@ -423,6 +435,7 @@ mod tests {
             sqlx::postgres::PgPoolOptions::new()
                 .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
                 .unwrap_or_else(|_| unreachable!()),
+            license_config(),
         );
         let coverage = ModuleCoverageRegistry::build(
             module_catalog().into_iter().map(|module| {
@@ -438,7 +451,7 @@ mod tests {
         .unwrap_or_else(|_| unreachable!());
 
         assert_eq!(coverage.entries().len(), module_catalog().len());
-        assert_eq!(coverage.missing_executable_capability_count(), 10);
+        assert_eq!(coverage.missing_executable_capability_count(), 8);
         for module_key in ["administration", "fleet", "timetabling"] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -446,12 +459,14 @@ mod tests {
                 module.licensing_aligned(),
                 "{module_key} licensing is not aligned"
             );
-            assert!(
-                !module.release_ready(),
-                "{module_key} has missing Agent reads"
-            );
             if module_key == "administration" {
-                assert_eq!(module.executable_capabilities(), 6);
+                assert!(module.release_ready());
+                assert_eq!(module.executable_capabilities(), 8);
+            } else {
+                assert!(
+                    !module.release_ready(),
+                    "{module_key} has missing Agent reads"
+                );
             }
         }
         assert_eq!(

@@ -33,7 +33,10 @@ impl AppState {
         let config_arc = Arc::new(config.clone());
         let db_ops = Arc::new(DatabaseOperations::new(pool.clone()));
         let kernel_db = Arc::new(KernelDbOps::new(pool.clone()));
-        let agent_capabilities = Arc::new(build_capability_registry(pool.clone()));
+        let agent_capabilities = Arc::new(build_capability_registry(
+            pool.clone(),
+            config.license.clone(),
+        ));
 
         // Initialize MinIO/S3 clients - one for internal ops, one for presigned URLs with public host
         let credentials = Credentials::new(
