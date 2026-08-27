@@ -8,7 +8,7 @@ import { usePageChrome } from "../layouts/page-chrome";
 const administrationAreas = [
   { title: "Users", description: "Create accounts, manage status, and assign roles.", href: "/admin/users" as const, icon: UsersRound, action: "Manage users", permission: "users:view" },
   { title: "Roles and access", description: "Manage role permissions and create custom roles.", href: "/admin/roles" as const, icon: ShieldCheck, action: "Manage roles", permission: "roles:view" },
-  { title: "Licensing", description: "Review module access and activate a license key.", href: "/admin/licensing" as const, icon: KeyRound, action: "Review licensing", permission: "licensing:view" },
+  { title: "Licensing", description: "Review installation licensing and module access.", href: "/admin/licensing" as const, icon: KeyRound, action: "Review licensing", permission: "licensing:view" },
   { title: "School settings", description: "Manage campus identity, academic defaults, notifications, and integrations.", href: "/admin/settings" as const, icon: Settings2, action: "Open settings", permission: "school_settings:view" },
 ];
 
