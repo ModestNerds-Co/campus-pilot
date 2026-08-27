@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 
 use actix_web::http::Method;
 
-use crate::{OperationEffect, ProductOperation};
+use crate::{AgentExposure, OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
 pub const OPERATION_CATALOG_VERSION: u32 = 2;
@@ -508,7 +508,14 @@ fn route(
     RoutedOperation {
         method,
         route_pattern,
-        operation: ProductOperation::route(key, module_key, permission, effect, license_required),
+        operation: ProductOperation::route(
+            key,
+            module_key,
+            permission,
+            effect,
+            agent_exposure_for(key),
+            license_required,
+        ),
         authority: RouteAuthority::Permission,
     }
 }
@@ -524,8 +531,70 @@ fn authenticated_route(
     RoutedOperation {
         method,
         route_pattern,
-        operation: ProductOperation::route(key, module_key, permission, effect, false),
+        operation: ProductOperation::route(
+            key,
+            module_key,
+            permission,
+            effect,
+            agent_exposure_for(key),
+            false,
+        ),
         authority: RouteAuthority::Authenticated,
+    }
+}
+
+fn agent_exposure_for(key: &'static str) -> AgentExposure {
+    match key {
+        "administration.catalog.read"
+        | "administration.modules.list"
+        | "administration.licensing.read"
+        | "administration.school_settings.read"
+        | "administration.roles.list"
+        | "administration.roles.read"
+        | "administration.users.list"
+        | "administration.users.read"
+        | "fleet.vehicles.list"
+        | "fleet.vehicles.read"
+        | "fleet.drivers.list"
+        | "fleet.drivers.read"
+        | "fleet.vehicle_logs.list"
+        | "fleet.vehicle_logs.read"
+        | "timetabling.configuration.read"
+        | "timetabling.runs.read_latest" => AgentExposure::Exposed,
+        "administration.school_settings.update"
+        | "administration.school_settings.update_logo"
+        | "administration.users.create"
+        | "administration.users.update"
+        | "administration.users.activate"
+        | "administration.users.deactivate"
+        | "administration.licensing.refresh"
+        | "administration.licensing.disable_module"
+        | "fleet.vehicles.create"
+        | "fleet.vehicles.update"
+        | "fleet.vehicles.delete"
+        | "fleet.drivers.create"
+        | "fleet.drivers.update"
+        | "fleet.drivers.delete"
+        | "fleet.vehicle_logs.create"
+        | "fleet.vehicle_logs.update"
+        | "fleet.vehicle_logs.delete"
+        | "timetabling.configuration.update"
+        | "timetabling.runs.generate"
+        | "timetabling.runs.publish" => AgentExposure::ApprovalRequired,
+        "administration.roles.create"
+        | "administration.roles.update"
+        | "administration.roles.delete" => AgentExposure::HumanOnly {
+            reason: "Role definition changes remain a direct human workflow.",
+        },
+        "administration.users.delete" => AgentExposure::HumanOnly {
+            reason: "Permanent account deletion remains a direct human workflow.",
+        },
+        "administration.licensing.activate_legacy_key"
+        | "administration.licensing.connect"
+        | "administration.licensing.import_offline_lease" => AgentExposure::HumanOnly {
+            reason: "License credential entry remains a direct human workflow.",
+        },
+        _ => panic!("Product operation {key} has no Agent exposure classification"),
     }
 }
 
@@ -536,8 +605,8 @@ mod tests {
     use actix_web::{App, HttpRequest, HttpResponse, http::Method, test as actix_test, web};
 
     use crate::{
-        EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState, ProductOperation,
-        RuntimeAccessChecks, evaluate_operation,
+        AgentExposure, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
+        ProductOperation, RuntimeAccessChecks, evaluate_operation,
     };
 
     use super::{
@@ -614,6 +683,45 @@ mod tests {
                 "duplicate routed operation: {route:?}"
             );
         }
+    }
+
+    #[test]
+    fn every_operation_has_an_explicit_agent_exposure_classification() {
+        let mut counts = [0_u32; 4];
+
+        for entry in operation_catalog() {
+            match entry.operation().agent_exposure() {
+                AgentExposure::Exposed => counts[0] += 1,
+                AgentExposure::ApprovalRequired => counts[1] += 1,
+                AgentExposure::HumanOnly { reason } => {
+                    assert!(
+                        !reason.trim().is_empty(),
+                        "human-only operation {} must explain why",
+                        entry.operation().key()
+                    );
+                    counts[2] += 1;
+                }
+                AgentExposure::Prohibited { reason } => {
+                    assert!(
+                        !reason.trim().is_empty(),
+                        "prohibited operation {} must explain why",
+                        entry.operation().key()
+                    );
+                    counts[3] += 1;
+                }
+            }
+        }
+
+        assert_eq!(counts, [16, 20, 7, 0]);
+        assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Product operation test.unclassified has no Agent exposure classification"
+    )]
+    fn unclassified_agent_operation_fails_the_code_owned_catalog() {
+        super::agent_exposure_for("test.unclassified");
     }
 
     #[test]

@@ -50,6 +50,8 @@ The application owns two related code catalogues:
 
 Every mounted API route references a stable operation constant. A product operation is classified as `exposed`, `approval_required`, `human_only`, or `prohibited`. CI fails when an operation has no classification, when a capability key is duplicated, or when a human-only/prohibited entry has no reason.
 
+Current implementation status: all 43 released server-owned operations have a code-owned Agent exposure classification. Sixteen read operations are exposed, 20 mutations require approval, and seven role, account-deletion, and license-credential operations remain human-only with explicit reasons. This metadata is coverage policy only; it does not make an operation executable until the capability broker and typed capability handler exist.
+
 Each operation and capability definition includes:
 
 - stable operation and capability keys such as `fleet.vehicles.list` or `timetabling.publish`;

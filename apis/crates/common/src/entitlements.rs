@@ -132,6 +132,38 @@ pub enum OperationEffect {
     External,
 }
 
+/// Declares whether and how Agent may expose one code-owned product operation.
+///
+/// Human-only and prohibited operations carry a durable reason so coverage
+/// reports never present an unexplained gap as an implementation oversight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentExposure {
+    Exposed,
+    ApprovalRequired,
+    HumanOnly { reason: &'static str },
+    Prohibited { reason: &'static str },
+}
+
+impl AgentExposure {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Exposed => "exposed",
+            Self::ApprovalRequired => "approval_required",
+            Self::HumanOnly { .. } => "human_only",
+            Self::Prohibited { .. } => "prohibited",
+        }
+    }
+
+    #[must_use]
+    pub const fn reason(self) -> Option<&'static str> {
+        match self {
+            Self::HumanOnly { reason } | Self::Prohibited { reason } => Some(reason),
+            Self::Exposed | Self::ApprovalRequired => None,
+        }
+    }
+}
+
 impl OperationEffect {
     fn is_restricted_safe(self) -> bool {
         matches!(self, Self::Read | Self::Export | Self::LicenseRepair)
@@ -148,6 +180,7 @@ pub struct ProductOperation {
     required_modules: BTreeSet<String>,
     hard_limit_key: Option<String>,
     effect: OperationEffect,
+    agent_exposure: AgentExposure,
     license_required: bool,
     approval_required: bool,
 }
@@ -161,6 +194,7 @@ impl ProductOperation {
         module_key: impl Into<String>,
         permission: impl Into<String>,
         effect: OperationEffect,
+        agent_exposure: AgentExposure,
         license_required: bool,
     ) -> Self {
         Self {
@@ -171,6 +205,7 @@ impl ProductOperation {
             required_modules: BTreeSet::new(),
             hard_limit_key: None,
             effect,
+            agent_exposure,
             license_required,
             approval_required: false,
         }
@@ -218,6 +253,11 @@ impl ProductOperation {
     #[must_use]
     pub const fn effect(&self) -> OperationEffect {
         self.effect
+    }
+
+    #[must_use]
+    pub const fn agent_exposure(&self) -> AgentExposure {
+        self.agent_exposure
     }
 
     #[must_use]
@@ -432,8 +472,9 @@ pub fn evaluate_operation(
 #[cfg(test)]
 mod tests {
     use super::{
-        AccessDecisionReason, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
-        OperationEffect, ProductOperation, RuntimeAccessChecks, evaluate_operation,
+        AccessDecisionReason, AgentExposure, EntitlementSnapshot, LeaseLifecycle,
+        ModuleEntitlementState, OperationEffect, ProductOperation, RuntimeAccessChecks,
+        evaluate_operation,
     };
 
     fn snapshot(lease: LeaseLifecycle) -> EntitlementSnapshot {
@@ -458,8 +499,37 @@ mod tests {
             "fleet",
             "fleet:create",
             effect,
+            AgentExposure::ApprovalRequired,
             true,
         )
+    }
+
+    #[test]
+    fn agent_exposure_contract_is_stable_and_explains_restrictions() {
+        let human_only = AgentExposure::HumanOnly {
+            reason: "A person must complete this workflow.",
+        };
+        let prohibited = AgentExposure::Prohibited {
+            reason: "This workflow cannot be delegated.",
+        };
+
+        assert_eq!(AgentExposure::Exposed.as_str(), "exposed");
+        assert_eq!(
+            AgentExposure::ApprovalRequired.as_str(),
+            "approval_required"
+        );
+        assert_eq!(human_only.as_str(), "human_only");
+        assert_eq!(prohibited.as_str(), "prohibited");
+        assert_eq!(AgentExposure::Exposed.reason(), None);
+        assert_eq!(AgentExposure::ApprovalRequired.reason(), None);
+        assert_eq!(
+            human_only.reason(),
+            Some("A person must complete this workflow.")
+        );
+        assert_eq!(
+            prohibited.reason(),
+            Some("This workflow cannot be delegated.")
+        );
     }
 
     fn decide(
@@ -668,6 +738,9 @@ mod tests {
             "administration",
             "licensing:edit",
             OperationEffect::LicenseRepair,
+            AgentExposure::HumanOnly {
+                reason: "License credential entry remains a direct human workflow.",
+            },
             false,
         );
         let decision = evaluate_operation(

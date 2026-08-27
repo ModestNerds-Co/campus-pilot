@@ -726,7 +726,7 @@ mod tests {
     use std::num::NonZeroU64;
 
     use chrono::{Duration, TimeZone, Utc};
-    use cp_common::{OperationEffect, ProductOperation};
+    use cp_common::{AgentExposure, OperationEffect, ProductOperation};
     use uuid::Uuid;
 
     use crate::tests::helpers::create_test_app_state;
@@ -739,6 +739,7 @@ mod tests {
             "agent",
             "agent:use",
             OperationEffect::External,
+            AgentExposure::ApprovalRequired,
             true,
         )
         .consuming_hard_limit(limit_key)
@@ -959,6 +960,7 @@ mod tests {
             "agent",
             "agent:view",
             OperationEffect::Read,
+            AgentExposure::Exposed,
             true,
         );
         assert_eq!(

@@ -18,9 +18,9 @@ pub use access::{AccessContext, module_key_for_namespace};
 pub use api_response::{ApiResponse, PaginationMeta};
 pub use attachment_file::AttachmentFile;
 pub use entitlements::{
-    AccessDecisionReason, EntitlementSnapshot, EntitlementSnapshotError, LeaseLifecycle,
-    ModuleEntitlementState, OperationAccessDecision, OperationEffect, ProductOperation,
-    RuntimeAccessChecks, evaluate_operation,
+    AccessDecisionReason, AgentExposure, EntitlementSnapshot, EntitlementSnapshotError,
+    LeaseLifecycle, ModuleEntitlementState, OperationAccessDecision, OperationEffect,
+    ProductOperation, RuntimeAccessChecks, evaluate_operation,
 };
 pub use operation_catalog::{
     OPERATION_CATALOG_VERSION, PRODUCT_CATALOG_VERSION, RouteAuthority, RoutedOperation,
