@@ -87,7 +87,7 @@ Billing is provider-neutral and multi-currency from the first contract. A plan m
 
 ### Signed entitlement lease v1
 
-The canonical wire contract is versioned as `cp-license/v1` and carried in an Ed25519-signed JWS. The protected header includes `alg`, `typ`, and `kid`. Claims include:
+The canonical wire contract is versioned as `cp-license/v1` and carried in an Ed25519-signed JWS. The protected header includes `alg`, `typ`, and `kid`. The independent `catalog_version` identifies the code-owned module, feature, limit, and operation vocabulary; it is never derived from a commercial plan key. The current control plane issues `campus-pilot/2`, and this runtime accepts only product-catalog versions it explicitly supports before it persists a lease or changes module state. Claims include:
 
 - issuer, audience, tenant ID, installation ID, lease ID, catalog version, and monotonic lease sequence;
 - issue time, not-before time, refresh-after time, active lease deadline, grace deadline, and final token expiry;

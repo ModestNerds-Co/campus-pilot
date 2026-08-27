@@ -675,7 +675,7 @@ mod entitlement_tests {
     use serde_json::json;
     use uuid::Uuid;
 
-    use cp_common::{LeaseLifecycle, ModuleEntitlementState};
+    use cp_common::{LeaseLifecycle, ModuleEntitlementState, PRODUCT_CATALOG_VERSION};
 
     use crate::tests::helpers::create_test_app_state;
 
@@ -702,7 +702,7 @@ mod entitlement_tests {
     ) -> LicenseLease {
         LicenseLease {
             lease_id: Uuid::new_v4(),
-            catalog_version: "plans/complete/1".to_string(),
+            catalog_version: PRODUCT_CATALOG_VERSION.to_string(),
             claims: json!({
                 "contract_version": "cp-license/v1",
                 "iss": "campus-pilot-control-plane",
@@ -711,7 +711,7 @@ mod entitlement_tests {
                 "installation_id": Uuid::new_v4().to_string(),
                 "jti": Uuid::new_v4().to_string(),
                 "sequence": 1,
-                "catalog_version": "plans/complete/1",
+                "catalog_version": PRODUCT_CATALOG_VERSION,
                 "iat": now.timestamp(),
                 "nbf": (now - Duration::seconds(30)).timestamp(),
                 "refresh_after": refresh_after.timestamp(),
@@ -754,7 +754,7 @@ mod entitlement_tests {
                 installation_id: installation_id.to_string(),
                 jti: Uuid::new_v4().to_string(),
                 sequence,
-                catalog_version: "plans/test/1".to_string(),
+                catalog_version: PRODUCT_CATALOG_VERSION.to_string(),
                 iat: issued_at.timestamp(),
                 nbf: (issued_at - Duration::seconds(30)).timestamp(),
                 refresh_after: refresh_after.timestamp(),

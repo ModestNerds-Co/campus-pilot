@@ -13,6 +13,19 @@ use crate::{OperationEffect, ProductOperation};
 /// Bump this when operation requirements change in a non-additive way.
 pub const OPERATION_CATALOG_VERSION: u32 = 2;
 
+/// Product-catalog identifier carried by signed entitlement leases.
+///
+/// The control plane and campus runtime must agree on this exact value before
+/// lease claims can be accepted. Keep it aligned with
+/// [`OPERATION_CATALOG_VERSION`].
+pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/2";
+
+/// Product-catalog versions this campus binary can safely interpret.
+///
+/// A catalog upgrade may temporarily list both versions during a coordinated
+/// rollout; the control plane still issues only [`PRODUCT_CATALOG_VERSION`].
+pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] = &[PRODUCT_CATALOG_VERSION];
+
 /// Declares the authoritative access boundary for one routed operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RouteAuthority {
@@ -528,7 +541,8 @@ mod tests {
     };
 
     use super::{
-        OPERATION_CATALOG_VERSION, RouteAuthority, operation_catalog, operation_for_route,
+        OPERATION_CATALOG_VERSION, PRODUCT_CATALOG_VERSION, RouteAuthority,
+        SUPPORTED_PRODUCT_CATALOG_VERSIONS, operation_catalog, operation_for_route,
         routed_operation_for_route,
     };
 
@@ -572,6 +586,11 @@ mod tests {
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
         assert_eq!(OPERATION_CATALOG_VERSION, 2);
+        assert_eq!(
+            PRODUCT_CATALOG_VERSION,
+            format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
+        );
+        assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
         assert_eq!(operation_catalog().len(), 43);
 
         let mut keys = BTreeSet::new();

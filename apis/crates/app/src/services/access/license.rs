@@ -9,6 +9,7 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Duration, Utc};
+use cp_common::SUPPORTED_PRODUCT_CATALOG_VERSIONS;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -251,8 +252,8 @@ fn validate_signed_claims(
     if claims.sequence <= 0 {
         bail!("Signed lease sequence is invalid");
     }
-    if claims.catalog_version.trim().is_empty() {
-        bail!("Signed lease catalog version is missing");
+    if !SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&claims.catalog_version.as_str()) {
+        bail!("Signed lease product catalog version is not supported");
     }
     if claims.modules.is_empty() {
         bail!("Signed lease contains no module entitlements");
@@ -470,6 +471,7 @@ mod tests {
         LeaseLimit, SignedLeaseClaims, app_version_is_supported, protect_installation_credential,
         reveal_installation_credential, verify_signed_lease,
     };
+    use cp_common::PRODUCT_CATALOG_VERSION;
 
     const PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIL9PtNqTMRWH3/0tsQRAHSoduxipswZZSjKkMtpWweJd\n-----END PRIVATE KEY-----\n";
     const PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAxbbyLLpJQoSoH8ia0Xw/lZTAUKtokEiy8l27VZND2zI=\n-----END PUBLIC KEY-----\n";
@@ -548,7 +550,7 @@ mod tests {
             installation_id: installation_id.to_string(),
             jti: Uuid::new_v4().to_string(),
             sequence: 7,
-            catalog_version: "plans/complete/1".to_string(),
+            catalog_version: PRODUCT_CATALOG_VERSION.to_string(),
             iat: now,
             nbf: now - 30,
             refresh_after: now + 300,
@@ -601,6 +603,24 @@ mod tests {
         );
         assert!(
             verify_signed_lease(&token, tenant_id, Some(Uuid::new_v4()), &license_config,).is_err()
+        );
+
+        let mut incompatible_catalog = claims.clone();
+        incompatible_catalog.catalog_version = "campus-pilot/999".to_string();
+        let incompatible_catalog_token = encode(
+            &header,
+            &incompatible_catalog,
+            &EncodingKey::from_ed_pem(PRIVATE_KEY.as_bytes()).unwrap_or_else(|_| unreachable!()),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            verify_signed_lease(
+                &incompatible_catalog_token,
+                tenant_id,
+                Some(installation_id),
+                &license_config,
+            )
+            .is_err()
         );
 
         let rotated_header = Header {

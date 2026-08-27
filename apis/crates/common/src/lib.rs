@@ -23,8 +23,9 @@ pub use entitlements::{
     RuntimeAccessChecks, evaluate_operation,
 };
 pub use operation_catalog::{
-    OPERATION_CATALOG_VERSION, RouteAuthority, RoutedOperation, operation_catalog,
-    operation_for_route, routed_operation_for_route,
+    OPERATION_CATALOG_VERSION, PRODUCT_CATALOG_VERSION, RouteAuthority, RoutedOperation,
+    SUPPORTED_PRODUCT_CATALOG_VERSIONS, operation_catalog, operation_for_route,
+    routed_operation_for_route,
 };
 pub use permissions::RequirePermission;
 pub use roles::Roles;
