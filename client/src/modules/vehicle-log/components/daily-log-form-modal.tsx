@@ -183,7 +183,7 @@ export const DailyLogFormModal: React.FC<DailyLogFormModalProps> = ({ isOpen, on
                   <option value="">Select driver...</option>
                   {drivers.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.full_name}
+                      {d.employee.display_name} · {d.employee.employee_number}
                     </option>
                   ))}
                 </Select>

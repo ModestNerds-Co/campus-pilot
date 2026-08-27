@@ -260,6 +260,13 @@ pub(super) fn read_descriptor(
     data_sensitivity: DataSensitivity,
     usage_tag: &str,
 ) -> CapabilityDescriptor {
+    let provider_data_class = match data_sensitivity {
+        DataSensitivity::General => ProviderDataClass::CampusApproved,
+        DataSensitivity::Personal | DataSensitivity::Sensitive => {
+            ProviderDataClass::SensitiveDataApproved
+        }
+        DataSensitivity::HighlySensitive => ProviderDataClass::LocalOnly,
+    };
     let key = CapabilityKey::try_from(key)
         .unwrap_or_else(|error| panic!("invalid built-in capability key: {error}"));
     CapabilityDescriptor::new(
@@ -283,7 +290,7 @@ pub(super) fn read_descriptor(
             ApprovalMode::None,
             IdempotencyMode::ReadOnly,
             StaleDataStrategy::RehydrateBeforeExecution,
-            ProviderDataClass::CampusApproved,
+            provider_data_class,
         ),
         CapabilityRedaction::new(
             RedactionProjection::AllowlistedFields,

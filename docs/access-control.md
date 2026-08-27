@@ -36,7 +36,21 @@ The initial seeded campus roles are:
 - Librarian — library operations and learner lookup.
 - Staff Member — employee self-service, timetable, communication, and library access.
 
-## 3. Module registry
+## 3. Canonical people and cross-module profiles
+
+Campus Pilot separates a person's campus record from their ability to sign in.
+
+- A `user` is an optional system account used for authentication, roles, permissions, Sessions, and audit attribution. It is not the canonical school-domain record for an employee, learner, guardian, or supplier contact.
+- An `employee` is the canonical workforce record owned by HR and payroll. It may link to at most one user account in the same campus, and an account may link to at most one active employee. Creating an employee never silently creates login credentials.
+- Fleet does not own a second driver person record. A driver is a one-to-one Fleet profile attached to an active employee and contains only driver-specific facts such as licence number, class, expiry, and driver status. Names, work contact details, department, position, and login identity are read from the employee.
+- Fleet exposes a licensed, minimum-field employee-candidate read for driver assignment. This lets a Fleet-only subscription select an existing employee without granting HR management access or making Fleet commercially dependent on the HR module.
+- A teacher is an employee with teaching assignments and any teacher-specific profile owned by Academics. A staff role grants access; it does not create or replace the employee record.
+- A learner is the canonical person/enrolment record in People and admissions. Student login is an optional linked account. Guardian relationships attach to the learner/person records and may independently link to user accounts.
+- Cross-module references use stable IDs and typed owning-module services. A consuming module must not copy a person's name, phone, email, department, or account state into its own profile table merely to display it.
+
+This identity pattern keeps the useful LADS employee/account foundation while removing its automatic inactive-user creation and duplicated module-owned person fields.
+
+## 4. Module registry
 
 The application owns one module catalog. Each entry has a stable key, label, group, route, permission namespace, description, and availability state.
 
@@ -121,7 +135,7 @@ Lease lifecycle is `active -> refresh_due -> offline_lease -> grace -> restricte
 
 Online installations refresh periodically. Offline installations may import a signed `.cp-license` bundle. A control-plane revocation takes effect on the next successful refresh or when the locally signed lease reaches its bounded validity deadline; the operational request path never depends on control-plane availability.
 
-## 4. Module navigation
+## 5. Module navigation
 
 - The launcher is a quiet, searchable campus map: recent modules first, then grouped modules. It must not become a dense wall of identical cards.
 - Each operational module owns its local navigation and provides a clear “All modules” return path.
@@ -129,7 +143,7 @@ Online installations refresh periodically. Offline installations may import a si
 - Unimplemented licensed modules route to an honest setup/coming-soon state; there are no dead links or invented operational data.
 - Secondary creation and editing flows use accessible right-side drawers. Centered modals are not used.
 
-## 5. Security boundary
+## 6. Security boundary
 
 - The server is authoritative for both module enablement and permissions; hiding a launcher tile is never treated as authorization.
 - The authenticated request context contains tenant ID, immutable role keys, effective permissions, and a freshly loaded entitlement snapshot. The snapshot distinguishes signed lease state, module state, projected feature grants, application-version compatibility, and future hard-limit exhaustion.
@@ -138,13 +152,13 @@ Online installations refresh periodically. Offline installations may import a si
 - License keys are never stored in plaintext or returned by the API.
 - Support access to a campus, if added later, must be explicit, time-bound, and auditable.
 
-## 6. Terminology
+## 7. Terminology
 
 - Use “Sign in”, “All modules”, “Administration”, “Roles and access”, and “Licensing” consistently.
 - “Campus Owner” is the campus-level super administrator. “Platform operator” is reserved for the future cross-campus platform console.
 - Use “module” for a major product area and “permission” for an action inside a module.
 
-## 7. Timetable lifecycle
+## 8. Timetable lifecycle
 
 - Timetabling follows `Rules and setup -> Generate draft -> Review -> Publish`.
 - A generation run stores the exact configuration snapshot used for the result. Later setup edits never silently rewrite an existing draft or published timetable.
@@ -153,7 +167,7 @@ Online installations refresh periodically. Offline installations may import a si
 - Publication supersedes the prior published run for the same campus; it does not delete historical runs.
 - The timetabling configuration is a self-contained scheduling source until Academics supplies equivalent verified records. Future synchronization must preserve snapshot and publication semantics.
 
-## 8. Agent access
+## 9. Agent access
 
 - Agent is a licensed module and follows the same login, role, permission, module-enablement, and record-scope rules as every other module.
 - Agent has stable module key `agent`, route `/modules/agent`, and permission namespace `agent`.

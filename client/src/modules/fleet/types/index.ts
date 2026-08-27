@@ -53,26 +53,34 @@ export interface VehiclesListParams {
 
 export interface Driver {
   id: string;
-  full_name: string;
+  employee: {
+    id: string;
+    account_id: string | null;
+    employee_number: string;
+    display_name: string;
+    work_email: string | null;
+    phone: string | null;
+    employment_status: string;
+  };
   license_number: string;
   license_class: string | null;
   license_expiry: string | null;
-  phone: string | null;
-  employee_id: string | null;
   status: string;
 }
 
 export interface CreateDriverRequest {
-  full_name: string;
+  employee_id: string;
   license_number: string;
   license_class?: string | null;
   license_expiry?: string | null;
-  phone?: string | null;
-  employee_id?: string | null;
   status?: string;
 }
 
-export type UpdateDriverRequest = Partial<CreateDriverRequest>;
+export type UpdateDriverRequest = Omit<Partial<CreateDriverRequest>, "employee_id">;
+
+export interface DriverCandidatesResponse {
+  employees: Driver["employee"][];
+}
 
 export interface DriversListParams {
   page?: number;

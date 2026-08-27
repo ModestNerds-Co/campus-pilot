@@ -146,7 +146,7 @@ export const DriversList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-[var(--text-muted)]">Maintain licensing, status and contact details for school drivers.</p>
+      <p className="text-sm text-[var(--text-muted)]">Assign active employees as drivers and maintain their licence status.</p>
 
       <TableControlsBar>
         <TableControlsSearch onSubmit={handleSearch}>
@@ -216,10 +216,10 @@ export const DriversList: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className="flex size-10 items-center justify-center rounded-full bg-[var(--brand-soft)]">
                             <span className="text-sm font-medium text-[var(--brand-strong)]">
-                              {driver.full_name.charAt(0).toUpperCase()}
+                              {driver.employee.display_name.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <div className="text-sm font-medium text-[var(--text-strong)]">{driver.full_name}</div>
+                          <div><div className="text-sm font-medium text-[var(--text-strong)]">{driver.employee.display_name}</div><div className="font-tabular text-xs text-[var(--text-muted)]">{driver.employee.employee_number}</div></div>
                         </div>
                       </TD>
                       <TD className="whitespace-nowrap text-sm text-[var(--text-strong)]">
@@ -239,10 +239,10 @@ export const DriversList: React.FC = () => {
                         </div>
                       </TD>
                       <TD className="whitespace-nowrap text-sm text-[var(--text-strong)]">
-                        {driver.phone ? (
+                        {driver.employee.phone ? (
                           <span className="inline-flex items-center gap-1.5">
                             <Phone className="size-3.5 text-[var(--text-subtle)]" />
-                            {driver.phone}
+                            {driver.employee.phone}
                           </span>
                         ) : (
                           <span className="text-[var(--text-muted)]">—</span>
@@ -306,7 +306,7 @@ export const DriversList: React.FC = () => {
       />
       <ConfirmDrawer
         confirmLabel="Remove driver"
-        description={`Remove ${pendingDelete?.full_name || "this driver"} from the roster? This action cannot be undone.`}
+        description={`Remove ${pendingDelete?.employee.display_name || "this driver"} from the driver roster? Their employee record will remain in HR and payroll.`}
         isPending={isDeleting}
         onClose={handleCloseDelete}
         onConfirm={() => void handleDelete()}

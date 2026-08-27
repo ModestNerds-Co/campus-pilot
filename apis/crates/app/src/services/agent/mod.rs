@@ -2,6 +2,8 @@
 
 mod administration;
 mod administration_access;
+mod fleet;
+mod hr;
 
 use cp_agent::CapabilityRegistry;
 use sqlx::PgPool;
@@ -15,6 +17,15 @@ use administration::{
 use administration_access::{
     AdministrationRoleReadCapability, AdministrationRolesListCapability,
     AdministrationUserReadCapability, AdministrationUsersListCapability,
+};
+use fleet::{
+    FleetDriverCandidatesListCapability, FleetDriverReadCapability, FleetDriversListCapability,
+    FleetVehicleLogReadCapability, FleetVehicleLogsListCapability, FleetVehicleReadCapability,
+    FleetVehiclesListCapability,
+};
+use hr::{
+    HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeReadCapability,
+    HrEmployeesListCapability, HrPositionReadCapability, HrPositionsListCapability,
 };
 
 #[must_use]
@@ -48,8 +59,50 @@ pub fn build_capability_registry(
             panic!("invalid Administration school-settings capability: {error}")
         });
     registry
-        .register(AdministrationLicensingCapability::new(pool, license_config))
+        .register(AdministrationLicensingCapability::new(
+            pool.clone(),
+            license_config,
+        ))
         .unwrap_or_else(|error| panic!("invalid Administration licensing capability: {error}"));
+    registry
+        .register(HrDepartmentsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR departments-list capability: {error}"));
+    registry
+        .register(HrDepartmentReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR department-read capability: {error}"));
+    registry
+        .register(HrPositionsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR positions-list capability: {error}"));
+    registry
+        .register(HrPositionReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR position-read capability: {error}"));
+    registry
+        .register(HrEmployeesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR employees-list capability: {error}"));
+    registry
+        .register(HrEmployeeReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR employee-read capability: {error}"));
+    registry
+        .register(FleetDriverCandidatesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fleet driver-candidates capability: {error}"));
+    registry
+        .register(FleetVehiclesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fleet vehicles-list capability: {error}"));
+    registry
+        .register(FleetVehicleReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fleet vehicle-read capability: {error}"));
+    registry
+        .register(FleetDriversListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fleet drivers-list capability: {error}"));
+    registry
+        .register(FleetDriverReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fleet driver-read capability: {error}"));
+    registry
+        .register(FleetVehicleLogsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fleet vehicle-logs-list capability: {error}"));
+    registry
+        .register(FleetVehicleLogReadCapability::new(pool))
+        .unwrap_or_else(|error| panic!("invalid Fleet vehicle-log-read capability: {error}"));
     registry
 }
 
@@ -123,8 +176,15 @@ mod tests {
                 "users:view".to_string(),
                 "school_settings:view".to_string(),
                 "licensing:view".to_string(),
+                "hr_payroll:view".to_string(),
+                "fleet:view".to_string(),
             ],
-            enabled_modules: vec!["agent".to_string(), "administration".to_string()],
+            enabled_modules: vec![
+                "agent".to_string(),
+                "administration".to_string(),
+                "hr_payroll".to_string(),
+                "fleet".to_string(),
+            ],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
                 [
@@ -133,6 +193,8 @@ mod tests {
                         "administration".to_string(),
                         ModuleEntitlementState::Enabled,
                     ),
+                    ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
+                    ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ],
                 Vec::<String>::new(),
             )
@@ -172,7 +234,20 @@ mod tests {
                 "administration.roles.read",
                 "administration.school_settings.read",
                 "administration.users.list",
-                "administration.users.read"
+                "administration.users.read",
+                "fleet.driver_candidates.list",
+                "fleet.drivers.list",
+                "fleet.drivers.read",
+                "fleet.vehicle_logs.list",
+                "fleet.vehicle_logs.read",
+                "fleet.vehicles.list",
+                "fleet.vehicles.read",
+                "hr_payroll.departments.list",
+                "hr_payroll.departments.read",
+                "hr_payroll.employees.list",
+                "hr_payroll.employees.read",
+                "hr_payroll.positions.list",
+                "hr_payroll.positions.read"
             ]
         );
         let broker = CapabilityBroker::new(

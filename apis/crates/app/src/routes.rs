@@ -60,7 +60,11 @@ pub fn init(cfg: &mut ServiceConfig) {
             )
             .service(scope("/finance").configure(cp_finance::routes::routes))
             .service(scope("/fees").configure(cp_fees::routes::routes))
-            .service(scope("/hr-payroll").configure(cp_hr_payroll::routes::routes))
+            .service(
+                scope("/hr-payroll")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_hr_payroll::routes::routes),
+            )
             .service(scope("/procurement").configure(cp_procurement::routes::routes))
             .service(scope("/library").configure(cp_library::routes::routes))
             .service(scope("/messaging").configure(cp_messaging::routes::routes))

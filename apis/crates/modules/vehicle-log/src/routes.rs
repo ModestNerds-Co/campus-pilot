@@ -51,11 +51,14 @@ async fn validate_vehicle_and_driver(
     {
         issues.push("Vehicle not found for this school".to_string());
     }
-    if DriverOps::get_by_id(pool, tenant_id, driver_id)
-        .await?
-        .is_none()
-    {
-        issues.push("Driver not found for this school".to_string());
+    match DriverOps::get_by_id(pool, tenant_id, driver_id).await? {
+        None => issues.push("Driver not found for this school".to_string()),
+        Some(driver)
+            if driver.status != "active" || driver.employee.employment_status != "active" =>
+        {
+            issues.push("Driver is not currently eligible for assignment".to_string());
+        }
+        Some(_) => {}
     }
 
     Ok(if issues.is_empty() {
@@ -250,14 +253,14 @@ async fn update_log(
     // Only checked when this request touches both readings — a partial update
     // that only sends one of the two can't be validated without the other,
     // already-stored value.
-    if let Some(start) = body.start_odometer {
-        if let Some(issues) = odometer_issue(start, body.end_odometer) {
-            return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
-                StatusCode::BAD_REQUEST,
-                None::<()>,
-                Some(issues),
-            )));
-        }
+    if let Some(start) = body.start_odometer
+        && let Some(issues) = odometer_issue(start, body.end_odometer)
+    {
+        return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+            StatusCode::BAD_REQUEST,
+            None::<()>,
+            Some(issues),
+        )));
     }
 
     if let (Some(vehicle_id), Some(driver_id)) = (body.vehicle_id, body.driver_id) {

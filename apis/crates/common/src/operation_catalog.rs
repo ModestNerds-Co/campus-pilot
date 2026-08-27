@@ -308,6 +308,151 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             false,
         ),
+        // HR and payroll: canonical workforce directory.
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/departments",
+            "hr_payroll.departments.list",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/departments/{id}",
+            "hr_payroll.departments.read",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hr-payroll/departments",
+            "hr_payroll.departments.create",
+            "hr_payroll",
+            "hr_payroll:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hr-payroll/departments/{id}",
+            "hr_payroll.departments.update",
+            "hr_payroll",
+            "hr_payroll:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/hr-payroll/departments/{id}",
+            "hr_payroll.departments.delete",
+            "hr_payroll",
+            "hr_payroll:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/positions",
+            "hr_payroll.positions.list",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/positions/{id}",
+            "hr_payroll.positions.read",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hr-payroll/positions",
+            "hr_payroll.positions.create",
+            "hr_payroll",
+            "hr_payroll:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hr-payroll/positions/{id}",
+            "hr_payroll.positions.update",
+            "hr_payroll",
+            "hr_payroll:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/hr-payroll/positions/{id}",
+            "hr_payroll.positions.delete",
+            "hr_payroll",
+            "hr_payroll:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/employees",
+            "hr_payroll.employees.list",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/employees/{id}",
+            "hr_payroll.employees.read",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hr-payroll/employees",
+            "hr_payroll.employees.create",
+            "hr_payroll",
+            "hr_payroll:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hr-payroll/employees/{id}",
+            "hr_payroll.employees.update",
+            "hr_payroll",
+            "hr_payroll:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hr-payroll/employees/{id}/account",
+            "hr_payroll.employees.link_account",
+            "hr_payroll",
+            "hr_payroll:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/hr-payroll/employees/{id}",
+            "hr_payroll.employees.delete",
+            "hr_payroll",
+            "hr_payroll:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
         // Fleet: vehicles.
         route(
             Method::GET,
@@ -355,6 +500,15 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         // Fleet: drivers.
+        route(
+            Method::GET,
+            "/api/1.0/fleet/driver-candidates",
+            "fleet.driver_candidates.list",
+            "fleet",
+            "fleet:view",
+            OperationEffect::Read,
+            true,
+        ),
         route(
             Method::GET,
             "/api/1.0/fleet/drivers",
@@ -553,6 +707,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.roles.read"
         | "administration.users.list"
         | "administration.users.read"
+        | "hr_payroll.departments.list"
+        | "hr_payroll.departments.read"
+        | "hr_payroll.positions.list"
+        | "hr_payroll.positions.read"
+        | "hr_payroll.employees.list"
+        | "hr_payroll.employees.read"
+        | "fleet.driver_candidates.list"
         | "fleet.vehicles.list"
         | "fleet.vehicles.read"
         | "fleet.drivers.list"
@@ -569,6 +730,16 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.users.deactivate"
         | "administration.licensing.refresh"
         | "administration.licensing.disable_module"
+        | "hr_payroll.departments.create"
+        | "hr_payroll.departments.update"
+        | "hr_payroll.departments.delete"
+        | "hr_payroll.positions.create"
+        | "hr_payroll.positions.update"
+        | "hr_payroll.positions.delete"
+        | "hr_payroll.employees.create"
+        | "hr_payroll.employees.update"
+        | "hr_payroll.employees.link_account"
+        | "hr_payroll.employees.delete"
         | "fleet.vehicles.create"
         | "fleet.vehicles.update"
         | "fleet.vehicles.delete"
@@ -631,6 +802,7 @@ mod tests {
                     "administration".to_string(),
                     ModuleEntitlementState::Enabled,
                 ),
+                ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
             ],
@@ -660,7 +832,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 43);
+        assert_eq!(operation_catalog().len(), 60);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -712,7 +884,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [16, 20, 7, 0]);
+        assert_eq!(counts, [23, 30, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -819,6 +991,11 @@ mod tests {
         assert!(allowed("fleet.vehicle_logs.read", &fleet_viewer));
         assert!(!allowed("fleet.vehicles.create", &fleet_viewer));
         assert!(!allowed("fleet.vehicle_logs.delete", &fleet_viewer));
+
+        let hr_viewer = ["hr_payroll:view"];
+        assert!(allowed("hr_payroll.employees.list", &hr_viewer));
+        assert!(allowed("hr_payroll.departments.read", &hr_viewer));
+        assert!(!allowed("hr_payroll.employees.link_account", &hr_viewer));
     }
 
     #[test]

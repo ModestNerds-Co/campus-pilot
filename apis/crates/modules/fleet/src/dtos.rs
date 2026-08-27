@@ -12,6 +12,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use super::models::{Driver, Vehicle};
+use cp_hr_payroll::models::EmployeeReference;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateVehicleRequest {
@@ -103,39 +104,30 @@ pub struct PaginatedVehiclesResponse {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateDriverRequest {
-    #[validate(length(min = 1, message = "Full name is required"))]
-    pub full_name: String,
+    pub employee_id: Uuid,
     #[validate(length(min = 1, message = "License number is required"))]
     pub license_number: String,
     pub license_class: Option<String>,
     pub license_expiry: Option<NaiveDate>,
-    pub phone: Option<String>,
-    pub employee_id: Option<Uuid>,
     pub status: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateDriverRequest {
-    #[validate(length(min = 1, message = "Full name cannot be empty"))]
-    pub full_name: Option<String>,
     #[validate(length(min = 1, message = "License number cannot be empty"))]
     pub license_number: Option<String>,
     pub license_class: Option<String>,
     pub license_expiry: Option<NaiveDate>,
-    pub phone: Option<String>,
-    pub employee_id: Option<Uuid>,
     pub status: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct DriverResponse {
     pub id: Uuid,
-    pub full_name: String,
+    pub employee: EmployeeReference,
     pub license_number: String,
     pub license_class: Option<String>,
     pub license_expiry: Option<NaiveDate>,
-    pub phone: Option<String>,
-    pub employee_id: Option<Uuid>,
     pub status: String,
 }
 
@@ -143,12 +135,10 @@ impl From<Driver> for DriverResponse {
     fn from(d: Driver) -> Self {
         Self {
             id: d.id,
-            full_name: d.full_name,
+            employee: d.employee,
             license_number: d.license_number,
             license_class: d.license_class,
             license_expiry: d.license_expiry,
-            phone: d.phone,
-            employee_id: d.employee_id,
             status: d.status,
         }
     }
@@ -165,4 +155,14 @@ pub struct ListDriversQuery {
 #[derive(Debug, Serialize)]
 pub struct PaginatedDriversResponse {
     pub drivers: Vec<DriverResponse>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DriverCandidatesResponse {
+    pub employees: Vec<EmployeeReference>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DriverCandidatesQuery {
+    pub search: Option<String>,
 }

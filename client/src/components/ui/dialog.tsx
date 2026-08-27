@@ -21,7 +21,7 @@ export const DialogPanel = React.forwardRef<
     aria-labelledby="dialog-title"
     aria-modal="true"
     className={cn(
-      "cp-drawer-panel relative ml-auto flex h-[100dvh] w-full max-w-[640px] flex-col overflow-hidden border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)]",
+      "cp-drawer-panel relative ml-auto flex h-[100dvh] w-full max-w-[640px] flex-col overflow-hidden border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)] [&>form]:flex [&>form]:min-h-0 [&>form]:flex-1 [&>form]:flex-col",
       className
     )}
     ref={ref}

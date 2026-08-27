@@ -6,18 +6,45 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-use anyhow::{Context, Result as OpsResult};
+use std::collections::HashMap;
+
+use anyhow::{Context, Result as OpsResult, bail};
+use cp_hr_payroll::{models::EmployeeReference, ops::EmployeeOps};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::dtos::{
     CreateDriverRequest, CreateVehicleRequest, UpdateDriverRequest, UpdateVehicleRequest,
 };
-use super::models::{Driver, Vehicle};
+use super::models::{Driver, DriverProfile, Vehicle};
 
 pub struct VehicleOps;
 
 impl VehicleOps {
+    pub async fn references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        ids: &[Uuid],
+    ) -> OpsResult<Vec<Vehicle>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, Vehicle>(
+            r#"
+            SELECT id, tenant_id, registration_number, make, model, year, vehicle_type,
+                   capacity, fuel_type, status, current_odometer, insurance_expiry,
+                   license_expiry, notes, created_at, updated_at, deleted_at
+            FROM vehicles
+            WHERE tenant_id = $1 AND id = ANY($2)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load vehicle references")
+    }
+
     pub async fn list(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -230,6 +257,64 @@ impl VehicleOps {
 pub struct DriverOps;
 
 impl DriverOps {
+    pub async fn list_candidates(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+    ) -> OpsResult<Vec<EmployeeReference>> {
+        let employees =
+            EmployeeOps::list_references(pool, tenant_id, search, Some("active"), 100).await?;
+        if employees.is_empty() {
+            return Ok(Vec::new());
+        }
+        let employee_ids = employees
+            .iter()
+            .map(|employee| employee.id)
+            .collect::<Vec<_>>();
+        let assigned = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            SELECT employee_id
+            FROM drivers
+            WHERE tenant_id = $1 AND employee_id = ANY($2) AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&employee_ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load assigned driver employees")?
+        .into_iter()
+        .collect::<std::collections::HashSet<_>>();
+        Ok(employees
+            .into_iter()
+            .filter(|employee| !assigned.contains(&employee.id))
+            .collect())
+    }
+
+    pub async fn references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        ids: &[Uuid],
+    ) -> OpsResult<Vec<Driver>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let profiles = sqlx::query_as::<_, DriverProfile>(
+            r#"
+            SELECT id, tenant_id, employee_id, license_number, license_class,
+                   license_expiry, status, created_at, updated_at, deleted_at
+            FROM drivers
+            WHERE tenant_id = $1 AND id = ANY($2)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load driver references")?;
+        hydrate_drivers(pool, tenant_id, profiles).await
+    }
+
     pub async fn list(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -240,65 +325,72 @@ impl DriverOps {
     ) -> OpsResult<(Vec<Driver>, i64)> {
         let offset = (page - 1) * per_page;
         let search_pattern = search.map(|s| format!("%{}%", s));
+        let employee_ids = match search {
+            Some(search) => EmployeeOps::search_reference_ids(pool, tenant_id, search).await?,
+            None => Vec::new(),
+        };
 
-        let drivers = sqlx::query_as!(
-            Driver,
+        let profiles = sqlx::query_as::<_, DriverProfile>(
             r#"
-            SELECT id, tenant_id, employee_id, full_name, license_number, license_class,
-                   license_expiry, phone, status, created_at, updated_at, deleted_at
+            SELECT id, tenant_id, employee_id, license_number, license_class,
+                   license_expiry, status, created_at, updated_at, deleted_at
             FROM drivers
             WHERE tenant_id = $1 AND deleted_at IS NULL
-              AND ($2::TEXT IS NULL OR full_name ILIKE $2 OR license_number ILIKE $2)
-              AND ($3::TEXT IS NULL OR status = $3)
+              AND ($2::TEXT IS NULL OR license_number ILIKE $2 OR employee_id = ANY($3))
+              AND ($4::TEXT IS NULL OR status = $4)
             ORDER BY created_at DESC
-            LIMIT $4 OFFSET $5
+            LIMIT $5 OFFSET $6
             "#,
-            tenant_id,
-            search_pattern,
-            status,
-            per_page,
-            offset
         )
+        .bind(tenant_id)
+        .bind(&search_pattern)
+        .bind(&employee_ids)
+        .bind(status)
+        .bind(per_page)
+        .bind(offset)
         .fetch_all(pool)
         .await
         .context("Failed to list drivers")?;
 
-        let total = sqlx::query_scalar!(
+        let total = sqlx::query_scalar::<_, i64>(
             r#"
-            SELECT COUNT(*) as "count!"
+            SELECT COUNT(*)
             FROM drivers
             WHERE tenant_id = $1 AND deleted_at IS NULL
-              AND ($2::TEXT IS NULL OR full_name ILIKE $2 OR license_number ILIKE $2)
-              AND ($3::TEXT IS NULL OR status = $3)
+              AND ($2::TEXT IS NULL OR license_number ILIKE $2 OR employee_id = ANY($3))
+              AND ($4::TEXT IS NULL OR status = $4)
             "#,
-            tenant_id,
-            search_pattern,
-            status
         )
+        .bind(tenant_id)
+        .bind(&search_pattern)
+        .bind(&employee_ids)
+        .bind(status)
         .fetch_one(pool)
         .await
         .context("Failed to count drivers")?;
 
-        Ok((drivers, total))
+        Ok((hydrate_drivers(pool, tenant_id, profiles).await?, total))
     }
 
     pub async fn get_by_id(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> OpsResult<Option<Driver>> {
-        let driver = sqlx::query_as!(
-            Driver,
+        let profile = sqlx::query_as::<_, DriverProfile>(
             r#"
-            SELECT id, tenant_id, employee_id, full_name, license_number, license_class,
-                   license_expiry, phone, status, created_at, updated_at, deleted_at
+            SELECT id, tenant_id, employee_id, license_number, license_class,
+                   license_expiry, status, created_at, updated_at, deleted_at
             FROM drivers
             WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
             "#,
-            id,
-            tenant_id
         )
+        .bind(id)
+        .bind(tenant_id)
         .fetch_optional(pool)
         .await
         .context("Failed to fetch driver")?;
 
-        Ok(driver)
+        match profile {
+            Some(profile) => Ok(Some(hydrate_driver(pool, tenant_id, profile).await?)),
+            None => Ok(None),
+        }
     }
 
     pub async fn license_exists(
@@ -332,31 +424,34 @@ impl DriverOps {
         tenant_id: Uuid,
         req: &CreateDriverRequest,
     ) -> OpsResult<Driver> {
-        let driver = sqlx::query_as!(
-            Driver,
+        let employee = EmployeeOps::get_reference(pool, tenant_id, req.employee_id)
+            .await?
+            .context("Employee was not found for this campus")?;
+        if employee.employment_status != "active" {
+            bail!("Only an active employee can be assigned as a driver");
+        }
+        let profile = sqlx::query_as::<_, DriverProfile>(
             r#"
             INSERT INTO drivers (
-                tenant_id, employee_id, full_name, license_number, license_class,
-                license_expiry, phone, status
+                tenant_id, employee_id, license_number, license_class,
+                license_expiry, status
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 'active'))
-            RETURNING id, tenant_id, employee_id, full_name, license_number, license_class,
-                      license_expiry, phone, status, created_at, updated_at, deleted_at
+            VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'active'))
+            RETURNING id, tenant_id, employee_id, license_number, license_class,
+                      license_expiry, status, created_at, updated_at, deleted_at
             "#,
-            tenant_id,
-            req.employee_id,
-            req.full_name,
-            req.license_number,
-            req.license_class,
-            req.license_expiry,
-            req.phone,
-            req.status
         )
+        .bind(tenant_id)
+        .bind(req.employee_id)
+        .bind(req.license_number.trim())
+        .bind(req.license_class.as_deref().map(str::trim))
+        .bind(req.license_expiry)
+        .bind(req.status.as_deref())
         .fetch_one(pool)
         .await
         .context("Failed to create driver")?;
 
-        Ok(driver)
+        Ok(Driver::from_profile(profile, employee))
     }
 
     pub async fn update(
@@ -365,37 +460,38 @@ impl DriverOps {
         id: Uuid,
         req: &UpdateDriverRequest,
     ) -> OpsResult<Option<Driver>> {
-        let driver = sqlx::query_as!(
-            Driver,
+        let current = match Self::get_by_id(pool, tenant_id, id).await? {
+            Some(value) => value,
+            None => return Ok(None),
+        };
+        if req.status.as_deref() == Some("active") && current.employee.employment_status != "active"
+        {
+            bail!("An inactive employee cannot have an active driver profile");
+        }
+        let profile = sqlx::query_as::<_, DriverProfile>(
             r#"
             UPDATE drivers
-            SET full_name = COALESCE($1, full_name),
-                license_number = COALESCE($2, license_number),
-                license_class = COALESCE($3, license_class),
-                license_expiry = COALESCE($4, license_expiry),
-                phone = COALESCE($5, phone),
-                employee_id = COALESCE($6, employee_id),
-                status = COALESCE($7, status),
+            SET license_number = COALESCE($1, license_number),
+                license_class = COALESCE($2, license_class),
+                license_expiry = COALESCE($3, license_expiry),
+                status = COALESCE($4, status),
                 updated_at = NOW()
-            WHERE id = $8 AND tenant_id = $9 AND deleted_at IS NULL
-            RETURNING id, tenant_id, employee_id, full_name, license_number, license_class,
-                      license_expiry, phone, status, created_at, updated_at, deleted_at
+            WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL
+            RETURNING id, tenant_id, employee_id, license_number, license_class,
+                      license_expiry, status, created_at, updated_at, deleted_at
             "#,
-            req.full_name,
-            req.license_number,
-            req.license_class,
-            req.license_expiry,
-            req.phone,
-            req.employee_id,
-            req.status,
-            id,
-            tenant_id
         )
+        .bind(req.license_number.as_deref().map(str::trim))
+        .bind(req.license_class.as_deref().map(str::trim))
+        .bind(req.license_expiry)
+        .bind(req.status.as_deref())
+        .bind(id)
+        .bind(tenant_id)
         .fetch_optional(pool)
         .await
         .context("Failed to update driver")?;
 
-        Ok(driver)
+        Ok(profile.map(|profile| Driver::from_profile(profile, current.employee)))
     }
 
     pub async fn delete(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> OpsResult<bool> {
@@ -414,4 +510,40 @@ impl DriverOps {
 
         Ok(result.rows_affected() > 0)
     }
+}
+
+async fn hydrate_drivers(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    profiles: Vec<DriverProfile>,
+) -> OpsResult<Vec<Driver>> {
+    let ids = profiles
+        .iter()
+        .map(|profile| profile.employee_id)
+        .collect::<Vec<_>>();
+    let mut employees = EmployeeOps::references_by_ids(pool, tenant_id, &ids)
+        .await?
+        .into_iter()
+        .map(|employee| (employee.id, employee))
+        .collect::<HashMap<_, _>>();
+    profiles
+        .into_iter()
+        .map(|profile| {
+            let employee = employees
+                .remove(&profile.employee_id)
+                .context("Driver employee reference is unavailable")?;
+            Ok(Driver::from_profile(profile, employee))
+        })
+        .collect()
+}
+
+async fn hydrate_driver(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    profile: DriverProfile,
+) -> OpsResult<Driver> {
+    let employee = EmployeeOps::get_reference(pool, tenant_id, profile.employee_id)
+        .await?
+        .context("Driver employee reference is unavailable")?;
+    Ok(Driver::from_profile(profile, employee))
 }

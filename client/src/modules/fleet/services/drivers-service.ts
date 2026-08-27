@@ -15,6 +15,7 @@ import type {
   DriversListParams,
   DriversListResponse,
   ApiEnvelope,
+  DriverCandidatesResponse,
 } from "../types";
 
 class DriversService {
@@ -33,6 +34,19 @@ class DriversService {
   async getDriver(id: string): Promise<ApiEnvelope<Driver>> {
     try {
       const response = await httpClient.get<ApiEnvelope<Driver>>(`${this.BASE_URL}/${id}`);
+      return response.data;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response) return error.response.data;
+      throw this.handleError(error);
+    }
+  }
+
+  async listCandidates(search?: string): Promise<ApiEnvelope<DriverCandidatesResponse>> {
+    try {
+      const response = await httpClient.get<ApiEnvelope<DriverCandidatesResponse>>(
+        "/api/1.0/fleet/driver-candidates",
+        { params: search ? { search } : undefined },
+      );
       return response.data;
     } catch (error) {
       if (error instanceof AxiosError && error.response) return error.response.data;

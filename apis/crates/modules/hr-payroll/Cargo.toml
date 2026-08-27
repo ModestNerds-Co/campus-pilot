@@ -6,4 +6,11 @@ edition = "2024"
 [dependencies]
 cp-common = { path = "../../common" }
 actix-web = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+validator = { workspace = true }
+log = { workspace = true }

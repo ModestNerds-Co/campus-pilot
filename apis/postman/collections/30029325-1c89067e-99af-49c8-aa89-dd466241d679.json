@@ -921,6 +921,32 @@
           "name": "Drivers",
           "item": [
             {
+              "name": "List Eligible Employee Candidates",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/fleet/driver-candidates?search=",
+                  "host": ["{{base_url}}"],
+                  "path": ["fleet", "driver-candidates"],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Lists active employees without a driver profile. This minimum-field Fleet read does not grant HR management access."
+              }
+            },
+            {
               "name": "List Drivers",
               "request": {
                 "method": "GET",
@@ -1011,7 +1037,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"full_name\": \"Tendai Moyo\",\n  \"license_number\": \"DL-99213\",\n  \"license_class\": \"Class 2\"\n}"
+                  "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"license_number\": \"DL-99213\",\n  \"license_class\": \"Class 2\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/fleet/drivers",
@@ -1042,7 +1068,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+263771234567\"\n}"
+                  "raw": "{\n  \"license_class\": \"Class 2\",\n  \"status\": \"active\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/fleet/drivers/:id",
@@ -1093,6 +1119,172 @@
                     }
                   ]
                 }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HR and Payroll",
+      "description": "Canonical workforce records. Employee login accounts are optional links; role-specific module profiles reference employees.",
+      "item": [
+        {
+          "name": "Departments",
+          "item": [
+            {
+              "name": "List Departments",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/departments?page=1&per_page=20",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "departments"],
+                  "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }]
+                }
+              }
+            },
+            {
+              "name": "Get Department",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/departments/:id",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "departments", ":id"],
+                  "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }]
+                }
+              }
+            },
+            {
+              "name": "Create Department",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"code\": \"OPS\",\n  \"name\": \"Operations\",\n  \"status\": \"active\"\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/departments", "host": ["{{base_url}}"], "path": ["hr-payroll", "departments"] }
+              }
+            },
+            {
+              "name": "Update Department",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Campus Operations\"\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/departments/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "departments", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            },
+            {
+              "name": "Delete Department",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/departments/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "departments", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Positions",
+          "item": [
+            {
+              "name": "List Positions",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/positions?page=1&per_page=20", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }] }
+              }
+            },
+            {
+              "name": "Get Position",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/positions/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            },
+            {
+              "name": "Create Position",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"department_id\": null,\n  \"code\": \"DRV\",\n  \"title\": \"Driver\",\n  \"status\": \"active\"\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/positions", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions"] }
+              }
+            },
+            {
+              "name": "Update Position",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"School Driver\"\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/positions/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            },
+            {
+              "name": "Delete Position",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/positions/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Employees",
+          "item": [
+            {
+              "name": "List Employees",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/employees?page=1&per_page=20", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }] }
+              }
+            },
+            {
+              "name": "Get Employee",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            },
+            {
+              "name": "Create Employee",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"employee_number\": \"EMP-001\",\n  \"display_name\": \"Tendai Moyo\",\n  \"work_email\": \"tendai@example.edu\",\n  \"employment_status\": \"active\"\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/employees", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees"] }
+              }
+            },
+            {
+              "name": "Update Employee",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+263771234567\"\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            },
+            {
+              "name": "Link or Unlink System Account",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"account_id\": null\n}" },
+                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id/account", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id", "account"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+              }
+            },
+            {
+              "name": "Delete Employee",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
               }
             }
           ]

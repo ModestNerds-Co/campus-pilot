@@ -39,6 +39,9 @@ import { Route as AdminFeesRouteImport } from './routes/admin/fees'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments'
 import { Route as AdminClassesRouteImport } from './routes/admin/classes'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
+import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
+import { Route as ModulesHrPayrollEmployeesRouteImport } from './routes/modules/hr-payroll/employees'
+import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/modules/hr-payroll/departments'
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
@@ -195,6 +198,24 @@ const AdminFleetIndexRoute = AdminFleetIndexRouteImport.update({
   path: '/fleet/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesHrPayrollPositionsRoute =
+  ModulesHrPayrollPositionsRouteImport.update({
+    id: '/hr-payroll/positions',
+    path: '/hr-payroll/positions',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesHrPayrollEmployeesRoute =
+  ModulesHrPayrollEmployeesRouteImport.update({
+    id: '/hr-payroll/employees',
+    path: '/hr-payroll/employees',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesHrPayrollDepartmentsRoute =
+  ModulesHrPayrollDepartmentsRouteImport.update({
+    id: '/hr-payroll/departments',
+    path: '/hr-payroll/departments',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesFleetVehiclesRoute = ModulesFleetVehiclesRouteImport.update({
   id: '/fleet/vehicles',
   path: '/fleet/vehicles',
@@ -256,6 +277,9 @@ export interface FileRoutesByFullPath {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
+  '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
+  '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesByTo {
@@ -292,6 +316,9 @@ export interface FileRoutesByTo {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
+  '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
+  '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesById {
@@ -330,6 +357,9 @@ export interface FileRoutesById {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
+  '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
+  '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
 }
 export interface FileRouteTypes {
@@ -369,6 +399,9 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/hr-payroll/departments'
+    | '/modules/hr-payroll/employees'
+    | '/modules/hr-payroll/positions'
     | '/admin/fleet'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -405,6 +438,9 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/hr-payroll/departments'
+    | '/modules/hr-payroll/employees'
+    | '/modules/hr-payroll/positions'
     | '/admin/fleet'
   id:
     | '__root__'
@@ -442,6 +478,9 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/hr-payroll/departments'
+    | '/modules/hr-payroll/employees'
+    | '/modules/hr-payroll/positions'
     | '/admin/fleet/'
   fileRoutesById: FileRoutesById
 }
@@ -670,6 +709,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/hr-payroll/positions': {
+      id: '/modules/hr-payroll/positions'
+      path: '/hr-payroll/positions'
+      fullPath: '/modules/hr-payroll/positions'
+      preLoaderRoute: typeof ModulesHrPayrollPositionsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/hr-payroll/employees': {
+      id: '/modules/hr-payroll/employees'
+      path: '/hr-payroll/employees'
+      fullPath: '/modules/hr-payroll/employees'
+      preLoaderRoute: typeof ModulesHrPayrollEmployeesRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/hr-payroll/departments': {
+      id: '/modules/hr-payroll/departments'
+      path: '/hr-payroll/departments'
+      fullPath: '/modules/hr-payroll/departments'
+      preLoaderRoute: typeof ModulesHrPayrollDepartmentsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/fleet/vehicles': {
       id: '/modules/fleet/vehicles'
       path: '/fleet/vehicles'
@@ -763,6 +823,9 @@ interface ModulesRouteChildren {
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
+  ModulesHrPayrollDepartmentsRoute: typeof ModulesHrPayrollDepartmentsRoute
+  ModulesHrPayrollEmployeesRoute: typeof ModulesHrPayrollEmployeesRoute
+  ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
 }
 
 const ModulesRouteChildren: ModulesRouteChildren = {
@@ -770,6 +833,9 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,
+  ModulesHrPayrollDepartmentsRoute: ModulesHrPayrollDepartmentsRoute,
+  ModulesHrPayrollEmployeesRoute: ModulesHrPayrollEmployeesRoute,
+  ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
 }
 
 const ModulesRouteWithChildren =

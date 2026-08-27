@@ -17,9 +17,9 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::dtos::{
-    CreateDriverRequest, CreateVehicleRequest, DriverResponse, ListDriversQuery, ListVehiclesQuery,
-    PaginatedDriversResponse, PaginatedVehiclesResponse, UpdateDriverRequest, UpdateVehicleRequest,
-    VehicleResponse,
+    CreateDriverRequest, CreateVehicleRequest, DriverCandidatesQuery, DriverCandidatesResponse,
+    DriverResponse, ListDriversQuery, ListVehiclesQuery, PaginatedDriversResponse,
+    PaginatedVehiclesResponse, UpdateDriverRequest, UpdateVehicleRequest, VehicleResponse,
 };
 use crate::ops::{DriverOps, VehicleOps};
 
@@ -269,6 +269,31 @@ async fn delete_vehicle(
 }
 
 // ----------------------------------------------------------------- drivers
+
+#[get("")]
+async fn list_driver_candidates(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<DriverCandidatesQuery>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let candidates = DriverOps::list_candidates(
+        &pool,
+        tenant.into_inner().into_inner(),
+        query.search.as_deref(),
+    )
+    .await
+    .map_err(|error| {
+        log::error!("Failed to list driver candidates: {error:#}");
+        actix_web::error::ErrorInternalServerError("Driver candidates could not be loaded")
+    })?;
+    Ok(HttpResponse::Ok().json(ApiResponse::from_status(
+        StatusCode::OK,
+        Some(DriverCandidatesResponse {
+            employees: candidates,
+        }),
+        None,
+    )))
+}
 
 #[get("")]
 async fn list_drivers(
@@ -522,6 +547,11 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(create_vehicle)
             .service(update_vehicle)
             .service(delete_vehicle),
+    )
+    .service(
+        web::scope("/driver-candidates")
+            .wrap(RequirePermission::new("fleet"))
+            .service(list_driver_candidates),
     )
     .service(
         web::scope("/drivers")
