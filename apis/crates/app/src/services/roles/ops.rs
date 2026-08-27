@@ -1,6 +1,9 @@
-// Copyright (c) 2025-01-02 Codecraft Solutions
-// Created: 2025-01-02
-// Author: AI Assistant
+//! Persists tenant-scoped role definitions and resolves assignment authority.
+//!
+//! Role keys are immutable assignment identifiers. Role names and permissions
+//! remain editable, while deletion is limited to unassigned custom roles.
+
+use std::collections::BTreeSet;
 
 use anyhow::Result;
 use sqlx::PgPool;
@@ -10,6 +13,14 @@ use super::dtos::{CreateRoleRequest, UpdateRoleRequest};
 use super::models::Role;
 
 pub struct RoleOps;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeleteRoleOutcome {
+    Deleted,
+    NotFound,
+    SystemRole,
+    Assigned,
+}
 
 impl RoleOps {
     pub async fn list_roles(
@@ -116,7 +127,7 @@ impl RoleOps {
             r#"
             SELECT id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at
             FROM roles
-            WHERE name = $1 AND tenant_id = $2 AND deleted_at IS NULL
+            WHERE LOWER(name) = LOWER($1) AND tenant_id = $2 AND deleted_at IS NULL
             "#,
             name,
             tenant_id
@@ -166,14 +177,15 @@ impl RoleOps {
             r#"
             UPDATE roles
             SET name = COALESCE($1, name),
-                description = COALESCE($2, description),
-                permissions = COALESCE($3, permissions),
+                description = CASE WHEN $2 THEN $3 ELSE description END,
+                permissions = COALESCE($4, permissions),
                 updated_at = NOW()
-            WHERE id = $4 AND tenant_id = $5 AND deleted_at IS NULL
+            WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL
             RETURNING id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at
             "#,
             req.name,
-            req.description,
+            req.description.is_some(),
+            req.description.as_ref().and_then(|value| value.as_deref()),
             req.permissions.as_deref(),
             id,
             tenant_id
@@ -184,7 +196,38 @@ impl RoleOps {
         Ok(role)
     }
 
-    pub async fn delete_role(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<bool> {
+    pub async fn delete_role(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> Result<DeleteRoleOutcome> {
+        let role = Self::get_role_by_id(pool, tenant_id, id).await?;
+        let Some(role) = role else {
+            return Ok(DeleteRoleOutcome::NotFound);
+        };
+        if role.is_system {
+            return Ok(DeleteRoleOutcome::SystemRole);
+        }
+
+        let assigned = sqlx::query_scalar::<_, bool>(
+            r#"
+            SELECT EXISTS(
+                SELECT 1
+                FROM users
+                WHERE tenant_id = $1
+                  AND $2 = ANY(roles)
+                  AND deleted_at IS NULL
+            )
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&role.key)
+        .fetch_one(pool)
+        .await?;
+        if assigned {
+            return Ok(DeleteRoleOutcome::Assigned);
+        }
+
         let result = sqlx::query!(
             r#"
             UPDATE roles
@@ -207,17 +250,27 @@ impl RoleOps {
         .execute(pool)
         .await?;
 
-        Ok(result.rows_affected() > 0)
+        Ok(if result.rows_affected() == 1 {
+            DeleteRoleOutcome::Deleted
+        } else {
+            DeleteRoleOutcome::Assigned
+        })
     }
 
-    pub async fn role_keys_exist(
+    pub async fn assignment_permissions(
         pool: &PgPool,
         tenant_id: Uuid,
         role_keys: &[String],
-    ) -> Result<bool> {
-        let count = sqlx::query_scalar::<_, i64>(
+    ) -> Result<Option<Vec<String>>> {
+        let requested: BTreeSet<String> = role_keys.iter().cloned().collect();
+        if requested.is_empty() {
+            return Ok(Some(Vec::new()));
+        }
+        let requested_keys: Vec<String> = requested.iter().cloned().collect();
+        let roles = sqlx::query_as::<_, Role>(
             r#"
-            SELECT COUNT(*)
+            SELECT id, tenant_id, key, name, description, permissions, is_system,
+                   created_at, updated_at, deleted_at
             FROM roles
             WHERE tenant_id = $1
               AND key = ANY($2)
@@ -225,11 +278,19 @@ impl RoleOps {
             "#,
         )
         .bind(tenant_id)
-        .bind(role_keys)
-        .fetch_one(pool)
+        .bind(&requested_keys)
+        .fetch_all(pool)
         .await?;
-
-        Ok(count == role_keys.len() as i64)
+        if roles.len() != requested.len() {
+            return Ok(None);
+        }
+        let permissions = roles
+            .into_iter()
+            .flat_map(|role| role.permissions)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        Ok(Some(permissions))
     }
 }
 
@@ -252,5 +313,16 @@ fn role_key_base(name: &str) -> String {
         "custom_role".to_string()
     } else {
         trimmed.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::role_key_base;
+
+    #[test]
+    fn custom_role_keys_are_stable_slugs() {
+        assert_eq!(role_key_base(" Head of Department "), "head_of_department");
+        assert_eq!(role_key_base("---"), "custom_role");
     }
 }

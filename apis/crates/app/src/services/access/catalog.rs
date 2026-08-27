@@ -263,6 +263,11 @@ pub fn administration_permissions() -> Vec<PermissionDefinition> {
             "Change seeded or custom role labels and permissions.",
         ),
         (
+            "roles:assign",
+            "Assign roles",
+            "Assign roles within your own access authority.",
+        ),
+        (
             "roles:delete",
             "Delete roles",
             "Delete unassigned custom roles.",

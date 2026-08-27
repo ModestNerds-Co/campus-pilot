@@ -1,10 +1,10 @@
-//
-//  campus-pilot
-//  user-form-modal.tsx - User Form Modal Component (token-driven)
-//
+/**
+ * Owns the add/edit user drawer and delegation-aware role selection.
+ * Password changes are deliberately outside this editor until a reset workflow exists.
+ */
 
-import React, { useState, useEffect } from "react";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { usersService } from "../services/users-service";
 import { rolesService } from "../services/roles-service";
 import type { User, CreateUserRequest, UpdateUserRequest, Role } from "../types";
@@ -12,6 +12,8 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { DialogShell, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import { useAuthStore } from "@/stores/auth-store";
+import { apiErrorMessage, canDelegatePermissions, hasPermission } from "../access-control";
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -21,6 +23,8 @@ interface UserFormModalProps {
 }
 
 export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, onSuccess, user }) => {
+  const operatorPermissions = useAuthStore((state) => state.user?.permissions);
+  const canAssignRoles = hasPermission(operatorPermissions, "roles:assign");
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
@@ -33,10 +37,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
   const [showPassword, setShowPassword] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+  const [rolesError, setRolesError] = useState<string | null>(null);
+
+  const assignableRoles = useMemo(
+    () => availableRoles.filter((role) => canDelegatePermissions(operatorPermissions, role.permissions)),
+    [availableRoles, operatorPermissions],
+  );
 
   useEffect(() => {
     if (isOpen) {
-      loadRoles();
+      if (canAssignRoles) void loadRoles();
       if (user) {
         setFormData({
           email: user.email,
@@ -50,17 +60,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
         setFormData({ email: "", full_name: "", password: "", phone: "", roles: [], is_active: true });
       }
     }
-  }, [user, isOpen]);
+  }, [canAssignRoles, user, isOpen]);
 
   const loadRoles = async () => {
     setIsLoadingRoles(true);
+    setRolesError(null);
     try {
       const response = await rolesService.listRoles({ limit: 100 });
       if (response.success && response.data) {
         setAvailableRoles(response.data.roles);
+      } else {
+        setRolesError(apiErrorMessage(response, "Roles could not be loaded."));
       }
     } catch {
-      toast.error("Failed to load roles");
+      setRolesError("Campus Pilot could not reach the roles directory.");
     } finally {
       setIsLoadingRoles(false);
     }
@@ -80,7 +93,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
       toast.error("Password is required for new users");
       return;
     }
-    if (formData.roles.length === 0) {
+    if ((!user || canAssignRoles) && formData.roles.length === 0) {
       toast.error("At least one role is required");
       return;
     }
@@ -91,17 +104,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
           email: formData.email,
           full_name: formData.full_name,
           phone: formData.phone || null,
-          roles: formData.roles,
           is_active: formData.is_active,
         };
-        if (formData.password) updateData.password = formData.password;
+        if (canAssignRoles) updateData.roles = formData.roles;
         const response = await usersService.updateUser(user.id, updateData);
         if (response.success) {
           toast.success("User updated successfully");
           onSuccess();
           onClose();
         } else {
-          toast.error(response.message || "Failed to update user");
+          toast.error(apiErrorMessage(response, "Failed to update user"));
         }
       } else {
         const createData: CreateUserRequest = {
@@ -118,7 +130,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
           onSuccess();
           onClose();
         } else {
-          toast.error(response.message || "Failed to create user");
+          toast.error(apiErrorMessage(response, "Failed to create user"));
         }
       }
     } catch {
@@ -140,7 +152,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
   return (
     <DialogShell open={isOpen} onClose={onClose}>
       <DialogHeader title={user ? "Edit user" : "Add user"} onClose={onClose} />
-      <form onSubmit={handleSubmit}>
+      <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={handleSubmit}>
         <DialogBody className="space-y-4">
           <div>
             <Label>
@@ -181,19 +193,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
             />
           </div>
 
-          <div>
+          {!user ? <div>
             <Label>
-              Password {!user && <span className="text-[var(--tone-danger)]">*</span>}
-              {user && <span className="ml-1 text-xs font-normal text-[var(--text-subtle)]">(leave blank to keep unchanged)</span>}
+              Temporary password <span className="text-[var(--tone-danger)]">*</span>
             </Label>
             <div className="relative mt-1.5">
               <Input
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder={user ? "Enter new password" : "Enter password"}
+                placeholder="Enter a temporary password"
                 className="pr-10"
-                required={!user}
+                required
               />
               <button
                 type="button"
@@ -204,9 +215,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-          </div>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-subtle)]">Share this securely. Password reset will be a separate action.</p>
+          </div> : null}
 
-          <div>
+          {canAssignRoles ? <div>
             <Label className="mb-2">
               Roles <span className="text-[var(--tone-danger)]">*</span>
             </Label>
@@ -214,9 +226,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="size-5 animate-spin text-[var(--brand)]" />
               </div>
+            ) : rolesError ? (
+              <div className="rounded-[var(--radius-lg)] border border-[var(--tone-danger-bd)] bg-[var(--tone-danger-bg)] p-4">
+                <div className="flex gap-2 text-sm text-[var(--tone-danger)]"><AlertCircle className="mt-0.5 size-4 shrink-0" />{rolesError}</div>
+                <Button className="mt-3" onClick={() => void loadRoles()} type="button" variant="secondary">Try again</Button>
+              </div>
+            ) : assignableRoles.length === 0 ? (
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--text-muted)]">No roles are available for you to assign.</div>
             ) : (
-              <div className="max-h-40 space-y-2 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
-                {availableRoles.map((role) => (
+              <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
+                {assignableRoles.map((role) => (
                   <label
                     key={role.id}
                     className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] p-2 hover:bg-[var(--surface-muted)]"
@@ -238,7 +257,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, o
             <p className="mt-1 text-xs text-[var(--text-subtle)]">
               {formData.roles.length} role{formData.roles.length !== 1 ? "s" : ""} selected
             </p>
-          </div>
+          </div> : null}
 
           <div>
             <label className="flex cursor-pointer items-center gap-2">

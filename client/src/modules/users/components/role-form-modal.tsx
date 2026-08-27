@@ -14,6 +14,8 @@ import { accessService } from "@/modules/platform/access-service";
 import type { ModuleCatalogResponse, PermissionDefinition } from "@/modules/platform/types";
 import { rolesService } from "../services/roles-service";
 import type { CreateRoleRequest, Role, UpdateRoleRequest } from "../types";
+import { apiErrorMessage, canDelegatePermissions } from "../access-control";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface RoleFormModalProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ interface PermissionSection {
 }
 
 export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, onSuccess, role }) => {
+  const operatorPermissions = useAuthStore((state) => state.user?.permissions);
   const [formData, setFormData] = useState({ name: "", description: "", permissions: [] as string[] });
   const [accessMode, setAccessMode] = useState<AccessMode>("custom");
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
@@ -48,7 +51,9 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
         key: "administration",
         label: "Administration",
         description: "People, roles, licensing, and campus configuration.",
-        permissions: catalog.administration_permissions,
+        permissions: catalog.administration_permissions.filter((permission) =>
+          canDelegatePermissions(operatorPermissions, [permission.key]),
+        ),
       },
       ...catalog.modules
         .filter((module) => module.key !== "administration")
@@ -56,10 +61,12 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
           key: module.key,
           label: module.label,
           description: module.description,
-          permissions: module.permissions,
+          permissions: module.permissions.filter((permission) =>
+            canDelegatePermissions(operatorPermissions, [permission.key]),
+          ),
         })),
-    ];
-  }, [catalog]);
+    ].filter((section) => section.permissions.length > 0);
+  }, [catalog, operatorPermissions]);
 
   const allPermissionKeys = useMemo(
     () => sections.flatMap((section) => section.permissions.map((permission) => permission.key)),
@@ -167,7 +174,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
         onSuccess();
         onClose();
       } else {
-        toast.error(response.message || (role ? "Failed to update role" : "Failed to create role"));
+        toast.error(apiErrorMessage(response, role ? "Failed to update role" : "Failed to create role"));
       }
     } catch {
       toast.error(role ? "Failed to update role" : "Failed to create role");
@@ -179,7 +186,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
   return (
     <DialogShell open={isOpen} onClose={onClose} panelClassName="max-w-[720px]">
       <DialogHeader title={role ? "Edit role" : "Create role"} onClose={onClose} />
-      <form onSubmit={handleSubmit}>
+      <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={handleSubmit}>
         <DialogBody className="space-y-7">
           <section className="space-y-4" aria-labelledby="role-details-heading">
             <h3 className="text-sm font-semibold text-[var(--text-strong)]" id="role-details-heading">Role details</h3>
@@ -216,13 +223,13 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <AccessModeCard
+              {operatorPermissions?.includes("*") ? <AccessModeCard
                 active={accessMode === "full"}
                 description="Every permission in current and future modules."
                 icon={ShieldCheck}
                 label="Full access"
                 onClick={() => selectAccessMode("full")}
-              />
+              /> : null}
               <AccessModeCard
                 active={accessMode === "custom"}
                 description="Select permissions by module."

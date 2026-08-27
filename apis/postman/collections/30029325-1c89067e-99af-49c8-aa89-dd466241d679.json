@@ -390,6 +390,7 @@
           "name": "Create Role",
           "request": {
             "method": "POST",
+            "description": "Creates a custom campus role. Requires roles:create. Only the Campus Owner may include the wildcard permission (*).",
             "header": [
               {
                 "key": "Authorization",
@@ -420,6 +421,7 @@
           "name": "Update Role",
           "request": {
             "method": "PUT",
+            "description": "Updates the role label, description, or permissions without changing its stable key. Protected roles are editable but not deletable; only the Campus Owner may manage wildcard access.",
             "header": [
               {
                 "key": "Authorization",
@@ -458,6 +460,7 @@
           "name": "Delete Role",
           "request": {
             "method": "DELETE",
+            "description": "Deletes an unassigned custom role. Protected roles return 403 and assigned custom roles return 409.",
             "header": [
               {
                 "key": "Authorization",
@@ -566,6 +569,7 @@
           "name": "Create User",
           "request": {
             "method": "POST",
+            "description": "Creates a campus user with one or more stable role keys. Requires users:create and roles:assign; only the Campus Owner may assign a wildcard role.",
             "header": [
               {
                 "key": "Authorization",
@@ -595,6 +599,7 @@
           "name": "Update User",
           "request": {
             "method": "PUT",
+            "description": "Updates an account other than the caller or Campus Owner. Omit roles to preserve assignments; send phone as null to clear it. Password changes are rejected and use a separate reset workflow.",
             "header": [
               {
                 "key": "Authorization",
@@ -625,6 +630,7 @@
           "name": "Delete User",
           "request": {
             "method": "DELETE",
+            "description": "Soft-deletes a manageable user and revokes their refresh sessions. The caller and Campus Owner are protected.",
             "header": [
               {
                 "key": "Authorization",
@@ -647,6 +653,7 @@
           "name": "Activate User",
           "request": {
             "method": "PUT",
+            "description": "Activates a manageable account. The caller and Campus Owner are protected.",
             "header": [
               {
                 "key": "Authorization",
@@ -670,6 +677,7 @@
           "name": "Deactivate User",
           "request": {
             "method": "PUT",
+            "description": "Deactivates a manageable account and revokes its refresh sessions. The caller and Campus Owner are protected.",
             "header": [
               {
                 "key": "Authorization",

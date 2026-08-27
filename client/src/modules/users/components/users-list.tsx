@@ -1,7 +1,7 @@
-//
-//  campus-pilot
-//  users-list.tsx - Users List Component (token-driven)
-//
+/**
+ * Owns the Administration user directory and account actions.
+ * Action visibility mirrors API delegation rules while the server remains authoritative.
+ */
 
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -15,7 +15,7 @@ import {
   UserX,
 } from "lucide-react";
 import { usersService } from "../services/users-service";
-import type { User, UsersListParams } from "../types";
+import type { Role, User, UsersListParams } from "../types";
 import toast from "react-hot-toast";
 import { UserFormModal } from "./user-form-modal";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,13 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
 import { rolesService } from "../services/roles-service";
 import { useAuthStore } from "@/stores/auth-store";
+import { apiErrorMessage, canDelegatePermissions, hasPermission } from "../access-control";
 
 export const UsersList: React.FC = () => {
   const currentUser = useAuthStore((state) => state.user);
   const [users, setUsers] = useState<User[]>([]);
   const [roleNames, setRoleNames] = useState<Record<string, string>>({});
+  const [rolesByKey, setRolesByKey] = useState<Record<string, Role>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,6 +46,7 @@ export const UsersList: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const actionButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const canCreate = hasPermission(currentUser?.permissions, "users:create");
+  const canAssignRoles = hasPermission(currentUser?.permissions, "roles:assign");
   const canEdit = hasPermission(currentUser?.permissions, "users:edit");
   const canDelete = hasPermission(currentUser?.permissions, "users:delete");
 
@@ -79,6 +82,7 @@ export const UsersList: React.FC = () => {
       .listRoles({ limit: 100 })
       .then((response) => {
         if (!active || !response.success || !response.data) return;
+        setRolesByKey(Object.fromEntries(response.data.roles.map((role) => [role.key, role])));
         setRoleNames(Object.fromEntries(response.data.roles.map((role) => [role.key, role.name])));
       })
       .catch(() => undefined);
@@ -100,7 +104,7 @@ export const UsersList: React.FC = () => {
         toast.success(user.is_active ? "User deactivated" : "User activated");
         fetchUsers();
       } else {
-        toast.error(response.message || "Failed to update user status");
+        toast.error(apiErrorMessage(response, "Failed to update user status"));
       }
     } catch {
       toast.error("Failed to update user status");
@@ -118,7 +122,7 @@ export const UsersList: React.FC = () => {
         setPendingDelete(null);
         void fetchUsers();
       } else {
-        toast.error(response.message || "Failed to delete user");
+        toast.error(apiErrorMessage(response, "Failed to delete user"));
       }
     } catch {
       toast.error("Failed to delete user");
@@ -156,7 +160,7 @@ export const UsersList: React.FC = () => {
 
   usePageChrome(
     "Users",
-    canCreate ? (
+    canCreate && canAssignRoles ? (
       <Button onClick={handleAddUser}>
         <Plus className="size-4" />
         Add user
@@ -226,8 +230,14 @@ export const UsersList: React.FC = () => {
                 </tr>
               </THead>
               <TBody>
-                {users.map((user) => (
-                  <TR key={user.id}>
+                {users.map((user) => {
+                  const targetPermissions = user.roles.flatMap(
+                    (roleKey) => rolesByKey[roleKey]?.permissions ?? ["*"],
+                  );
+                  const canManageUser = user.id !== currentUser?.id
+                    && !user.roles.includes("campus_owner")
+                    && canDelegatePermissions(currentUser?.permissions, targetPermissions);
+                  return <TR key={user.id}>
                     <TD className="whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="flex size-10 items-center justify-center rounded-full bg-[var(--brand-soft)]">
@@ -259,7 +269,7 @@ export const UsersList: React.FC = () => {
                     </TD>
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
-                        {(canEdit || (canDelete && !user.roles.includes("campus_owner"))) ? <button
+                        {((canEdit || canDelete) && canManageUser) ? <button
                           aria-controls={openMenuId === user.id ? `user-actions-${user.id}` : undefined}
                           aria-expanded={openMenuId === user.id}
                           aria-haspopup="menu"
@@ -272,14 +282,14 @@ export const UsersList: React.FC = () => {
                         </button> : null}
                         {openMenuId === user.id && (
                           <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`user-actions-${user.id}`} role="menu">
-                            {canEdit ? <button
+                            {canEdit && canManageUser ? <button
                               onClick={() => handleEditUser(user)}
                               role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               <Edit className="size-4" /> Edit
                             </button> : null}
-                            {canEdit ? <button
+                            {canEdit && canManageUser ? <button
                               onClick={() => handleToggleActive(user)}
                               role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
@@ -294,7 +304,7 @@ export const UsersList: React.FC = () => {
                                 </>
                               )}
                             </button> : null}
-                            {canDelete && !user.roles.includes("campus_owner") ? <button
+                            {canDelete && canManageUser ? <button
                               onClick={() => {
                                 setPendingDelete(user);
                                 setOpenMenuId(null);
@@ -308,8 +318,8 @@ export const UsersList: React.FC = () => {
                         )}
                       </div>
                     </TD>
-                  </TR>
-                ))}
+                  </TR>;
+                })}
               </TBody>
             </Table>
           </TableScroll>
@@ -334,8 +344,4 @@ function humanizeKey(value: string) {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (character: string) => character.toUpperCase());
-}
-
-function hasPermission(permissions: string[] | undefined, permission: string) {
-  return permissions?.includes("*") || permissions?.includes(permission) || false;
 }

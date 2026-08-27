@@ -1,21 +1,23 @@
-//
-//  campus-pilot-apis
-//  routes.rs
-//
-//  Created by Ngonidzashe Mangudya on 2025/10/02.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Exposes tenant-scoped user administration with delegation-safe role changes.
+//!
+//! Operators cannot manage their own account, the Campus Owner account, or a
+//! user whose existing role access exceeds their own effective permissions.
+
+use std::collections::BTreeSet;
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, delete, get, post, put, web};
-use cp_common::TenantId;
+use cp_common::{AccessContext, TenantId};
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
     middleware::{AuthMiddleware, RequirePermission},
     models::api_response::{ApiResponse, PaginationMeta},
-    services::{auth::models::User, roles::ops::RoleOps},
+    services::{
+        auth::{AuthOps, models::User},
+        roles::ops::RoleOps,
+    },
     state::AppState,
     utils::{flatten_validation_errors, hash_password},
 };
@@ -119,6 +121,7 @@ async fn get_user(
 async fn create_user(
     state: web::Data<AppState>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
     body: web::Json<CreateUserRequest>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let tenant_id = tenant.into_inner().into_inner();
@@ -133,9 +136,49 @@ async fn create_user(
         )));
     }
 
-    match RoleOps::role_keys_exist(&state.db, tenant_id, &body.roles).await {
-        Ok(true) => {}
-        Ok(false) => {
+    let email = body.email.trim();
+    let full_name = body.full_name.trim();
+    let phone = body
+        .phone
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if full_name.is_empty() {
+        return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+            StatusCode::BAD_REQUEST,
+            None::<()>,
+            Some(vec!["Full name is required".to_string()]),
+        )));
+    }
+
+    let role_keys = canonical_values(body.roles.clone());
+    if role_keys.is_empty() {
+        return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+            StatusCode::BAD_REQUEST,
+            None::<()>,
+            Some(vec!["At least one role is required".to_string()]),
+        )));
+    }
+
+    if !access.has_permission("roles:assign") {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec!["Role assignment permission is required".to_string()]),
+        )));
+    }
+    match RoleOps::assignment_permissions(&state.db, tenant_id, &role_keys).await {
+        Ok(Some(permissions)) if access.can_delegate_permissions(&permissions) => {}
+        Ok(Some(_)) => {
+            return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+                StatusCode::FORBIDDEN,
+                None::<()>,
+                Some(vec![
+                    "Only the Campus Owner can assign a full-access role".to_string(),
+                ]),
+            )));
+        }
+        Ok(None) => {
             return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
                 StatusCode::BAD_REQUEST,
                 None::<()>,
@@ -157,7 +200,7 @@ async fn create_user(
     }
 
     // Check if email already exists
-    match UserOps::email_exists(&state.db, tenant_id, &body.email, None).await {
+    match UserOps::email_exists(&state.db, tenant_id, email, None).await {
         Ok(true) => {
             return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
                 StatusCode::CONFLICT,
@@ -197,11 +240,11 @@ async fn create_user(
     let user = match UserOps::create_user(
         &state.db,
         tenant_id,
-        &body.email,
-        &body.full_name,
+        email,
+        full_name,
         &password_hash,
-        body.phone.as_deref(),
-        body.roles.clone(),
+        phone,
+        role_keys,
         body.is_active.unwrap_or(true),
     )
     .await
@@ -232,6 +275,7 @@ async fn create_user(
 async fn update_user(
     state: web::Data<AppState>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
     path: web::Path<Uuid>,
     body: web::Json<UpdateUserRequest>,
     req: HttpRequest,
@@ -249,10 +293,105 @@ async fn update_user(
         )));
     }
 
-    if let Some(role_keys) = body.roles.as_ref() {
-        match RoleOps::role_keys_exist(&state.db, tenant_id, role_keys).await {
-            Ok(true) => {}
-            Ok(false) => {
+    let target_user = match UserOps::get_user_by_id(&state.db, tenant_id, user_id).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
+                StatusCode::NOT_FOUND,
+                None::<()>,
+                Some(vec!["User not found".to_string()]),
+            )));
+        }
+        Err(error) => {
+            log::error!("Failed to load user before update: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["User access could not be checked".to_string()]),
+                )),
+            );
+        }
+    };
+
+    if req
+        .extensions()
+        .get::<User>()
+        .is_some_and(|current_user| current_user.id == user_id)
+    {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec![
+                "Use your account settings to change your own details".to_string(),
+            ]),
+        )));
+    }
+    if target_user.roles.iter().any(|role| role == "campus_owner") {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec![
+                "The Campus Owner account is managed through account settings".to_string(),
+            ]),
+        )));
+    }
+    if !can_manage_user(&state, tenant_id, &access, &target_user).await? {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec![
+                "You cannot change a user with access beyond your own".to_string(),
+            ]),
+        )));
+    }
+
+    let normalized_role_keys = body.roles.clone().map(canonical_values);
+    if normalized_role_keys.as_ref().is_some_and(Vec::is_empty) {
+        return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+            StatusCode::BAD_REQUEST,
+            None::<()>,
+            Some(vec!["At least one role is required".to_string()]),
+        )));
+    }
+
+    let email = body.email.as_deref().map(str::trim);
+    let full_name = body.full_name.as_deref().map(str::trim);
+    if full_name.is_some_and(str::is_empty) {
+        return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+            StatusCode::BAD_REQUEST,
+            None::<()>,
+            Some(vec!["Full name cannot be empty".to_string()]),
+        )));
+    }
+    let phone = body.phone.as_ref().map(|phone| {
+        phone
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    });
+
+    if let Some(role_keys) = normalized_role_keys.as_ref() {
+        if !access.has_permission("roles:assign") {
+            return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+                StatusCode::FORBIDDEN,
+                None::<()>,
+                Some(vec!["Role assignment permission is required".to_string()]),
+            )));
+        }
+        match RoleOps::assignment_permissions(&state.db, tenant_id, role_keys).await {
+            Ok(Some(permissions)) if access.can_delegate_permissions(&permissions) => {}
+            Ok(Some(_)) => {
+                return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+                    StatusCode::FORBIDDEN,
+                    None::<()>,
+                    Some(vec![
+                        "Only the Campus Owner can assign a full-access role".to_string(),
+                    ]),
+                )));
+            }
+            Ok(None) => {
                 return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
                     StatusCode::BAD_REQUEST,
                     None::<()>,
@@ -274,24 +413,8 @@ async fn update_user(
         }
     }
 
-    // Check if user exists
-    if UserOps::get_user_by_id(&state.db, tenant_id, user_id)
-        .await
-        .map_err(|e| {
-            log::error!("Failed to check user existence: {:?}", e);
-            actix_web::error::ErrorInternalServerError("Failed to check user")
-        })?
-        .is_none()
-    {
-        return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
-            StatusCode::NOT_FOUND,
-            None::<()>,
-            Some(vec!["User not found".to_string()]),
-        )));
-    }
-
     // Check if email is being updated and already exists
-    if let Some(ref email) = body.email {
+    if let Some(email) = email {
         match UserOps::email_exists(&state.db, tenant_id, email, Some(user_id)).await {
             Ok(true) => {
                 return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
@@ -314,26 +437,15 @@ async fn update_user(
         }
     }
 
-    // Prevent user from modifying their own account
-    if let Some(current_user) = req.extensions().get::<User>() {
-        if current_user.id == user_id {
-            return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
-                StatusCode::FORBIDDEN,
-                None::<()>,
-                Some(vec!["Cannot modify your own account".to_string()]),
-            )));
-        }
-    }
-
     // Update user
     let user = match UserOps::update_user(
         &state.db,
         tenant_id,
         user_id,
-        body.email.as_deref(),
-        body.full_name.as_deref(),
-        body.phone.as_deref(),
-        body.roles.clone(),
+        email,
+        full_name,
+        phone.as_ref().map(|phone| phone.as_deref()),
+        normalized_role_keys,
         body.is_active,
     )
     .await
@@ -364,6 +476,7 @@ async fn update_user(
 async fn delete_user(
     state: web::Data<AppState>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
     path: web::Path<Uuid>,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
@@ -393,14 +506,16 @@ async fn delete_user(
     };
 
     // Prevent deleting own account
-    if let Some(current_user) = req.extensions().get::<User>() {
-        if current_user.id == user_id {
-            return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
-                StatusCode::FORBIDDEN,
-                None::<()>,
-                Some(vec!["Cannot delete your own account".to_string()]),
-            )));
-        }
+    if req
+        .extensions()
+        .get::<User>()
+        .is_some_and(|current_user| current_user.id == user_id)
+    {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec!["Cannot delete your own account".to_string()]),
+        )));
     }
 
     // The campus must always retain its owner account.
@@ -410,6 +525,15 @@ async fn delete_user(
             None::<()>,
             Some(vec![
                 "The Campus Owner account cannot be deleted".to_string(),
+            ]),
+        )));
+    }
+    if !can_manage_user(&state, tenant_id, &access, &target_user).await? {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec![
+                "You cannot delete a user with access beyond your own".to_string(),
             ]),
         )));
     }
@@ -425,6 +549,9 @@ async fn delete_user(
             )),
         );
     }
+    if let Err(error) = AuthOps::revoke_all_user_tokens(&state.db, user_id).await {
+        log::error!("Failed to revoke deleted user's sessions: {:?}", error);
+    }
 
     Ok(HttpResponse::Ok().json(ApiResponse::from_status(
         StatusCode::OK,
@@ -437,10 +564,27 @@ async fn delete_user(
 async fn activate_user(
     state: web::Data<AppState>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
     path: web::Path<Uuid>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
+
+    let target_user = match managed_target_user(&state, tenant_id, user_id, &access, &req).await? {
+        ManagedTargetUser::Allowed(user) => user,
+        ManagedTargetUser::NotFound => return Ok(manage_user_not_found()),
+        ManagedTargetUser::Forbidden => return Ok(manage_user_forbidden()),
+    };
+    if target_user.roles.iter().any(|role| role == "campus_owner") {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec![
+                "The Campus Owner account is always active".to_string(),
+            ]),
+        )));
+    }
 
     let user = match UserOps::activate_user(&state.db, tenant_id, user_id).await {
         Ok(user) => user,
@@ -469,10 +613,27 @@ async fn activate_user(
 async fn deactivate_user(
     state: web::Data<AppState>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
     path: web::Path<Uuid>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     let tenant_id = tenant.into_inner().into_inner();
     let user_id = path.into_inner();
+
+    let target_user = match managed_target_user(&state, tenant_id, user_id, &access, &req).await? {
+        ManagedTargetUser::Allowed(user) => user,
+        ManagedTargetUser::NotFound => return Ok(manage_user_not_found()),
+        ManagedTargetUser::Forbidden => return Ok(manage_user_forbidden()),
+    };
+    if target_user.roles.iter().any(|role| role == "campus_owner") {
+        return Ok(HttpResponse::Forbidden().json(ApiResponse::from_status(
+            StatusCode::FORBIDDEN,
+            None::<()>,
+            Some(vec![
+                "The Campus Owner account cannot be deactivated".to_string(),
+            ]),
+        )));
+    }
 
     let user = match UserOps::deactivate_user(&state.db, tenant_id, user_id).await {
         Ok(user) => user,
@@ -488,7 +649,9 @@ async fn deactivate_user(
         }
     };
 
-    // TODO: Revoke all user sessions
+    if let Err(error) = AuthOps::revoke_all_user_tokens(&state.db, user_id).await {
+        log::error!("Failed to revoke deactivated user's sessions: {:?}", error);
+    }
 
     let response: UserResponse = user.into();
 
@@ -497,6 +660,87 @@ async fn deactivate_user(
         Some(response),
         None,
     )))
+}
+
+fn canonical_values(values: Vec<String>) -> Vec<String> {
+    values
+        .into_iter()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+async fn can_manage_user(
+    state: &web::Data<AppState>,
+    tenant_id: Uuid,
+    access: &AccessContext,
+    target_user: &User,
+) -> Result<bool, actix_web::Error> {
+    RoleOps::assignment_permissions(&state.db, tenant_id, &target_user.roles)
+        .await
+        .map(|permissions| {
+            permissions.is_some_and(|permissions| access.can_delegate_permissions(&permissions))
+        })
+        .map_err(|error| {
+            log::error!("Failed to resolve target user access: {:?}", error);
+            actix_web::error::ErrorInternalServerError("User access could not be checked")
+        })
+}
+
+async fn managed_target_user(
+    state: &web::Data<AppState>,
+    tenant_id: Uuid,
+    user_id: Uuid,
+    access: &AccessContext,
+    req: &HttpRequest,
+) -> Result<ManagedTargetUser, actix_web::Error> {
+    if req
+        .extensions()
+        .get::<User>()
+        .is_some_and(|current_user| current_user.id == user_id)
+    {
+        return Ok(ManagedTargetUser::Forbidden);
+    }
+    let target_user = UserOps::get_user_by_id(&state.db, tenant_id, user_id)
+        .await
+        .map_err(|error| {
+            log::error!("Failed to load managed user: {:?}", error);
+            actix_web::error::ErrorInternalServerError("User access could not be checked")
+        })?;
+    let Some(target_user) = target_user else {
+        return Ok(ManagedTargetUser::NotFound);
+    };
+    Ok(
+        if can_manage_user(state, tenant_id, access, &target_user).await? {
+            ManagedTargetUser::Allowed(Box::new(target_user))
+        } else {
+            ManagedTargetUser::Forbidden
+        },
+    )
+}
+
+enum ManagedTargetUser {
+    Allowed(Box<User>),
+    NotFound,
+    Forbidden,
+}
+
+fn manage_user_forbidden() -> HttpResponse {
+    HttpResponse::Forbidden().json(ApiResponse::from_status(
+        StatusCode::FORBIDDEN,
+        None::<()>,
+        Some(vec!["You cannot change this account".to_string()]),
+    ))
+}
+
+fn manage_user_not_found() -> HttpResponse {
+    HttpResponse::NotFound().json(ApiResponse::from_status(
+        StatusCode::NOT_FOUND,
+        None::<()>,
+        Some(vec!["User not found".to_string()]),
+    ))
 }
 
 pub fn routes(cfg: &mut web::ServiceConfig) {

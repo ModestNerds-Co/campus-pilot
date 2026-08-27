@@ -185,7 +185,7 @@ impl UserOps {
         user_id: Uuid,
         email: Option<&str>,
         full_name: Option<&str>,
-        phone: Option<&str>,
+        phone: Option<Option<&str>>,
         roles: Option<Vec<String>>,
         is_active: Option<bool>,
     ) -> ApiResult<User> {

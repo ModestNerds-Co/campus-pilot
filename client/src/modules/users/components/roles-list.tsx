@@ -16,6 +16,7 @@ import { TableWrap, TableScroll, Table, THead, TH, TBody, TR, TD, TableEmpty, Ta
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
 import { useAuthStore } from "@/stores/auth-store";
+import { apiErrorMessage, canDelegatePermissions, hasPermission } from "../access-control";
 
 export const RolesList: React.FC = () => {
   const currentUser = useAuthStore((state) => state.user);
@@ -76,7 +77,7 @@ export const RolesList: React.FC = () => {
         setPendingDelete(null);
         void fetchRoles();
       } else {
-        toast.error(response.message || "Failed to delete role");
+        toast.error(apiErrorMessage(response, "Failed to delete role"));
       }
     } catch {
       toast.error("Failed to delete role");
@@ -171,8 +172,9 @@ export const RolesList: React.FC = () => {
                 </tr>
               </THead>
               <TBody>
-                {roles.map((role) => (
-                  <TR key={role.id}>
+                {roles.map((role) => {
+                  const canManageRole = canDelegatePermissions(currentUser?.permissions, role.permissions);
+                  return <TR key={role.id}>
                     <TD className="whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="flex size-10 items-center justify-center rounded-full bg-[var(--accent-100)]">
@@ -206,7 +208,7 @@ export const RolesList: React.FC = () => {
                     </TD>
                     <TD className="whitespace-nowrap text-right">
                       <div className="relative flex justify-end">
-                        {(canEdit || (canDelete && !role.is_system)) ? <button
+                        {((canEdit && canManageRole) || (canDelete && canManageRole && !role.is_system)) ? <button
                           aria-controls={openMenuId === role.id ? `role-actions-${role.id}` : undefined}
                           aria-expanded={openMenuId === role.id}
                           aria-haspopup="menu"
@@ -219,14 +221,14 @@ export const RolesList: React.FC = () => {
                         </button> : null}
                         {openMenuId === role.id && (
                           <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]" id={`role-actions-${role.id}`} role="menu">
-                            {canEdit ? <button
+                            {canEdit && canManageRole ? <button
                               onClick={() => handleEditRole(role)}
                               role="menuitem"
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
                             >
                               <Edit className="size-4" /> Edit
                             </button> : null}
-                            {canDelete && !role.is_system ? <button
+                            {canDelete && canManageRole && !role.is_system ? <button
                               onClick={() => {
                                 setPendingDelete(role);
                                 setOpenMenuId(null);
@@ -240,8 +242,8 @@ export const RolesList: React.FC = () => {
                         )}
                       </div>
                     </TD>
-                  </TR>
-                ))}
+                  </TR>;
+                })}
               </TBody>
             </Table>
           </TableScroll>
@@ -270,8 +272,4 @@ function humanizeKey(value: string) {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (character: string) => character.toUpperCase());
-}
-
-function hasPermission(permissions: string[] | undefined, permission: string) {
-  return permissions?.includes("*") || permissions?.includes(permission) || false;
 }

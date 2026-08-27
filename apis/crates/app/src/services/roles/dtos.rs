@@ -1,6 +1,6 @@
-// Copyright (c) 2025-01-02 Codecraft Solutions
-// Created: 2025-01-02
-// Author: AI Assistant
+//! Defines role-management wire contracts and response representations.
+//!
+//! Update descriptions preserve the difference between omitted and explicit null.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct CreateRoleRequest {
     #[validate(length(
         min = 1,
@@ -23,6 +24,7 @@ pub struct CreateRoleRequest {
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct UpdateRoleRequest {
     #[validate(length(
         min = 1,
@@ -31,10 +33,18 @@ pub struct UpdateRoleRequest {
     ))]
     pub name: Option<String>,
 
-    #[validate(length(max = 1000, message = "Description must not exceed 1000 characters"))]
-    pub description: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    pub description: Option<Option<String>>,
 
     pub permissions: Option<Vec<String>>,
+}
+
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }
 
 #[derive(Debug, Serialize)]
@@ -73,5 +83,30 @@ impl From<super::models::Role> for RoleResponse {
             created_at: role.created_at,
             updated_at: role.updated_at,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UpdateRoleRequest;
+
+    #[test]
+    fn update_description_preserves_omitted_null_and_value() {
+        let omitted: UpdateRoleRequest = serde_json::from_str("{}").unwrap();
+        let cleared: UpdateRoleRequest = serde_json::from_str(r#"{"description":null}"#).unwrap();
+        let changed: UpdateRoleRequest =
+            serde_json::from_str(r#"{"description":"Heads a faculty"}"#).unwrap();
+
+        assert_eq!(omitted.description, None);
+        assert_eq!(cleared.description, Some(None));
+        assert_eq!(
+            changed.description,
+            Some(Some("Heads a faculty".to_string()))
+        );
+    }
+
+    #[test]
+    fn role_updates_reject_unknown_fields() {
+        assert!(serde_json::from_str::<UpdateRoleRequest>(r#"{"is_system":true}"#).is_err());
     }
 }

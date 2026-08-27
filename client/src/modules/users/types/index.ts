@@ -30,7 +30,6 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   email?: string;
   full_name?: string;
-  password?: string;
   phone?: string | null;
   roles?: string[];
   is_active?: boolean;

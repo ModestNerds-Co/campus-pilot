@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE roles\n            SET name = COALESCE($1, name),\n                description = COALESCE($2, description),\n                permissions = COALESCE($3, permissions),\n                updated_at = NOW()\n            WHERE id = $4 AND tenant_id = $5 AND deleted_at IS NULL\n            RETURNING id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            ",
+  "query": "\n            SELECT id, tenant_id, key, name, description, permissions, is_system, created_at, updated_at, deleted_at\n            FROM roles\n            WHERE LOWER(name) = LOWER($1) AND tenant_id = $2 AND deleted_at IS NULL\n            ",
   "describe": {
     "columns": [
       {
@@ -57,9 +57,6 @@
     "parameters": {
       "Left": [
         "Text",
-        "Text",
-        "TextArray",
-        "Uuid",
         "Uuid"
       ]
     },
@@ -76,5 +73,5 @@
       true
     ]
   },
-  "hash": "91c587a061594faddcf1fe36ccde7aa5a274fe176e4f69487033b34a29e1603b"
+  "hash": "f4729ffe1c9f7ef7bca77b06b6a88dd4030d8c05cf5dfac984c3893caaa7736a"
 }

@@ -11,4 +11,5 @@ pub mod models;
 mod ops;
 mod routes;
 
+pub(crate) use ops::AuthOps;
 pub use routes::routes;

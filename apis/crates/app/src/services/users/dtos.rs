@@ -1,10 +1,6 @@
-//
-//  campus-pilot-apis
-//  dtos.rs
-//
-//  Created by Ngonidzashe Mangudya on 2025/10/02.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Defines user-administration wire contracts and response representations.
+//!
+//! Update phone values preserve the difference between omitted and explicit null.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -14,6 +10,7 @@ use validator::Validate;
 use crate::services::auth::models::User;
 
 #[derive(Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct CreateUserRequest {
     #[validate(email(message = "Invalid email format"))]
     pub email: String,
@@ -28,13 +25,23 @@ pub struct CreateUserRequest {
 }
 
 #[derive(Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct UpdateUserRequest {
     #[validate(email(message = "Invalid email format"))]
     pub email: Option<String>,
     pub full_name: Option<String>,
-    pub phone: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    pub phone: Option<Option<String>>,
     pub roles: Option<Vec<String>>,
     pub is_active: Option<bool>,
+}
+
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }
 
 #[derive(Serialize)]
@@ -78,5 +85,27 @@ impl From<User> for UserResponse {
             created_at: user.created_at,
             updated_at: user.updated_at,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UpdateUserRequest;
+
+    #[test]
+    fn update_phone_preserves_omitted_null_and_value() {
+        let omitted: UpdateUserRequest = serde_json::from_str("{}").unwrap();
+        let cleared: UpdateUserRequest = serde_json::from_str(r#"{"phone":null}"#).unwrap();
+        let changed: UpdateUserRequest =
+            serde_json::from_str(r#"{"phone":"+263 77 000 0000"}"#).unwrap();
+
+        assert_eq!(omitted.phone, None);
+        assert_eq!(cleared.phone, Some(None));
+        assert_eq!(changed.phone, Some(Some("+263 77 000 0000".to_string())));
+    }
+
+    #[test]
+    fn user_updates_reject_ignored_password_changes() {
+        assert!(serde_json::from_str::<UpdateUserRequest>(r#"{"password":"ignored"}"#).is_err());
     }
 }
