@@ -147,7 +147,7 @@ mod tests {
             CapabilityVersion, DataSensitivity, IdempotencyMode, ObjectSchema, ProviderDataClass,
             RedactionProjection, Reversibility, StaleDataStrategy,
         },
-        handler::Capability,
+        handler::{Capability, ErasedCapabilityError, ParsedCapabilityInput},
         types::{
             AuthenticatedAgentPrincipal, AuthorizedCapabilityContext, AuthorizedRecordScope,
             CapabilityExecutionError, CapabilityScope,
@@ -278,6 +278,10 @@ mod tests {
         let handler = registry
             .handler(&key, version)
             .unwrap_or_else(|| unreachable!());
+        assert!(matches!(
+            handler.scope(&ParsedCapabilityInput(Box::new(7_u64))),
+            Err(ErasedCapabilityError::Contract)
+        ));
         let parsed = handler
             .parse_input(json!({"value": "catalog"}))
             .unwrap_or_else(|_| unreachable!());

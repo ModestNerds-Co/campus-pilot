@@ -1147,6 +1147,7 @@ dependencies = [
  "base64 0.21.7",
  "chrono",
  "cp-academics",
+ "cp-agent",
  "cp-audit",
  "cp-common",
  "cp-fees",

@@ -249,6 +249,8 @@ Provider credentials never share tables with messages or usage. Usage is not the
 
 The code catalogue contains the exact operation list. This planning map defines the capability families that must be inventoried; it is not permission to invent unavailable features.
 
+Current implementation status: `cp-agent::ModuleCoverageRegistry` now joins every catalogued module's delivery stage, core/licensed boundary, workspace route, routed product operations, Agent exposure counts, registered executable capabilities, and missing directly exposed handlers. The application catalogue test currently proves 17 modules are represented, Administration/Fleet/Timetabling have aligned delivery and licensing declarations, and the 16 directly exposed read operations are still explicit executable-capability gaps. SIS is honestly marked `foundation` because its current API is a `not_implemented` status stub; it must not appear as an available module until real operations exist. This registry is diagnostic evidence, not an access grant.
+
 | Module | Capability families | Initial policy emphasis |
 | --- | --- | --- |
 | Administration | users, roles, licensing, school settings, Agent governance | Secrets stay human-only; access escalation and license changes require strong approval. |

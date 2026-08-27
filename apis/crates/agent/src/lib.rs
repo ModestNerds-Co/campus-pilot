@@ -5,6 +5,7 @@
 
 mod audit;
 mod broker;
+mod coverage;
 mod descriptor;
 mod handler;
 mod registry;
@@ -16,6 +17,10 @@ pub use audit::{
 };
 pub use broker::{
     AuthorityLoadError, AuthorityLoader, CapabilityBroker, RecordScopeAuthorizer, RecordScopeDenied,
+};
+pub use coverage::{
+    ModuleCoverage, ModuleCoverageError, ModuleCoverageRegistry, ModuleCoverageSource,
+    ModuleDeliveryStage,
 };
 pub use descriptor::{
     ApprovalMode, CapabilityDescriptor, CapabilityEffect, CapabilityIdentity, CapabilityKey,

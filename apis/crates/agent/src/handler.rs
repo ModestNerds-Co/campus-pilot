@@ -30,7 +30,7 @@ pub trait Capability: Send + Sync + 'static {
     ) -> Result<Self::Output, CapabilityExecutionError>;
 }
 
-pub(crate) struct ParsedCapabilityInput(Box<dyn Any + Send + Sync>);
+pub(crate) struct ParsedCapabilityInput(pub(crate) Box<dyn Any + Send + Sync>);
 
 #[derive(Debug)]
 pub(crate) enum ErasedCapabilityError {

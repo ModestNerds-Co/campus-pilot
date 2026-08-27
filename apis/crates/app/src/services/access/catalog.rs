@@ -49,7 +49,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/sis",
             "sis",
             false,
-            "available",
+            "foundation",
             &["view", "create", "edit", "delete"],
         ),
         module(
@@ -381,7 +381,8 @@ fn action_label(action: &str) -> String {
 mod tests {
     use std::collections::BTreeSet;
 
-    use cp_common::operation_catalog;
+    use cp_agent::{CapabilityRegistry, ModuleCoverageRegistry, ModuleCoverageSource};
+    use cp_common::{ProductOperation, operation_catalog};
 
     use super::{all_permission_keys, module_catalog};
 
@@ -412,5 +413,45 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn module_coverage_exposes_current_release_and_agent_gaps() {
+        let capability_registry =
+            CapabilityRegistry::from_product_catalog().unwrap_or_else(|_| unreachable!());
+        let coverage = ModuleCoverageRegistry::build(
+            module_catalog().into_iter().map(|module| {
+                ModuleCoverageSource::parse(module.key, module.stage, module.core, module.route)
+                    .unwrap_or_else(|_| unreachable!())
+            }),
+            operation_catalog()
+                .iter()
+                .map(|entry| entry.operation().clone())
+                .collect::<Vec<ProductOperation>>(),
+            &capability_registry,
+        )
+        .unwrap_or_else(|_| unreachable!());
+
+        assert_eq!(coverage.entries().len(), module_catalog().len());
+        assert_eq!(coverage.missing_executable_capability_count(), 16);
+        for module_key in ["administration", "fleet", "timetabling"] {
+            let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
+            assert!(module.stage_aligned(), "{module_key} stage is not aligned");
+            assert!(
+                module.licensing_aligned(),
+                "{module_key} licensing is not aligned"
+            );
+            assert!(
+                !module.release_ready(),
+                "{module_key} has missing Agent reads"
+            );
+        }
+        assert_eq!(
+            coverage
+                .entry("sis")
+                .unwrap_or_else(|| unreachable!())
+                .stage(),
+            cp_agent::ModuleDeliveryStage::Foundation
+        );
     }
 }
