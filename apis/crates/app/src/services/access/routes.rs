@@ -657,3 +657,290 @@ mod authority_tests {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use std::{
+        net::TcpListener,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, AtomicI64, Ordering},
+        },
+    };
+
+    use actix_web::{App, HttpRequest, HttpResponse, HttpServer, http::header, web};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use chrono::{Duration, Utc};
+    use cp_common::PRODUCT_CATALOG_VERSION;
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+    use serde::Deserialize;
+    use serde_json::json;
+    use uuid::Uuid;
+
+    use crate::{state::AppState, tests::helpers::create_test_app_state};
+
+    use super::{
+        AccessOps, SignedLeaseClaims, connect_license_inner, import_license_inner,
+        refresh_license_inner, reveal_installation_credential,
+    };
+
+    const KEY_ID: &str = "lifecycle-test-key";
+    const ACTIVATION_CODE: &str = "cpact_lifecycle_test_value";
+    const INSTALLATION_CREDENTIAL: &str = "cpinst_lifecycle_test_value";
+    const PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIL9PtNqTMRWH3/0tsQRAHSoduxipswZZSjKkMtpWweJd\n-----END PRIVATE KEY-----\n";
+    const PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAxbbyLLpJQoSoH8ia0Xw/lZTAUKtokEiy8l27VZND2zI=\n-----END PUBLIC KEY-----\n";
+
+    struct MockControlPlane {
+        tenant_id: Uuid,
+        installation_id: Uuid,
+        revoked: AtomicBool,
+        next_sequence: AtomicI64,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ActivationBody {
+        activation_code: String,
+        tenant_id: Uuid,
+        deployment_id: Uuid,
+        name: String,
+    }
+
+    async fn activate(
+        state: web::Data<MockControlPlane>,
+        body: web::Json<ActivationBody>,
+    ) -> HttpResponse {
+        if body.activation_code != ACTIVATION_CODE
+            || body.tenant_id != state.tenant_id
+            || body.deployment_id.is_nil()
+            || body.name.trim().is_empty()
+        {
+            return HttpResponse::BadRequest().json(json!({
+                "error": "The activation code is invalid or expired",
+                "code": "activation_invalid",
+            }));
+        }
+        let (lease, claims) = signed_lease(
+            state.tenant_id,
+            state.installation_id,
+            1,
+            &["agent", "fleet"],
+            &["agent.sessions"],
+        );
+        HttpResponse::Ok().json(json!({
+            "installation_id": state.installation_id,
+            "installation_token": INSTALLATION_CREDENTIAL,
+            "lease": lease,
+            "claims": claims,
+        }))
+    }
+
+    async fn renew(state: web::Data<MockControlPlane>, request: HttpRequest) -> HttpResponse {
+        let authorization = request
+            .headers()
+            .get(header::AUTHORIZATION)
+            .and_then(|value| value.to_str().ok());
+        if authorization != Some("Bearer cpinst_lifecycle_test_value") {
+            return HttpResponse::Unauthorized().json(json!({
+                "error": "Installation authentication failed",
+                "code": "installation_unauthorized",
+            }));
+        }
+        if state.revoked.load(Ordering::SeqCst) {
+            return HttpResponse::Forbidden().json(json!({
+                "error": "This installation is not active",
+                "code": "installation_inactive",
+            }));
+        }
+        let sequence = state.next_sequence.fetch_add(1, Ordering::SeqCst);
+        let (token, claims) = signed_lease(
+            state.tenant_id,
+            state.installation_id,
+            sequence,
+            &["agent"],
+            &["agent.history"],
+        );
+        HttpResponse::Ok().json(json!({ "token": token, "claims": claims }))
+    }
+
+    fn signed_lease(
+        tenant_id: Uuid,
+        installation_id: Uuid,
+        sequence: i64,
+        modules: &[&str],
+        features: &[&str],
+    ) -> (String, SignedLeaseClaims) {
+        let now = Utc::now();
+        let claims = SignedLeaseClaims {
+            contract_version: "cp-license/v1".to_string(),
+            iss: "campus-pilot-control-plane".to_string(),
+            aud: "campus-pilot".to_string(),
+            sub: tenant_id.to_string(),
+            installation_id: installation_id.to_string(),
+            jti: Uuid::new_v4().to_string(),
+            sequence,
+            catalog_version: PRODUCT_CATALOG_VERSION.to_string(),
+            iat: now.timestamp(),
+            nbf: (now - Duration::seconds(30)).timestamp(),
+            refresh_after: (now + Duration::minutes(5)).timestamp(),
+            lease_expires_at: (now + Duration::minutes(10)).timestamp(),
+            grace_until: (now + Duration::minutes(15)).timestamp(),
+            exp: (now + Duration::minutes(15)).timestamp(),
+            modules: modules.iter().map(|value| (*value).to_string()).collect(),
+            features: features.iter().map(|value| (*value).to_string()).collect(),
+            limits: vec![],
+            min_app_version: None,
+            max_app_version: None,
+        };
+        let header = Header {
+            alg: Algorithm::EdDSA,
+            kid: Some(KEY_ID.to_string()),
+            ..Header::default()
+        };
+        let token = encode(
+            &header,
+            &claims,
+            &EncodingKey::from_ed_pem(PRIVATE_KEY.as_bytes()).unwrap_or_else(|_| unreachable!()),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        (token, claims)
+    }
+
+    #[actix_web::test]
+    async fn activation_refresh_offline_replay_revocation_and_recovery_are_coherent() {
+        let base_state = create_test_app_state().await;
+        let tenant_id = Uuid::new_v4();
+        sqlx::query("INSERT INTO tenants (id, slug, name) VALUES ($1, $2, 'Lifecycle test')")
+            .bind(tenant_id)
+            .bind(format!("license-lifecycle-{tenant_id}"))
+            .execute(&base_state.db)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+
+        let installation_id = Uuid::new_v4();
+        let mock_state = web::Data::new(MockControlPlane {
+            tenant_id,
+            installation_id,
+            revoked: AtomicBool::new(false),
+            next_sequence: AtomicI64::new(2),
+        });
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| unreachable!());
+        let address = listener.local_addr().unwrap_or_else(|_| unreachable!());
+        let server_state = mock_state.clone();
+        let server = HttpServer::new(move || {
+            App::new()
+                .app_data(server_state.clone())
+                .route("/api/v1/installations/activate", web::post().to(activate))
+                .route("/api/v1/leases/renew", web::post().to(renew))
+        })
+        .listen(listener)
+        .unwrap_or_else(|_| unreachable!())
+        .run();
+        let server_handle = server.handle();
+        actix_web::rt::spawn(server);
+
+        let mut config = (*base_state.config).clone();
+        config.license.control_plane_url = Some(format!("http://{address}"));
+        config.license.credential_key_base64 = Some(STANDARD.encode([7_u8; 32]));
+        config
+            .license
+            .trusted_public_keys
+            .insert(KEY_ID.to_string(), STANDARD.encode(PUBLIC_KEY.as_bytes()));
+        config.license.installation_name = "Lifecycle test server".to_string();
+        let state = Arc::new(AppState::init(base_state.db.clone(), config));
+
+        assert!(
+            connect_license_inner(&state, tenant_id, "cpact_invalid_test_value")
+                .await
+                .is_err()
+        );
+        let activated = connect_license_inner(&state, tenant_id, ACTIVATION_CODE)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        assert_eq!(activated.activated_modules, vec!["agent", "fleet"]);
+
+        let installation = AccessOps::ensure_license_installation(&state.db, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        assert_eq!(installation.remote_installation_id, Some(installation_id));
+        assert_eq!(installation.latest_lease_sequence, 1);
+        let stored_credential = reveal_installation_credential(
+            installation
+                .credential_ciphertext
+                .as_deref()
+                .unwrap_or_else(|| unreachable!()),
+            installation
+                .credential_nonce
+                .as_deref()
+                .unwrap_or_else(|| unreachable!()),
+            tenant_id,
+            installation.deployment_id,
+            &state.config.license,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert_eq!(stored_credential, INSTALLATION_CREDENTIAL);
+
+        let refreshed = refresh_license_inner(&state, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        assert_eq!(refreshed.activated_modules, vec!["agent"]);
+        assert_eq!(
+            AccessOps::ensure_license_installation(&state.db, tenant_id)
+                .await
+                .unwrap_or_else(|_| unreachable!())
+                .latest_lease_sequence,
+            2
+        );
+
+        let (offline_token, _) = signed_lease(
+            tenant_id,
+            installation_id,
+            3,
+            &["agent"],
+            &["agent.offline"],
+        );
+        let bundle = json!({
+            "format": "cp-license-bundle/v1",
+            "key_id": KEY_ID,
+            "lease": offline_token,
+        })
+        .to_string();
+        let imported = import_license_inner(&state, tenant_id, &bundle)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        assert_eq!(imported.activated_modules, vec!["agent"]);
+        assert!(
+            import_license_inner(&state, tenant_id, &bundle)
+                .await
+                .is_err()
+        );
+        let lease = AccessOps::latest_license_lease(&state.db, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!())
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(lease.source, "offline_import");
+
+        mock_state.revoked.store(true, Ordering::SeqCst);
+        assert!(refresh_license_inner(&state, tenant_id).await.is_err());
+        assert_eq!(
+            AccessOps::ensure_license_installation(&state.db, tenant_id)
+                .await
+                .unwrap_or_else(|_| unreachable!())
+                .latest_lease_sequence,
+            3
+        );
+
+        mock_state.revoked.store(false, Ordering::SeqCst);
+        mock_state.next_sequence.store(4, Ordering::SeqCst);
+        refresh_license_inner(&state, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        let recovered = AccessOps::ensure_license_installation(&state.db, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        assert_eq!(recovered.latest_lease_sequence, 4);
+        assert_eq!(recovered.status, "active");
+        assert!(recovered.last_refresh_success_at.is_some());
+
+        server_handle.stop(true).await;
+    }
+}
