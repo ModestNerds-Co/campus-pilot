@@ -1333,7 +1333,122 @@
           }
         },
         {
-          "name": "Activate Signed License",
+          "name": "Get Licensing State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/access/licensing",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "licensing"
+              ]
+            },
+            "description": "Returns this deployment identity, remote installation status, current lease lifecycle, modules, features, and limits."
+          }
+        },
+        {
+          "name": "Connect License Installation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activation_code\": \"cpact_one_time_code\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/access/licensing/connect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "licensing",
+                "connect"
+              ]
+            },
+            "description": "Exchanges a one-time customer portal activation code for an installation credential and first signed lease."
+          }
+        },
+        {
+          "name": "Refresh License Lease",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/access/licensing/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "licensing",
+                "refresh"
+              ]
+            },
+            "description": "Renews the signed lease using the encrypted installation credential."
+          }
+        },
+        {
+          "name": "Import Offline License Lease",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bundle\": \"{\\\"format\\\":\\\"cp-license-bundle/v1\\\",\\\"key_id\\\":\\\"key-id\\\",\\\"lease\\\":\\\"signed-jws\\\"}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/access/licensing/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "access",
+                "licensing",
+                "import"
+              ]
+            },
+            "description": "Imports a newer signed .cp-license bundle for the connected installation."
+          }
+        },
+        {
+          "name": "Activate Legacy Signed License",
           "request": {
             "method": "PUT",
             "header": [
@@ -1362,7 +1477,7 @@
                 "activate"
               ]
             },
-            "description": "Verifies an EdDSA-signed campus license and stores only its fingerprint and entitlement claims."
+            "description": "Compatibility endpoint for the previous paste-key license format. New installations use /access/licensing/connect."
           }
         },
         {

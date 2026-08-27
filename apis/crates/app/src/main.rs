@@ -18,6 +18,7 @@ use sentry::integrations::log::LogFilter;
 use sentry_actix::Sentry;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
+use std::time::Duration;
 
 mod config;
 mod db;
@@ -30,6 +31,7 @@ mod utils;
 
 use crate::config::Config;
 use crate::models::ApiResponse;
+use crate::services::access::{ops::AccessOps, routes::refresh_license_inner};
 use state::AppState;
 
 #[actix_web::main]
@@ -90,6 +92,35 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     info!("Setting up storage bucket... 🗄️");
     app_state.storage_ops.ensure_bucket_setup().await?;
     info!("Storage bucket configured successfully 📦");
+
+    let refresh_state = Arc::clone(&app_state);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            match AccessOps::due_license_tenants(&refresh_state.db).await {
+                Ok(tenant_ids) => {
+                    for tenant_id in tenant_ids {
+                        if let Err(error) = refresh_license_inner(&refresh_state, tenant_id).await {
+                            log::warn!(
+                                "Scheduled license refresh failed for tenant {}: {:#}",
+                                tenant_id,
+                                error
+                            );
+                            let _ = AccessOps::note_license_error(
+                                &refresh_state.db,
+                                tenant_id,
+                                "scheduled_refresh_failed",
+                            )
+                            .await;
+                        }
+                    }
+                }
+                Err(error) => log::error!("Scheduled license refresh scan failed: {:#}", error),
+            }
+        }
+    });
 
     let addr = format!("0.0.0.0:{}", config.app.port);
     info!("Ready to rock and roll on {} 🚀", addr);

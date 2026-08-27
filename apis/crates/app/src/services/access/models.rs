@@ -7,7 +7,8 @@
 //
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -20,15 +21,10 @@ pub struct EffectiveAccess {
 
 #[derive(Debug, Clone, FromRow)]
 pub struct TenantModule {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
     pub module_key: String,
     pub status: String,
     pub source: String,
-    pub license_fingerprint: Option<String>,
     pub license_expires_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -56,4 +52,42 @@ impl From<TenantModule> for TenantModuleResponse {
             licensed: module.source == "license",
         }
     }
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct LicenseInstallation {
+    pub id: Uuid,
+    pub deployment_id: Uuid,
+    pub remote_installation_id: Option<Uuid>,
+    pub control_plane_url: Option<String>,
+    pub credential_ciphertext: Option<String>,
+    pub credential_nonce: Option<String>,
+    pub credential_hint: Option<String>,
+    pub status: String,
+    pub latest_lease_sequence: i64,
+    pub last_refresh_attempt_at: Option<DateTime<Utc>>,
+    pub last_refresh_success_at: Option<DateTime<Utc>>,
+    pub last_error_code: Option<String>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct LicenseLease {
+    pub lease_id: Uuid,
+    pub catalog_version: String,
+    pub claims: Value,
+    pub status: String,
+    pub issued_at: DateTime<Utc>,
+    pub refresh_after: DateTime<Utc>,
+    pub lease_expires_at: DateTime<Utc>,
+    pub grace_until: DateTime<Utc>,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LicenseLimitResponse {
+    pub key: String,
+    pub unit: String,
+    pub period: String,
+    pub value: u64,
+    pub enforcement: String,
 }

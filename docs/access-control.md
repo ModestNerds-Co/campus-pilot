@@ -63,6 +63,52 @@ Initial school module catalog:
 
 The final three adopt useful LADS concepts in school language. LADS route-string authorization and unfiltered module walls are deliberately not carried forward.
 
+### Commercial licensing and control plane
+
+Commercial licensing is split across two deployables:
+
+- **Campus Pilot control plane** is a separate vendor-operated Cloudflare service. It owns customer accounts, plans, prices, subscriptions, payments, installations, entitlement issuance, renewal, revocation, signing-key rotation, and vendor audit. It never receives learner, guardian, staff, health, payroll, finance, or other school operational records.
+- **Campus entitlement runtime** remains inside each Campus Pilot installation. It stores and verifies signed leases, materializes effective entitlements, applies local module enablement, evaluates dependencies and limits, and continues operating without a synchronous control-plane call.
+
+The control plane provides two distinct authenticated workspaces:
+
+- The customer portal lets an authorized campus customer compare plans, purchase or renew a subscription, manage billing, register installations, create one-time activation codes, and download an offline license bundle.
+- The owner portal is for platform operators only. It shows customers, subscriptions, payment state, installations, issued leases, entitlement changes, revocations, signing-key state, and append-only operator audit. Platform access never implies access to a school's operational application or data.
+
+Hosted payment checkout and billing management are used so Campus Pilot and the control plane do not collect or store card details. Payment-provider webhooks are signature-verified and idempotent. A client redirect or checkout success page is never authority to enable a module.
+
+Billing is provider-neutral and multi-currency from the first contract. A plan may have several provider-specific price mappings in currencies such as ZWG, USD, or ZAR. Every money value uses an ISO 4217 currency code, an explicit currency exponent, and integer minor units; code never assumes two decimal places. Original, settlement, fee, and refund money remain distinct, and no report silently adds or converts unlike currencies. Stripe, PayPal, Paynow, Pesepay, and future providers integrate through isolated adapters rather than provider-named commercial columns.
+
+### Signed entitlement lease v1
+
+The canonical wire contract is versioned as `cp-license/v1` and carried in an Ed25519-signed JWS. The protected header includes `alg`, `typ`, and `kid`. Claims include:
+
+- issuer, audience, tenant ID, installation ID, lease ID, catalog version, and monotonic lease sequence;
+- issue time, not-before time, refresh-after time, active lease deadline, grace deadline, and final token expiry;
+- entitled module, feature, capability, and meter keys;
+- limits with unit, period, value, and enforcement mode;
+- optional minimum and maximum supported Campus Pilot versions.
+
+The signing private key exists only in the control plane. Campus installations pin trusted public keys and accept overlapping keys during rotation. Activation credentials and installation renewal credentials are write-only secrets and are never logged, returned after creation, or stored in plaintext.
+
+The local decision is an intersection, never a union:
+
+```text
+trusted installation and signed lease
+AND lease state permits the requested operation
+AND module or feature is commercially entitled
+AND the module is locally enabled
+AND declared dependencies are satisfied
+AND the person's exact permission and record scope allow it
+AND policy, approval, and quota checks allow it
+```
+
+The evaluator returns stable reason codes and the catalog/policy versions used. Agent discovery hides unlicensed capabilities, but every Agent execution evaluates licensing, permissions, scope, policy, approval, and quota again.
+
+Lease lifecycle is `active -> refresh_due -> offline_lease -> grace -> restricted`; `revoked` and `invalid` override every other state. Restricted mode preserves sign-in, read access, backup/export, licensing repair, and explicitly documented safety-critical workflows. It blocks new high-risk writes, financial posting, destructive changes, and external Agent actions. Expiry or revocation never deletes, encrypts, or withholds a campus's own data.
+
+Online installations refresh periodically. Offline installations may import a signed `.cp-license` bundle. A control-plane revocation takes effect on the next successful refresh or when the locally signed lease reaches its bounded validity deadline; the operational request path never depends on control-plane availability.
+
 ## 4. Module navigation
 
 - The launcher is a quiet, searchable campus map: recent modules first, then grouped modules. It must not become a dense wall of identical cards.

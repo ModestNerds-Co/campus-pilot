@@ -2,7 +2,12 @@ import { AxiosError } from "axios";
 
 import { httpClient } from "@/lib/http-client";
 import type { ApiEnvelope } from "@/modules/users/types";
-import type { ModuleCatalogResponse, TenantModulesResponse } from "./types";
+import type {
+  LicenseUpdateResponse,
+  LicensingState,
+  ModuleCatalogResponse,
+  TenantModulesResponse,
+} from "./types";
 
 class AccessService {
   private readonly baseUrl = "/api/1.0/access";
@@ -16,6 +21,36 @@ class AccessService {
   async listModules(): Promise<ApiEnvelope<TenantModulesResponse>> {
     return this.request(() =>
       httpClient.get<ApiEnvelope<TenantModulesResponse>>(`${this.baseUrl}/modules`),
+    );
+  }
+
+  async getLicensingState(): Promise<ApiEnvelope<LicensingState>> {
+    return this.request(() =>
+      httpClient.get<ApiEnvelope<LicensingState>>(`${this.baseUrl}/licensing`),
+    );
+  }
+
+  async connectLicense(activationCode: string): Promise<ApiEnvelope<LicenseUpdateResponse>> {
+    return this.request(() =>
+      httpClient.put<ApiEnvelope<LicenseUpdateResponse>>(
+        `${this.baseUrl}/licensing/connect`,
+        { activation_code: activationCode },
+      ),
+    );
+  }
+
+  async refreshLicense(): Promise<ApiEnvelope<LicenseUpdateResponse>> {
+    return this.request(() =>
+      httpClient.post<ApiEnvelope<LicenseUpdateResponse>>(`${this.baseUrl}/licensing/refresh`),
+    );
+  }
+
+  async importLicense(bundle: string): Promise<ApiEnvelope<LicenseUpdateResponse>> {
+    return this.request(() =>
+      httpClient.post<ApiEnvelope<LicenseUpdateResponse>>(
+        `${this.baseUrl}/licensing/import`,
+        { bundle },
+      ),
     );
   }
 

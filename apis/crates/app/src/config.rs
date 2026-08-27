@@ -34,6 +34,10 @@ pub struct JwtConfig {
 pub struct LicenseConfig {
     pub public_key_base64: Option<String>,
     pub issuer: String,
+    pub audience: String,
+    pub control_plane_url: Option<String>,
+    pub credential_key_base64: Option<String>,
+    pub installation_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +145,17 @@ impl LicenseConfig {
                 .ok()
                 .filter(|value| !value.trim().is_empty()),
             issuer: env::var("LICENSE_ISSUER")
-                .unwrap_or_else(|_| "campus-pilot-licensing".to_string()),
+                .unwrap_or_else(|_| "campus-pilot-control-plane".to_string()),
+            audience: env::var("LICENSE_AUDIENCE").unwrap_or_else(|_| "campus-pilot".to_string()),
+            control_plane_url: env::var("LICENSE_CONTROL_PLANE_URL")
+                .ok()
+                .map(|value| value.trim_end_matches('/').to_string())
+                .filter(|value| !value.is_empty()),
+            credential_key_base64: env::var("LICENSE_CREDENTIAL_KEY_BASE64")
+                .ok()
+                .filter(|value| !value.trim().is_empty()),
+            installation_name: env::var("LICENSE_INSTALLATION_NAME")
+                .unwrap_or_else(|_| "Campus Pilot server".to_string()),
         }
     }
 }

@@ -95,8 +95,18 @@ export function DialogShell({
   React.useEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement as HTMLElement | null;
+    const previousScrollY = window.scrollY;
     const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
+    const root = document.documentElement;
+    const previousRootOverflow = root.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${previousScrollY}px`;
+    document.body.style.width = "100%";
+    root.style.overflow = "hidden";
 
     const panel = panelRef.current;
     const focusableSelector =
@@ -136,6 +146,11 @@ export function DialogShell({
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
+      root.style.overflow = previousRootOverflow;
+      window.scrollTo(0, previousScrollY);
       document.removeEventListener("keydown", handleKeyDown);
       previousFocus?.focus({ preventScroll: true });
     };

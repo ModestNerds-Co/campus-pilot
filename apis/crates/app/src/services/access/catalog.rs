@@ -206,6 +206,17 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "planned",
             &["view", "create", "edit", "delete"],
         ),
+        module(
+            "agent",
+            "Agent",
+            "Campus tools",
+            "Work with authorized campus capabilities through durable Agent sessions.",
+            "/modules/agent",
+            "agent",
+            false,
+            "planned",
+            &["view", "run", "history", "share", "approve"],
+        ),
     ]
 }
 

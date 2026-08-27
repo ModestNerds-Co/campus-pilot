@@ -4,6 +4,7 @@ These rules apply to the whole repository. Backend-specific conventions remain i
 
 ## Canonical references
 
+- `/Users/modestnerd/.codex/skills/ngoni-rust/SKILL.md` is the source of truth for Rust design, implementation, review, and verification.
 - Read `docs/design-system.md` before changing the client UI.
 - Read `docs/access-control.md` before changing sign-in, roles, permissions, module navigation, or licensing.
 - Read `docs/agent-platform.md` before changing Agent, AI providers, capability exposure, approvals, or usage reporting.

@@ -1,27 +1,44 @@
+// campus-pilot — installation licensing operations and entitled module controls
 import React, { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, KeyRound, Loader2, Power, RefreshCw, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  Power,
+  RefreshCw,
+  ShieldCheck,
+  Upload,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
-import { Label, Textarea } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
+import { cn, formatDateTime } from "@/lib/utils";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import type { ApiEnvelope } from "@/modules/users/types";
 
 import { accessService } from "./access-service";
 import { defaultModuleVisual, moduleVisuals } from "./module-registry";
-import type { ModuleDefinition, TenantModule } from "./types";
+import type { LicensingState, ModuleDefinition, TenantModule } from "./types";
+
+type LicenseDrawer = "connect" | "import" | null;
 
 export const LicensingPanel: React.FC = () => {
   const [catalog, setCatalog] = useState<ModuleDefinition[]>([]);
   const [entitlements, setEntitlements] = useState<TenantModule[]>([]);
+  const [licensing, setLicensing] = useState<LicensingState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [licenseDrawerOpen, setLicenseDrawerOpen] = useState(false);
-  const [licenseKey, setLicenseKey] = useState("");
-  const [isActivating, setIsActivating] = useState(false);
+  const [drawer, setDrawer] = useState<LicenseDrawer>(null);
+  const [activationCode, setActivationCode] = useState("");
+  const [offlineBundle, setOfflineBundle] = useState("");
+  const [offlineFileName, setOfflineFileName] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
   const [pendingDisable, setPendingDisable] = useState<ModuleDefinition | null>(null);
   const [isDisabling, setIsDisabling] = useState(false);
 
@@ -29,16 +46,22 @@ export const LicensingPanel: React.FC = () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [catalogResponse, moduleResponse] = await Promise.all([
+      const [catalogResponse, moduleResponse, licenseResponse] = await Promise.all([
         accessService.getCatalog(),
         accessService.listModules(),
+        accessService.getLicensingState(),
       ]);
-      if (!catalogResponse.success || !catalogResponse.data || !moduleResponse.success || !moduleResponse.data) {
+      if (
+        !catalogResponse.success || !catalogResponse.data ||
+        !moduleResponse.success || !moduleResponse.data ||
+        !licenseResponse.success || !licenseResponse.data
+      ) {
         setLoadError("Licensing information could not be loaded.");
         return;
       }
       setCatalog(catalogResponse.data.modules.filter((module) => !module.core));
       setEntitlements(moduleResponse.data.modules);
+      setLicensing(licenseResponse.data);
     } catch {
       setLoadError("Campus Pilot could not reach licensing. Check the connection and try again.");
     } finally {
@@ -48,34 +71,100 @@ export const LicensingPanel: React.FC = () => {
 
   useEffect(() => { void load(); }, []);
 
-  usePageChrome(
-    "Licensing",
-    <Button onClick={() => setLicenseDrawerOpen(true)}><KeyRound className="size-4" />Activate license</Button>,
+  const pageAction = useMemo(
+    () => licensing?.connected ? (
+      <Button disabled={isUpdating} onClick={() => void refresh()}>
+        {isUpdating ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+        Refresh license
+      </Button>
+    ) : (
+      <Button onClick={() => setDrawer("connect")}><KeyRound className="size-4" />Connect</Button>
+    ),
+    [isUpdating, licensing?.connected],
   );
+  usePageChrome("Licensing", pageAction);
 
   const statusByKey = useMemo(() => new Map(entitlements.map((item) => [item.key, item])), [entitlements]);
 
-  const activate = async (event: React.FormEvent) => {
+  const connect = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!licenseKey.trim()) {
-      toast.error("Paste a license key to continue");
+    if (!activationCode.trim()) {
+      toast.error("Enter an activation code");
       return;
     }
-    setIsActivating(true);
+    setIsUpdating(true);
     try {
-      const response = await accessService.activateLicense(licenseKey.trim());
+      const response = await accessService.connectLicense(activationCode.trim());
       if (!response.success) {
-        toast.error(firstIssue(response, "The license key could not be activated"));
+        toast.error(firstIssue(response, "The activation code could not be used"));
         return;
       }
-      toast.success("Module license activated");
-      setLicenseKey("");
-      setLicenseDrawerOpen(false);
+      toast.success("License connected");
+      setActivationCode("");
+      setDrawer(null);
       await load();
     } catch {
       toast.error("Campus Pilot could not reach licensing. Try again.");
     } finally {
-      setIsActivating(false);
+      setIsUpdating(false);
+    }
+  };
+
+  const refresh = async () => {
+    setIsUpdating(true);
+    try {
+      const response = await accessService.refreshLicense();
+      if (!response.success) {
+        toast.error(firstIssue(response, "The license could not be refreshed"));
+        return;
+      }
+      toast.success("License refreshed");
+      await load();
+    } catch {
+      toast.error("Campus Pilot could not reach licensing. Try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const importBundle = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!offlineBundle.trim()) {
+      toast.error("Choose a .cp-license file");
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      const response = await accessService.importLicense(offlineBundle);
+      if (!response.success) {
+        toast.error(firstIssue(response, "The license file could not be imported"));
+        return;
+      }
+      toast.success("Offline license imported");
+      setOfflineBundle("");
+      setOfflineFileName("");
+      setDrawer(null);
+      await load();
+    } catch {
+      toast.error("The license file could not be imported");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const selectOfflineFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith(".cp-license")) {
+      toast.error("Choose a .cp-license file");
+      event.target.value = "";
+      return;
+    }
+    try {
+      setOfflineBundle(await file.text());
+      setOfflineFileName(file.name);
+    } catch {
+      toast.error("The license file could not be read");
     }
   };
 
@@ -100,13 +189,12 @@ export const LicensingPanel: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <section>
-        <div>
-          <p className="max-w-[34em] text-sm leading-6 text-[var(--text-muted)]">Review enabled modules or activate a license key.</p>
+      {isLoading ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="h-32 animate-pulse bg-[var(--surface-sunken)] lg:col-span-2" />
+          <div className="h-32 animate-pulse bg-[var(--surface-sunken)]" />
         </div>
-      </section>
-
-      {isLoading ? <div className="grid gap-4 md:grid-cols-2"><div className="h-36 animate-pulse bg-[var(--surface-sunken)]" /><div className="h-36 animate-pulse bg-[var(--surface-sunken)]" /></div> : null}
+      ) : null}
 
       {!isLoading && loadError ? (
         <div className="border border-[var(--tone-danger-bd)] bg-[var(--tone-danger-bg)] p-5" role="alert">
@@ -116,53 +204,107 @@ export const LicensingPanel: React.FC = () => {
         </div>
       ) : null}
 
-      {!isLoading && !loadError ? (
-        <section aria-labelledby="licensed-modules">
-          <div className="border-b border-[var(--border)] pb-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Campus catalog</p>
-            <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="licensed-modules">Available modules</h2>
-          </div>
-          <div className="grid gap-x-8 md:grid-cols-2">
-            {catalog.map((module) => {
-              const entitlement = statusByKey.get(module.key);
-              const enabled = entitlement?.enabled ?? false;
-              const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
-              const Icon = visual.icon;
-              return (
-                <article className="flex min-h-[168px] items-start gap-4 border-b border-[var(--border-subtle)] py-6" key={module.key}>
-                  <span className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] ${enabled ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "bg-[var(--surface-sunken)] text-[var(--text-muted)]"}`}><Icon className="size-[19px]" /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-semibold text-[var(--text-strong)]">{module.label}</h3>
-                      <Badge tone={enabled ? "success" : "neutral"}>{enabled ? "Enabled" : "Not enabled"}</Badge>
-                    </div>
-                    <p className="mt-1.5 text-sm leading-5 text-[var(--text-muted)]">{module.description}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-subtle)]">
-                      <span className="inline-flex items-center gap-1.5">{enabled ? <CheckCircle2 className="size-3.5 text-[var(--tone-success)]" /> : <ShieldCheck className="size-3.5" />}{sourceLabel(entitlement?.source)}</span>
-                      {entitlement?.expires_at ? <span>Expires {new Date(entitlement.expires_at).toLocaleDateString()}</span> : null}
-                      {enabled ? <button className="inline-flex min-h-8 items-center gap-1.5 font-semibold text-[var(--tone-danger)] hover:underline" onClick={() => setPendingDisable(module)} type="button"><Power className="size-3.5" />Disable</button> : null}
-                    </div>
+      {!isLoading && !loadError && licensing ? (
+        <>
+          <section className="grid border border-[var(--border)] bg-[var(--surface)] lg:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Installation license</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]">{licensing.connected ? "Connected" : "Not connected"}</h2>
+                    <Badge tone={licenseTone(licensing)} dot>{licenseLabel(licensing)}</Badge>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {licensing.connected ? <Button onClick={() => setDrawer("import")} variant="secondary"><Upload className="size-4" />Import file</Button> : null}
+                  {licensing.portal_url ? (
+                    <a className={cn(buttonVariants({ variant: "secondary" }), "no-underline")} href={licensing.portal_url} rel="noreferrer" target="_blank">Customer portal <ExternalLink className="size-4" /></a>
+                  ) : null}
+                </div>
+              </div>
+              <dl className="mt-6 grid gap-5 border-t border-[var(--border-subtle)] pt-5 sm:grid-cols-3">
+                <StatusDatum label="Lease sequence" value={licensing.latest_sequence > 0 ? String(licensing.latest_sequence) : "None"} />
+                <StatusDatum label="Last refreshed" value={dateLabel(licensing.last_refresh_success_at)} />
+                <StatusDatum label="Access through" value={dateLabel(licensing.lease?.grace_until ?? null)} />
+              </dl>
+            </div>
+            <div className="border-t border-[var(--border)] bg-[var(--surface-muted)] p-5 lg:border-l lg:border-t-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Deployment</p>
+              <p className="mt-3 break-all font-mono text-xs leading-5 text-[var(--text-body)]">{licensing.deployment_id}</p>
+              {licensing.credential_hint ? <p className="mt-3 text-xs text-[var(--text-muted)]">Credential ending {licensing.credential_hint}</p> : null}
+              {!licensing.configured ? <p className="mt-4 text-xs leading-5 text-[var(--tone-warn-strong)]">Licensing configuration is incomplete on this server.</p> : null}
+            </div>
+          </section>
+
+          <section aria-labelledby="licensed-modules">
+            <div className="border-b border-[var(--border)] pb-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Campus catalog</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="licensed-modules">Modules</h2>
+            </div>
+            <div className="grid gap-x-8 md:grid-cols-2">
+              {catalog.map((module) => {
+                const entitlement = statusByKey.get(module.key);
+                const enabled = entitlement?.enabled ?? false;
+                const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
+                const Icon = visual.icon;
+                return (
+                  <article className="flex min-h-[168px] items-start gap-4 border-b border-[var(--border-subtle)] py-6" key={module.key}>
+                    <span className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] ${enabled ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "bg-[var(--surface-sunken)] text-[var(--text-muted)]"}`}><Icon className="size-[19px]" /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="font-semibold text-[var(--text-strong)]">{module.label}</h3>
+                        <Badge tone={enabled ? "success" : "neutral"}>{enabled ? "Enabled" : moduleStatus(entitlement)}</Badge>
+                      </div>
+                      <p className="mt-1.5 text-sm leading-5 text-[var(--text-muted)]">{module.description}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-subtle)]">
+                        <span className="inline-flex items-center gap-1.5">{enabled ? <CheckCircle2 className="size-3.5 text-[var(--tone-success)]" /> : <ShieldCheck className="size-3.5" />}{sourceLabel(entitlement?.source)}</span>
+                        {entitlement?.expires_at ? <span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5" />{dateLabel(entitlement.expires_at)}</span> : null}
+                        {enabled && entitlement?.source === "license" ? <button className="inline-flex min-h-8 items-center gap-1.5 font-semibold text-[var(--tone-danger)] hover:underline" onClick={() => setPendingDisable(module)} type="button"><Power className="size-3.5" />Disable</button> : null}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        </>
       ) : null}
 
-      <DialogShell onClose={() => !isActivating && setLicenseDrawerOpen(false)} open={licenseDrawerOpen}>
-        <DialogHeader onClose={() => setLicenseDrawerOpen(false)} title="Activate license" />
-        <form onSubmit={activate}>
+      <DialogShell onClose={() => !isUpdating && setDrawer(null)} open={drawer === "connect"}>
+        <DialogHeader onClose={() => setDrawer(null)} title="Connect licensing" />
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={connect}>
           <DialogBody className="space-y-6">
-            <p className="text-sm leading-6 text-[var(--text-muted)]">Use a license key issued for this campus. It may enable one module or several modules and may include an expiry date.</p>
+            <p className="text-sm leading-6 text-[var(--text-muted)]">Enter a one-time activation code from the customer portal.</p>
             <div>
-              <Label htmlFor="license-key">License key</Label>
-              <Textarea autoComplete="off" className="mt-2 min-h-40 resize-y font-mono text-xs" id="license-key" onChange={(event) => setLicenseKey(event.target.value)} placeholder="Paste the complete license key" spellCheck={false} value={licenseKey} />
+              <Label htmlFor="activation-code">Activation code</Label>
+              <Input autoCapitalize="none" autoComplete="off" className="mt-2 font-mono" data-autofocus="true" id="activation-code" onChange={(event) => setActivationCode(event.target.value)} placeholder="cpact_…" spellCheck={false} value={activationCode} />
             </div>
           </DialogBody>
           <DialogFooter>
-            <Button disabled={isActivating} onClick={() => setLicenseDrawerOpen(false)} type="button" variant="ghost">Keep current licensing</Button>
-            <Button disabled={isActivating || !licenseKey.trim()} type="submit">{isActivating ? <><Loader2 className="size-4 animate-spin" />Activating…</> : <><KeyRound className="size-4" />Activate license</>}</Button>
+            <Button disabled={isUpdating} onClick={() => setDrawer(null)} type="button" variant="ghost">Cancel</Button>
+            <Button disabled={isUpdating || !activationCode.trim()} type="submit">{isUpdating ? <><Loader2 className="size-4 animate-spin" />Connecting…</> : <><KeyRound className="size-4" />Connect</>}</Button>
+          </DialogFooter>
+        </form>
+      </DialogShell>
+
+      <DialogShell onClose={() => !isUpdating && setDrawer(null)} open={drawer === "import"}>
+        <DialogHeader onClose={() => setDrawer(null)} title="Import offline license" />
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={importBundle}>
+          <DialogBody className="space-y-6">
+            <p className="text-sm leading-6 text-[var(--text-muted)]">Use a signed .cp-license file issued for this installation.</p>
+            <div>
+              <Label htmlFor="offline-license">License file</Label>
+              <label className="mt-2 flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-[var(--border-strong)] bg-[var(--surface-muted)] px-5 text-center hover:bg-[var(--surface-sunken)]" htmlFor="offline-license">
+                <Upload className="size-5 text-[var(--brand-strong)]" />
+                <span className="text-sm font-medium text-[var(--text-strong)]">{offlineFileName || "Choose a .cp-license file"}</span>
+              </label>
+              <input accept=".cp-license,application/json" className="sr-only" id="offline-license" onChange={(event) => void selectOfflineFile(event)} type="file" />
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button disabled={isUpdating} onClick={() => setDrawer(null)} type="button" variant="ghost">Cancel</Button>
+            <Button disabled={isUpdating || !offlineBundle} type="submit">{isUpdating ? <><Loader2 className="size-4 animate-spin" />Importing…</> : <><Upload className="size-4" />Import</>}</Button>
           </DialogFooter>
         </form>
       </DialogShell>
@@ -172,11 +314,42 @@ export const LicensingPanel: React.FC = () => {
   );
 };
 
+function StatusDatum({ label, value }: { label: string; value: string }) {
+  return <div><dt className="text-xs text-[var(--text-muted)]">{label}</dt><dd className="mt-1 text-sm font-semibold text-[var(--text-strong)]">{value}</dd></div>;
+}
+
 function sourceLabel(source?: TenantModule["source"]) {
   if (source === "core") return "Included";
   if (source === "license") return "License";
   if (source === "legacy") return "Enabled";
   return "License required";
+}
+
+function moduleStatus(module?: TenantModule) {
+  if (module?.status === "disabled") return "Disabled";
+  if (module?.status === "expired") return "Expired";
+  if (module?.status === "revoked") return "Revoked";
+  return "Not enabled";
+}
+
+function licenseTone(licensing: LicensingState): "success" | "warn" | "danger" | "neutral" {
+  if (!licensing.configured || !licensing.connected) return "neutral";
+  if (licensing.status === "active" && licensing.lease && new Date(licensing.lease.lease_expires_at) > new Date()) return "success";
+  if (licensing.status === "active" && licensing.lease && new Date(licensing.lease.grace_until) > new Date()) return "warn";
+  return "danger";
+}
+
+function licenseLabel(licensing: LicensingState) {
+  if (!licensing.configured) return "Setup required";
+  if (!licensing.connected) return "Not connected";
+  if (licensing.status !== "active") return licensing.status[0].toUpperCase() + licensing.status.slice(1);
+  if (licensing.lease && new Date(licensing.lease.lease_expires_at) > new Date()) return "Active";
+  if (licensing.lease && new Date(licensing.lease.grace_until) > new Date()) return "Grace period";
+  return "Expired";
+}
+
+function dateLabel(value: string | null) {
+  return value ? formatDateTime(value) : "Not available";
 }
 
 function firstIssue<T>(response: ApiEnvelope<T>, fallback: string) {
