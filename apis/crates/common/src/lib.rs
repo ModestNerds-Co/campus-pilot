@@ -6,6 +6,7 @@ pub mod access;
 pub mod api_response;
 pub mod attachment_file;
 pub mod entitlements;
+pub mod operation_catalog;
 pub mod permissions;
 pub mod roles;
 pub mod status_info;
@@ -21,7 +22,11 @@ pub use entitlements::{
     ModuleEntitlementState, OperationAccessDecision, OperationEffect, ProductOperation,
     RuntimeAccessChecks, evaluate_operation,
 };
-pub use permissions::RequirePermission;
+pub use operation_catalog::{
+    LegacyRouteGate, OPERATION_CATALOG_VERSION, RoutedOperation, operation_catalog,
+    operation_for_route, routed_operation_for_route,
+};
+pub use permissions::{ObserveOperationAccess, RequirePermission};
 pub use roles::Roles;
 pub use status_info::{StatusInfo, status_meaning};
 pub use tenant::TenantId;

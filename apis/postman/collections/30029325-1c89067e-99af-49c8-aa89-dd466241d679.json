@@ -1101,6 +1101,7 @@
     },
     {
       "name": "Vehicle Daily Log",
+      "description": "Vehicle Daily Log is owned by the Fleet module. Requests require the matching fleet:view, fleet:create, fleet:edit, or fleet:delete permission.",
       "item": [
         {
           "name": "List Daily Logs",
@@ -1291,6 +1292,7 @@
     },
     {
       "name": "Access and Licensing",
+      "description": "License connect, refresh, offline import, and legacy activation require licensing:edit. Local module disable requires licensing:delete.",
       "item": [
         {
           "name": "Get Access Catalog",

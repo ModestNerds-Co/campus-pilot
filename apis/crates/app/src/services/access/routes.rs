@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use anyhow::{Context, Result, bail};
-use cp_common::{RequirePermission, TenantId};
+use cp_common::{ObserveOperationAccess, RequirePermission, TenantId};
 use serde::Deserialize;
 use validator::Validate;
 
@@ -340,6 +340,7 @@ async fn disable_module(
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/access")
+            .wrap(ObserveOperationAccess)
             .wrap(AuthMiddleware)
             .service(catalog)
             .service(modules)

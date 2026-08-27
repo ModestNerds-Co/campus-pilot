@@ -376,3 +376,35 @@ fn action_label(action: &str) -> String {
         None => String::new(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use cp_common::operation_catalog;
+
+    use super::{all_permission_keys, module_catalog};
+
+    #[test]
+    fn operation_catalog_references_known_modules_and_permissions() {
+        let modules: BTreeSet<_> = module_catalog()
+            .into_iter()
+            .map(|module| module.key)
+            .collect();
+        let permissions: BTreeSet<_> = all_permission_keys().into_iter().collect();
+
+        for route in operation_catalog() {
+            let operation = route.operation();
+            assert!(
+                modules.contains(operation.module_key()),
+                "unknown operation module: {}",
+                operation.module_key()
+            );
+            assert!(
+                permissions.contains(operation.permission()),
+                "unknown operation permission: {}",
+                operation.permission()
+            );
+        }
+    }
+}

@@ -209,6 +209,21 @@ impl ProductOperation {
     pub fn permission(&self) -> &str {
         &self.permission
     }
+
+    #[must_use]
+    pub fn module_key(&self) -> &str {
+        &self.module_key
+    }
+
+    #[must_use]
+    pub const fn effect(&self) -> OperationEffect {
+        self.effect
+    }
+
+    #[must_use]
+    pub const fn license_required(&self) -> bool {
+        self.license_required
+    }
 }
 
 /// Request- and record-specific checks that cannot be cached in entitlements.
