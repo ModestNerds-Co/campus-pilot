@@ -1,6 +1,6 @@
-//! Gates module routes and compares legacy checks with the operation evaluator.
+//! Enforces catalogued permission routes through the operation evaluator.
 //!
-//! Shadow decisions are observable but do not change enforcement until drift is resolved.
+//! Authentication-only routes remain observable while their semantics are classified.
 
 use actix_web::{
     Error, HttpMessage, HttpResponse,
@@ -15,8 +15,8 @@ use std::{
 };
 
 use crate::{
-    AccessContext, ApiResponse, LegacyRouteGate, OperationEffect, ProductOperation,
-    RuntimeAccessChecks, module_key_for_namespace, operation_for_route, routed_operation_for_route,
+    AccessContext, ApiResponse, LegacyRouteGate, RuntimeAccessChecks, module_key_for_namespace,
+    routed_operation_for_route,
 };
 
 /// Observes exact evaluator decisions for routes whose compatibility gate is
@@ -122,15 +122,6 @@ fn action_for(method: &Method) -> &'static str {
     }
 }
 
-fn effect_for(method: &Method) -> OperationEffect {
-    match *method {
-        Method::GET => OperationEffect::Read,
-        Method::DELETE => OperationEffect::Destructive,
-        Method::POST | Method::PUT | Method::PATCH => OperationEffect::Write,
-        _ => OperationEffect::Read,
-    }
-}
-
 impl<S, B> Transform<S, ServiceRequest> for RequirePermission
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
@@ -174,18 +165,9 @@ where
         let fallback_permission = format!("{}:{}", self.module, action);
         let fallback_module_key = module_key_for_namespace(&self.module).to_string();
         let matched_pattern = req.match_pattern();
-        let catalog_operation = matched_pattern
+        let routed_operation = matched_pattern
             .as_deref()
-            .and_then(|pattern| operation_for_route(req.method(), pattern));
-        let fallback_operation = catalog_operation.is_none().then(|| {
-            ProductOperation::route(
-                format!("{}.{}", fallback_module_key, action),
-                fallback_module_key.clone(),
-                fallback_permission.clone(),
-                effect_for(req.method()),
-                !matches!(fallback_module_key.as_str(), "administration" | "home"),
-            )
-        });
+            .and_then(|pattern| routed_operation_for_route(req.method(), pattern));
 
         Box::pin(async move {
             // AccessContext is set by AuthMiddleware (in the app crate) before
@@ -194,55 +176,79 @@ where
 
             match access {
                 Some(access) => {
-                    let operation = match catalog_operation {
-                        Some(operation) => operation,
+                    match routed_operation {
+                        Some(route) if route.legacy_gate() == LegacyRouteGate::Permission => {
+                            let operation = route.operation();
+                            let decision = access
+                                .evaluate_operation(operation, RuntimeAccessChecks::default());
+                            if decision.allowed {
+                                return service
+                                    .call(req)
+                                    .await
+                                    .map(|response| response.map_into_left_body());
+                            }
+
+                            log::warn!(
+                                "Operation access denied: operation={}, reason={}",
+                                operation.key(),
+                                decision.reason.as_str(),
+                            );
+                            let response = ApiResponse::<()>::from_status(
+                                actix_web::http::StatusCode::FORBIDDEN,
+                                None,
+                                Some(vec![
+                                    "This operation is not available for your account or campus"
+                                        .to_string(),
+                                ]),
+                            );
+                            return Ok(req
+                                .into_response(HttpResponse::Forbidden().json(response))
+                                .map_into_right_body());
+                        }
+                        Some(route) => {
+                            log::error!(
+                                "Operation gate mismatch: operation={}, expected=permission, actual=authenticated",
+                                route.operation().key(),
+                            );
+                            let response = ApiResponse::<()>::from_status(
+                                actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                None,
+                                Some(vec!["Operation access could not be checked".to_string()]),
+                            );
+                            return Ok(req
+                                .into_response(HttpResponse::InternalServerError().json(response))
+                                .map_into_right_body());
+                        }
                         None => {
                             log::error!(
                                 "Missing operation descriptor: method={}, route_pattern={}",
                                 req.method(),
                                 matched_pattern.as_deref().unwrap_or("<unmatched>"),
                             );
-                            fallback_operation
-                                .as_ref()
-                                .unwrap_or_else(|| unreachable!())
                         }
-                    };
-                    let module_key = operation.module_key();
-                    let permission = operation.permission();
-                    let legacy_has_module = access.has_module(module_key);
-                    let legacy_has_permission = access.has_permission(permission);
-                    let shadow =
-                        access.evaluate_operation(operation, RuntimeAccessChecks::default());
-                    let legacy_allowed = legacy_has_module && legacy_has_permission;
-                    if shadow.allowed != legacy_allowed {
-                        log::warn!(
-                            "Operation entitlement shadow drift: operation={}, legacy_allowed={}, evaluator_allowed={}, evaluator_reason={}",
-                            operation.key(),
-                            legacy_allowed,
-                            shadow.allowed,
-                            shadow.reason.as_str(),
-                        );
                     }
 
-                    if !legacy_has_module {
+                    if !access.has_module(&fallback_module_key) {
                         let response = ApiResponse::<()>::from_status(
                             actix_web::http::StatusCode::FORBIDDEN,
                             None,
-                            Some(vec![format!("Module is not enabled: {module_key}")]),
+                            Some(vec![format!(
+                                "Module is not enabled: {fallback_module_key}"
+                            )]),
                         );
                         return Ok(req
                             .into_response(HttpResponse::Forbidden().json(response))
                             .map_into_right_body());
                     }
 
-                    if legacy_has_permission {
+                    if access.has_permission(&fallback_permission) {
                         service.call(req).await.map(|res| res.map_into_left_body())
                     } else {
                         let response = ApiResponse::<()>::from_status(
                             actix_web::http::StatusCode::FORBIDDEN,
                             None,
                             Some(vec![format!(
-                                "Insufficient permissions. Required: {permission}"
+                                "Insufficient permissions. Required: {fallback_permission}"
                             )]),
                         );
                         Ok(req
@@ -267,6 +273,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Once;
+
     use actix_web::{
         App, HttpMessage, HttpResponse,
         dev::Service as _,
@@ -279,9 +287,40 @@ mod tests {
         ObserveOperationAccess, RequirePermission,
     };
 
-    use super::{OperationEffect, action_for, effect_for};
+    use super::action_for;
+
+    struct TestLogger;
+
+    impl log::Log for TestLogger {
+        fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
+            true
+        }
+
+        fn log(&self, _record: &log::Record<'_>) {}
+
+        fn flush(&self) {}
+    }
+
+    static LOGGER: TestLogger = TestLogger;
+    static INIT_LOGGER: Once = Once::new();
+
+    fn enable_test_logging() {
+        INIT_LOGGER.call_once(|| {
+            let _ = log::set_logger(&LOGGER);
+            log::set_max_level(log::LevelFilter::Trace);
+        });
+    }
 
     fn access(permissions: &[&str], enabled_modules: &[&str]) -> AccessContext {
+        access_with_lifecycle(permissions, enabled_modules, LeaseLifecycle::Legacy)
+    }
+
+    fn access_with_lifecycle(
+        permissions: &[&str],
+        enabled_modules: &[&str],
+        lifecycle: LeaseLifecycle,
+    ) -> AccessContext {
+        enable_test_logging();
         AccessContext {
             role_keys: vec!["test-role".to_string()],
             permissions: permissions.iter().map(|value| value.to_string()).collect(),
@@ -290,15 +329,15 @@ mod tests {
                 .map(|value| value.to_string())
                 .collect(),
             entitlements: EntitlementSnapshot::new(
-                LeaseLifecycle::Legacy,
-                [
+                lifecycle,
+                vec![
                     (
                         "administration".to_string(),
                         ModuleEntitlementState::Enabled,
                     ),
                     ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ],
-                [],
+                vec![],
             )
             .unwrap_or_else(|_| unreachable!()),
         }
@@ -316,13 +355,6 @@ mod tests {
         assert_eq!(action_for(&Method::PATCH), "edit");
         assert_eq!(action_for(&Method::DELETE), "delete");
         assert_eq!(action_for(&Method::OPTIONS), "view");
-
-        assert_eq!(effect_for(&Method::GET), OperationEffect::Read);
-        assert_eq!(effect_for(&Method::DELETE), OperationEffect::Destructive);
-        assert_eq!(effect_for(&Method::POST), OperationEffect::Write);
-        assert_eq!(effect_for(&Method::PUT), OperationEffect::Write);
-        assert_eq!(effect_for(&Method::PATCH), OperationEffect::Write);
-        assert_eq!(effect_for(&Method::OPTIONS), OperationEffect::Read);
     }
 
     #[actix_web::test]
@@ -401,18 +433,18 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn evaluator_result_remains_observational_during_shadow_rollout() {
+    async fn evaluator_denial_is_authoritative_for_cataloged_permission_routes() {
         let mut access = access(&["fleet:view"], &["fleet"]);
         access.entitlements = EntitlementSnapshot::new(
             LeaseLifecycle::Legacy,
-            [
+            vec![
                 (
                     "administration".to_string(),
                     ModuleEntitlementState::Enabled,
                 ),
                 ("fleet".to_string(), ModuleEntitlementState::LocallyDisabled),
             ],
-            [],
+            vec![],
         )
         .unwrap_or_else(|_| unreachable!());
 
@@ -437,12 +469,136 @@ mod tests {
                 .to_request(),
         )
         .await;
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body: crate::ApiResponse<serde_json::Value> =
+            actix_test::read_body_json(response).await;
+        assert_eq!(
+            body.issues,
+            Some(vec![
+                "This operation is not available for your account or campus".to_string()
+            ])
+        );
+    }
+
+    #[actix_web::test]
+    async fn lease_lifecycle_matrix_is_enforced_at_the_route_boundary() {
+        let restricted = access_with_lifecycle(
+            &["fleet:view", "fleet:create"],
+            &["fleet"],
+            LeaseLifecycle::Restricted,
+        );
+        let app = actix_test::init_service(
+            App::new()
+                .wrap_fn(move |request, service| {
+                    request.extensions_mut().insert(restricted.clone());
+                    service.call(request)
+                })
+                .service(
+                    web::scope("/api/1.0/fleet/vehicles")
+                        .wrap(RequirePermission::new("fleet"))
+                        .route("", web::get().to(ok))
+                        .route("", web::post().to(ok)),
+                ),
+        )
+        .await;
+
+        let read = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::get()
+                .uri("/api/1.0/fleet/vehicles")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(read.status(), StatusCode::OK);
+        let write = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::post()
+                .uri("/api/1.0/fleet/vehicles")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(write.status(), StatusCode::FORBIDDEN);
+
+        let revoked = access_with_lifecycle(
+            &["fleet:view", "roles:view"],
+            &["fleet", "administration"],
+            LeaseLifecycle::Revoked,
+        );
+        let app = actix_test::init_service(
+            App::new()
+                .wrap_fn(move |request, service| {
+                    request.extensions_mut().insert(revoked.clone());
+                    service.call(request)
+                })
+                .service(
+                    web::scope("/api/1.0")
+                        .service(
+                            web::scope("/fleet/vehicles")
+                                .wrap(RequirePermission::new("fleet"))
+                                .route("", web::get().to(ok)),
+                        )
+                        .service(
+                            web::scope("/roles")
+                                .wrap(RequirePermission::new("roles"))
+                                .route("", web::get().to(ok)),
+                        ),
+                ),
+        )
+        .await;
+        let licensed_read = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::get()
+                .uri("/api/1.0/fleet/vehicles")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(licensed_read.status(), StatusCode::FORBIDDEN);
+        let core_read = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::get()
+                .uri("/api/1.0/roles")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(core_read.status(), StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    async fn permission_middleware_rejects_an_authenticated_only_catalog_entry() {
+        let access = access(&["administration:view"], &["administration"]);
+        let app = actix_test::init_service(
+            App::new()
+                .wrap_fn(move |request, service| {
+                    request.extensions_mut().insert(access.clone());
+                    service.call(request)
+                })
+                .service(
+                    web::scope("/api/1.0/access")
+                        .wrap(RequirePermission::new("administration"))
+                        .route("/catalog", web::get().to(ok)),
+                ),
+        )
+        .await;
+
+        let response = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::get()
+                .uri("/api/1.0/access/catalog")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     #[actix_web::test]
     async fn permission_gate_preserves_module_and_authentication_denials() {
-        let disabled_access = access(&["fleet:view"], &[]);
+        let mut disabled_access = access(&["fleet:view"], &[]);
+        disabled_access.entitlements = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            vec![("fleet".to_string(), ModuleEntitlementState::LocallyDisabled)],
+            vec![],
+        )
+        .unwrap_or_else(|_| unreachable!());
         let app = actix_test::init_service(
             App::new()
                 .wrap_fn(move |request, service| {
@@ -508,6 +664,69 @@ mod tests {
         )
         .await;
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    async fn unclassified_permission_route_preserves_fallback_denials() {
+        let disabled = access(&["fleet:view"], &[]);
+        let app = actix_test::init_service(
+            App::new()
+                .wrap_fn(move |request, service| {
+                    request.extensions_mut().insert(disabled.clone());
+                    service.call(request)
+                })
+                .service(
+                    web::scope("/api/1.0/fleet")
+                        .wrap(RequirePermission::new("fleet"))
+                        .route("/unclassified", web::get().to(ok)),
+                ),
+        )
+        .await;
+        let response = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::get()
+                .uri("/api/1.0/fleet/unclassified")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body: crate::ApiResponse<serde_json::Value> =
+            actix_test::read_body_json(response).await;
+        assert_eq!(
+            body.issues,
+            Some(vec!["Module is not enabled: fleet".to_string()])
+        );
+
+        let unauthorized = access(&[], &["fleet"]);
+        let app = actix_test::init_service(
+            App::new()
+                .wrap_fn(move |request, service| {
+                    request.extensions_mut().insert(unauthorized.clone());
+                    service.call(request)
+                })
+                .service(
+                    web::scope("/api/1.0/fleet")
+                        .wrap(RequirePermission::new("fleet"))
+                        .route("/unclassified", web::get().to(ok)),
+                ),
+        )
+        .await;
+        let response = actix_test::call_service(
+            &app,
+            actix_test::TestRequest::get()
+                .uri("/api/1.0/fleet/unclassified")
+                .to_request(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body: crate::ApiResponse<serde_json::Value> =
+            actix_test::read_body_json(response).await;
+        assert_eq!(
+            body.issues,
+            Some(vec![
+                "Insufficient permissions. Required: fleet:view".to_string()
+            ])
+        );
     }
 
     #[actix_web::test]

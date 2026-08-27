@@ -354,7 +354,7 @@ pub fn evaluate_operation(
         return OperationAccessDecision::deny(AccessDecisionReason::LeaseExpired);
     }
 
-    if !entitlements.app_version_supported {
+    if operation.license_required && !entitlements.app_version_supported {
         return OperationAccessDecision::deny(AccessDecisionReason::AppVersionUnsupported);
     }
 
@@ -421,7 +421,7 @@ mod tests {
     fn snapshot(lease: LeaseLifecycle) -> EntitlementSnapshot {
         EntitlementSnapshot::new(
             lease,
-            [
+            vec![
                 (
                     "administration".to_string(),
                     ModuleEntitlementState::Enabled,
@@ -429,7 +429,7 @@ mod tests {
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("sis".to_string(), ModuleEntitlementState::Enabled),
             ],
-            ["fleet.trips".to_string()],
+            vec!["fleet.trips".to_string()],
         )
         .unwrap_or_else(|_| unreachable!())
     }
@@ -484,12 +484,27 @@ mod tests {
     #[test]
     fn restricted_mode_preserves_reads_and_blocks_writes() {
         let snapshot = snapshot(LeaseLifecycle::Restricted);
-        let read = decide(&operation(OperationEffect::Read), &snapshot);
-        let write = decide(&operation(OperationEffect::Write), &snapshot);
-        assert_eq!(read.reason, AccessDecisionReason::RestrictedRecoveryAllowed);
-        assert!(read.allowed);
-        assert_eq!(write.reason, AccessDecisionReason::LeaseExpired);
-        assert!(!write.allowed);
+        for effect in [
+            OperationEffect::Read,
+            OperationEffect::Export,
+            OperationEffect::LicenseRepair,
+        ] {
+            let decision = decide(&operation(effect), &snapshot);
+            assert_eq!(
+                decision.reason,
+                AccessDecisionReason::RestrictedRecoveryAllowed
+            );
+            assert!(decision.allowed);
+        }
+        for effect in [
+            OperationEffect::Write,
+            OperationEffect::Destructive,
+            OperationEffect::External,
+        ] {
+            let decision = decide(&operation(effect), &snapshot);
+            assert_eq!(decision.reason, AccessDecisionReason::LeaseExpired);
+            assert!(!decision.allowed);
+        }
     }
 
     #[test]
@@ -525,8 +540,8 @@ mod tests {
         ] {
             let snapshot = EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
-                [("fleet".to_string(), state)],
-                [],
+                vec![("fleet".to_string(), state)],
+                vec![],
             )
             .unwrap_or_else(|_| unreachable!());
             assert_eq!(
@@ -534,7 +549,7 @@ mod tests {
                 reason
             );
         }
-        let missing = EntitlementSnapshot::new(LeaseLifecycle::Active, [], [])
+        let missing = EntitlementSnapshot::new(LeaseLifecycle::Active, vec![], vec![])
             .unwrap_or_else(|_| unreachable!());
         assert_eq!(
             decide(&operation(OperationEffect::Read), &missing).reason,
@@ -545,9 +560,9 @@ mod tests {
     #[test]
     fn dependencies_and_features_are_checked_separately() {
         let missing_dependency =
-            operation(OperationEffect::Read).requiring_modules(["finance".to_string()]);
+            operation(OperationEffect::Read).requiring_modules(vec!["finance".to_string()]);
         let missing_feature =
-            operation(OperationEffect::Read).requiring_features(["fleet.routing".to_string()]);
+            operation(OperationEffect::Read).requiring_features(vec!["fleet.routing".to_string()]);
         assert_eq!(
             decide(&missing_dependency, &snapshot(LeaseLifecycle::Active)).reason,
             AccessDecisionReason::DependencyMissing
@@ -586,7 +601,7 @@ mod tests {
             &["*".to_string()],
             RuntimeAccessChecks::default(),
         );
-        let missing_module = EntitlementSnapshot::new(LeaseLifecycle::Active, [], [])
+        let missing_module = EntitlementSnapshot::new(LeaseLifecycle::Active, vec![], vec![])
             .unwrap_or_else(|_| unreachable!());
         let denied = evaluate_operation(
             &operation(OperationEffect::Read),
@@ -610,7 +625,7 @@ mod tests {
         );
 
         let exhausted = snapshot(LeaseLifecycle::Active)
-            .with_exhausted_hard_limits(["fleet.trips".to_string()]);
+            .with_exhausted_hard_limits(vec!["fleet.trips".to_string()]);
         assert_eq!(
             decide(&operation, &exhausted).reason,
             AccessDecisionReason::QuotaExceeded
@@ -645,17 +660,26 @@ mod tests {
         );
         assert!(decision.allowed);
         assert_eq!(decision.reason.as_str(), "allowed");
+
+        let unsupported = snapshot(LeaseLifecycle::Invalid).with_app_version_supported(false);
+        let decision = evaluate_operation(
+            &operation,
+            &unsupported,
+            &["licensing:edit".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(decision.allowed);
     }
 
     #[test]
     fn duplicate_projection_rows_are_rejected() {
         let result = EntitlementSnapshot::new(
             LeaseLifecycle::Active,
-            [
+            vec![
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Revoked),
             ],
-            [],
+            vec![],
         );
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -709,6 +733,35 @@ mod tests {
             (AccessDecisionReason::ApprovalRequired, "approval_required"),
         ] {
             assert_eq!(reason.as_str(), code);
+            assert_eq!(
+                serde_json::to_value(reason).unwrap_or_default(),
+                serde_json::json!(code)
+            );
+            assert_eq!(reason, reason.clone());
+            assert!(!format!("{reason:?}").is_empty());
         }
+    }
+
+    #[test]
+    fn operation_metadata_and_decision_contracts_are_exposed() {
+        let operation = operation(OperationEffect::External);
+        assert_eq!(operation.module_key(), "fleet");
+        assert_eq!(operation.effect(), OperationEffect::External);
+        assert!(operation.license_required());
+
+        let decision = decide(&operation, &snapshot(LeaseLifecycle::Active));
+        assert!(decision.allowed);
+        assert_eq!(decision.reason, AccessDecisionReason::Allowed);
+        assert_eq!(decision, decision.clone());
+        assert!(format!("{decision:?}").contains("OperationAccessDecision"));
+
+        let denied = decide(
+            &operation,
+            &EntitlementSnapshot::new(LeaseLifecycle::Active, vec![], vec![])
+                .unwrap_or_else(|_| unreachable!()),
+        );
+        assert!(!denied.allowed);
+        assert_eq!(denied, denied.clone());
+        assert!(format!("{denied:?}").contains("ModuleNotEntitled"));
     }
 }

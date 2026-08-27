@@ -80,3 +80,68 @@ impl<T> ApiResponse<T> {
         response
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::http::StatusCode;
+
+    use super::{ApiResponse, PaginationMeta};
+
+    #[test]
+    fn pagination_reports_page_boundaries() {
+        let first = PaginationMeta::new(1, 10, 21);
+        assert_eq!(first.total_pages, 3);
+        assert!(first.has_next);
+        assert!(!first.has_prev);
+
+        let middle = PaginationMeta::new(2, 10, 21);
+        assert!(middle.has_next);
+        assert!(middle.has_prev);
+
+        let last = PaginationMeta::new(3, 10, 21);
+        assert!(!last.has_next);
+        assert!(last.has_prev);
+
+        let empty = PaginationMeta::new(1, 10, 0);
+        assert_eq!(empty.total_pages, 0);
+        assert!(!empty.has_next);
+        assert!(!empty.has_prev);
+    }
+
+    #[test]
+    fn response_uses_first_bad_request_issue_and_standard_status_messages() {
+        let bad = ApiResponse::<()>::from_status(
+            StatusCode::BAD_REQUEST,
+            None,
+            Some(vec![
+                "Correct the email address".to_string(),
+                "Ignored".to_string(),
+            ]),
+        );
+        assert!(!bad.success);
+        assert_eq!(bad.message.as_deref(), Some("Correct the email address"));
+        assert_eq!(bad.version, 1);
+        assert_eq!(bad.by, "Codecraft Solutions");
+
+        let empty_issues =
+            ApiResponse::<()>::from_status(StatusCode::BAD_REQUEST, None, Some(Vec::new()));
+        assert_eq!(empty_issues.message.as_deref(), Some("Bad Request"));
+
+        let created = ApiResponse::from_status(StatusCode::CREATED, Some("created"), None);
+        assert!(created.success);
+        assert_eq!(created.message.as_deref(), Some("Created"));
+        assert_eq!(created.data, Some("created"));
+    }
+
+    #[test]
+    fn response_can_include_pagination() {
+        let pagination = PaginationMeta::new(2, 20, 45);
+        let response =
+            ApiResponse::with_pagination(StatusCode::OK, Some(vec![1, 2]), pagination, None);
+        let pagination = response.pagination.expect("pagination should be present");
+        assert_eq!(pagination.current_page, 2);
+        assert_eq!(pagination.per_page, 20);
+        assert_eq!(pagination.total, 45);
+        assert_eq!(response.data, Some(vec![1, 2]));
+    }
+}

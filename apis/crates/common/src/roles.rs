@@ -19,3 +19,17 @@ impl Roles {
         self.0.iter().any(|r| r == role)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Roles;
+
+    #[test]
+    fn role_membership_is_exact() {
+        let roles = Roles(vec!["campus_owner".to_string(), "teacher".to_string()]);
+        assert!(roles.contains("campus_owner"));
+        assert!(roles.contains("teacher"));
+        assert!(!roles.contains("student"));
+        assert!(!roles.contains("Teacher"));
+    }
+}

@@ -11,7 +11,7 @@ use crate::{
 pub struct AccessContext {
     pub role_keys: Vec<String>,
     pub permissions: Vec<String>,
-    /// Compatibility projection used by route enforcement during shadow rollout.
+    /// Compatibility projection used only by unclassified legacy route gates.
     pub enabled_modules: Vec<String>,
     pub entitlements: EntitlementSnapshot,
 }
@@ -69,11 +69,11 @@ mod tests {
             enabled_modules: vec!["administration".to_string()],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Legacy,
-                [(
+                vec![(
                     "administration".to_string(),
                     ModuleEntitlementState::Enabled,
                 )],
-                [],
+                vec![],
             )
             .unwrap_or_else(|_| unreachable!()),
         }

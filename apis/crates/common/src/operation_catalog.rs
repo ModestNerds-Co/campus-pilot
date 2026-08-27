@@ -517,7 +517,49 @@ mod tests {
 
     use actix_web::{App, HttpRequest, HttpResponse, http::Method, test as actix_test, web};
 
+    use crate::{
+        EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState, ProductOperation,
+        RuntimeAccessChecks, evaluate_operation,
+    };
+
     use super::{OPERATION_CATALOG_VERSION, operation_catalog, operation_for_route};
+
+    fn operation(key: &str) -> &'static ProductOperation {
+        operation_catalog()
+            .iter()
+            .find(|entry| entry.operation().key() == key)
+            .map(super::RoutedOperation::operation)
+            .unwrap_or_else(|| unreachable!())
+    }
+
+    fn active_snapshot() -> EntitlementSnapshot {
+        EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            vec![
+                (
+                    "administration".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
+                ("fleet".to_string(), ModuleEntitlementState::Enabled),
+                ("timetabling".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            vec![],
+        )
+        .unwrap_or_else(|_| unreachable!())
+    }
+
+    fn allowed(key: &str, permissions: &[&str]) -> bool {
+        evaluate_operation(
+            operation(key),
+            &active_snapshot(),
+            &permissions
+                .iter()
+                .map(|permission| permission.to_string())
+                .collect::<Vec<_>>(),
+            RuntimeAccessChecks::default(),
+        )
+        .allowed
+    }
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
@@ -557,6 +599,100 @@ mod tests {
         assert_eq!(list.key(), "administration.users.list");
         assert_eq!(read.key(), "administration.users.read");
         assert!(operation_for_route(&Method::PATCH, "/api/1.0/users/{id}").is_none());
+    }
+
+    #[test]
+    fn seeded_and_custom_role_permissions_intersect_exact_operations() {
+        let school_administrator = [
+            "administration:view",
+            "users:view",
+            "users:create",
+            "users:edit",
+            "roles:view",
+            "roles:create",
+            "roles:edit",
+            "roles:assign",
+            "licensing:view",
+            "licensing:edit",
+            "licensing:delete",
+            "school_settings:view",
+            "school_settings:edit",
+        ];
+        assert!(allowed("administration.users.list", &school_administrator));
+        assert!(allowed(
+            "administration.licensing.refresh",
+            &school_administrator
+        ));
+        assert!(!allowed(
+            "administration.users.delete",
+            &school_administrator
+        ));
+        assert!(!allowed("fleet.vehicles.list", &school_administrator));
+
+        let teacher = [
+            "academics:view",
+            "academics:edit",
+            "sis:view",
+            "timetabling:view",
+            "messaging:view",
+            "messaging:create",
+            "library:view",
+        ];
+        assert!(allowed("timetabling.configuration.read", &teacher));
+        assert!(!allowed("timetabling.runs.generate", &teacher));
+        assert!(!allowed("administration.users.list", &teacher));
+
+        let student = [
+            "academics:view",
+            "timetabling:view",
+            "fees:view",
+            "library:view",
+            "messaging:view",
+        ];
+        assert!(allowed("timetabling.runs.read_latest", &student));
+        assert!(!allowed("timetabling.configuration.update", &student));
+
+        let fleet_viewer = ["fleet:view"];
+        assert!(allowed("fleet.vehicles.list", &fleet_viewer));
+        assert!(allowed("fleet.vehicle_logs.read", &fleet_viewer));
+        assert!(!allowed("fleet.vehicles.create", &fleet_viewer));
+        assert!(!allowed("fleet.vehicle_logs.delete", &fleet_viewer));
+    }
+
+    #[test]
+    fn campus_owner_wildcard_still_requires_every_operation_module() {
+        let snapshot = active_snapshot();
+        for entry in operation_catalog() {
+            let decision = evaluate_operation(
+                entry.operation(),
+                &snapshot,
+                &["*".to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(
+                decision.allowed,
+                "owner unexpectedly denied operation {}: {}",
+                entry.operation().key(),
+                decision.reason.as_str()
+            );
+        }
+
+        let missing_fleet = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            vec![(
+                "administration".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            vec![],
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let decision = evaluate_operation(
+            operation("fleet.vehicles.list"),
+            &missing_fleet,
+            &["*".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(!decision.allowed);
     }
 
     #[actix_web::test]
