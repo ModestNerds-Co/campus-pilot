@@ -239,6 +239,8 @@ Keep these concerns separate:
 
 The current trigger-based `event_log` records table changes but lacks the actor, request, approval, and Agent-run linkage required here. Before Agent write capabilities ship, introduce a first-class actor-aware audit ledger with tenant, actor type/person, action, target, request/correlation ID, reason, redacted metadata, and timestamp. The legacy table may remain table-change evidence during migration, but it is not the Agent audit boundary.
 
+Current implementation status: the shared `cp-audit` platform crate defines server-owned request/correlation context, person/Agent/system actor identity, outcomes, targets, reduced redacted metadata, and a writer that can append through the same SQL transaction as a domain change. Every API response carries a fresh `x-request-id`; a valid incoming `x-correlation-id` is propagated, otherwise the request ID starts the correlation. Authenticated requests receive a person actor context. Migration 016 creates the indexed, append-only `actor_audit_events` ledger while retaining the legacy trigger log. Existing domain mutations still need to adopt the writer operation by operation; Agent execution is not enabled by this foundation.
+
 Provider credentials never share tables with messages or usage. Usage is not the audit record, and a run trail is not the usage ledger.
 
 ## 12. Module capability coverage

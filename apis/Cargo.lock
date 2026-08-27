@@ -1147,6 +1147,7 @@ dependencies = [
  "base64 0.21.7",
  "chrono",
  "cp-academics",
+ "cp-audit",
  "cp-common",
  "cp-fees",
  "cp-finance",
@@ -1346,6 +1347,16 @@ dependencies = [
  "actix-web",
  "cp-common",
  "serde_json",
+]
+
+[[package]]
+name = "cp-audit"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "serde_json",
+ "sqlx",
+ "uuid",
 ]
 
 [[package]]

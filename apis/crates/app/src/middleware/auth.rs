@@ -13,6 +13,7 @@ use std::{
     rc::Rc,
 };
 
+use cp_audit::AuditActor;
 use cp_common::{AccessContext, Roles, TenantId};
 
 use crate::{
@@ -218,6 +219,7 @@ where
                 entitlements: effective_access.entitlements,
             };
             req.extensions_mut().insert(user);
+            req.extensions_mut().insert(AuditActor::person(claims.sub));
             req.extensions_mut().insert(tenant_id);
             req.extensions_mut().insert(roles);
             req.extensions_mut().insert(access_context);

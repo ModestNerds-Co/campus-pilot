@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/common",
+    "crates/platform/audit",
     "crates/app",
     "crates/modules/fleet",
     "crates/modules/vehicle-log",

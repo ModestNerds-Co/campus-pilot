@@ -133,6 +133,7 @@ Online installations refresh periodically. Offline installations may import a si
 
 - The server is authoritative for both module enablement and permissions; hiding a launcher tile is never treated as authorization.
 - The authenticated request context contains tenant ID, immutable role keys, effective permissions, and a freshly loaded entitlement snapshot. The snapshot distinguishes signed lease state, module state, projected feature grants, application-version compatibility, and future hard-limit exhaustion.
+- Each API request receives a server-generated request ID and either propagates a valid incoming correlation ID or starts a new correlation. Successful authentication adds a person actor identity. Consequential domain transactions append reduced, redacted evidence to the actor-aware audit ledger using that context; request or correlation identifiers are never authorization inputs.
 - Permission checks require both an enabled module and a matching permission. Campus Owner wildcard access still respects module enablement.
 - License keys are never stored in plaintext or returned by the API.
 - Support access to a campus, if added later, must be explicit, time-bound, and auditable.

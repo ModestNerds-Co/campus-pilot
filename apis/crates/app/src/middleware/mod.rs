@@ -8,9 +8,11 @@
 
 pub mod auth;
 pub mod rate_limit;
+pub mod request_context;
 
 pub use auth::AuthMiddleware;
 pub use rate_limit::{auth_rate_limiter, refresh_rate_limiter};
+pub use request_context::RequestContextMiddleware;
 
 // RequirePermission now lives in cp-common so module crates can gate their
 // own routes without depending on `app`; re-exported here so existing

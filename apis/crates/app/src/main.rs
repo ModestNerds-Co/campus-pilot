@@ -12,6 +12,7 @@ use actix_web::http::StatusCode;
 use actix_web::middleware::Logger;
 use actix_web::web::JsonConfig;
 use actix_web::{App, HttpResponse, HttpServer, web};
+use cp_audit::{CORRELATION_ID_HEADER, REQUEST_ID_HEADER};
 use dotenv::dotenv;
 use log::info;
 use sentry::integrations::log::LogFilter;
@@ -30,6 +31,7 @@ mod state;
 mod utils;
 
 use crate::config::Config;
+use crate::middleware::RequestContextMiddleware;
 use crate::models::ApiResponse;
 use crate::services::access::{ops::AccessOps, routes::refresh_license_inner};
 use state::AppState;
@@ -155,7 +157,7 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
                 .into()
             }))
             .wrap(Sentry::new())
-            .wrap(Cors::permissive())
+            .wrap(Cors::permissive().expose_headers([REQUEST_ID_HEADER, CORRELATION_ID_HEADER]))
             .wrap(Governor::new(
                 &GovernorConfigBuilder::default()
                     .per_second(200)
@@ -164,6 +166,7 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
                     .unwrap(),
             ))
             .wrap(Logger::default())
+            .wrap(RequestContextMiddleware)
             .configure(routes::init)
     })
     .bind(addr.as_str())?
