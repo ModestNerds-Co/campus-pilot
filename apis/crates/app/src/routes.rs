@@ -38,9 +38,8 @@ pub fn init(cfg: &mut ServiceConfig) {
             .configure(users::routes::routes)
             .service(scope("/kernel").configure(kernel::routes::init))
             .service(scope("/storage").configure(storage::routes::init))
-            // ERP modules — Fleet Management + Vehicle Daily Log are fully
-            // implemented; the rest are scaffolded stubs awaiting their own
-            // schema and business logic.
+            // Operational module scopes mount the shared identity middleware;
+            // exact licensing and permission checks run inside each module.
             .service(
                 scope("/fleet")
                     .wrap(AuthMiddleware)
@@ -52,7 +51,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_vehicle_log::routes::routes),
             )
             .service(scope("/sis").configure(cp_sis::routes::routes))
-            .service(scope("/academics").configure(cp_academics::routes::routes))
+            .service(
+                scope("/academics")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_academics::routes::routes),
+            )
             .service(
                 scope("/timetabling")
                     .wrap(AuthMiddleware)

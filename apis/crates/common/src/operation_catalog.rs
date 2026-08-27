@@ -308,6 +308,241 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             false,
         ),
+        // Academics: canonical teaching structure.
+        route(
+            Method::GET,
+            "/api/1.0/academics/academic-years",
+            "academics.academic_years.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/academic-years/{id}",
+            "academics.academic_years.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/academic-years",
+            "academics.academic_years.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/academic-years/{id}",
+            "academics.academic_years.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/academic-years/{id}",
+            "academics.academic_years.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/subjects",
+            "academics.subjects.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/subjects/{id}",
+            "academics.subjects.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/subjects",
+            "academics.subjects.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/subjects/{id}",
+            "academics.subjects.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/subjects/{id}",
+            "academics.subjects.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/teacher-candidates",
+            "academics.teacher_candidates.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/teachers",
+            "academics.teachers.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/teachers/{id}",
+            "academics.teachers.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/teachers",
+            "academics.teachers.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/teachers/{id}",
+            "academics.teachers.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/teachers/{id}",
+            "academics.teachers.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/classes",
+            "academics.classes.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/classes/{id}",
+            "academics.classes.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/classes",
+            "academics.classes.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/classes/{id}",
+            "academics.classes.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/classes/{id}",
+            "academics.classes.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/teaching-assignments",
+            "academics.teaching_assignments.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/teaching-assignments/{id}",
+            "academics.teaching_assignments.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/teaching-assignments",
+            "academics.teaching_assignments.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/teaching-assignments/{id}",
+            "academics.teaching_assignments.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/teaching-assignments/{id}",
+            "academics.teaching_assignments.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -659,17 +894,27 @@ fn route(
     effect: OperationEffect,
     license_required: bool,
 ) -> RoutedOperation {
+    let operation = ProductOperation::route(
+        key,
+        module_key,
+        permission,
+        effect,
+        agent_exposure_for(key),
+        license_required,
+    );
+    let operation = if key.starts_with("academics.teacher")
+        || key.starts_with("academics.teaching_assignments")
+    {
+        operation.requiring_modules(["hr_payroll".to_string()])
+    } else if key.starts_with("timetabling.") {
+        operation.requiring_modules(["academics".to_string()])
+    } else {
+        operation
+    };
     RoutedOperation {
         method,
         route_pattern,
-        operation: ProductOperation::route(
-            key,
-            module_key,
-            permission,
-            effect,
-            agent_exposure_for(key),
-            license_required,
-        ),
+        operation,
         authority: RouteAuthority::Permission,
     }
 }
@@ -707,6 +952,17 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.roles.read"
         | "administration.users.list"
         | "administration.users.read"
+        | "academics.academic_years.list"
+        | "academics.academic_years.read"
+        | "academics.subjects.list"
+        | "academics.subjects.read"
+        | "academics.teacher_candidates.list"
+        | "academics.teachers.list"
+        | "academics.teachers.read"
+        | "academics.classes.list"
+        | "academics.classes.read"
+        | "academics.teaching_assignments.list"
+        | "academics.teaching_assignments.read"
         | "hr_payroll.departments.list"
         | "hr_payroll.departments.read"
         | "hr_payroll.positions.list"
@@ -730,6 +986,21 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.users.deactivate"
         | "administration.licensing.refresh"
         | "administration.licensing.disable_module"
+        | "academics.academic_years.create"
+        | "academics.academic_years.update"
+        | "academics.academic_years.delete"
+        | "academics.subjects.create"
+        | "academics.subjects.update"
+        | "academics.subjects.delete"
+        | "academics.teachers.create"
+        | "academics.teachers.update"
+        | "academics.teachers.delete"
+        | "academics.classes.create"
+        | "academics.classes.update"
+        | "academics.classes.delete"
+        | "academics.teaching_assignments.create"
+        | "academics.teaching_assignments.update"
+        | "academics.teaching_assignments.delete"
         | "hr_payroll.departments.create"
         | "hr_payroll.departments.update"
         | "hr_payroll.departments.delete"
@@ -802,6 +1073,7 @@ mod tests {
                     "administration".to_string(),
                     ModuleEntitlementState::Enabled,
                 ),
+                ("academics".to_string(), ModuleEntitlementState::Enabled),
                 ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
@@ -832,7 +1104,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 60);
+        assert_eq!(operation_catalog().len(), 86);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -884,7 +1156,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [23, 30, 7, 0]);
+        assert_eq!(counts, [34, 45, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

@@ -1717,6 +1717,207 @@
       ]
     },
     {
+      "name": "Academics",
+      "description": "Academic years, subjects, employee-backed teachers, classes, and canonical teaching assignments.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "List Academic Years",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/academic-years?page=1&per_page=20" }
+        },
+        {
+          "name": "Get Academic Year",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/academic-years/:id" }
+        },
+        {
+          "name": "Create Academic Year",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"2027\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/academic-years"
+          }
+        },
+        {
+          "name": "Update Academic Year",
+          "request": {
+            "method": "PUT",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"2027\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"status\": \"closed\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/academic-years/:id"
+          }
+        },
+        {
+          "name": "Delete Academic Year",
+          "request": { "method": "DELETE", "url": "{{base_url}}/academics/academic-years/:id" }
+        },
+        {
+          "name": "List Subjects",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/subjects?page=1&per_page=20" }
+        },
+        {
+          "name": "Get Subject",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/subjects/:id" }
+        },
+        {
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"MATH\",\n  \"name\": \"Mathematics\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/subjects"
+          }
+        },
+        {
+          "name": "Update Subject",
+          "request": {
+            "method": "PUT",
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"MATH\",\n  \"name\": \"Mathematics\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/subjects/:id"
+          }
+        },
+        {
+          "name": "Delete Subject",
+          "request": { "method": "DELETE", "url": "{{base_url}}/academics/subjects/:id" }
+        },
+        {
+          "name": "List Teacher Candidates",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/teacher-candidates?search=" }
+        },
+        {
+          "name": "List Teachers",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/teachers?page=1&per_page=20" }
+        },
+        {
+          "name": "Get Teacher",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/teachers/:id" }
+        },
+        {
+          "name": "Create Teacher Profile",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "raw", "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/teachers"
+          }
+        },
+        {
+          "name": "Update Teacher Status",
+          "request": {
+            "method": "PUT",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"inactive\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/teachers/:id"
+          }
+        },
+        {
+          "name": "Delete Teacher Profile",
+          "request": { "method": "DELETE", "url": "{{base_url}}/academics/teachers/:id" }
+        },
+        {
+          "name": "List Classes",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/classes?page=1&per_page=20&academic_year_id=" }
+        },
+        {
+          "name": "Get Class",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/classes/:id" }
+        },
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/classes"
+          }
+        },
+        {
+          "name": "Update Class",
+          "request": {
+            "method": "PUT",
+            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/classes/:id"
+          }
+        },
+        {
+          "name": "Delete Class",
+          "request": { "method": "DELETE", "url": "{{base_url}}/academics/classes/:id" }
+        },
+        {
+          "name": "List Teaching Assignments",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/teaching-assignments?page=1&per_page=20&academic_year_id=" }
+        },
+        {
+          "name": "Get Teaching Assignment",
+          "request": { "method": "GET", "url": "{{base_url}}/academics/teaching-assignments/:id" }
+        },
+        {
+          "name": "Create Teaching Assignment",
+          "request": {
+            "method": "POST",
+            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"subject_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"teacher_profile_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"periods_per_cycle\": 5,\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/teaching-assignments"
+          }
+        },
+        {
+          "name": "Update Teaching Assignment",
+          "request": {
+            "method": "PUT",
+            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"subject_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"teacher_profile_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"periods_per_cycle\": 6,\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/academics/teaching-assignments/:id"
+          }
+        },
+        {
+          "name": "Delete Teaching Assignment",
+          "request": { "method": "DELETE", "url": "{{base_url}}/academics/teaching-assignments/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Timetabling",
+      "description": "Consumes active Academics records. Timetabling owns schedule rules, rooms, availability, generated snapshots, and publication.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get Configuration",
+          "request": { "method": "GET", "url": "{{base_url}}/timetabling/configuration" }
+        },
+        {
+          "name": "Save Scheduling Settings",
+          "request": {
+            "method": "PUT",
+            "description": "Academic classes, subjects, teachers, and teaching assignments in this body are replaced by current Academics records. Only timetable-owned settings persist.",
+            "body": { "mode": "raw", "raw": "{\n  \"cycle_name\": \"\",\n  \"days\": [{\"key\": \"monday\", \"label\": \"Monday\"}],\n  \"periods\": [{\"key\": \"period-1\", \"label\": \"Period 1\", \"start_time\": null, \"end_time\": null}],\n  \"classes\": [],\n  \"subjects\": [],\n  \"teachers\": [],\n  \"rooms\": [],\n  \"lesson_requirements\": []\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/timetabling/configuration"
+          }
+        },
+        {
+          "name": "Generate Draft",
+          "request": { "method": "POST", "url": "{{base_url}}/timetabling/generate" }
+        },
+        {
+          "name": "Get Latest Run",
+          "request": { "method": "GET", "url": "{{base_url}}/timetabling/runs/latest" }
+        },
+        {
+          "name": "Publish Run",
+          "request": { "method": "PUT", "url": "{{base_url}}/timetabling/runs/:id/publish" }
+        }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",

@@ -60,7 +60,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/academics",
             "academics",
             false,
-            "foundation",
+            "available",
             &["view", "create", "edit", "delete"],
         ),
         module(
@@ -451,8 +451,14 @@ mod tests {
         .unwrap_or_else(|_| unreachable!());
 
         assert_eq!(coverage.entries().len(), module_catalog().len());
-        assert_eq!(coverage.missing_executable_capability_count(), 2);
-        for module_key in ["administration", "fleet", "hr_payroll", "timetabling"] {
+        assert_eq!(coverage.missing_executable_capability_count(), 0);
+        for module_key in [
+            "administration",
+            "academics",
+            "fleet",
+            "hr_payroll",
+            "timetabling",
+        ] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
             assert!(
@@ -462,6 +468,9 @@ mod tests {
             if module_key == "administration" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 8);
+            } else if module_key == "academics" {
+                assert!(module.release_ready());
+                assert_eq!(module.executable_capabilities(), 11);
             } else if module_key == "fleet" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 7);
@@ -469,10 +478,8 @@ mod tests {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 6);
             } else {
-                assert!(
-                    !module.release_ready(),
-                    "{module_key} has missing Agent reads"
-                );
+                assert!(module.release_ready());
+                assert_eq!(module.executable_capabilities(), 2);
             }
         }
         assert_eq!(

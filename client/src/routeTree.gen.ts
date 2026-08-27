@@ -45,6 +45,11 @@ import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/module
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
+import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
+import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
+import { Route as ModulesAcademicsSubjectsRouteImport } from './routes/modules/academics/subjects'
+import { Route as ModulesAcademicsClassesRouteImport } from './routes/modules/academics/classes'
+import { Route as ModulesAcademicsAcademicYearsRouteImport } from './routes/modules/academics/academic-years'
 import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
 
@@ -231,6 +236,35 @@ const ModulesFleetDailyLogRoute = ModulesFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesAcademicsTeachingAssignmentsRoute =
+  ModulesAcademicsTeachingAssignmentsRouteImport.update({
+    id: '/academics/teaching-assignments',
+    path: '/academics/teaching-assignments',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAcademicsTeachersRoute =
+  ModulesAcademicsTeachersRouteImport.update({
+    id: '/academics/teachers',
+    path: '/academics/teachers',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAcademicsSubjectsRoute =
+  ModulesAcademicsSubjectsRouteImport.update({
+    id: '/academics/subjects',
+    path: '/academics/subjects',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAcademicsClassesRoute = ModulesAcademicsClassesRouteImport.update({
+  id: '/academics/classes',
+  path: '/academics/classes',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesAcademicsAcademicYearsRoute =
+  ModulesAcademicsAcademicYearsRouteImport.update({
+    id: '/academics/academic-years',
+    path: '/academics/academic-years',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const AdminFleetDriversRoute = AdminFleetDriversRouteImport.update({
   id: '/fleet/drivers',
   path: '/fleet/drivers',
@@ -274,6 +308,11 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
+  '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
+  '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
+  '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
+  '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -313,6 +352,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
+  '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
+  '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
+  '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
+  '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -354,6 +398,11 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
+  '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
+  '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
+  '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
+  '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
+  '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -396,6 +445,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
+    | '/modules/academics/academic-years'
+    | '/modules/academics/classes'
+    | '/modules/academics/subjects'
+    | '/modules/academics/teachers'
+    | '/modules/academics/teaching-assignments'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -435,6 +489,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
+    | '/modules/academics/academic-years'
+    | '/modules/academics/classes'
+    | '/modules/academics/subjects'
+    | '/modules/academics/teachers'
+    | '/modules/academics/teaching-assignments'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -475,6 +534,11 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
+    | '/modules/academics/academic-years'
+    | '/modules/academics/classes'
+    | '/modules/academics/subjects'
+    | '/modules/academics/teachers'
+    | '/modules/academics/teaching-assignments'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -751,6 +815,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFleetDailyLogRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/academics/teaching-assignments': {
+      id: '/modules/academics/teaching-assignments'
+      path: '/academics/teaching-assignments'
+      fullPath: '/modules/academics/teaching-assignments'
+      preLoaderRoute: typeof ModulesAcademicsTeachingAssignmentsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/academics/teachers': {
+      id: '/modules/academics/teachers'
+      path: '/academics/teachers'
+      fullPath: '/modules/academics/teachers'
+      preLoaderRoute: typeof ModulesAcademicsTeachersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/academics/subjects': {
+      id: '/modules/academics/subjects'
+      path: '/academics/subjects'
+      fullPath: '/modules/academics/subjects'
+      preLoaderRoute: typeof ModulesAcademicsSubjectsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/academics/classes': {
+      id: '/modules/academics/classes'
+      path: '/academics/classes'
+      fullPath: '/modules/academics/classes'
+      preLoaderRoute: typeof ModulesAcademicsClassesRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/academics/academic-years': {
+      id: '/modules/academics/academic-years'
+      path: '/academics/academic-years'
+      fullPath: '/modules/academics/academic-years'
+      preLoaderRoute: typeof ModulesAcademicsAcademicYearsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/admin/fleet/drivers': {
       id: '/admin/fleet/drivers'
       path: '/fleet/drivers'
@@ -820,6 +919,11 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ModulesRouteChildren {
   ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
+  ModulesAcademicsAcademicYearsRoute: typeof ModulesAcademicsAcademicYearsRoute
+  ModulesAcademicsClassesRoute: typeof ModulesAcademicsClassesRoute
+  ModulesAcademicsSubjectsRoute: typeof ModulesAcademicsSubjectsRoute
+  ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
+  ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
@@ -830,6 +934,12 @@ interface ModulesRouteChildren {
 
 const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesModuleKeyRoute: ModulesModuleKeyRoute,
+  ModulesAcademicsAcademicYearsRoute: ModulesAcademicsAcademicYearsRoute,
+  ModulesAcademicsClassesRoute: ModulesAcademicsClassesRoute,
+  ModulesAcademicsSubjectsRoute: ModulesAcademicsSubjectsRoute,
+  ModulesAcademicsTeachersRoute: ModulesAcademicsTeachersRoute,
+  ModulesAcademicsTeachingAssignmentsRoute:
+    ModulesAcademicsTeachingAssignmentsRoute,
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,

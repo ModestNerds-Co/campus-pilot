@@ -290,32 +290,34 @@ mod tests {
 
     #[test]
     fn avoids_teacher_and_class_collisions() {
-        let mut config = TimetableConfiguration::default();
-        config.classes = vec![resource("class-a"), resource("class-b")];
-        config.subjects = vec![resource("math")];
-        config.teachers = vec![TeacherResource {
-            id: "teacher-a".into(),
-            name: "Teacher A".into(),
-            unavailable_slots: Vec::new(),
-        }];
-        config.lesson_requirements = vec![
-            LessonRequirement {
-                id: "a".into(),
-                class_id: "class-a".into(),
-                subject_id: "math".into(),
-                teacher_id: "teacher-a".into(),
-                room_id: None,
-                periods_per_cycle: 5,
-            },
-            LessonRequirement {
-                id: "b".into(),
-                class_id: "class-b".into(),
-                subject_id: "math".into(),
-                teacher_id: "teacher-a".into(),
-                room_id: None,
-                periods_per_cycle: 5,
-            },
-        ];
+        let config = TimetableConfiguration {
+            classes: vec![resource("class-a"), resource("class-b")],
+            subjects: vec![resource("math")],
+            teachers: vec![TeacherResource {
+                id: "teacher-a".into(),
+                name: "Teacher A".into(),
+                unavailable_slots: Vec::new(),
+            }],
+            lesson_requirements: vec![
+                LessonRequirement {
+                    id: "a".into(),
+                    class_id: "class-a".into(),
+                    subject_id: "math".into(),
+                    teacher_id: "teacher-a".into(),
+                    room_id: None,
+                    periods_per_cycle: 5,
+                },
+                LessonRequirement {
+                    id: "b".into(),
+                    class_id: "class-b".into(),
+                    subject_id: "math".into(),
+                    teacher_id: "teacher-a".into(),
+                    room_id: None,
+                    periods_per_cycle: 5,
+                },
+            ],
+            ..TimetableConfiguration::default()
+        };
         let result = generate(&config);
         assert!(result.unresolved.is_empty());
         let slots: HashSet<_> = result

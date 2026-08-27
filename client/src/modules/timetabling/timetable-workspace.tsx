@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
   CalendarClock,
@@ -180,7 +181,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]"><CheckCircle2 className="size-3.5" />Available</div>
             <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{module.label}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">Build from verified school rules, generate without class, teacher, or room collisions, then review before publishing.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">Set scheduling rules, generate a draft, and publish after reviewing conflicts.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             {canEdit ? <Button disabled={!isDirty || isSaving} onClick={() => void save()} variant="secondary">{isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}Save setup</Button> : null}
@@ -220,7 +221,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
               <div className="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <div>
                   <Label htmlFor="cycle-name">Academic cycle</Label>
-                  <Input className="mt-2" disabled={!canEdit} id="cycle-name" onChange={(event) => updateConfiguration({ ...configuration, cycle_name: event.target.value })} value={configuration.cycle_name} />
+                  <Input className="mt-2" disabled id="cycle-name" value={configuration.cycle_name} />
                 </div>
                 <p className="pb-2 text-sm text-[var(--text-muted)]">{configuration.days.map((day) => day.label.slice(0, 3)).join(" · ")} · {configuration.periods.length} periods</p>
               </div>
@@ -240,10 +241,13 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
             <div className="grid gap-5 pt-5 md:grid-cols-2">
               {(["classes", "subjects", "teachers", "rooms"] as RegistryKind[]).map((registry) => (
                 <RegistryCard
-                  canEdit={canEdit}
+                  canAdd={canEdit && registry === "rooms"}
+                  canEdit={canEdit && (registry === "teachers" || registry === "rooms")}
+                  canRemove={canEdit && registry === "rooms"}
                   items={configuration[registry]}
                   key={registry}
                   label={registryLabels[registry].plural}
+                  managedInAcademics={registry !== "rooms"}
                   onAdd={() => setDrawer({ kind: "registry", registry })}
                   onEdit={(item) => setDrawer({ kind: "registry", registry, item })}
                   onRemove={(id) => removeRegistryItem(configuration, registry, id, updateConfiguration)}
@@ -255,9 +259,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
           <LessonRequirements
             canEdit={canEdit}
             configuration={configuration}
-            onAdd={() => setDrawer({ kind: "lesson" })}
             onEdit={(item) => setDrawer({ kind: "lesson", item })}
-            onRemove={(id) => updateConfiguration({ ...configuration, lesson_requirements: configuration.lesson_requirements.filter((item) => item.id !== id) })}
           />
         </div>
       ) : (
@@ -275,31 +277,31 @@ const ViewTab: React.FC<{ active: boolean; label: string; onClick: () => void }>
   <button aria-selected={active} className={`border-b-2 px-4 py-3 text-sm font-semibold ${active ? "border-[var(--brand)] text-[var(--brand-strong)]" : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-strong)]"}`} onClick={onClick} role="tab" type="button">{label}</button>
 );
 
-const RegistryCard: React.FC<{ canEdit: boolean; items: Array<NamedResource | TeacherResource>; label: string; onAdd: () => void; onEdit: (item: NamedResource | TeacherResource) => void; onRemove: (id: string) => void }> = ({ canEdit, items, label, onAdd, onEdit, onRemove }) => (
+const RegistryCard: React.FC<{ canAdd: boolean; canEdit: boolean; canRemove: boolean; items: Array<NamedResource | TeacherResource>; label: string; managedInAcademics: boolean; onAdd: () => void; onEdit: (item: NamedResource | TeacherResource) => void; onRemove: (id: string) => void }> = ({ canAdd, canEdit, canRemove, items, label, managedInAcademics, onAdd, onEdit, onRemove }) => (
   <div className="border border-[var(--border)] bg-[var(--surface)]">
     <div className="flex items-center justify-between gap-4 border-b border-[var(--border-subtle)] px-5 py-4">
-      <div><h3 className="font-semibold text-[var(--text-strong)]">{label}</h3><p className="mt-0.5 text-xs text-[var(--text-muted)]">{items.length} configured</p></div>
-      {canEdit ? <Button aria-label={`Add ${label.toLowerCase()}`} onClick={onAdd} size="icon-sm" variant="secondary"><Plus className="size-4" /></Button> : null}
+      <div><h3 className="font-semibold text-[var(--text-strong)]">{label}</h3><p className="mt-0.5 text-xs text-[var(--text-muted)]">{items.length} configured{managedInAcademics ? " · managed in Academics" : ""}</p></div>
+      {canAdd ? <Button aria-label={`Add ${label.toLowerCase()}`} onClick={onAdd} size="icon-sm" variant="secondary"><Plus className="size-4" /></Button> : null}
     </div>
     <div className="max-h-64 divide-y divide-[var(--border-subtle)] overflow-y-auto">
       {items.length === 0 ? <p className="px-5 py-7 text-sm text-[var(--text-muted)]">No {label.toLowerCase()} configured yet.</p> : items.map((item) => (
         <div className="flex items-center justify-between gap-4 px-5 py-3" key={item.id}>
           <div className="min-w-0"><p className="truncate text-sm font-medium text-[var(--text-strong)]">{item.name}</p>{"unavailable_slots" in item && item.unavailable_slots.length > 0 ? <p className="mt-0.5 text-xs text-[var(--text-muted)]">{item.unavailable_slots.length} unavailable slots</p> : null}</div>
-          {canEdit ? <div className="flex gap-1"><Button aria-label={`Edit ${item.name}`} onClick={() => onEdit(item)} size="icon-sm" variant="ghost"><Edit3 className="size-3.5" /></Button><Button aria-label={`Remove ${item.name}`} onClick={() => onRemove(item.id)} size="icon-sm" variant="ghost"><Trash2 className="size-3.5" /></Button></div> : null}
+          {canEdit || canRemove ? <div className="flex gap-1">{canEdit ? <Button aria-label={`Edit ${item.name}`} onClick={() => onEdit(item)} size="icon-sm" variant="ghost"><Edit3 className="size-3.5" /></Button> : null}{canRemove ? <Button aria-label={`Remove ${item.name}`} onClick={() => onRemove(item.id)} size="icon-sm" variant="ghost"><Trash2 className="size-3.5" /></Button> : null}</div> : null}
         </div>
       ))}
     </div>
   </div>
 );
 
-const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableConfiguration; onAdd: () => void; onEdit: (item: LessonRequirement) => void; onRemove: (id: string) => void }> = ({ canEdit, configuration, onAdd, onEdit, onRemove }) => (
+const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableConfiguration; onEdit: (item: LessonRequirement) => void }> = ({ canEdit, configuration, onEdit }) => (
   <section aria-labelledby="requirements-heading">
     <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-3 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">03 · Teaching load</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="requirements-heading">Lesson requirements</h2></div>
-      {canEdit ? <Button disabled={configuration.classes.length === 0 || configuration.subjects.length === 0 || configuration.teachers.length === 0} onClick={onAdd} size="sm"><Plus className="size-4" />Add requirement</Button> : null}
+      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">03 · Teaching load</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="requirements-heading">Teaching assignments</h2></div>
+      <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/academics/teaching-assignments">Manage in Academics</Link>
     </div>
     {configuration.lesson_requirements.length === 0 ? (
-      <StateMessage description="Connect a class, subject, and teacher, then define how many periods they need each cycle." title="No teaching requirements yet" />
+      <StateMessage description="Add an active class, subject, and teacher assignment in Academics." title="No teaching assignments yet" />
     ) : (
       <div className="divide-y divide-[var(--border-subtle)] border-b border-[var(--border)]">
         {configuration.lesson_requirements.map((lesson) => (
@@ -307,7 +309,7 @@ const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableC
             <div><p className="text-sm font-semibold text-[var(--text-strong)]">{nameFor(configuration.classes, lesson.class_id)} · {nameFor(configuration.subjects, lesson.subject_id)}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{nameFor(configuration.teachers, lesson.teacher_id)}{lesson.room_id ? ` · ${nameFor(configuration.rooms, lesson.room_id)}` : " · Any room"}</p></div>
             <p className="text-sm text-[var(--text-muted)]">{lesson.periods_per_cycle} periods per cycle</p>
             <span className="w-fit rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-strong)]">Hard constraints</span>
-            {canEdit ? <div className="flex gap-1 sm:justify-end"><Button aria-label="Edit requirement" onClick={() => onEdit(lesson)} size="icon-sm" variant="ghost"><Edit3 className="size-3.5" /></Button><Button aria-label="Remove requirement" onClick={() => onRemove(lesson.id)} size="icon-sm" variant="ghost"><Trash2 className="size-3.5" /></Button></div> : null}
+            {canEdit ? <div className="flex gap-1 sm:justify-end"><Button aria-label="Set room preference" onClick={() => onEdit(lesson)} size="icon-sm" variant="ghost"><Edit3 className="size-3.5" /></Button></div> : null}
           </div>
         ))}
       </div>
@@ -378,7 +380,8 @@ const RegistryDrawer: React.FC<{ configuration: TimetableConfiguration; drawer: 
     onSave({ ...configuration, [registry]: nextItems });
     onClose();
   };
-  return <DialogShell onClose={onClose} open><DialogHeader onClose={onClose} title={`${drawer.item ? "Edit" : "Add"} ${registryLabels[registry].singular}`} /><DialogBody><Label htmlFor="registry-name">Name</Label><Input className="mt-2" data-autofocus="true" id="registry-name" onChange={(event) => setName(event.target.value)} placeholder={`e.g. ${registry === "classes" ? "Grade 7A" : registry === "subjects" ? "Mathematics" : registry === "teachers" ? "T. Moyo" : "Science Lab"}`} value={name} />{registry === "teachers" ? <div className="mt-7"><p className="text-sm font-semibold text-[var(--text-strong)]">Unavailable teaching slots</p><p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Selected slots become hard constraints during generation.</p><div className="mt-4 overflow-x-auto"><div className="grid min-w-[520px] gap-2" style={{ gridTemplateColumns: `110px repeat(${configuration.days.length}, minmax(72px, 1fr))` }}><span />{configuration.days.map((day) => <span className="text-center text-xs font-semibold text-[var(--text-muted)]" key={day.key}>{day.label.slice(0, 3)}</span>)}{configuration.periods.map((period) => <React.Fragment key={period.key}><span className="self-center text-xs text-[var(--text-muted)]">{period.label}</span>{configuration.days.map((day) => { const slot = `${day.key}:${period.key}`; return <button aria-pressed={unavailable.includes(slot)} className={`h-9 border text-xs ${unavailable.includes(slot) ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--border)] text-[var(--text-subtle)]"}`} key={day.key} onClick={() => setUnavailable((current) => current.includes(slot) ? current.filter((item) => item !== slot) : [...current, slot])} type="button">{unavailable.includes(slot) ? "Away" : "Free"}</button>; })}</React.Fragment>)}</div></div></div> : null}</DialogBody><DialogFooter><Button onClick={onClose} variant="secondary">Cancel</Button><Button onClick={submit}>{drawer.item ? "Save changes" : `Add ${registryLabels[registry].singular}`}</Button></DialogFooter></DialogShell>;
+  const teacherAvailability = registry === "teachers";
+  return <DialogShell onClose={onClose} open><DialogHeader onClose={onClose} title={teacherAvailability ? "Teacher availability" : `${drawer.item ? "Edit" : "Add"} ${registryLabels[registry].singular}`} /><DialogBody>{teacherAvailability ? <div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4"><p className="font-medium text-[var(--text-strong)]">{name}</p><p className="mt-1 text-xs text-[var(--text-muted)]">The teacher name comes from the linked HR employee.</p></div> : <><Label htmlFor="registry-name">Name</Label><Input className="mt-2" data-autofocus="true" id="registry-name" onChange={(event) => setName(event.target.value)} placeholder="e.g. Science Lab" value={name} /></>}{teacherAvailability ? <div className="mt-7"><p className="text-sm font-semibold text-[var(--text-strong)]">Unavailable teaching slots</p><p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Selected slots are excluded during generation.</p><div className="mt-4 overflow-x-auto"><div className="grid min-w-[520px] gap-2" style={{ gridTemplateColumns: `110px repeat(${configuration.days.length}, minmax(72px, 1fr))` }}><span />{configuration.days.map((day) => <span className="text-center text-xs font-semibold text-[var(--text-muted)]" key={day.key}>{day.label.slice(0, 3)}</span>)}{configuration.periods.map((period) => <React.Fragment key={period.key}><span className="self-center text-xs text-[var(--text-muted)]">{period.label}</span>{configuration.days.map((day) => { const slot = `${day.key}:${period.key}`; return <button aria-pressed={unavailable.includes(slot)} className={`h-9 border text-xs ${unavailable.includes(slot) ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--border)] text-[var(--text-subtle)]"}`} key={day.key} onClick={() => setUnavailable((current) => current.includes(slot) ? current.filter((item) => item !== slot) : [...current, slot])} type="button">{unavailable.includes(slot) ? "Away" : "Free"}</button>; })}</React.Fragment>)}</div></div></div> : null}</DialogBody><DialogFooter><Button onClick={onClose} variant="secondary">Cancel</Button><Button onClick={submit}>{teacherAvailability ? "Save availability" : drawer.item ? "Save changes" : `Add ${registryLabels[registry].singular}`}</Button></DialogFooter></DialogShell>;
 };
 
 const LessonDrawer: React.FC<{ configuration: TimetableConfiguration; item?: LessonRequirement; onClose: () => void; onSave: (next: TimetableConfiguration) => void; open: boolean }> = ({ configuration, item, onClose, onSave, open }) => {
@@ -390,7 +393,7 @@ const LessonDrawer: React.FC<{ configuration: TimetableConfiguration; item?: Les
     onSave({ ...configuration, lesson_requirements: item ? configuration.lesson_requirements.map((entry) => entry.id === item.id ? lesson : entry) : [...configuration.lesson_requirements, lesson] });
     onClose();
   };
-  return <DialogShell onClose={onClose} open={open}><DialogHeader onClose={onClose} title={item ? "Edit teaching requirement" : "Add teaching requirement"} /><DialogBody><p className="text-sm leading-6 text-[var(--text-muted)]">Define the weekly teaching load. Campus Pilot will place each requested period around hard resource constraints.</p><div className="mt-6 space-y-5"><ComboboxField label="Class" options={configuration.classes} value={draft.class_id || null} onChange={(value) => setDraft({ ...draft, class_id: value ?? "" })} /><ComboboxField label="Subject" options={configuration.subjects} value={draft.subject_id || null} onChange={(value) => setDraft({ ...draft, subject_id: value ?? "" })} /><ComboboxField label="Teacher" options={configuration.teachers} value={draft.teacher_id || null} onChange={(value) => setDraft({ ...draft, teacher_id: value ?? "" })} /><ComboboxField allowClear label="Preferred room" options={configuration.rooms} value={draft.room_id} onChange={(value) => setDraft({ ...draft, room_id: value })} /><div><Label htmlFor="periods-per-cycle">Periods per cycle</Label><Input className="mt-2" id="periods-per-cycle" max={40} min={1} onChange={(event) => setDraft({ ...draft, periods_per_cycle: Math.max(1, Math.min(40, Number(event.target.value))) })} type="number" value={draft.periods_per_cycle} /></div></div></DialogBody><DialogFooter><Button onClick={onClose} variant="secondary">Cancel</Button><Button onClick={submit}>{item ? "Save changes" : "Add requirement"}</Button></DialogFooter></DialogShell>;
+  return <DialogShell onClose={onClose} open={open}><DialogHeader onClose={onClose} title="Room preference" /><DialogBody><p className="text-sm leading-6 text-[var(--text-muted)]">The class, subject, teacher, and teaching load come from Academics. Timetabling only stores the preferred room.</p><div className="mt-6 space-y-5"><div className="rounded-[var(--radius-lg)] bg-[var(--surface-muted)] p-4"><p className="font-medium text-[var(--text-strong)]">{nameFor(configuration.classes, draft.class_id)} · {nameFor(configuration.subjects, draft.subject_id)}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{nameFor(configuration.teachers, draft.teacher_id)} · {draft.periods_per_cycle} periods per cycle</p></div><ComboboxField allowClear label="Preferred room" options={configuration.rooms} value={draft.room_id} onChange={(value) => setDraft({ ...draft, room_id: value })} /></div></DialogBody><DialogFooter><Button onClick={onClose} variant="secondary">Cancel</Button><Button onClick={submit}>Save room preference</Button></DialogFooter></DialogShell>;
 };
 
 const ComboboxField: React.FC<{ allowClear?: boolean; label: string; onChange: (value: string | null) => void; options: NamedResource[]; value: string | null }> = ({ allowClear, label, onChange, options, value }) => <div><Label>{label}</Label><div className="mt-2"><StringCombobox allowClear={allowClear} onChange={onChange} options={options} placeholder={`Choose ${label.toLowerCase()}`} value={value} /></div></div>;

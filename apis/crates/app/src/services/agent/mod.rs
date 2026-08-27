@@ -1,15 +1,21 @@
 //! Assembles production Agent capability adapters over existing domain services.
 
+mod academics;
 mod administration;
 mod administration_access;
 mod fleet;
 mod hr;
+mod timetabling;
 
 use cp_agent::CapabilityRegistry;
 use sqlx::PgPool;
 
 use crate::config::LicenseConfig;
 
+use academics::{
+    AcademicsListCapability, AcademicsListKind, AcademicsReadCapability, AcademicsReadKind,
+    TeacherCandidatesCapability,
+};
 use administration::{
     AdministrationCatalogCapability, AdministrationLicensingCapability,
     AdministrationModulesCapability, AdministrationSchoolSettingsCapability,
@@ -27,6 +33,7 @@ use hr::{
     HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeReadCapability,
     HrEmployeesListCapability, HrPositionReadCapability, HrPositionsListCapability,
 };
+use timetabling::{LatestTimetableRunCapability, TimetableConfigurationCapability};
 
 #[must_use]
 pub fn build_capability_registry(
@@ -64,6 +71,31 @@ pub fn build_capability_registry(
             license_config,
         ))
         .unwrap_or_else(|error| panic!("invalid Administration licensing capability: {error}"));
+    for kind in [
+        AcademicsListKind::AcademicYears,
+        AcademicsListKind::Subjects,
+        AcademicsListKind::Teachers,
+        AcademicsListKind::Classes,
+        AcademicsListKind::TeachingAssignments,
+    ] {
+        registry
+            .register(AcademicsListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [
+        AcademicsReadKind::AcademicYear,
+        AcademicsReadKind::Subject,
+        AcademicsReadKind::Teacher,
+        AcademicsReadKind::Class,
+        AcademicsReadKind::TeachingAssignment,
+    ] {
+        registry
+            .register(AcademicsReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
+        .register(TeacherCandidatesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Academics teacher-candidates capability: {error}"));
     registry
         .register(HrDepartmentsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR departments-list capability: {error}"));
@@ -101,8 +133,14 @@ pub fn build_capability_registry(
         .register(FleetVehicleLogsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fleet vehicle-logs-list capability: {error}"));
     registry
-        .register(FleetVehicleLogReadCapability::new(pool))
+        .register(FleetVehicleLogReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fleet vehicle-log-read capability: {error}"));
+    registry
+        .register(TimetableConfigurationCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
+    registry
+        .register(LatestTimetableRunCapability::new(pool))
+        .unwrap_or_else(|error| panic!("invalid Timetabling latest-run capability: {error}"));
     registry
 }
 
@@ -176,14 +214,18 @@ mod tests {
                 "users:view".to_string(),
                 "school_settings:view".to_string(),
                 "licensing:view".to_string(),
+                "academics:view".to_string(),
                 "hr_payroll:view".to_string(),
                 "fleet:view".to_string(),
+                "timetabling:view".to_string(),
             ],
             enabled_modules: vec![
                 "agent".to_string(),
                 "administration".to_string(),
+                "academics".to_string(),
                 "hr_payroll".to_string(),
                 "fleet".to_string(),
+                "timetabling".to_string(),
             ],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
@@ -193,8 +235,10 @@ mod tests {
                         "administration".to_string(),
                         ModuleEntitlementState::Enabled,
                     ),
+                    ("academics".to_string(), ModuleEntitlementState::Enabled),
                     ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                     ("fleet".to_string(), ModuleEntitlementState::Enabled),
+                    ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ],
                 Vec::<String>::new(),
             )
@@ -227,6 +271,17 @@ mod tests {
         assert_eq!(
             keys,
             vec![
+                "academics.academic_years.list",
+                "academics.academic_years.read",
+                "academics.classes.list",
+                "academics.classes.read",
+                "academics.subjects.list",
+                "academics.subjects.read",
+                "academics.teacher_candidates.list",
+                "academics.teachers.list",
+                "academics.teachers.read",
+                "academics.teaching_assignments.list",
+                "academics.teaching_assignments.read",
                 "administration.catalog.read",
                 "administration.licensing.read",
                 "administration.modules.list",
@@ -247,7 +302,9 @@ mod tests {
                 "hr_payroll.employees.list",
                 "hr_payroll.employees.read",
                 "hr_payroll.positions.list",
-                "hr_payroll.positions.read"
+                "hr_payroll.positions.read",
+                "timetabling.configuration.read",
+                "timetabling.runs.read_latest"
             ]
         );
         let broker = CapabilityBroker::new(
