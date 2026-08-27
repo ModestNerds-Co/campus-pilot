@@ -355,9 +355,11 @@ impl AccessOps {
         sqlx::query(
             r#"
             UPDATE tenant_modules
-            SET status = 'revoked', license_fingerprint = $2,
+            SET status = 'revoked', source = 'license', license_fingerprint = $2,
                 license_expires_at = $3, updated_at = NOW()
-            WHERE tenant_id = $1 AND source = 'license' AND deleted_at IS NULL
+            WHERE tenant_id = $1
+              AND source IN ('legacy', 'license')
+              AND deleted_at IS NULL
               AND NOT (module_key = ANY($4))
             "#,
         )
@@ -379,17 +381,21 @@ impl AccessOps {
                 ON CONFLICT (tenant_id, module_key) WHERE deleted_at IS NULL
                 DO UPDATE SET
                     status = CASE
-                        WHEN tenant_modules.source != 'license' THEN tenant_modules.status
+                        WHEN tenant_modules.source = 'core' THEN tenant_modules.status
                         WHEN tenant_modules.status = 'disabled' THEN 'disabled'
                         ELSE 'enabled'
                     END,
+                    source = CASE
+                        WHEN tenant_modules.source = 'core' THEN tenant_modules.source
+                        ELSE 'license'
+                    END,
                     license_fingerprint = CASE
-                        WHEN tenant_modules.source = 'license' THEN EXCLUDED.license_fingerprint
-                        ELSE tenant_modules.license_fingerprint
+                        WHEN tenant_modules.source = 'core' THEN tenant_modules.license_fingerprint
+                        ELSE EXCLUDED.license_fingerprint
                     END,
                     license_expires_at = CASE
-                        WHEN tenant_modules.source = 'license' THEN EXCLUDED.license_expires_at
-                        ELSE tenant_modules.license_expires_at
+                        WHEN tenant_modules.source = 'core' THEN tenant_modules.license_expires_at
+                        ELSE EXCLUDED.license_expires_at
                     END,
                     updated_at = NOW()
                 "#,
@@ -998,6 +1004,19 @@ mod entitlement_tests {
         let installation = AccessOps::ensure_license_installation(&state.db, tenant_id)
             .await
             .unwrap_or_else(|_| unreachable!());
+        sqlx::query(
+            r#"
+            INSERT INTO tenant_modules (tenant_id, module_key, status, source)
+            VALUES
+                ($1, 'fleet', 'disabled', 'legacy'),
+                ($1, 'agent', 'enabled', 'legacy'),
+                ($1, 'timetabling', 'enabled', 'legacy')
+            "#,
+        )
+        .bind(tenant_id)
+        .execute(&state.db)
+        .await
+        .unwrap_or_else(|_| unreachable!());
         let remote_installation_id = Uuid::new_v4();
         let first = verified_lease(
             tenant_id,
@@ -1039,6 +1058,48 @@ mod entitlement_tests {
         .await
         .unwrap_or_else(|_| unreachable!());
         assert_eq!(limit, ("agent.runs".to_string(), 100, "report".to_string()));
+        let first_states = sqlx::query_as::<_, (String, String, String)>(
+            r#"
+            SELECT module_key, status, source
+            FROM tenant_modules
+            WHERE tenant_id = $1
+            ORDER BY module_key
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
+        assert_eq!(
+            first_states,
+            vec![
+                (
+                    "administration".to_string(),
+                    "enabled".to_string(),
+                    "core".to_string(),
+                ),
+                (
+                    "agent".to_string(),
+                    "enabled".to_string(),
+                    "license".to_string(),
+                ),
+                (
+                    "fleet".to_string(),
+                    "disabled".to_string(),
+                    "license".to_string(),
+                ),
+                (
+                    "home".to_string(),
+                    "enabled".to_string(),
+                    "core".to_string(),
+                ),
+                (
+                    "timetabling".to_string(),
+                    "revoked".to_string(),
+                    "license".to_string(),
+                ),
+            ]
+        );
 
         let second = verified_lease(
             tenant_id,
@@ -1075,8 +1136,8 @@ mod entitlement_tests {
             .unwrap_or_default(),
             0
         );
-        let states = sqlx::query_as::<_, (String, String)>(
-            "SELECT module_key, status FROM tenant_modules WHERE tenant_id = $1 ORDER BY module_key",
+        let states = sqlx::query_as::<_, (String, String, String)>(
+            "SELECT module_key, status, source FROM tenant_modules WHERE tenant_id = $1 ORDER BY module_key",
         )
         .bind(tenant_id)
         .fetch_all(&state.db)
@@ -1085,10 +1146,31 @@ mod entitlement_tests {
         assert_eq!(
             states,
             vec![
-                ("administration".to_string(), "enabled".to_string()),
-                ("agent".to_string(), "enabled".to_string()),
-                ("fleet".to_string(), "revoked".to_string()),
-                ("home".to_string(), "enabled".to_string()),
+                (
+                    "administration".to_string(),
+                    "enabled".to_string(),
+                    "core".to_string(),
+                ),
+                (
+                    "agent".to_string(),
+                    "enabled".to_string(),
+                    "license".to_string(),
+                ),
+                (
+                    "fleet".to_string(),
+                    "revoked".to_string(),
+                    "license".to_string(),
+                ),
+                (
+                    "home".to_string(),
+                    "enabled".to_string(),
+                    "core".to_string(),
+                ),
+                (
+                    "timetabling".to_string(),
+                    "revoked".to_string(),
+                    "license".to_string(),
+                ),
             ]
         );
         assert_eq!(installation.latest_lease_sequence, 0);
