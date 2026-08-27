@@ -84,6 +84,10 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
         .await?;
 
     let app_state = Arc::new(AppState::init(db_pool, config.clone()));
+    info!(
+        "Loaded {} executable Agent capabilities",
+        app_state.agent_capabilities.descriptors().len()
+    );
 
     // Run database migrations
     info!("Running database migrations... ⚙️");

@@ -381,8 +381,10 @@ fn action_label(action: &str) -> String {
 mod tests {
     use std::collections::BTreeSet;
 
-    use cp_agent::{CapabilityRegistry, ModuleCoverageRegistry, ModuleCoverageSource};
+    use cp_agent::{ModuleCoverageRegistry, ModuleCoverageSource};
     use cp_common::{ProductOperation, operation_catalog};
+
+    use crate::services::agent::build_capability_registry;
 
     use super::{all_permission_keys, module_catalog};
 
@@ -415,10 +417,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn module_coverage_exposes_current_release_and_agent_gaps() {
-        let capability_registry =
-            CapabilityRegistry::from_product_catalog().unwrap_or_else(|_| unreachable!());
+    #[tokio::test]
+    async fn module_coverage_exposes_current_release_and_agent_gaps() {
+        let capability_registry = build_capability_registry(
+            sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+                .unwrap_or_else(|_| unreachable!()),
+        );
         let coverage = ModuleCoverageRegistry::build(
             module_catalog().into_iter().map(|module| {
                 ModuleCoverageSource::parse(module.key, module.stage, module.core, module.route)
@@ -433,7 +438,7 @@ mod tests {
         .unwrap_or_else(|_| unreachable!());
 
         assert_eq!(coverage.entries().len(), module_catalog().len());
-        assert_eq!(coverage.missing_executable_capability_count(), 16);
+        assert_eq!(coverage.missing_executable_capability_count(), 14);
         for module_key in ["administration", "fleet", "timetabling"] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -445,6 +450,9 @@ mod tests {
                 !module.release_ready(),
                 "{module_key} has missing Agent reads"
             );
+            if module_key == "administration" {
+                assert_eq!(module.executable_capabilities(), 2);
+            }
         }
         assert_eq!(
             coverage
