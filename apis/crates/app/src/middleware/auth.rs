@@ -1,10 +1,6 @@
-//
-//  campus-pilot-apis
-//  auth.rs
-//
-//  Created by Ngonidzashe Mangudya on 2025/10/02.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Authenticates API requests and attaches tenant-scoped access evidence.
+//!
+//! Downstream handlers receive only active users with freshly loaded authority.
 
 use actix_web::{
     Error, HttpMessage, HttpResponse,
@@ -219,6 +215,7 @@ where
                 role_keys: user.roles.clone(),
                 permissions: effective_access.permissions,
                 enabled_modules: effective_access.enabled_modules,
+                entitlements: effective_access.entitlements,
             };
             req.extensions_mut().insert(user);
             req.extensions_mut().insert(tenant_id);

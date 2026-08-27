@@ -79,6 +79,8 @@ The control plane provides two distinct authenticated workspaces:
 - The customer portal lets an authorized campus customer compare plans, purchase or renew a subscription, manage billing, register installations, create one-time activation codes, and download an offline license bundle.
 - The owner portal is for platform operators only. It shows customers, subscriptions, payment state, installations, issued leases, entitlement changes, revocations, signing-key state, and append-only operator audit. Platform access never implies access to a school's operational application or data.
 
+Assigning a subscription does not itself connect a campus server. A customer administrator creates a short-lived, one-time activation code under Customer portal → Installations. A Campus Owner enters that code under Campus Pilot Administration → Licensing. The campus server exchanges it for a signed lease and encrypted renewable installation credential. The owner portal may inspect or revoke the resulting installation, but it does not impersonate the customer or issue the customer's activation code.
+
 Hosted payment checkout and billing management are used so Campus Pilot and the control plane do not collect or store card details. Payment-provider webhooks are signature-verified and idempotent. A client redirect or checkout success page is never authority to enable a module.
 
 Billing is provider-neutral and multi-currency from the first contract. A plan may have several provider-specific price mappings in currencies such as ZWG, USD, or ZAR. Every money value uses an ISO 4217 currency code, an explicit currency exponent, and integer minor units; code never assumes two decimal places. Original, settlement, fee, and refund money remain distinct, and no report silently adds or converts unlike currencies. Stripe, PayPal, Paynow, Pesepay, and future providers integrate through isolated adapters rather than provider-named commercial columns.
@@ -107,7 +109,7 @@ AND the person's exact permission and record scope allow it
 AND policy, approval, and quota checks allow it
 ```
 
-The evaluator returns stable reason codes and the catalog/policy versions used. Agent discovery hides unlicensed capabilities, but every Agent execution evaluates licensing, permissions, scope, policy, approval, and quota again.
+The pure operation evaluator returns stable reason codes for module, feature, local enablement, dependency, lease lifecycle, application version, permission, record scope, quota, and approval decisions. It currently runs beside the legacy route check in shadow mode and records only decision drift; the legacy decision remains authoritative until exact operation descriptors are attached and observed drift is resolved. Agent discovery hides unlicensed capabilities, but every Agent execution evaluates licensing, permissions, scope, policy, approval, and quota again.
 
 Lease lifecycle is `active -> refresh_due -> offline_lease -> grace -> restricted`; `revoked` and `invalid` override every other state. Restricted mode preserves sign-in, read access, backup/export, licensing repair, and explicitly documented safety-critical workflows. It blocks new high-risk writes, financial posting, destructive changes, and external Agent actions. Expiry or revocation never deletes, encrypts, or withholds a campus's own data.
 
@@ -124,7 +126,7 @@ Online installations refresh periodically. Offline installations may import a si
 ## 5. Security boundary
 
 - The server is authoritative for both module enablement and permissions; hiding a launcher tile is never treated as authorization.
-- The authenticated request context contains tenant ID, immutable role keys, effective permissions, and enabled module keys.
+- The authenticated request context contains tenant ID, immutable role keys, effective permissions, and a freshly loaded entitlement snapshot. The snapshot distinguishes signed lease state, module state, feature grants, application-version compatibility, and future hard-limit exhaustion.
 - Permission checks require both an enabled module and a matching permission. Campus Owner wildcard access still respects module enablement.
 - License keys are never stored in plaintext or returned by the API.
 - Support access to a campus, if added later, must be explicit, time-bound, and auditable.

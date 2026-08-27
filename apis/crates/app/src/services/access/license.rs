@@ -1,10 +1,6 @@
-//
-//  campus-pilot-apis
-//  license.rs
-//
-//  Created by OpenAI Codex on 2026/08/26.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Verifies signed license material and protects renewable installation credentials.
+//!
+//! Raw activation material and signed envelopes remain write-only outside this module.
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
@@ -12,6 +8,7 @@ use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -246,6 +243,7 @@ fn validate_signed_claims(
     if claims.limits.iter().any(|limit| !valid_limit(limit)) {
         bail!("Signed lease contains an invalid capability limit");
     }
+    validate_version_bounds(claims)?;
     if !(claims.nbf <= claims.iat
         && claims.iat <= claims.refresh_after
         && claims.refresh_after <= claims.lease_expires_at
@@ -259,6 +257,48 @@ fn validate_signed_claims(
         bail!("Signed lease was issued too far in the future");
     }
     Ok(())
+}
+
+fn validate_version_bounds(claims: &SignedLeaseClaims) -> Result<()> {
+    let minimum = claims
+        .min_app_version
+        .as_deref()
+        .map(Version::parse)
+        .transpose()
+        .context("Signed lease minimum application version is invalid")?;
+    let maximum = claims
+        .max_app_version
+        .as_deref()
+        .map(Version::parse)
+        .transpose()
+        .context("Signed lease maximum application version is invalid")?;
+    if minimum
+        .as_ref()
+        .zip(maximum.as_ref())
+        .is_some_and(|(minimum, maximum)| minimum > maximum)
+    {
+        bail!("Signed lease application version bounds are invalid");
+    }
+    Ok(())
+}
+
+pub(crate) fn app_version_is_supported(claims: &SignedLeaseClaims) -> Result<bool> {
+    validate_version_bounds(claims)?;
+    let current = Version::parse(env!("CARGO_PKG_VERSION"))
+        .context("Campus Pilot application version is invalid")?;
+    let minimum_matches = claims
+        .min_app_version
+        .as_deref()
+        .map(Version::parse)
+        .transpose()?
+        .is_none_or(|minimum| current >= minimum);
+    let maximum_matches = claims
+        .max_app_version
+        .as_deref()
+        .map(Version::parse)
+        .transpose()?
+        .is_none_or(|maximum| current <= maximum);
+    Ok(minimum_matches && maximum_matches)
 }
 
 fn valid_limit(limit: &LeaseLimit) -> bool {
@@ -364,7 +404,7 @@ mod tests {
     use crate::config::LicenseConfig;
 
     use super::{
-        LeaseLimit, SignedLeaseClaims, protect_installation_credential,
+        LeaseLimit, SignedLeaseClaims, app_version_is_supported, protect_installation_credential,
         reveal_installation_credential, verify_signed_lease,
     };
 
@@ -493,6 +533,29 @@ mod tests {
         );
         assert!(
             verify_signed_lease(&token, tenant_id, Some(Uuid::new_v4()), &license_config,).is_err()
+        );
+
+        let mut unsupported = claims.clone();
+        unsupported.min_app_version = Some("2.0.0".to_string());
+        assert!(app_version_is_supported(&unsupported).is_ok_and(|supported| !supported));
+
+        let mut invalid_bounds = claims;
+        invalid_bounds.min_app_version = Some("2.0.0".to_string());
+        invalid_bounds.max_app_version = Some("1.0.0".to_string());
+        let invalid_token = encode(
+            &header,
+            &invalid_bounds,
+            &EncodingKey::from_ed_pem(PRIVATE_KEY.as_bytes()).unwrap_or_else(|_| unreachable!()),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            verify_signed_lease(
+                &invalid_token,
+                tenant_id,
+                Some(installation_id),
+                &license_config,
+            )
+            .is_err()
         );
     }
 }

@@ -1,17 +1,6 @@
-//
-//  cp-common
-//  permissions.rs
-//
-//  Created by Ngonidzashe Mangudya on 2025/10/02.
-//  Moved into cp-common on 2026/08/21 so every module crate can gate its
-//  own routes without depending on the `app` crate. Redesigned the same day
-//  to wrap a whole resource scope ONCE per module rather than nesting a
-//  separate empty-prefixed `web::scope("")` per permission tier — actix-web
-//  only honors the first of several identically-patterned nested scopes
-//  under one parent, which silently 404'd every create/update/delete route
-//  in `users`, `roles`, and the new ERP modules alike.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Gates module routes and compares legacy checks with the operation evaluator.
+//!
+//! Shadow decisions are observable but do not change enforcement until drift is resolved.
 
 use actix_web::{
     Error, HttpMessage, HttpResponse,
@@ -25,7 +14,10 @@ use std::{
     rc::Rc,
 };
 
-use crate::{AccessContext, ApiResponse, module_key_for_namespace};
+use crate::{
+    AccessContext, ApiResponse, OperationEffect, ProductOperation, RuntimeAccessChecks,
+    module_key_for_namespace,
+};
 
 /// Gates every request in a scope with a `"<module>:<action>"` permission,
 /// deriving `<action>` from the HTTP method (GET -> view, POST -> create,
@@ -50,6 +42,15 @@ fn action_for(method: &Method) -> &'static str {
         Method::PUT | Method::PATCH => "edit",
         Method::DELETE => "delete",
         _ => "view",
+    }
+}
+
+fn effect_for(method: &Method) -> OperationEffect {
+    match *method {
+        Method::GET => OperationEffect::Read,
+        Method::DELETE => OperationEffect::Destructive,
+        Method::POST | Method::PUT | Method::PATCH => OperationEffect::Write,
+        _ => OperationEffect::Read,
     }
 }
 
@@ -92,8 +93,16 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = Rc::clone(&self.service);
-        let permission = format!("{}:{}", self.module, action_for(req.method()));
+        let action = action_for(req.method());
+        let permission = format!("{}:{}", self.module, action);
         let module_key = module_key_for_namespace(&self.module).to_string();
+        let operation = ProductOperation::route(
+            format!("{}.{}", module_key, action),
+            module_key.clone(),
+            permission.clone(),
+            effect_for(req.method()),
+            !matches!(module_key.as_str(), "administration" | "home"),
+        );
 
         Box::pin(async move {
             // AccessContext is set by AuthMiddleware (in the app crate) before
@@ -102,7 +111,22 @@ where
 
             match access {
                 Some(access) => {
-                    if !access.has_module(&module_key) {
+                    let legacy_has_module = access.has_module(&module_key);
+                    let legacy_has_permission = access.has_permission(&permission);
+                    let shadow =
+                        access.evaluate_operation(&operation, RuntimeAccessChecks::default());
+                    let legacy_allowed = legacy_has_module && legacy_has_permission;
+                    if shadow.allowed != legacy_allowed {
+                        log::warn!(
+                            "Operation entitlement shadow drift: operation={}, legacy_allowed={}, evaluator_allowed={}, evaluator_reason={}",
+                            operation.key(),
+                            legacy_allowed,
+                            shadow.allowed,
+                            shadow.reason.as_str(),
+                        );
+                    }
+
+                    if !legacy_has_module {
                         let response = ApiResponse::<()>::from_status(
                             actix_web::http::StatusCode::FORBIDDEN,
                             None,
@@ -113,7 +137,7 @@ where
                             .map_into_right_body());
                     }
 
-                    if access.has_permission(&permission) {
+                    if legacy_has_permission {
                         service.call(req).await.map(|res| res.map_into_left_body())
                     } else {
                         let response = ApiResponse::<()>::from_status(

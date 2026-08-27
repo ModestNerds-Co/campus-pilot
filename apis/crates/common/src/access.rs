@@ -1,16 +1,19 @@
-//
-//  cp-common
-//  access.rs
-//
-//  Created by OpenAI Codex on 2026/08/26.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Carries request-scoped role authority and trusted entitlement evidence.
+//!
+//! Only authentication middleware constructs this context for request handlers.
+
+use crate::{
+    EntitlementSnapshot, OperationAccessDecision, ProductOperation, RuntimeAccessChecks,
+    evaluate_operation,
+};
 
 #[derive(Debug, Clone)]
 pub struct AccessContext {
     pub role_keys: Vec<String>,
     pub permissions: Vec<String>,
+    /// Compatibility projection used by route enforcement during shadow rollout.
     pub enabled_modules: Vec<String>,
+    pub entitlements: EntitlementSnapshot,
 }
 
 impl AccessContext {
@@ -22,6 +25,16 @@ impl AccessContext {
 
     pub fn has_module(&self, module_key: &str) -> bool {
         self.enabled_modules.iter().any(|item| item == module_key)
+    }
+
+    /// Evaluates a typed product operation without trusting client-side state.
+    #[must_use]
+    pub fn evaluate_operation(
+        &self,
+        operation: &ProductOperation,
+        runtime: RuntimeAccessChecks,
+    ) -> OperationAccessDecision {
+        evaluate_operation(operation, &self.entitlements, &self.permissions, runtime)
     }
 
     /// A dedicated role-management permission authorizes catalog access
@@ -45,6 +58,8 @@ pub fn module_key_for_namespace(namespace: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use crate::{EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState};
+
     use super::AccessContext;
 
     fn access(permissions: &[&str]) -> AccessContext {
@@ -52,6 +67,15 @@ mod tests {
             role_keys: Vec::new(),
             permissions: permissions.iter().map(|value| value.to_string()).collect(),
             enabled_modules: vec!["administration".to_string()],
+            entitlements: EntitlementSnapshot::new(
+                LeaseLifecycle::Legacy,
+                [(
+                    "administration".to_string(),
+                    ModuleEntitlementState::Enabled,
+                )],
+                [],
+            )
+            .unwrap_or_else(|_| unreachable!()),
         }
     }
 

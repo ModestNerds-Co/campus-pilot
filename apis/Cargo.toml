@@ -29,6 +29,7 @@ chrono = { version = "0.4", features = ["serde"] }
 validator = { version = "0.20.0", features = ["derive"] }
 log = "0.4"
 futures-util = "0.3.31"
+semver = "1.0"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

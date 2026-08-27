@@ -1,12 +1,7 @@
-//
-//  campus-pilot-apis
-//  models.rs
-//
-//  Created by OpenAI Codex on 2026/08/26.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Defines persisted access rows and safe Administration response projections.
 
 use chrono::{DateTime, Utc};
+use cp_common::EntitlementSnapshot;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
@@ -17,6 +12,7 @@ pub struct EffectiveAccess {
     pub role_names: Vec<String>,
     pub permissions: Vec<String>,
     pub enabled_modules: Vec<String>,
+    pub entitlements: EntitlementSnapshot,
 }
 
 #[derive(Debug, Clone, FromRow)]

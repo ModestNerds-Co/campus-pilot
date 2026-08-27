@@ -1,21 +1,20 @@
-//
-//  campus-pilot-apis
-//  ops.rs
-//
-//  Created by OpenAI Codex on 2026/08/26.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
+//! Owns tenant access projections and atomic signed-lease installation.
+//!
+//! Commercial entitlements and role permissions stay separate until evaluation.
 
 use std::collections::BTreeSet;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use cp_common::{EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState};
 use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{
-    license::{ProtectedCredential, VerifiedSignedLease},
+    license::{
+        ProtectedCredential, SignedLeaseClaims, VerifiedSignedLease, app_version_is_supported,
+    },
     models::{EffectiveAccess, LicenseInstallation, LicenseLease, TenantModule},
 };
 
@@ -311,26 +310,54 @@ impl AccessOps {
             permissions.extend(role_permissions);
         }
 
-        let enabled_modules = sqlx::query_scalar::<_, String>(
+        let module_rows = sqlx::query_as::<_, TenantModule>(
             r#"
-            SELECT module_key
+            SELECT module_key, status, source, license_expires_at
             FROM tenant_modules
             WHERE tenant_id = $1
               AND deleted_at IS NULL
-              AND status = 'enabled'
-              AND (license_expires_at IS NULL OR license_expires_at > NOW())
             ORDER BY module_key
             "#,
         )
         .bind(tenant_id)
         .fetch_all(pool)
         .await
-        .context("Failed to load enabled modules")?;
+        .context("Failed to load module entitlements")?;
+        let latest_lease = Self::latest_license_lease(pool, tenant_id).await?;
+        let installation_status = sqlx::query_scalar::<_, String>(
+            r#"
+            SELECT status
+            FROM license_installations
+            WHERE tenant_id = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load license installation state")?;
+        let evaluated_at = Utc::now();
+        let entitlements = entitlement_snapshot(
+            &module_rows,
+            latest_lease.as_ref(),
+            installation_status.as_deref(),
+            evaluated_at,
+        )?;
+        let enabled_modules = module_rows
+            .iter()
+            .filter(|module| {
+                module.status == "enabled"
+                    && module
+                        .license_expires_at
+                        .is_none_or(|expires_at| expires_at > evaluated_at)
+            })
+            .map(|module| module.module_key.clone())
+            .collect();
 
         Ok(EffectiveAccess {
             role_names,
             permissions: permissions.into_iter().collect(),
             enabled_modules,
+            entitlements,
         })
     }
 
@@ -429,5 +456,279 @@ impl AccessOps {
         .execute(pool)
         .await?;
         Ok(result.rows_affected() > 0)
+    }
+}
+
+fn entitlement_snapshot(
+    modules: &[TenantModule],
+    lease: Option<&LicenseLease>,
+    installation_status: Option<&str>,
+    now: DateTime<Utc>,
+) -> Result<EntitlementSnapshot> {
+    let (mut lifecycle, features, app_version_supported) = match lease {
+        Some(lease) => {
+            let claims = serde_json::from_value::<SignedLeaseClaims>(lease.claims.clone())
+                .context("Stored license claims are invalid")?;
+            let lifecycle = match lease.status.as_str() {
+                "revoked" => LeaseLifecycle::Revoked,
+                "invalid" => LeaseLifecycle::Invalid,
+                "expired" => LeaseLifecycle::Restricted,
+                "active" | "superseded" if now < lease.refresh_after => LeaseLifecycle::Active,
+                "active" | "superseded" if now < lease.lease_expires_at => {
+                    LeaseLifecycle::RefreshDue
+                }
+                "active" | "superseded" if now < lease.grace_until => LeaseLifecycle::Grace,
+                "active" | "superseded" => LeaseLifecycle::Restricted,
+                other => anyhow::bail!("Stored license lease status is invalid: {other}"),
+            };
+            (
+                lifecycle,
+                claims.features.clone(),
+                app_version_is_supported(&claims)?,
+            )
+        }
+        None => (LeaseLifecycle::Legacy, Vec::new(), true),
+    };
+
+    lifecycle = match installation_status {
+        Some("revoked") => LeaseLifecycle::Revoked,
+        Some("suspended") => LeaseLifecycle::Restricted,
+        Some("error") => LeaseLifecycle::Invalid,
+        Some("unconfigured" | "active") | None => lifecycle,
+        Some(other) => anyhow::bail!("Stored license installation status is invalid: {other}"),
+    };
+
+    let module_states = modules.iter().map(|module| {
+        let state = match module.status.as_str() {
+            "enabled"
+                if lease.is_none()
+                    && module
+                        .license_expires_at
+                        .is_some_and(|expires_at| expires_at <= now) =>
+            {
+                ModuleEntitlementState::Expired
+            }
+            "enabled" => ModuleEntitlementState::Enabled,
+            "disabled" => ModuleEntitlementState::LocallyDisabled,
+            "expired" => ModuleEntitlementState::Expired,
+            "revoked" => ModuleEntitlementState::Revoked,
+            other => anyhow::bail!("Stored module entitlement status is invalid: {other}"),
+        };
+        Ok((module.module_key.clone(), state))
+    });
+    let module_states = module_states.collect::<Result<Vec<_>>>()?;
+    EntitlementSnapshot::new(lifecycle, module_states, features)
+        .map(|snapshot| snapshot.with_app_version_supported(app_version_supported))
+        .context("Stored module entitlement projection is invalid")
+}
+
+#[cfg(test)]
+mod entitlement_tests {
+    use chrono::{Duration, Utc};
+    use serde_json::json;
+    use uuid::Uuid;
+
+    use cp_common::{LeaseLifecycle, ModuleEntitlementState};
+
+    use super::{LicenseLease, TenantModule, entitlement_snapshot};
+
+    fn module(status: &str, expires_at: Option<chrono::DateTime<Utc>>) -> TenantModule {
+        TenantModule {
+            module_key: "fleet".to_string(),
+            status: status.to_string(),
+            source: "license".to_string(),
+            license_expires_at: expires_at,
+        }
+    }
+
+    fn lease(
+        now: chrono::DateTime<Utc>,
+        refresh_after: chrono::DateTime<Utc>,
+        lease_expires_at: chrono::DateTime<Utc>,
+        grace_until: chrono::DateTime<Utc>,
+    ) -> LicenseLease {
+        LicenseLease {
+            lease_id: Uuid::new_v4(),
+            catalog_version: "plans/complete/1".to_string(),
+            claims: json!({
+                "contract_version": "cp-license/v1",
+                "iss": "campus-pilot-control-plane",
+                "aud": "campus-pilot",
+                "sub": Uuid::new_v4().to_string(),
+                "installation_id": Uuid::new_v4().to_string(),
+                "jti": Uuid::new_v4().to_string(),
+                "sequence": 1,
+                "catalog_version": "plans/complete/1",
+                "iat": now.timestamp(),
+                "nbf": (now - Duration::seconds(30)).timestamp(),
+                "refresh_after": refresh_after.timestamp(),
+                "lease_expires_at": lease_expires_at.timestamp(),
+                "grace_until": grace_until.timestamp(),
+                "exp": grace_until.timestamp(),
+                "modules": ["fleet"],
+                "features": ["fleet.trips"],
+                "limits": [],
+                "min_app_version": "1.0.0",
+                "max_app_version": "1.9.0"
+            }),
+            status: "active".to_string(),
+            issued_at: now,
+            refresh_after,
+            lease_expires_at,
+            grace_until,
+            source: "online_activation".to_string(),
+        }
+    }
+
+    #[test]
+    fn lease_lifecycle_is_derived_from_trusted_deadlines() {
+        let now = Utc::now();
+        let active = lease(
+            now,
+            now + Duration::hours(1),
+            now + Duration::hours(2),
+            now + Duration::hours(3),
+        );
+        let refresh = lease(
+            now,
+            now - Duration::minutes(1),
+            now + Duration::hours(1),
+            now + Duration::hours(2),
+        );
+        let grace = lease(
+            now,
+            now - Duration::hours(2),
+            now - Duration::minutes(1),
+            now + Duration::hours(1),
+        );
+        let restricted = lease(
+            now,
+            now - Duration::hours(3),
+            now - Duration::hours(2),
+            now - Duration::hours(1),
+        );
+        for (lease, expected) in [
+            (active, LeaseLifecycle::Active),
+            (refresh, LeaseLifecycle::RefreshDue),
+            (grace, LeaseLifecycle::Grace),
+            (restricted, LeaseLifecycle::Restricted),
+        ] {
+            let snapshot =
+                entitlement_snapshot(&[module("enabled", None)], Some(&lease), None, now)
+                    .unwrap_or_else(|_| unreachable!());
+            assert_eq!(snapshot.lease(), expected);
+            assert!(snapshot.has_feature("fleet.trips"));
+        }
+
+        let restricted = lease(
+            now,
+            now - Duration::hours(3),
+            now - Duration::hours(2),
+            now - Duration::hours(1),
+        );
+        let snapshot = entitlement_snapshot(
+            &[module("enabled", Some(now - Duration::hours(1)))],
+            Some(&restricted),
+            None,
+            now,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert_eq!(
+            snapshot.module_state("fleet"),
+            Some(ModuleEntitlementState::Enabled)
+        );
+    }
+
+    #[test]
+    fn installation_revocation_overrides_an_active_lease() {
+        let now = Utc::now();
+        let lease = lease(
+            now,
+            now + Duration::hours(1),
+            now + Duration::hours(2),
+            now + Duration::hours(3),
+        );
+        let snapshot = entitlement_snapshot(
+            &[module("enabled", None)],
+            Some(&lease),
+            Some("revoked"),
+            now,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert_eq!(snapshot.lease(), LeaseLifecycle::Revoked);
+    }
+
+    #[test]
+    fn local_and_expired_module_states_remain_distinct() {
+        let now = Utc::now();
+        let disabled =
+            entitlement_snapshot(&[module("disabled", None)], None, Some("unconfigured"), now)
+                .unwrap_or_else(|_| unreachable!());
+        let expired = entitlement_snapshot(
+            &[module("enabled", Some(now - Duration::seconds(1)))],
+            None,
+            None,
+            now,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert_eq!(
+            disabled.module_state("fleet"),
+            Some(ModuleEntitlementState::LocallyDisabled)
+        );
+        assert_eq!(
+            expired.module_state("fleet"),
+            Some(ModuleEntitlementState::Expired)
+        );
+    }
+
+    #[test]
+    fn persisted_status_values_are_exhaustive_and_reject_unknowns() {
+        let now = Utc::now();
+        let base = lease(
+            now,
+            now + Duration::hours(1),
+            now + Duration::hours(2),
+            now + Duration::hours(3),
+        );
+        for (status, expected) in [
+            ("revoked", LeaseLifecycle::Revoked),
+            ("invalid", LeaseLifecycle::Invalid),
+            ("expired", LeaseLifecycle::Restricted),
+        ] {
+            let mut lease = base.clone();
+            lease.status = status.to_string();
+            let snapshot =
+                entitlement_snapshot(&[module("enabled", None)], Some(&lease), None, now)
+                    .unwrap_or_else(|_| unreachable!());
+            assert_eq!(snapshot.lease(), expected);
+        }
+        for (status, expected) in [
+            ("suspended", LeaseLifecycle::Restricted),
+            ("error", LeaseLifecycle::Invalid),
+        ] {
+            let snapshot =
+                entitlement_snapshot(&[module("enabled", None)], Some(&base), Some(status), now)
+                    .unwrap_or_else(|_| unreachable!());
+            assert_eq!(snapshot.lease(), expected);
+        }
+        for (status, expected) in [
+            ("expired", ModuleEntitlementState::Expired),
+            ("revoked", ModuleEntitlementState::Revoked),
+        ] {
+            let snapshot = entitlement_snapshot(&[module(status, None)], None, None, now)
+                .unwrap_or_else(|_| unreachable!());
+            assert_eq!(snapshot.module_state("fleet"), Some(expected));
+        }
+
+        let mut invalid_lease = base;
+        invalid_lease.status = "unknown".to_string();
+        assert!(
+            entitlement_snapshot(&[module("enabled", None)], Some(&invalid_lease), None, now,)
+                .is_err()
+        );
+        assert!(
+            entitlement_snapshot(&[module("enabled", None)], None, Some("unknown"), now,).is_err()
+        );
+        assert!(entitlement_snapshot(&[module("unknown", None)], None, None, now).is_err());
     }
 }
