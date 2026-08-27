@@ -438,7 +438,7 @@ mod tests {
         .unwrap_or_else(|_| unreachable!());
 
         assert_eq!(coverage.entries().len(), module_catalog().len());
-        assert_eq!(coverage.missing_executable_capability_count(), 14);
+        assert_eq!(coverage.missing_executable_capability_count(), 10);
         for module_key in ["administration", "fleet", "timetabling"] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -451,7 +451,7 @@ mod tests {
                 "{module_key} has missing Agent reads"
             );
             if module_key == "administration" {
-                assert_eq!(module.executable_capabilities(), 2);
+                assert_eq!(module.executable_capabilities(), 6);
             }
         }
         assert_eq!(

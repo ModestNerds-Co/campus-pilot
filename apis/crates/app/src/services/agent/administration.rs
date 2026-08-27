@@ -34,10 +34,12 @@ impl AdministrationCatalogCapability {
                 "administration.catalog.read",
                 "Read module catalogue",
                 "Returns the current campus module and permission catalogue.",
+                json!({}),
                 json!({
                     "modules": { "type": "array" },
                     "administration_permissions": { "type": "array" }
                 }),
+                DataSensitivity::General,
                 "administration.catalog",
             ),
         }
@@ -82,7 +84,9 @@ impl AdministrationModulesCapability {
                 "administration.modules.list",
                 "List campus modules",
                 "Returns the current licensed and locally enabled module states.",
+                json!({}),
                 json!({ "modules": { "type": "array" } }),
+                DataSensitivity::General,
                 "administration.modules",
             ),
         }
@@ -124,11 +128,13 @@ impl Capability for AdministrationModulesCapability {
     }
 }
 
-fn read_descriptor(
+pub(super) fn read_descriptor(
     key: &str,
     title: &str,
     description: &str,
+    input_properties: Value,
     output_properties: Value,
+    data_sensitivity: DataSensitivity,
     usage_tag: &str,
 ) -> CapabilityDescriptor {
     let key = CapabilityKey::try_from(key)
@@ -144,13 +150,13 @@ fn read_descriptor(
         )
         .unwrap_or_else(|error| panic!("invalid built-in capability identity: {error}")),
         CapabilitySchemas::new(
-            closed_object_schema(json!({})),
+            closed_object_schema(input_properties),
             closed_object_schema(output_properties),
         ),
         CapabilityPolicy::new(
             CapabilityEffect::Read,
             Reversibility::NotApplicable,
-            DataSensitivity::General,
+            data_sensitivity,
             ApprovalMode::None,
             IdempotencyMode::ReadOnly,
             StaleDataStrategy::RehydrateBeforeExecution,

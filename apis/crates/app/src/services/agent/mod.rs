@@ -1,11 +1,16 @@
 //! Assembles production Agent capability adapters over existing domain services.
 
 mod administration;
+mod administration_access;
 
 use cp_agent::CapabilityRegistry;
 use sqlx::PgPool;
 
 use administration::{AdministrationCatalogCapability, AdministrationModulesCapability};
+use administration_access::{
+    AdministrationRoleReadCapability, AdministrationRolesListCapability,
+    AdministrationUserReadCapability, AdministrationUsersListCapability,
+};
 
 #[must_use]
 pub fn build_capability_registry(pool: PgPool) -> CapabilityRegistry {
@@ -15,8 +20,20 @@ pub fn build_capability_registry(pool: PgPool) -> CapabilityRegistry {
         .register(AdministrationCatalogCapability::new())
         .unwrap_or_else(|error| panic!("invalid Administration catalogue capability: {error}"));
     registry
-        .register(AdministrationModulesCapability::new(pool))
+        .register(AdministrationModulesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Administration modules capability: {error}"));
+    registry
+        .register(AdministrationRolesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Administration roles-list capability: {error}"));
+    registry
+        .register(AdministrationRoleReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Administration role-read capability: {error}"));
+    registry
+        .register(AdministrationUsersListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Administration users-list capability: {error}"));
+    registry
+        .register(AdministrationUserReadCapability::new(pool))
+        .unwrap_or_else(|error| panic!("invalid Administration user-read capability: {error}"));
     registry
 }
 
@@ -80,7 +97,12 @@ mod tests {
     fn authority() -> CurrentAuthority {
         CurrentAuthority::from_reloaded_access(AccessContext {
             role_keys: vec!["campus_owner".to_string()],
-            permissions: vec!["agent:run".to_string(), "administration:view".to_string()],
+            permissions: vec![
+                "agent:run".to_string(),
+                "administration:view".to_string(),
+                "roles:view".to_string(),
+                "users:view".to_string(),
+            ],
             enabled_modules: vec!["agent".to_string(), "administration".to_string()],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
@@ -110,7 +132,14 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(
             keys,
-            vec!["administration.catalog.read", "administration.modules.list"]
+            vec![
+                "administration.catalog.read",
+                "administration.modules.list",
+                "administration.roles.list",
+                "administration.roles.read",
+                "administration.users.list",
+                "administration.users.read"
+            ]
         );
         let broker = CapabilityBroker::new(
             registry,
@@ -169,5 +198,68 @@ mod tests {
             error.safe_message(),
             "The capability could not be completed."
         );
+    }
+
+    #[tokio::test]
+    async fn production_role_and_user_capabilities_are_typed_and_fail_safely() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        pool.close().await;
+        let broker = CapabilityBroker::new(
+            build_capability_registry(pool),
+            Arc::new(TestAuthorityLoader(authority())),
+            Arc::new(TenantWideScope),
+            Arc::new(TestAudit),
+        );
+        let principal =
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4());
+        let request_context = RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4());
+        for (key, input) in [
+            ("administration.roles.list", json!({})),
+            (
+                "administration.roles.read",
+                json!({ "role_id": Uuid::new_v4() }),
+            ),
+            (
+                "administration.users.list",
+                json!({ "status": "active", "sort": "email" }),
+            ),
+            (
+                "administration.users.read",
+                json!({ "account_id": Uuid::new_v4() }),
+            ),
+        ] {
+            let error = broker
+                .invoke(
+                    principal,
+                    CapabilityCall::parse(key, 1, input, request_context)
+                        .unwrap_or_else(|_| unreachable!()),
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| unreachable!());
+            assert_eq!(
+                error.code(),
+                BrokerErrorCode::ExecutionFailed,
+                "unexpected broker result for {key}"
+            );
+        }
+
+        let invalid = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "administration.users.list",
+                    1,
+                    json!({ "status": "maybe" }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid.code(), BrokerErrorCode::InvalidInput);
     }
 }
