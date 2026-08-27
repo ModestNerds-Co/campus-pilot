@@ -1350,6 +1350,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cp-agent"
+version = "1.0.0"
+dependencies = [
+ "async-trait",
+ "cp-audit",
+ "cp-common",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "cp-audit"
 version = "1.0.0"
 dependencies = [

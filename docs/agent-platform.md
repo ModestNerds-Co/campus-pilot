@@ -113,6 +113,8 @@ For every call the broker:
 
 The broker rejects tenant or user IDs supplied by a model. Resource identifiers are always resolved again under the authenticated tenant and person.
 
+Current implementation status: `cp-agent` now provides the typed, provider-independent broker boundary. It owns versioned capability descriptors and closed input/output schemas, a registry indexed against the complete product-operation catalogue, authenticated principal and proof-bearing scope types, typed handler adapters, fresh-authority and record-scope checks, reserved identity-field rejection, and a fail-closed `cp-audit` sink. The first release deliberately registers only directly exposed read/export operations with no approval requirement; approval-required mutations cannot be registered until immutable proposals and approval execution exist. No production module handler, Agent API route, model provider, session worker, or chat UI is enabled by this foundation alone.
+
 An optional remote MCP/API adapter may be added later. It is disabled by default and uses expiring, revocable, hashed personal tokens with per-capability allowlists. Token access is intersected with the person's current roles on every call; a token never becomes a service superuser.
 
 ## 6. Conversation and contextual execution
@@ -269,9 +271,10 @@ The code catalogue contains the exact operation list. This planning map defines 
 
 ## 13. Rust workspace integration
 
-- `cp-common` owns stable operation/capability descriptors, execution principal/context, policy enums, and keys; it contains no business logic.
+- `cp-common` owns the complete product-operation catalogue and shared access/licensing policy primitives; it contains no business logic.
 - Each operational module owns typed domain services, its operation catalogue, and capability adapters beside those services.
-- A new `cp-agent` crate aggregates registries, evaluates policy, routes providers, redacts data, and orchestrates runs. It may depend on operational modules; operational modules never depend on Agent.
+- `cp-agent` owns Agent-specific capability descriptors, schemas, execution principal/context, registry, typed broker, redaction metadata, and broker audit adapter. It may depend on operational modules when real adapters are assembled; operational modules never depend on Agent.
+- Provider routing, durable run orchestration, approvals, usage, and limits will be added behind the same broker boundary; they do not belong in `cp-common` or module domain services.
 - A dedicated Agent worker binary/crate claims durable runs and handles recovery.
 - The app crate mounts Agent APIs plus Administration provider, routing, policy, usage, limit, and audit APIs. `AuthMiddleware` remains outermost, followed by module, permission, scope, and broker checks.
 - Chat and any future MCP/API adapter use the broker; there is no second dispatcher or duplicated business implementation.
