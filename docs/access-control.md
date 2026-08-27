@@ -81,6 +81,8 @@ The control plane provides two distinct authenticated workspaces:
 
 Assigning a subscription does not itself connect a campus server. A customer administrator creates a short-lived, one-time activation code under Customer portal → Installations. A Campus Owner enters that code under Campus Pilot Administration → Licensing. The campus server exchanges it for a signed lease and encrypted renewable installation credential. The owner portal may inspect or revoke the resulting installation, but it does not impersonate the customer or issue the customer's activation code.
 
+Online activation does not expose a reusable license key for the customer to store. The customer portal shows the activation code once, reports whether copying succeeded, and names the exact Campus Pilot screen where it must be used. After acceptance, the campus server owns renewal and keeps the installation credential encrypted.
+
 Hosted payment checkout and billing management are used so Campus Pilot and the control plane do not collect or store card details. Payment-provider webhooks are signature-verified and idempotent. A client redirect or checkout success page is never authority to enable a module.
 
 Billing is provider-neutral and multi-currency from the first contract. A plan may have several provider-specific price mappings in currencies such as ZWG, USD, or ZAR. Every money value uses an ISO 4217 currency code, an explicit currency exponent, and integer minor units; code never assumes two decimal places. Original, settlement, fee, and refund money remain distinct, and no report silently adds or converts unlike currencies. Stripe, PayPal, Paynow, Pesepay, and future providers integrate through isolated adapters rather than provider-named commercial columns.

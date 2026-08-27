@@ -82,6 +82,10 @@ export const LicensingPanel: React.FC = () => {
     ),
     [isUpdating, licensing?.connected],
   );
+  const customerPortalLoginUrl = useMemo(
+    () => licensing?.portal_url ? portalLoginUrl(licensing.portal_url) : null,
+    [licensing?.portal_url],
+  );
   usePageChrome("Licensing", pageAction);
 
   const statusByKey = useMemo(() => new Map(entitlements.map((item) => [item.key, item])), [entitlements]);
@@ -218,8 +222,8 @@ export const LicensingPanel: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {licensing.connected ? <Button onClick={() => setDrawer("import")} variant="secondary"><Upload className="size-4" />Import file</Button> : null}
-                  {licensing.portal_url ? (
-                    <a className={cn(buttonVariants({ variant: "secondary" }), "no-underline")} href={licensing.portal_url} rel="noreferrer" target="_blank">Customer portal <ExternalLink className="size-4" /></a>
+                  {customerPortalLoginUrl ? (
+                    <a className={cn(buttonVariants({ variant: "secondary" }), "no-underline")} href={customerPortalLoginUrl} rel="noreferrer" target="_blank">Customer portal <ExternalLink className="size-4" /></a>
                   ) : null}
                 </div>
               </div>
@@ -275,7 +279,15 @@ export const LicensingPanel: React.FC = () => {
         <DialogHeader onClose={() => setDrawer(null)} title="Connect licensing" />
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={connect}>
           <DialogBody className="space-y-6">
-            <p className="text-sm leading-6 text-[var(--text-muted)]">Enter a one-time activation code from the customer portal.</p>
+            <div className="space-y-3 text-sm leading-6 text-[var(--text-muted)]">
+              <p>Create a one-time code under Installations in the customer portal, then paste it below. Campus Pilot will obtain and store the license automatically.</p>
+              {customerPortalLoginUrl ? (
+                <a className={cn(buttonVariants({ variant: "secondary" }), "no-underline")} href={customerPortalLoginUrl} rel="noreferrer" target="_blank">
+                  Open customer portal
+                  <ExternalLink className="size-4" />
+                </a>
+              ) : null}
+            </div>
             <div>
               <Label htmlFor="activation-code">Activation code</Label>
               <Input autoCapitalize="none" autoComplete="off" className="mt-2 font-mono" data-autofocus="true" id="activation-code" onChange={(event) => setActivationCode(event.target.value)} placeholder="cpact_…" spellCheck={false} value={activationCode} />
@@ -357,4 +369,16 @@ function firstIssue<T>(response: ApiEnvelope<T>, fallback: string) {
   if (typeof issue === "string") return issue;
   if (issue?.detail) return issue.detail;
   return response.message || fallback;
+}
+
+function portalLoginUrl(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl);
+    url.pathname = "/login";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return null;
+  }
 }

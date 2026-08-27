@@ -79,6 +79,7 @@ Forms, destructive confirmations, changelogs, document previews, and secondary w
 - Background scrolling is locked while open.
 - Header and action footer stay stable while long drawer content scrolls.
 - Destructive confirmations focus the safe action first and clearly identify the affected record.
+- One-time codes and credentials state where they must be used, show copy success or failure, and make intentional loss on close clear.
 - Do not use `window.confirm`, centered dialog cards, or ad-hoc fixed overlays.
 
 The current shared implementation is `client/src/components/ui/dialog.tsx`; its historical API name is retained for compatibility, but it renders the right-side drawer pattern.
