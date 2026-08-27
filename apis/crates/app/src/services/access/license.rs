@@ -110,13 +110,11 @@ pub fn verify_license(
     tenant_id: Uuid,
     config: &LicenseConfig,
 ) -> Result<VerifiedLicense> {
-    let encoded_key = config
-        .public_key_base64
-        .as_deref()
-        .context("License verification is not configured for this installation")?;
-    let public_key = STANDARD
-        .decode(encoded_key)
-        .context("Configured license public key is invalid")?;
+    let token_header = decode_header(key.trim()).context("License key header is invalid")?;
+    if token_header.alg != Algorithm::EdDSA {
+        bail!("License key uses an unsupported algorithm");
+    }
+    let public_key = verification_public_key(config, token_header.kid.as_deref())?;
 
     let mut validation = Validation::new(Algorithm::EdDSA);
     validation.set_issuer(&[config.issuer.as_str()]);
@@ -166,13 +164,6 @@ pub fn verify_signed_lease(
     config: &LicenseConfig,
 ) -> Result<VerifiedSignedLease> {
     let token = token.trim();
-    let encoded_key = config
-        .public_key_base64
-        .as_deref()
-        .context("License verification is not configured for this installation")?;
-    let public_key = STANDARD
-        .decode(encoded_key)
-        .context("Configured license public key is invalid")?;
     let header = decode_header(token).context("Signed lease header is invalid")?;
     if header.alg != Algorithm::EdDSA {
         bail!("Signed lease uses an unsupported algorithm");
@@ -181,6 +172,7 @@ pub fn verify_signed_lease(
         .kid
         .filter(|value| !value.trim().is_empty())
         .context("Signed lease has no signing key identifier")?;
+    let public_key = verification_public_key(config, Some(&key_id))?;
 
     let mut validation = Validation::new(Algorithm::EdDSA);
     validation.set_issuer(&[config.issuer.as_str()]);
@@ -207,6 +199,36 @@ pub fn verify_signed_lease(
         key_id,
         claims: decoded.claims,
     })
+}
+
+fn verification_public_key(config: &LicenseConfig, key_id: Option<&str>) -> Result<Vec<u8>> {
+    let encoded_key = match key_id {
+        Some(key_id) if valid_signing_key_id(key_id) => config
+            .trusted_public_keys
+            .get(key_id)
+            .context("License signing key is not trusted")?,
+        Some(_) => bail!("License signing key identifier is invalid"),
+        None if config.trusted_public_keys.len() == 1 => config
+            .trusted_public_keys
+            .values()
+            .next()
+            .unwrap_or_else(|| unreachable!()),
+        None if config.trusted_public_keys.is_empty() => {
+            bail!("License verification is not configured for this installation")
+        }
+        None => bail!("License key has no signing key identifier"),
+    };
+    STANDARD
+        .decode(encoded_key)
+        .context("Configured license public key is invalid")
+}
+
+fn valid_signing_key_id(key_id: &str) -> bool {
+    !key_id.is_empty()
+        && key_id.len() <= 128
+        && key_id.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        })
 }
 
 fn validate_signed_claims(
@@ -451,10 +473,12 @@ mod tests {
 
     const PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIL9PtNqTMRWH3/0tsQRAHSoduxipswZZSjKkMtpWweJd\n-----END PRIVATE KEY-----\n";
     const PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAxbbyLLpJQoSoH8ia0Xw/lZTAUKtokEiy8l27VZND2zI=\n-----END PUBLIC KEY-----\n";
+    const ROTATED_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIKOQSSnPzGEB6bPVS7j6EJPJzSDSorw5Iw3GsmdSB/vP\n-----END PRIVATE KEY-----\n";
+    const ROTATED_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEArVSef1/+8dsF8OsxRrBs6q6+hRI7leppr00NTz3n2NA=\n-----END PUBLIC KEY-----\n";
 
     fn config() -> LicenseConfig {
         LicenseConfig {
-            public_key_base64: None,
+            trusted_public_keys: Default::default(),
             issuer: "campus-pilot-control-plane".to_string(),
             audience: "campus-pilot".to_string(),
             control_plane_url: Some("https://licenses.example.test".to_string()),
@@ -555,7 +579,10 @@ mod tests {
         )
         .unwrap_or_else(|_| unreachable!());
         let mut license_config = config();
-        license_config.public_key_base64 = Some(STANDARD.encode(PUBLIC_KEY.as_bytes()));
+        license_config.trusted_public_keys.insert(
+            "test-key-1".to_string(),
+            STANDARD.encode(PUBLIC_KEY.as_bytes()),
+        );
 
         let verified =
             verify_signed_lease(&token, tenant_id, Some(installation_id), &license_config);
@@ -574,6 +601,94 @@ mod tests {
         );
         assert!(
             verify_signed_lease(&token, tenant_id, Some(Uuid::new_v4()), &license_config,).is_err()
+        );
+
+        let rotated_header = Header {
+            alg: Algorithm::EdDSA,
+            kid: Some("test-key-2".to_string()),
+            ..Header::default()
+        };
+        let rotated_token = encode(
+            &rotated_header,
+            &claims,
+            &EncodingKey::from_ed_pem(ROTATED_PRIVATE_KEY.as_bytes())
+                .unwrap_or_else(|_| unreachable!()),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        license_config.trusted_public_keys.insert(
+            "test-key-2".to_string(),
+            STANDARD.encode(ROTATED_PUBLIC_KEY.as_bytes()),
+        );
+        assert!(
+            verify_signed_lease(&token, tenant_id, Some(installation_id), &license_config,).is_ok()
+        );
+        assert!(
+            verify_signed_lease(
+                &rotated_token,
+                tenant_id,
+                Some(installation_id),
+                &license_config,
+            )
+            .is_ok_and(|lease| lease.key_id == "test-key-2")
+        );
+
+        let mut after_overlap = license_config.clone();
+        after_overlap.trusted_public_keys.remove("test-key-1");
+        assert!(
+            verify_signed_lease(&token, tenant_id, Some(installation_id), &after_overlap,).is_err()
+        );
+        assert!(
+            verify_signed_lease(
+                &rotated_token,
+                tenant_id,
+                Some(installation_id),
+                &after_overlap,
+            )
+            .is_ok()
+        );
+
+        let unknown_header = Header {
+            alg: Algorithm::EdDSA,
+            kid: Some("unknown-key".to_string()),
+            ..Header::default()
+        };
+        let unknown_token = encode(
+            &unknown_header,
+            &claims,
+            &EncodingKey::from_ed_pem(ROTATED_PRIVATE_KEY.as_bytes())
+                .unwrap_or_else(|_| unreachable!()),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            verify_signed_lease(
+                &unknown_token,
+                tenant_id,
+                Some(installation_id),
+                &license_config,
+            )
+            .is_err()
+        );
+
+        let invalid_key_id_header = Header {
+            alg: Algorithm::EdDSA,
+            kid: Some("invalid\nkey".to_string()),
+            ..Header::default()
+        };
+        let invalid_key_id_token = encode(
+            &invalid_key_id_header,
+            &claims,
+            &EncodingKey::from_ed_pem(ROTATED_PRIVATE_KEY.as_bytes())
+                .unwrap_or_else(|_| unreachable!()),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            verify_signed_lease(
+                &invalid_key_id_token,
+                tenant_id,
+                Some(installation_id),
+                &license_config,
+            )
+            .is_err()
         );
 
         let mut duplicate_modules = claims.clone();

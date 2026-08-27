@@ -95,7 +95,7 @@ The canonical wire contract is versioned as `cp-license/v1` and carried in an Ed
 - limits with unit, period, value, and enforcement mode;
 - optional minimum and maximum supported Campus Pilot versions.
 
-The signing private key exists only in the control plane. Campus installations pin trusted public keys and accept overlapping keys during rotation. Activation credentials and installation renewal credentials are write-only secrets and are never logged, returned after creation, or stored in plaintext.
+The signing private key exists only in the control plane. Campus installations select an exact trusted public key by the signed `kid` header and reject unknown identifiers before signature verification. `LICENSE_PUBLIC_KEY_BASE64` plus `LICENSE_PUBLIC_KEY_ID` supplies the current key; `LICENSE_TRUSTED_PUBLIC_KEYS_JSON` supplies an optional identifier-to-base64 keyring for overlap. Rotation provisions the new public key to campuses before the control plane begins signing with it, keeps both old and new keys trusted through the maximum old lease/offline/grace lifetime, then removes the old key only after evidence shows it is no longer in use. The public `/api/v1/keys` response aids provisioning but is never fetched synchronously by an operational authorization decision. Activation credentials and installation renewal credentials are write-only secrets and are never logged, returned after creation, or stored in plaintext.
 
 The local decision is an intersection, never a union:
 

@@ -6,8 +6,10 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-use anyhow::{Context, Result};
-use std::env;
+use anyhow::{Context, Result, bail};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use jsonwebtoken::DecodingKey;
+use std::{collections::BTreeMap, env};
 use urlencoding::encode;
 
 #[derive(Debug, Clone)]
@@ -32,7 +34,7 @@ pub struct JwtConfig {
 
 #[derive(Debug, Clone)]
 pub struct LicenseConfig {
-    pub public_key_base64: Option<String>,
+    pub trusted_public_keys: BTreeMap<String, String>,
     pub issuer: String,
     pub audience: String,
     pub control_plane_url: Option<String>,
@@ -61,7 +63,7 @@ impl Config {
         let database = DatabaseConfig::from_env()?;
         let storage = StorageConfig::from_env()?;
         let jwt = JwtConfig::from_env()?;
-        let license = LicenseConfig::from_env();
+        let license = LicenseConfig::from_env()?;
 
         Ok(Config {
             app,
@@ -139,11 +141,22 @@ impl JwtConfig {
 }
 
 impl LicenseConfig {
-    fn from_env() -> Self {
-        Self {
-            public_key_base64: env::var("LICENSE_PUBLIC_KEY_BASE64")
-                .ok()
-                .filter(|value| !value.trim().is_empty()),
+    fn from_env() -> Result<Self> {
+        let legacy_public_key = env::var("LICENSE_PUBLIC_KEY_BASE64")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        let legacy_public_key_id = env::var("LICENSE_PUBLIC_KEY_ID")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        let configured_keyring = env::var("LICENSE_TRUSTED_PUBLIC_KEYS_JSON")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        Ok(Self {
+            trusted_public_keys: trusted_public_keys(
+                configured_keyring.as_deref(),
+                legacy_public_key_id.as_deref(),
+                legacy_public_key.as_deref(),
+            )?,
             issuer: env::var("LICENSE_ISSUER")
                 .unwrap_or_else(|_| "campus-pilot-control-plane".to_string()),
             audience: env::var("LICENSE_AUDIENCE").unwrap_or_else(|_| "campus-pilot".to_string()),
@@ -156,6 +169,111 @@ impl LicenseConfig {
                 .filter(|value| !value.trim().is_empty()),
             installation_name: env::var("LICENSE_INSTALLATION_NAME")
                 .unwrap_or_else(|_| "Campus Pilot server".to_string()),
+        })
+    }
+
+    #[must_use]
+    pub fn verification_is_configured(&self) -> bool {
+        !self.trusted_public_keys.is_empty()
+    }
+}
+
+fn trusted_public_keys(
+    configured_keyring: Option<&str>,
+    legacy_key_id: Option<&str>,
+    legacy_key: Option<&str>,
+) -> Result<BTreeMap<String, String>> {
+    let mut keys = configured_keyring.map_or_else(
+        || Ok(BTreeMap::new()),
+        |value| {
+            serde_json::from_str::<BTreeMap<String, String>>(value)
+                .context("LICENSE_TRUSTED_PUBLIC_KEYS_JSON must be a JSON object")
+        },
+    )?;
+    for (key_id, public_key) in &keys {
+        validate_key_entry(key_id, public_key)?;
+    }
+
+    if let Some(public_key) = legacy_key {
+        let key_id = legacy_key_id.context(
+            "LICENSE_PUBLIC_KEY_ID must be set when LICENSE_PUBLIC_KEY_BASE64 is configured",
+        )?;
+        validate_key_entry(key_id, public_key)?;
+        match keys.get(key_id) {
+            Some(configured) if configured != public_key => {
+                bail!("License public key identifier is configured with conflicting keys")
+            }
+            Some(_) => {}
+            None => {
+                keys.insert(key_id.to_string(), public_key.to_string());
+            }
         }
+    } else if legacy_key_id.is_some() {
+        bail!("LICENSE_PUBLIC_KEY_BASE64 must be set when LICENSE_PUBLIC_KEY_ID is configured");
+    }
+
+    Ok(keys)
+}
+
+fn validate_key_entry(key_id: &str, public_key: &str) -> Result<()> {
+    if key_id.is_empty()
+        || key_id.len() > 128
+        || !key_id.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        })
+    {
+        bail!("License public key identifier is invalid");
+    }
+    if public_key.trim().is_empty() {
+        bail!("License public key is empty");
+    }
+    let public_key = STANDARD
+        .decode(public_key)
+        .context("Configured license public key is invalid")?;
+    DecodingKey::from_ed_pem(&public_key)
+        .context("Configured license public key is not valid Ed25519 PEM")?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod license_tests {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    use super::trusted_public_keys;
+
+    const PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAxbbyLLpJQoSoH8ia0Xw/lZTAUKtokEiy8l27VZND2zI=\n-----END PUBLIC KEY-----\n";
+    const ROTATED_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEArVSef1/+8dsF8OsxRrBs6q6+hRI7leppr00NTz3n2NA=\n-----END PUBLIC KEY-----\n";
+
+    #[test]
+    fn trusted_keyring_merges_the_legacy_active_key_without_ambiguity() {
+        let previous = STANDARD.encode(PUBLIC_KEY.as_bytes());
+        let active = STANDARD.encode(ROTATED_PUBLIC_KEY.as_bytes());
+        let configured = serde_json::to_string(&std::collections::BTreeMap::from([(
+            "production-0",
+            previous.as_str(),
+        )]))
+        .unwrap_or_else(|_| unreachable!());
+        let keys = trusted_public_keys(Some(&configured), Some("production-1"), Some(&active))
+            .unwrap_or_else(|_| unreachable!());
+        assert_eq!(
+            keys.get("production-0").map(String::as_str),
+            Some(previous.as_str())
+        );
+        assert_eq!(
+            keys.get("production-1").map(String::as_str),
+            Some(active.as_str())
+        );
+
+        let conflicting = serde_json::to_string(&std::collections::BTreeMap::from([(
+            "production-1",
+            previous.as_str(),
+        )]))
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            trusted_public_keys(Some(&conflicting), Some("production-1"), Some(&active),).is_err()
+        );
+        assert!(trusted_public_keys(None, None, Some(&active)).is_err());
+        assert!(trusted_public_keys(Some("[]"), None, None).is_err());
+        assert!(trusted_public_keys(None, Some("production-1"), Some("not-base64")).is_err());
     }
 }

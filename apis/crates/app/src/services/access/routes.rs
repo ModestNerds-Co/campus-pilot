@@ -124,7 +124,7 @@ async fn licensing_state(
         None => None,
     };
     let configured = state.config.license.control_plane_url.is_some()
-        && state.config.license.public_key_base64.is_some()
+        && state.config.license.verification_is_configured()
         && state.config.license.credential_key_base64.is_some();
     let response = LicensingStateResponse {
         configured,
