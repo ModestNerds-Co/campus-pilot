@@ -17,6 +17,7 @@ use super::{
         app_version_bounds_are_supported, app_version_is_supported,
     },
     models::{EffectiveAccess, LicenseInstallation, LicenseLease, TenantModule},
+    quota::QuotaOps,
 };
 
 pub struct AccessOps;
@@ -467,13 +468,15 @@ impl AccessOps {
         .await
         .context("Failed to load license installation state")?;
         let evaluated_at = Utc::now();
+        let exhausted_hard_limits = QuotaOps::exhausted_hard_limits(pool, tenant_id).await?;
         let entitlements = entitlement_snapshot(
             &module_rows,
             latest_lease.as_ref(),
             entitlement_projection.as_ref(),
             installation_status.as_deref(),
             evaluated_at,
-        )?;
+        )?
+        .with_exhausted_hard_limits(exhausted_hard_limits);
         let enabled_modules = module_rows
             .iter()
             .filter(|module| {

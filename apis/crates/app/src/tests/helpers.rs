@@ -25,13 +25,26 @@ pub async fn create_test_app_state() -> Arc<AppState> {
         .await
         .expect("Failed to connect to database");
 
+    // Several integration tests create independent runtimes and pools. Keep
+    // their idempotent DDL migration passes from updating the same PostgreSQL
+    // catalog tuples concurrently on a fresh migration.
+    let mut migration_lock = db_pool
+        .acquire()
+        .await
+        .expect("Failed to acquire migration lock connection");
+    sqlx::query("SELECT PG_ADVISORY_LOCK(HASHTEXT('campus-pilot-test-migrations'))")
+        .execute(&mut *migration_lock)
+        .await
+        .expect("Failed to acquire migration lock");
+
     let app_state = Arc::new(AppState::init(db_pool, config));
 
-    app_state
-        .db_ops
-        .run_migrations()
+    let migration_result = app_state.db_ops.run_migrations().await;
+    sqlx::query("SELECT PG_ADVISORY_UNLOCK(HASHTEXT('campus-pilot-test-migrations'))")
+        .execute(&mut *migration_lock)
         .await
-        .expect("Failed to run migrations");
+        .expect("Failed to release migration lock");
+    migration_result.expect("Failed to run migrations");
 
     app_state
 }
