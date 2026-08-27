@@ -67,7 +67,6 @@ impl AppState {
             presign_client,
             config.storage.bucket.clone(),
             config.storage.endpoint.clone(),
-            config.storage.public_endpoint.clone(),
         ));
 
         Self {

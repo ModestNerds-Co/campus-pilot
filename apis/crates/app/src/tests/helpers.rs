@@ -11,38 +11,29 @@ use crate::state::AppState;
 use actix_web::{App, web};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
-use tokio::sync::OnceCell;
 
-static TEST_APP_STATE: OnceCell<Arc<AppState>> = OnceCell::const_new();
-
-/// Create a test app state with a test database (singleton to avoid migration conflicts)
+/// Create test state within the calling test's runtime. A SQLx pool cannot be
+/// cached across independent Actix/Tokio test runtimes.
 pub async fn create_test_app_state() -> Arc<AppState> {
-    TEST_APP_STATE
-        .get_or_init(|| async {
-            dotenv::dotenv().ok();
+    dotenv::dotenv().ok();
 
-            let config = Config::from_env().expect("Failed to load config");
+    let config = Config::from_env().expect("Failed to load config");
 
-            // Use a test database or the regular database
-            let db_pool = PgPoolOptions::new()
-                .max_connections(10)
-                .connect(&config.database.url)
-                .await
-                .expect("Failed to connect to database");
-
-            let app_state = Arc::new(AppState::init(db_pool, config));
-
-            // Run migrations once
-            app_state
-                .db_ops
-                .run_migrations()
-                .await
-                .expect("Failed to run migrations");
-
-            app_state
-        })
+    let db_pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&config.database.url)
         .await
-        .clone()
+        .expect("Failed to connect to database");
+
+    let app_state = Arc::new(AppState::init(db_pool, config));
+
+    app_state
+        .db_ops
+        .run_migrations()
+        .await
+        .expect("Failed to run migrations");
+
+    app_state
 }
 
 /// Create a test app with all routes configured

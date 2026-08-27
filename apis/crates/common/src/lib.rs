@@ -23,10 +23,10 @@ pub use entitlements::{
     RuntimeAccessChecks, evaluate_operation,
 };
 pub use operation_catalog::{
-    LegacyRouteGate, OPERATION_CATALOG_VERSION, RoutedOperation, operation_catalog,
+    OPERATION_CATALOG_VERSION, RouteAuthority, RoutedOperation, operation_catalog,
     operation_for_route, routed_operation_for_route,
 };
-pub use permissions::{ObserveOperationAccess, RequirePermission};
+pub use permissions::RequirePermission;
 pub use roles::Roles;
 pub use status_info::{StatusInfo, status_meaning};
 pub use tenant::TenantId;

@@ -224,6 +224,24 @@ impl ProductOperation {
     pub const fn license_required(&self) -> bool {
         self.license_required
     }
+
+    pub fn required_features(&self) -> impl Iterator<Item = &str> {
+        self.required_features.iter().map(String::as_str)
+    }
+
+    pub fn required_modules(&self) -> impl Iterator<Item = &str> {
+        self.required_modules.iter().map(String::as_str)
+    }
+
+    #[must_use]
+    pub fn hard_limit_key(&self) -> Option<&str> {
+        self.hard_limit_key.as_deref()
+    }
+
+    #[must_use]
+    pub const fn approval_required(&self) -> bool {
+        self.approval_required
+    }
 }
 
 /// Request- and record-specific checks that cannot be cached in entitlements.
@@ -748,6 +766,10 @@ mod tests {
         assert_eq!(operation.module_key(), "fleet");
         assert_eq!(operation.effect(), OperationEffect::External);
         assert!(operation.license_required());
+        assert_eq!(operation.required_features().count(), 0);
+        assert_eq!(operation.required_modules().count(), 0);
+        assert_eq!(operation.hard_limit_key(), None);
+        assert!(!operation.approval_required());
 
         let decision = decide(&operation, &snapshot(LeaseLifecycle::Active));
         assert!(decision.allowed);

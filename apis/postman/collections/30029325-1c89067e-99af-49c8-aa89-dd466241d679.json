@@ -1292,7 +1292,7 @@
     },
     {
       "name": "Access and Licensing",
-      "description": "Catalogued permission routes enforce the exact operation descriptor through the entitlement evaluator. License connect, refresh, offline import, and legacy activation require licensing:edit; local module disable requires licensing:delete. Authentication-only catalog and licensing-status reads remain observational.",
+      "description": "Catalogued permission routes enforce the exact operation descriptor through the entitlement evaluator. License status requires licensing:view; connect, refresh, offline import, and legacy activation require licensing:edit; local module disable requires licensing:delete. Only launcher catalog and tenant-module discovery remain authentication-only.",
       "item": [
         {
           "name": "Get Access Catalog",

@@ -1,6 +1,6 @@
 use actix_multipart::Multipart;
 use actix_web::{HttpResponse, get, post, put, web, web::ServiceConfig};
-use cp_common::ObserveOperationAccess;
+use cp_common::RequirePermission;
 use futures_util::StreamExt;
 use serde_json::json;
 use validator::Validate;
@@ -341,7 +341,7 @@ pub fn init(cfg: &mut ServiceConfig) {
         .service(setup_admin)
         .service(
             web::scope("")
-                .wrap(ObserveOperationAccess)
+                .wrap(RequirePermission::new("school_settings"))
                 .wrap(AuthMiddleware)
                 .service(get_school_profile)
                 .service(update_school_profile)

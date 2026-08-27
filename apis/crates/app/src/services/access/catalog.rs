@@ -405,6 +405,12 @@ mod tests {
                 "unknown operation permission: {}",
                 operation.permission()
             );
+            for dependency in operation.required_modules() {
+                assert!(
+                    modules.contains(dependency),
+                    "unknown operation dependency: {dependency}"
+                );
+            }
         }
     }
 }

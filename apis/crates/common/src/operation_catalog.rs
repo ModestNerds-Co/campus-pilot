@@ -11,14 +11,15 @@ use actix_web::http::Method;
 use crate::{OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
-pub const OPERATION_CATALOG_VERSION: u32 = 1;
+pub const OPERATION_CATALOG_VERSION: u32 = 2;
 
-/// Describes the access behavior that predates evaluator enforcement.
+/// Declares the authoritative access boundary for one routed operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LegacyRouteGate {
-    /// Authentication alone currently permits the operation.
+pub enum RouteAuthority {
+    /// A current campus identity is sufficient. This is reserved for shared
+    /// launcher discovery needed before a user enters a module.
     Authenticated,
-    /// The existing namespace and HTTP-method permission middleware applies.
+    /// The exact operation evaluator is authoritative.
     Permission,
 }
 
@@ -28,7 +29,7 @@ pub struct RoutedOperation {
     method: Method,
     route_pattern: &'static str,
     operation: ProductOperation,
-    legacy_gate: LegacyRouteGate,
+    authority: RouteAuthority,
 }
 
 impl RoutedOperation {
@@ -48,12 +49,12 @@ impl RoutedOperation {
     }
 
     #[must_use]
-    pub const fn legacy_gate(&self) -> LegacyRouteGate {
-        self.legacy_gate
+    pub const fn authority(&self) -> RouteAuthority {
+        self.authority
     }
 }
 
-/// Returns all product operations currently backed by working, permission-gated routes.
+/// Returns all product operations currently backed by working authenticated routes.
 #[must_use]
 pub fn operation_catalog() -> &'static [RoutedOperation] {
     static CATALOG: OnceLock<Vec<RoutedOperation>> = OnceLock::new();
@@ -72,7 +73,7 @@ pub fn operation_for_route(
         .map(RoutedOperation::operation)
 }
 
-/// Resolves the route entry, including its compatibility enforcement behavior.
+/// Resolves the route entry, including its authoritative access boundary.
 #[must_use]
 pub fn routed_operation_for_route(
     method: &Method,
@@ -85,7 +86,7 @@ pub fn routed_operation_for_route(
 
 fn build_catalog() -> Vec<RoutedOperation> {
     vec![
-        // Authenticated Administration reads and campus configuration.
+        // Authenticated launcher discovery used by every signed-in role.
         authenticated_route(
             Method::GET,
             "/api/1.0/access/catalog",
@@ -102,37 +103,41 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "administration:view",
             OperationEffect::Read,
         ),
-        authenticated_route(
+        route(
             Method::GET,
             "/api/1.0/access/licensing",
             "administration.licensing.read",
             "administration",
             "licensing:view",
             OperationEffect::Read,
+            false,
         ),
-        authenticated_route(
+        route(
             Method::GET,
             "/api/1.0/kernel/school-profile",
             "administration.school_settings.read",
             "administration",
             "school_settings:view",
             OperationEffect::Read,
+            false,
         ),
-        authenticated_route(
+        route(
             Method::PUT,
             "/api/1.0/kernel/school-profile",
             "administration.school_settings.update",
             "administration",
             "school_settings:edit",
             OperationEffect::Write,
+            false,
         ),
-        authenticated_route(
+        route(
             Method::POST,
             "/api/1.0/kernel/school-profile/logo",
             "administration.school_settings.update_logo",
             "administration",
             "school_settings:edit",
             OperationEffect::Write,
+            false,
         ),
         // Administration: roles.
         route(
@@ -491,7 +496,7 @@ fn route(
         method,
         route_pattern,
         operation: ProductOperation::route(key, module_key, permission, effect, license_required),
-        legacy_gate: LegacyRouteGate::Permission,
+        authority: RouteAuthority::Permission,
     }
 }
 
@@ -507,7 +512,7 @@ fn authenticated_route(
         method,
         route_pattern,
         operation: ProductOperation::route(key, module_key, permission, effect, false),
-        legacy_gate: LegacyRouteGate::Authenticated,
+        authority: RouteAuthority::Authenticated,
     }
 }
 
@@ -522,7 +527,10 @@ mod tests {
         RuntimeAccessChecks, evaluate_operation,
     };
 
-    use super::{OPERATION_CATALOG_VERSION, operation_catalog, operation_for_route};
+    use super::{
+        OPERATION_CATALOG_VERSION, RouteAuthority, operation_catalog, operation_for_route,
+        routed_operation_for_route,
+    };
 
     fn operation(key: &str) -> &'static ProductOperation {
         operation_catalog()
@@ -563,7 +571,7 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
-        assert_eq!(OPERATION_CATALOG_VERSION, 1);
+        assert_eq!(OPERATION_CATALOG_VERSION, 2);
         assert_eq!(operation_catalog().len(), 43);
 
         let mut keys = BTreeSet::new();
@@ -585,6 +593,33 @@ mod tests {
             assert!(
                 routes.insert(route),
                 "duplicate routed operation: {route:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn only_launcher_discovery_uses_authenticated_authority() {
+        let authenticated = operation_catalog()
+            .iter()
+            .filter(|entry| entry.authority() == RouteAuthority::Authenticated)
+            .map(|entry| entry.operation().key())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            authenticated,
+            vec!["administration.catalog.read", "administration.modules.list"]
+        );
+
+        for (method, pattern) in [
+            (Method::GET, "/api/1.0/access/licensing"),
+            (Method::GET, "/api/1.0/kernel/school-profile"),
+            (Method::PUT, "/api/1.0/kernel/school-profile"),
+            (Method::POST, "/api/1.0/kernel/school-profile/logo"),
+        ] {
+            assert_eq!(
+                routed_operation_for_route(&method, pattern)
+                    .unwrap_or_else(|| unreachable!())
+                    .authority(),
+                RouteAuthority::Permission
             );
         }
     }

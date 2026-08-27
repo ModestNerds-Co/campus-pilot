@@ -2,6 +2,8 @@
 //!
 //! Raw activation material and signed envelopes remain write-only outside this module.
 
+use std::collections::BTreeSet;
+
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use anyhow::{Context, Result, bail};
@@ -240,7 +242,20 @@ fn validate_signed_claims(
     {
         bail!("Signed lease contains an unknown or core module");
     }
-    if claims.limits.iter().any(|limit| !valid_limit(limit)) {
+    if !all_unique(claims.modules.iter()) {
+        bail!("Signed lease contains duplicate module entitlements");
+    }
+    if claims
+        .features
+        .iter()
+        .any(|feature| !valid_entitlement_key(feature))
+        || !all_unique(claims.features.iter())
+    {
+        bail!("Signed lease contains an invalid feature entitlement");
+    }
+    if claims.limits.iter().any(|limit| !valid_limit(limit))
+        || !all_unique(claims.limits.iter().map(|limit| &limit.key))
+    {
         bail!("Signed lease contains an invalid capability limit");
     }
     validate_version_bounds(claims)?;
@@ -260,15 +275,22 @@ fn validate_signed_claims(
 }
 
 fn validate_version_bounds(claims: &SignedLeaseClaims) -> Result<()> {
-    let minimum = claims
-        .min_app_version
-        .as_deref()
+    parsed_version_bounds(
+        claims.min_app_version.as_deref(),
+        claims.max_app_version.as_deref(),
+    )?;
+    Ok(())
+}
+
+fn parsed_version_bounds(
+    minimum: Option<&str>,
+    maximum: Option<&str>,
+) -> Result<(Option<Version>, Option<Version>)> {
+    let minimum = minimum
         .map(Version::parse)
         .transpose()
         .context("Signed lease minimum application version is invalid")?;
-    let maximum = claims
-        .max_app_version
-        .as_deref()
+    let maximum = maximum
         .map(Version::parse)
         .transpose()
         .context("Signed lease maximum application version is invalid")?;
@@ -279,33 +301,52 @@ fn validate_version_bounds(claims: &SignedLeaseClaims) -> Result<()> {
     {
         bail!("Signed lease application version bounds are invalid");
     }
-    Ok(())
+    Ok((minimum, maximum))
 }
 
 pub(crate) fn app_version_is_supported(claims: &SignedLeaseClaims) -> Result<bool> {
-    validate_version_bounds(claims)?;
+    app_version_bounds_are_supported(
+        claims.min_app_version.as_deref(),
+        claims.max_app_version.as_deref(),
+    )
+}
+
+pub(crate) fn app_version_bounds_are_supported(
+    minimum: Option<&str>,
+    maximum: Option<&str>,
+) -> Result<bool> {
+    let (minimum, maximum) = parsed_version_bounds(minimum, maximum)?;
     let current = Version::parse(env!("CARGO_PKG_VERSION"))
         .context("Campus Pilot application version is invalid")?;
-    let minimum_matches = claims
-        .min_app_version
-        .as_deref()
-        .map(Version::parse)
-        .transpose()?
-        .is_none_or(|minimum| current >= minimum);
-    let maximum_matches = claims
-        .max_app_version
-        .as_deref()
-        .map(Version::parse)
-        .transpose()?
-        .is_none_or(|maximum| current <= maximum);
+    let minimum_matches = minimum.is_none_or(|minimum| current >= minimum);
+    let maximum_matches = maximum.is_none_or(|maximum| current <= maximum);
     Ok(minimum_matches && maximum_matches)
 }
 
 fn valid_limit(limit: &LeaseLimit) -> bool {
-    !limit.key.trim().is_empty()
+    valid_entitlement_key(&limit.key)
         && !limit.unit.trim().is_empty()
         && matches!(limit.period.as_str(), "none" | "day" | "month" | "year")
         && matches!(limit.enforcement.as_str(), "report" | "hard")
+        && i64::try_from(limit.value).is_ok()
+}
+
+fn valid_entitlement_key(key: &str) -> bool {
+    let mut characters = key.chars();
+    characters
+        .next()
+        .is_some_and(|first| first.is_ascii_lowercase())
+        && characters.all(|character| {
+            character.is_ascii_lowercase()
+                || character.is_ascii_digit()
+                || character == '_'
+                || character == '.'
+        })
+}
+
+fn all_unique<'a>(values: impl IntoIterator<Item = &'a String>) -> bool {
+    let mut unique = BTreeSet::new();
+    values.into_iter().all(|value| unique.insert(value))
 }
 
 fn timestamp(label: &str, value: i64) -> Result<DateTime<Utc>> {
@@ -534,6 +575,45 @@ mod tests {
         assert!(
             verify_signed_lease(&token, tenant_id, Some(Uuid::new_v4()), &license_config,).is_err()
         );
+
+        let mut duplicate_modules = claims.clone();
+        duplicate_modules.modules.push("agent".to_string());
+        let mut duplicate_features = claims.clone();
+        duplicate_features
+            .features
+            .push("agent.sessions".to_string());
+        let mut duplicate_limits = claims.clone();
+        duplicate_limits
+            .limits
+            .push(duplicate_limits.limits[0].clone());
+        let mut invalid_feature = claims.clone();
+        invalid_feature.features = vec!["Agent Sessions".to_string()];
+        let mut oversized_limit = claims.clone();
+        oversized_limit.limits[0].value = u64::MAX;
+        for invalid_claims in [
+            duplicate_modules,
+            duplicate_features,
+            duplicate_limits,
+            invalid_feature,
+            oversized_limit,
+        ] {
+            let invalid_token = encode(
+                &header,
+                &invalid_claims,
+                &EncodingKey::from_ed_pem(PRIVATE_KEY.as_bytes())
+                    .unwrap_or_else(|_| unreachable!()),
+            )
+            .unwrap_or_else(|_| unreachable!());
+            assert!(
+                verify_signed_lease(
+                    &invalid_token,
+                    tenant_id,
+                    Some(installation_id),
+                    &license_config,
+                )
+                .is_err()
+            );
+        }
 
         let mut unsupported = claims.clone();
         unsupported.min_app_version = Some("2.0.0".to_string());

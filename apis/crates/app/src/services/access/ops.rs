@@ -13,12 +13,20 @@ use uuid::Uuid;
 
 use super::{
     license::{
-        ProtectedCredential, SignedLeaseClaims, VerifiedSignedLease, app_version_is_supported,
+        ProtectedCredential, SignedLeaseClaims, VerifiedSignedLease,
+        app_version_bounds_are_supported, app_version_is_supported,
     },
     models::{EffectiveAccess, LicenseInstallation, LicenseLease, TenantModule},
 };
 
 pub struct AccessOps;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct EntitlementProjectionEvidence {
+    source_lease_id: Uuid,
+    features: Vec<String>,
+    app_version_supported: bool,
+}
 
 impl AccessOps {
     pub async fn ensure_license_installation(
@@ -61,6 +69,47 @@ impl AccessOps {
         .fetch_optional(pool)
         .await
         .context("Failed to load the current license lease")
+    }
+
+    async fn current_entitlement_projection(
+        pool: &PgPool,
+        tenant_id: Uuid,
+    ) -> Result<Option<EntitlementProjectionEvidence>> {
+        let row = sqlx::query_as::<_, (Uuid, Option<String>, Option<String>, Vec<String>)>(
+            r#"
+            SELECT entitlement.source_lease_id,
+                   entitlement.min_app_version,
+                   entitlement.max_app_version,
+                   COALESCE(
+                       ARRAY_AGG(feature.feature_key ORDER BY feature.feature_key)
+                           FILTER (WHERE feature.feature_key IS NOT NULL),
+                       ARRAY[]::TEXT[]
+                   ) AS features
+            FROM tenant_entitlements AS entitlement
+            LEFT JOIN tenant_entitlement_features AS feature
+              ON feature.tenant_id = entitlement.tenant_id
+             AND feature.source_lease_id = entitlement.source_lease_id
+            WHERE entitlement.tenant_id = $1
+            GROUP BY entitlement.source_lease_id,
+                     entitlement.min_app_version,
+                     entitlement.max_app_version
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load the current entitlement projection")?;
+        row.map(|(source_lease_id, minimum, maximum, features)| {
+            Ok(EntitlementProjectionEvidence {
+                source_lease_id,
+                features,
+                app_version_supported: app_version_bounds_are_supported(
+                    minimum.as_deref(),
+                    maximum.as_deref(),
+                )?,
+            })
+        })
+        .transpose()
     }
 
     pub async fn note_refresh_attempt(pool: &PgPool, tenant_id: Uuid) -> Result<()> {
@@ -140,6 +189,7 @@ impl AccessOps {
             .context("Verified lease identifier is invalid")?;
         let claims = serde_json::to_value(&verified.claims)
             .context("Verified lease claims could not be stored")?;
+        app_version_is_supported(&verified.claims)?;
         let mut transaction = pool.begin().await?;
         let installation = sqlx::query_as::<_, LicenseInstallation>(
             r#"
@@ -203,6 +253,80 @@ impl AccessOps {
         .bind(source)
         .execute(&mut *transaction)
         .await?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO tenant_entitlements (
+                tenant_id, source_lease_id, lease_sequence, catalog_version,
+                min_app_version, max_app_version, projected_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (tenant_id)
+            DO UPDATE SET
+                source_lease_id = EXCLUDED.source_lease_id,
+                lease_sequence = EXCLUDED.lease_sequence,
+                catalog_version = EXCLUDED.catalog_version,
+                min_app_version = EXCLUDED.min_app_version,
+                max_app_version = EXCLUDED.max_app_version,
+                projected_at = NOW(),
+                updated_at = NOW()
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(lease_id)
+        .bind(verified.claims.sequence)
+        .bind(&verified.claims.catalog_version)
+        .bind(&verified.claims.min_app_version)
+        .bind(&verified.claims.max_app_version)
+        .execute(&mut *transaction)
+        .await?;
+
+        sqlx::query("DELETE FROM tenant_entitlement_features WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .execute(&mut *transaction)
+            .await?;
+        for feature_key in &verified.claims.features {
+            sqlx::query(
+                r#"
+                INSERT INTO tenant_entitlement_features (
+                    tenant_id, feature_key, source_lease_id
+                )
+                VALUES ($1, $2, $3)
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(feature_key)
+            .bind(lease_id)
+            .execute(&mut *transaction)
+            .await?;
+        }
+
+        sqlx::query("DELETE FROM entitlement_limits WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .execute(&mut *transaction)
+            .await?;
+        for limit in &verified.claims.limits {
+            let value = i64::try_from(limit.value)
+                .context("Verified lease capability limit is too large")?;
+            sqlx::query(
+                r#"
+                INSERT INTO entitlement_limits (
+                    tenant_id, limit_key, source_lease_id, unit,
+                    period, limit_value, enforcement
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(&limit.key)
+            .bind(lease_id)
+            .bind(&limit.unit)
+            .bind(&limit.period)
+            .bind(value)
+            .bind(&limit.enforcement)
+            .execute(&mut *transaction)
+            .await?;
+        }
 
         sqlx::query(
             r#"
@@ -324,6 +448,7 @@ impl AccessOps {
         .await
         .context("Failed to load module entitlements")?;
         let latest_lease = Self::latest_license_lease(pool, tenant_id).await?;
+        let entitlement_projection = Self::current_entitlement_projection(pool, tenant_id).await?;
         let installation_status = sqlx::query_scalar::<_, String>(
             r#"
             SELECT status
@@ -339,6 +464,7 @@ impl AccessOps {
         let entitlements = entitlement_snapshot(
             &module_rows,
             latest_lease.as_ref(),
+            entitlement_projection.as_ref(),
             installation_status.as_deref(),
             evaluated_at,
         )?;
@@ -462,13 +588,12 @@ impl AccessOps {
 fn entitlement_snapshot(
     modules: &[TenantModule],
     lease: Option<&LicenseLease>,
+    projection: Option<&EntitlementProjectionEvidence>,
     installation_status: Option<&str>,
     now: DateTime<Utc>,
 ) -> Result<EntitlementSnapshot> {
     let (mut lifecycle, features, app_version_supported) = match lease {
         Some(lease) => {
-            let claims = serde_json::from_value::<SignedLeaseClaims>(lease.claims.clone())
-                .context("Stored license claims are invalid")?;
             let lifecycle = match lease.status.as_str() {
                 "revoked" => LeaseLifecycle::Revoked,
                 "invalid" => LeaseLifecycle::Invalid,
@@ -481,11 +606,8 @@ fn entitlement_snapshot(
                 "active" | "superseded" => LeaseLifecycle::Restricted,
                 other => anyhow::bail!("Stored license lease status is invalid: {other}"),
             };
-            (
-                lifecycle,
-                claims.features.clone(),
-                app_version_is_supported(&claims)?,
-            )
+            let evidence = projection_evidence(lease, projection)?;
+            (lifecycle, evidence.features, evidence.app_version_supported)
         }
         None => (LeaseLifecycle::Legacy, Vec::new(), true),
     };
@@ -522,6 +644,25 @@ fn entitlement_snapshot(
         .context("Stored module entitlement projection is invalid")
 }
 
+fn projection_evidence(
+    lease: &LicenseLease,
+    projection: Option<&EntitlementProjectionEvidence>,
+) -> Result<EntitlementProjectionEvidence> {
+    if let Some(projection) = projection.filter(|value| value.source_lease_id == lease.lease_id) {
+        return Ok(projection.clone());
+    }
+
+    // A lease accepted before migration 009 has no normalized projection. Keep
+    // it usable until its next successful refresh creates one transactionally.
+    let claims = serde_json::from_value::<SignedLeaseClaims>(lease.claims.clone())
+        .context("Stored license claims are invalid")?;
+    Ok(EntitlementProjectionEvidence {
+        source_lease_id: lease.lease_id,
+        features: claims.features.clone(),
+        app_version_supported: app_version_is_supported(&claims)?,
+    })
+}
+
 #[cfg(test)]
 mod entitlement_tests {
     use chrono::{Duration, Utc};
@@ -530,7 +671,13 @@ mod entitlement_tests {
 
     use cp_common::{LeaseLifecycle, ModuleEntitlementState};
 
-    use super::{LicenseLease, TenantModule, entitlement_snapshot};
+    use crate::tests::helpers::create_test_app_state;
+
+    use super::{
+        AccessOps, EntitlementProjectionEvidence, LicenseLease, TenantModule, entitlement_snapshot,
+        projection_evidence,
+    };
+    use crate::services::access::license::{LeaseLimit, SignedLeaseClaims, VerifiedSignedLease};
 
     fn module(status: &str, expires_at: Option<chrono::DateTime<Utc>>) -> TenantModule {
         TenantModule {
@@ -580,6 +727,50 @@ mod entitlement_tests {
         }
     }
 
+    fn verified_lease(
+        tenant_id: Uuid,
+        installation_id: Uuid,
+        sequence: i64,
+        modules: Vec<String>,
+        features: Vec<String>,
+        limits: Vec<LeaseLimit>,
+    ) -> VerifiedSignedLease {
+        let issued_at = Utc::now();
+        let refresh_after = issued_at + Duration::hours(1);
+        let lease_expires_at = issued_at + Duration::hours(2);
+        let grace_until = issued_at + Duration::hours(3);
+        VerifiedSignedLease {
+            claims: SignedLeaseClaims {
+                contract_version: "cp-license/v1".to_string(),
+                iss: "campus-pilot-control-plane".to_string(),
+                aud: "campus-pilot".to_string(),
+                sub: tenant_id.to_string(),
+                installation_id: installation_id.to_string(),
+                jti: Uuid::new_v4().to_string(),
+                sequence,
+                catalog_version: "plans/test/1".to_string(),
+                iat: issued_at.timestamp(),
+                nbf: (issued_at - Duration::seconds(30)).timestamp(),
+                refresh_after: refresh_after.timestamp(),
+                lease_expires_at: lease_expires_at.timestamp(),
+                grace_until: grace_until.timestamp(),
+                exp: grace_until.timestamp(),
+                modules,
+                features,
+                limits,
+                min_app_version: Some("1.0.0".to_string()),
+                max_app_version: Some("1.9.0".to_string()),
+            },
+            fingerprint: format!("test-fingerprint-{sequence}"),
+            key_id: "test-key".to_string(),
+            issued_at,
+            refresh_after,
+            lease_expires_at,
+            grace_until,
+            token_expires_at: grace_until,
+        }
+    }
+
     #[test]
     fn lease_lifecycle_is_derived_from_trusted_deadlines() {
         let now = Utc::now();
@@ -614,7 +805,7 @@ mod entitlement_tests {
             (restricted, LeaseLifecycle::Restricted),
         ] {
             let snapshot =
-                entitlement_snapshot(&[module("enabled", None)], Some(&lease), None, now)
+                entitlement_snapshot(&[module("enabled", None)], Some(&lease), None, None, now)
                     .unwrap_or_else(|_| unreachable!());
             assert_eq!(snapshot.lease(), expected);
             assert!(snapshot.has_feature("fleet.trips"));
@@ -629,6 +820,7 @@ mod entitlement_tests {
         let snapshot = entitlement_snapshot(
             &[module("enabled", Some(now - Duration::hours(1)))],
             Some(&restricted),
+            None,
             None,
             now,
         )
@@ -651,6 +843,7 @@ mod entitlement_tests {
         let snapshot = entitlement_snapshot(
             &[module("enabled", None)],
             Some(&lease),
+            None,
             Some("revoked"),
             now,
         )
@@ -661,11 +854,17 @@ mod entitlement_tests {
     #[test]
     fn local_and_expired_module_states_remain_distinct() {
         let now = Utc::now();
-        let disabled =
-            entitlement_snapshot(&[module("disabled", None)], None, Some("unconfigured"), now)
-                .unwrap_or_else(|_| unreachable!());
+        let disabled = entitlement_snapshot(
+            &[module("disabled", None)],
+            None,
+            None,
+            Some("unconfigured"),
+            now,
+        )
+        .unwrap_or_else(|_| unreachable!());
         let expired = entitlement_snapshot(
             &[module("enabled", Some(now - Duration::seconds(1)))],
+            None,
             None,
             None,
             now,
@@ -698,7 +897,7 @@ mod entitlement_tests {
             let mut lease = base.clone();
             lease.status = status.to_string();
             let snapshot =
-                entitlement_snapshot(&[module("enabled", None)], Some(&lease), None, now)
+                entitlement_snapshot(&[module("enabled", None)], Some(&lease), None, None, now)
                     .unwrap_or_else(|_| unreachable!());
             assert_eq!(snapshot.lease(), expected);
         }
@@ -706,16 +905,21 @@ mod entitlement_tests {
             ("suspended", LeaseLifecycle::Restricted),
             ("error", LeaseLifecycle::Invalid),
         ] {
-            let snapshot =
-                entitlement_snapshot(&[module("enabled", None)], Some(&base), Some(status), now)
-                    .unwrap_or_else(|_| unreachable!());
+            let snapshot = entitlement_snapshot(
+                &[module("enabled", None)],
+                Some(&base),
+                None,
+                Some(status),
+                now,
+            )
+            .unwrap_or_else(|_| unreachable!());
             assert_eq!(snapshot.lease(), expected);
         }
         for (status, expected) in [
             ("expired", ModuleEntitlementState::Expired),
             ("revoked", ModuleEntitlementState::Revoked),
         ] {
-            let snapshot = entitlement_snapshot(&[module(status, None)], None, None, now)
+            let snapshot = entitlement_snapshot(&[module(status, None)], None, None, None, now)
                 .unwrap_or_else(|_| unreachable!());
             assert_eq!(snapshot.module_state("fleet"), Some(expected));
         }
@@ -723,12 +927,170 @@ mod entitlement_tests {
         let mut invalid_lease = base;
         invalid_lease.status = "unknown".to_string();
         assert!(
-            entitlement_snapshot(&[module("enabled", None)], Some(&invalid_lease), None, now,)
-                .is_err()
+            entitlement_snapshot(
+                &[module("enabled", None)],
+                Some(&invalid_lease),
+                None,
+                None,
+                now,
+            )
+            .is_err()
         );
         assert!(
-            entitlement_snapshot(&[module("enabled", None)], None, Some("unknown"), now,).is_err()
+            entitlement_snapshot(&[module("enabled", None)], None, None, Some("unknown"), now,)
+                .is_err()
         );
-        assert!(entitlement_snapshot(&[module("unknown", None)], None, None, now).is_err());
+        assert!(entitlement_snapshot(&[module("unknown", None)], None, None, None, now).is_err());
+    }
+
+    #[test]
+    fn normalized_projection_is_authoritative_for_its_source_lease() {
+        let now = Utc::now();
+        let lease = lease(
+            now,
+            now + Duration::hours(1),
+            now + Duration::hours(2),
+            now + Duration::hours(3),
+        );
+        let projection = EntitlementProjectionEvidence {
+            source_lease_id: lease.lease_id,
+            features: vec!["fleet.projected".to_string()],
+            app_version_supported: false,
+        };
+        let evidence =
+            projection_evidence(&lease, Some(&projection)).unwrap_or_else(|_| unreachable!());
+        assert_eq!(evidence, projection);
+
+        let snapshot = entitlement_snapshot(
+            &[module("enabled", None)],
+            Some(&lease),
+            Some(&projection),
+            None,
+            now,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(snapshot.has_feature("fleet.projected"));
+        assert!(!snapshot.has_feature("fleet.trips"));
+
+        let stale = EntitlementProjectionEvidence {
+            source_lease_id: Uuid::new_v4(),
+            features: vec!["fleet.stale".to_string()],
+            app_version_supported: false,
+        };
+        let fallback = projection_evidence(&lease, Some(&stale)).unwrap_or_else(|_| unreachable!());
+        assert_eq!(fallback.source_lease_id, lease.lease_id);
+        assert_eq!(fallback.features, vec!["fleet.trips"]);
+        assert!(fallback.app_version_supported);
+    }
+
+    #[actix_web::test]
+    async fn accepted_lease_replaces_normalized_projection_atomically() {
+        let state = create_test_app_state().await;
+        let tenant_id = Uuid::new_v4();
+        let slug = format!("projection-test-{tenant_id}");
+        sqlx::query("INSERT INTO tenants (id, slug, name) VALUES ($1, $2, 'Projection test')")
+            .bind(tenant_id)
+            .bind(slug)
+            .execute(&state.db)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+
+        let installation = AccessOps::ensure_license_installation(&state.db, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!());
+        let remote_installation_id = Uuid::new_v4();
+        let first = verified_lease(
+            tenant_id,
+            remote_installation_id,
+            1,
+            vec!["fleet".to_string(), "agent".to_string()],
+            vec!["agent.sessions".to_string()],
+            vec![LeaseLimit {
+                key: "agent.runs".to_string(),
+                unit: "run".to_string(),
+                period: "month".to_string(),
+                value: 100,
+                enforcement: "report".to_string(),
+            }],
+        );
+        AccessOps::apply_signed_lease(
+            &state.db,
+            tenant_id,
+            remote_installation_id,
+            Some("https://licenses.example.test"),
+            None,
+            &first,
+            "online_activation",
+        )
+        .await
+        .unwrap_or_else(|_| unreachable!());
+
+        let projection = AccessOps::current_entitlement_projection(&state.db, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!())
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(projection.features, vec!["agent.sessions"]);
+        assert!(projection.app_version_supported);
+        let limit = sqlx::query_as::<_, (String, i64, String)>(
+            "SELECT limit_key, limit_value, enforcement FROM entitlement_limits WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or_else(|_| unreachable!());
+        assert_eq!(limit, ("agent.runs".to_string(), 100, "report".to_string()));
+
+        let second = verified_lease(
+            tenant_id,
+            remote_installation_id,
+            2,
+            vec!["agent".to_string()],
+            vec!["agent.history".to_string()],
+            vec![],
+        );
+        AccessOps::apply_signed_lease(
+            &state.db,
+            tenant_id,
+            remote_installation_id,
+            None,
+            None,
+            &second,
+            "online_refresh",
+        )
+        .await
+        .unwrap_or_else(|_| unreachable!());
+
+        let projection = AccessOps::current_entitlement_projection(&state.db, tenant_id)
+            .await
+            .unwrap_or_else(|_| unreachable!())
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(projection.features, vec!["agent.history"]);
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM entitlement_limits WHERE tenant_id = $1"
+            )
+            .bind(tenant_id)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or_default(),
+            0
+        );
+        let states = sqlx::query_as::<_, (String, String)>(
+            "SELECT module_key, status FROM tenant_modules WHERE tenant_id = $1 ORDER BY module_key",
+        )
+        .bind(tenant_id)
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
+        assert_eq!(
+            states,
+            vec![
+                ("administration".to_string(), "enabled".to_string()),
+                ("agent".to_string(), "enabled".to_string()),
+                ("fleet".to_string(), "revoked".to_string()),
+                ("home".to_string(), "enabled".to_string()),
+            ]
+        );
+        assert_eq!(installation.latest_lease_sequence, 0);
     }
 }

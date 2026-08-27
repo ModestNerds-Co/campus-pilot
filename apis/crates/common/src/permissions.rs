@@ -1,6 +1,4 @@
 //! Enforces catalogued permission routes through the operation evaluator.
-//!
-//! Authentication-only routes remain observable while their semantics are classified.
 
 use actix_web::{
     Error, HttpMessage, HttpResponse,
@@ -15,86 +13,9 @@ use std::{
 };
 
 use crate::{
-    AccessContext, ApiResponse, LegacyRouteGate, RuntimeAccessChecks, module_key_for_namespace,
+    AccessContext, ApiResponse, RouteAuthority, RuntimeAccessChecks, module_key_for_namespace,
     routed_operation_for_route,
 };
-
-/// Observes exact evaluator decisions for routes whose compatibility gate is
-/// authentication only. It never changes the response during shadow rollout.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ObserveOperationAccess;
-
-impl<S, B> Transform<S, ServiceRequest> for ObserveOperationAccess
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type InitError = ();
-    type Transform = ObserveOperationAccessService<S>;
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
-
-    fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(ObserveOperationAccessService {
-            service: Rc::new(service),
-        }))
-    }
-}
-
-pub struct ObserveOperationAccessService<S> {
-    service: Rc<S>,
-}
-
-impl<S, B> Service<ServiceRequest> for ObserveOperationAccessService<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    S::Future: 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    forward_ready!(service);
-
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        let service = Rc::clone(&self.service);
-        let matched_pattern = req.match_pattern();
-        let routed_operation = matched_pattern
-            .as_deref()
-            .and_then(|pattern| routed_operation_for_route(req.method(), pattern));
-
-        Box::pin(async move {
-            match routed_operation {
-                Some(route) if route.legacy_gate() == LegacyRouteGate::Authenticated => {
-                    if let Some(access) = req.extensions().get::<AccessContext>() {
-                        let shadow = access
-                            .evaluate_operation(route.operation(), RuntimeAccessChecks::default());
-                        if !shadow.allowed {
-                            log::warn!(
-                                "Operation entitlement shadow drift: operation={}, legacy_allowed=true, evaluator_allowed=false, evaluator_reason={}",
-                                route.operation().key(),
-                                shadow.reason.as_str(),
-                            );
-                        }
-                    }
-                }
-                Some(_) => {}
-                None => {
-                    log::error!(
-                        "Missing operation descriptor: method={}, route_pattern={}",
-                        req.method(),
-                        matched_pattern.as_deref().unwrap_or("<unmatched>"),
-                    );
-                }
-            }
-
-            service.call(req).await
-        })
-    }
-}
 
 /// Gates a route with its exact catalog module and permission.
 ///
@@ -177,7 +98,7 @@ where
             match access {
                 Some(access) => {
                     match routed_operation {
-                        Some(route) if route.legacy_gate() == LegacyRouteGate::Permission => {
+                        Some(route) if route.authority() == RouteAuthority::Permission => {
                             let operation = route.operation();
                             let decision = access
                                 .evaluate_operation(operation, RuntimeAccessChecks::default());
@@ -284,7 +205,7 @@ mod tests {
 
     use crate::{
         AccessContext, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
-        ObserveOperationAccess, RequirePermission,
+        RequirePermission,
     };
 
     use super::action_for;
@@ -727,58 +648,5 @@ mod tests {
                 "Insufficient permissions. Required: fleet:view".to_string()
             ])
         );
-    }
-
-    #[actix_web::test]
-    async fn authenticated_operation_observer_never_changes_legacy_response() {
-        let access = access(&[], &["administration"]);
-        let app = actix_test::init_service(
-            App::new()
-                .wrap_fn(move |request, service| {
-                    request.extensions_mut().insert(access.clone());
-                    service.call(request)
-                })
-                .service(
-                    web::scope("/api/1.0/access")
-                        .wrap(ObserveOperationAccess)
-                        .route("/catalog", web::get().to(ok))
-                        .route("/licensing/connect", web::put().to(ok))
-                        .route("/unknown", web::get().to(ok)),
-                ),
-        )
-        .await;
-
-        for (method, path) in [
-            (Method::GET, "/api/1.0/access/catalog"),
-            (Method::PUT, "/api/1.0/access/licensing/connect"),
-            (Method::GET, "/api/1.0/access/unknown"),
-        ] {
-            let response = actix_test::call_service(
-                &app,
-                actix_test::TestRequest::default()
-                    .method(method)
-                    .uri(path)
-                    .to_request(),
-            )
-            .await;
-            assert_eq!(response.status(), StatusCode::OK);
-        }
-
-        let app = actix_test::init_service(
-            App::new().service(
-                web::scope("/api/1.0/access")
-                    .wrap(ObserveOperationAccess)
-                    .route("/catalog", web::get().to(ok)),
-            ),
-        )
-        .await;
-        let response = actix_test::call_service(
-            &app,
-            actix_test::TestRequest::get()
-                .uri("/api/1.0/access/catalog")
-                .to_request(),
-        )
-        .await;
-        assert_eq!(response.status(), StatusCode::OK);
     }
 }

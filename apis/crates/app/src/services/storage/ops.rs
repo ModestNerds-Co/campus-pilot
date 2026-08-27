@@ -15,7 +15,6 @@ pub struct StorageOps {
     presign_client: Option<S3Client>,
     bucket: String,
     endpoint: String,
-    public_endpoint: Option<String>,
 }
 
 impl StorageOps {
@@ -24,14 +23,12 @@ impl StorageOps {
         presign_client: Option<S3Client>,
         bucket: String,
         endpoint: String,
-        public_endpoint: Option<String>,
     ) -> Self {
         Self {
             client,
             presign_client,
             bucket,
             endpoint,
-            public_endpoint,
         }
     }
 

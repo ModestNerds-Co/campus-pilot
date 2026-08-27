@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use anyhow::{Context, Result, bail};
-use cp_common::{ObserveOperationAccess, RequirePermission, TenantId};
+use cp_common::{RequirePermission, TenantId};
 use serde::Deserialize;
 use validator::Validate;
 
@@ -340,14 +340,13 @@ async fn disable_module(
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/access")
-            .wrap(ObserveOperationAccess)
             .wrap(AuthMiddleware)
             .service(catalog)
             .service(modules)
-            .service(licensing_state)
             .service(
                 web::scope("")
                     .wrap(RequirePermission::new("licensing"))
+                    .service(licensing_state)
                     .service(activate_license)
                     .service(connect_license)
                     .service(refresh_license)
@@ -561,4 +560,100 @@ fn internal_error(message: &str, error: anyhow::Error) -> HttpResponse {
         None::<()>,
         Some(vec![message.to_string()]),
     ))
+}
+
+#[cfg(test)]
+mod authority_tests {
+    use actix_web::{http::StatusCode, test as actix_test};
+    use uuid::Uuid;
+
+    use crate::{
+        tests::helpers::{create_test_app, create_test_app_state},
+        utils::generate_access_token,
+    };
+
+    async fn token_for(role_key: &str) -> String {
+        let state = create_test_app_state().await;
+        let tenant_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let email = format!("authority-{role_key}-{user_id}@example.test");
+        sqlx::query("INSERT INTO tenants (id, slug, name) VALUES ($1, $2, $3)")
+            .bind(tenant_id)
+            .bind(format!("authority-{tenant_id}"))
+            .bind("Authority test")
+            .execute(&state.db)
+            .await
+            .expect("failed to create authority test tenant");
+        sqlx::query(
+            r#"
+            INSERT INTO users (
+                id, tenant_id, email, full_name, password_hash, roles, is_active
+            )
+            VALUES ($1, $2, $3, 'Authority test', 'not-used', $4, TRUE)
+            "#,
+        )
+        .bind(user_id)
+        .bind(tenant_id)
+        .bind(&email)
+        .bind(vec![role_key.to_string()])
+        .execute(&state.db)
+        .await
+        .expect("failed to create authority test user");
+        generate_access_token(
+            user_id,
+            tenant_id,
+            &email,
+            vec![role_key.to_string()],
+            &state.config.jwt.secret,
+        )
+        .unwrap_or_else(|_| unreachable!())
+    }
+
+    #[actix_web::test]
+    async fn launcher_discovery_stays_shared_while_admin_reads_require_permission() {
+        let state = create_test_app_state().await;
+        let teacher_token = token_for("teacher").await;
+        let app = actix_test::init_service(create_test_app(state.clone())).await;
+
+        for path in ["/api/1.0/access/catalog", "/api/1.0/access/modules"] {
+            let request = actix_test::TestRequest::get()
+                .uri(path)
+                .insert_header(("Authorization", format!("Bearer {teacher_token}")))
+                .to_request();
+            let response = actix_test::call_service(&app, request).await;
+            assert_eq!(response.status(), StatusCode::OK, "{path}");
+        }
+
+        for path in [
+            "/api/1.0/access/licensing",
+            "/api/1.0/kernel/school-profile",
+        ] {
+            let request = actix_test::TestRequest::get()
+                .uri(path)
+                .insert_header(("Authorization", format!("Bearer {teacher_token}")))
+                .to_request();
+            let response = actix_test::call_service(&app, request).await;
+            assert_eq!(response.status(), StatusCode::FORBIDDEN, "{path}");
+        }
+
+        assert!(
+            state.db.num_idle() > 0,
+            "route test pool exhausted before administrator check: size={}, idle={}",
+            state.db.size(),
+            state.db.num_idle()
+        );
+        let admin_token = token_for("school_administrator").await;
+        let request = actix_test::TestRequest::get()
+            .uri("/api/1.0/access/licensing")
+            .insert_header(("Authorization", format!("Bearer {admin_token}")))
+            .to_request();
+        let response = actix_test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let request = actix_test::TestRequest::get()
+            .uri("/api/1.0/access/catalog")
+            .to_request();
+        let response = actix_test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
 }

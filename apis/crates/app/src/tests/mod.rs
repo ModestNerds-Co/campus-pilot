@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-mod helpers;
+pub(crate) mod helpers;
 mod test_auth;
 mod test_kernel;
 mod test_users;
