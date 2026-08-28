@@ -93,6 +93,25 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
     );
   }
 
+  if (module.key === "sis") {
+    return (
+      <div className="space-y-8">
+        <ModuleIntroduction module={module} />
+        <section aria-labelledby="sis-workspaces">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="sis-workspaces">Manage people and admissions</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <SisLink description="Maintain learner records used across admissions and enrolment." label="Learners" to="/modules/sis/learners" />
+            <SisLink description="Maintain the people responsible for learners." label="Guardians" to="/modules/sis/guardians" />
+            <SisLink description="Connect learners to guardians and their responsibilities." label="Guardian relationships" to="/modules/sis/guardian-relationships" />
+            <SisLink description="Track applications against an academic year and target class." label="Applications" to="/modules/sis/applications" />
+            <SisLink description="Place learners in an Academics class for an academic year." label="Enrolments" to="/modules/sis/enrolments" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <ModuleIntroduction module={module} />
@@ -154,6 +173,13 @@ const HrLink: React.FC<{ description: string; label: string; to: "/modules/hr-pa
 );
 
 const AcademicLink: React.FC<{ description: string; label: string; to: "/modules/academics/academic-years" | "/modules/academics/subjects" | "/modules/academics/teachers" | "/modules/academics/classes" | "/modules/academics/teaching-assignments" }> = ({ description, label, to }) => (
+  <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
+    <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+    <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
+  </Link>
+);
+
+const SisLink: React.FC<{ description: string; label: string; to: "/modules/sis/learners" | "/modules/sis/guardians" | "/modules/sis/guardian-relationships" | "/modules/sis/applications" | "/modules/sis/enrolments" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

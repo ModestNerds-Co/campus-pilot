@@ -404,7 +404,7 @@
             ],
             "body": {
               "mode": "raw",
-          "raw": "{\n  \"name\": \"Head of Department\",\n  \"description\": \"Academic leadership with teaching and timetable access\",\n  \"permissions\": [\n    \"academics:view\",\n    \"academics:create\",\n    \"academics:edit\",\n    \"timetabling:view\",\n    \"timetabling:edit\"\n  ]\n}"
+              "raw": "{\n  \"name\": \"Head of Department\",\n  \"description\": \"Academic leadership with teaching and timetable access\",\n  \"permissions\": [\n    \"academics:view\",\n    \"academics:create\",\n    \"academics:edit\",\n    \"timetabling:view\",\n    \"timetabling:edit\"\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/roles",
@@ -435,7 +435,7 @@
             ],
             "body": {
               "mode": "raw",
-          "raw": "{\n  \"name\": \"Academic Director\",\n  \"description\": \"Academic leadership with timetable publishing access\",\n  \"permissions\": [\n    \"academics:view\",\n    \"academics:create\",\n    \"academics:edit\",\n    \"timetabling:view\",\n    \"timetabling:edit\",\n    \"timetabling:manage\"\n  ]\n}"
+              "raw": "{\n  \"name\": \"Academic Director\",\n  \"description\": \"Academic leadership with timetable publishing access\",\n  \"permissions\": [\n    \"academics:view\",\n    \"academics:create\",\n    \"academics:edit\",\n    \"timetabling:view\",\n    \"timetabling:edit\",\n    \"timetabling:manage\"\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/roles/:id",
@@ -933,8 +933,13 @@
                 ],
                 "url": {
                   "raw": "{{base_url}}/fleet/driver-candidates?search=",
-                  "host": ["{{base_url}}"],
-                  "path": ["fleet", "driver-candidates"],
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "fleet",
+                    "driver-candidates"
+                  ],
                   "query": [
                     {
                       "key": "search",
@@ -1136,12 +1141,32 @@
               "name": "List Departments",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
                 "url": {
                   "raw": "{{base_url}}/hr-payroll/departments?page=1&per_page=20",
-                  "host": ["{{base_url}}"],
-                  "path": ["hr-payroll", "departments"],
-                  "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "departments"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
                 }
               }
             },
@@ -1149,12 +1174,29 @@
               "name": "Get Department",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
                 "url": {
                   "raw": "{{base_url}}/hr-payroll/departments/:id",
-                  "host": ["{{base_url}}"],
-                  "path": ["hr-payroll", "departments", ":id"],
-                  "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }]
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "departments",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
                 }
               }
             },
@@ -1162,26 +1204,99 @@
               "name": "Create Department",
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"code\": \"OPS\",\n  \"name\": \"Operations\",\n  \"status\": \"active\"\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/departments", "host": ["{{base_url}}"], "path": ["hr-payroll", "departments"] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"OPS\",\n  \"name\": \"Operations\",\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/departments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "departments"
+                  ]
+                }
               }
             },
             {
               "name": "Update Department",
               "request": {
                 "method": "PUT",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Campus Operations\"\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/departments/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "departments", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Campus Operations\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/departments/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "departments",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Delete Department",
               "request": {
                 "method": "DELETE",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/departments/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "departments", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/departments/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "departments",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             }
           ]
@@ -1193,42 +1308,162 @@
               "name": "List Positions",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/positions?page=1&per_page=20", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/positions?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "positions"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Get Position",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/positions/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/positions/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "positions",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Create Position",
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"department_id\": null,\n  \"code\": \"DRV\",\n  \"title\": \"Driver\",\n  \"status\": \"active\"\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/positions", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions"] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"department_id\": null,\n  \"code\": \"DRV\",\n  \"title\": \"Driver\",\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/positions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "positions"
+                  ]
+                }
               }
             },
             {
               "name": "Update Position",
               "request": {
                 "method": "PUT",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"title\": \"School Driver\"\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/positions/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"School Driver\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/positions/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "positions",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Delete Position",
               "request": {
                 "method": "DELETE",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/positions/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "positions", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/positions/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "positions",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             }
           ]
@@ -1240,51 +1475,201 @@
               "name": "List Employees",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/employees?page=1&per_page=20", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees"], "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "20" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employees?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employees"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Get Employee",
               "request": {
                 "method": "GET",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employees/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employees",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Create Employee",
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"employee_number\": \"EMP-001\",\n  \"display_name\": \"Tendai Moyo\",\n  \"work_email\": \"tendai@example.edu\",\n  \"employment_status\": \"active\"\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/employees", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees"] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employee_number\": \"EMP-001\",\n  \"display_name\": \"Tendai Moyo\",\n  \"work_email\": \"tendai@example.edu\",\n  \"employment_status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employees",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employees"
+                  ]
+                }
               }
             },
             {
               "name": "Update Employee",
               "request": {
                 "method": "PUT",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+263771234567\"\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+263771234567\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employees/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employees",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Link or Unlink System Account",
               "request": {
                 "method": "PUT",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }, { "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"account_id\": null\n}" },
-                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id/account", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id", "account"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"account_id\": null\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employees/:id/account",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employees",
+                    ":id",
+                    "account"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             },
             {
               "name": "Delete Employee",
               "request": {
                 "method": "DELETE",
-                "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
-                "url": { "raw": "{{base_url}}/hr-payroll/employees/:id", "host": ["{{base_url}}"], "path": ["hr-payroll", "employees", ":id"], "variable": [{ "key": "id", "value": "00000000-0000-0000-0000-000000000000" }] }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employees/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employees",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
               }
             }
           ]
@@ -1732,17 +2117,31 @@
       "item": [
         {
           "name": "List Academic Years",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/academic-years?page=1&per_page=20" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/academic-years?page=1&per_page=20"
+          }
         },
         {
           "name": "Get Academic Year",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/academic-years/:id" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/academic-years/:id"
+          }
         },
         {
           "name": "Create Academic Year",
           "request": {
             "method": "POST",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"2027\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2027\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/academic-years"
           }
         },
@@ -1750,27 +2149,52 @@
           "name": "Update Academic Year",
           "request": {
             "method": "PUT",
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"2027\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"status\": \"closed\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2027\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"status\": \"closed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/academic-years/:id"
           }
         },
         {
           "name": "Delete Academic Year",
-          "request": { "method": "DELETE", "url": "{{base_url}}/academics/academic-years/:id" }
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/academic-years/:id"
+          }
         },
         {
           "name": "List Subjects",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/subjects?page=1&per_page=20" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/subjects?page=1&per_page=20"
+          }
         },
         {
           "name": "Get Subject",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/subjects/:id" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/subjects/:id"
+          }
         },
         {
           "name": "Create Subject",
           "request": {
             "method": "POST",
-            "body": { "mode": "raw", "raw": "{\n  \"code\": \"MATH\",\n  \"name\": \"Mathematics\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"MATH\",\n  \"name\": \"Mathematics\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/subjects"
           }
         },
@@ -1778,31 +2202,59 @@
           "name": "Update Subject",
           "request": {
             "method": "PUT",
-            "body": { "mode": "raw", "raw": "{\n  \"code\": \"MATH\",\n  \"name\": \"Mathematics\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"MATH\",\n  \"name\": \"Mathematics\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/subjects/:id"
           }
         },
         {
           "name": "Delete Subject",
-          "request": { "method": "DELETE", "url": "{{base_url}}/academics/subjects/:id" }
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/subjects/:id"
+          }
         },
         {
           "name": "List Teacher Candidates",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/teacher-candidates?search=" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/teacher-candidates?search="
+          }
         },
         {
           "name": "List Teachers",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/teachers?page=1&per_page=20" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/teachers?page=1&per_page=20"
+          }
         },
         {
           "name": "Get Teacher",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/teachers/:id" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/teachers/:id"
+          }
         },
         {
           "name": "Create Teacher Profile",
           "request": {
             "method": "POST",
-            "body": { "mode": "raw", "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/teachers"
           }
         },
@@ -1810,27 +2262,52 @@
           "name": "Update Teacher Status",
           "request": {
             "method": "PUT",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"inactive\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/teachers/:id"
           }
         },
         {
           "name": "Delete Teacher Profile",
-          "request": { "method": "DELETE", "url": "{{base_url}}/academics/teachers/:id" }
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/teachers/:id"
+          }
         },
         {
           "name": "List Classes",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/classes?page=1&per_page=20&academic_year_id=" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/classes?page=1&per_page=20&academic_year_id="
+          }
         },
         {
           "name": "Get Class",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/classes/:id" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/classes/:id"
+          }
         },
         {
           "name": "Create Class",
           "request": {
             "method": "POST",
-            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/classes"
           }
         },
@@ -1838,27 +2315,52 @@
           "name": "Update Class",
           "request": {
             "method": "PUT",
-            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/classes/:id"
           }
         },
         {
           "name": "Delete Class",
-          "request": { "method": "DELETE", "url": "{{base_url}}/academics/classes/:id" }
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/classes/:id"
+          }
         },
         {
           "name": "List Teaching Assignments",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/teaching-assignments?page=1&per_page=20&academic_year_id=" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/teaching-assignments?page=1&per_page=20&academic_year_id="
+          }
         },
         {
           "name": "Get Teaching Assignment",
-          "request": { "method": "GET", "url": "{{base_url}}/academics/teaching-assignments/:id" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/teaching-assignments/:id"
+          }
         },
         {
           "name": "Create Teaching Assignment",
           "request": {
             "method": "POST",
-            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"subject_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"teacher_profile_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"periods_per_cycle\": 5,\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"subject_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"teacher_profile_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"periods_per_cycle\": 5,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/teaching-assignments"
           }
         },
@@ -1866,13 +2368,24 @@
           "name": "Update Teaching Assignment",
           "request": {
             "method": "PUT",
-            "body": { "mode": "raw", "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"subject_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"teacher_profile_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"periods_per_cycle\": 6,\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"subject_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"teacher_profile_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"periods_per_cycle\": 6,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/academics/teaching-assignments/:id"
           }
         },
         {
           "name": "Delete Teaching Assignment",
-          "request": { "method": "DELETE", "url": "{{base_url}}/academics/teaching-assignments/:id" }
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/teaching-assignments/:id"
+          }
         }
       ]
     },
@@ -1892,28 +2405,361 @@
       "item": [
         {
           "name": "Get Configuration",
-          "request": { "method": "GET", "url": "{{base_url}}/timetabling/configuration" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/timetabling/configuration"
+          }
         },
         {
           "name": "Save Scheduling Settings",
           "request": {
             "method": "PUT",
             "description": "Academic classes, subjects, teachers, and teaching assignments in this body are replaced by current Academics records. Only timetable-owned settings persist.",
-            "body": { "mode": "raw", "raw": "{\n  \"cycle_name\": \"\",\n  \"days\": [{\"key\": \"monday\", \"label\": \"Monday\"}],\n  \"periods\": [{\"key\": \"period-1\", \"label\": \"Period 1\", \"start_time\": null, \"end_time\": null}],\n  \"classes\": [],\n  \"subjects\": [],\n  \"teachers\": [],\n  \"rooms\": [],\n  \"lesson_requirements\": []\n}", "options": { "raw": { "language": "json" } } },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cycle_name\": \"\",\n  \"days\": [{\"key\": \"monday\", \"label\": \"Monday\"}],\n  \"periods\": [{\"key\": \"period-1\", \"label\": \"Period 1\", \"start_time\": null, \"end_time\": null}],\n  \"classes\": [],\n  \"subjects\": [],\n  \"teachers\": [],\n  \"rooms\": [],\n  \"lesson_requirements\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{base_url}}/timetabling/configuration"
           }
         },
         {
           "name": "Generate Draft",
-          "request": { "method": "POST", "url": "{{base_url}}/timetabling/generate" }
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/timetabling/generate"
+          }
         },
         {
           "name": "Get Latest Run",
-          "request": { "method": "GET", "url": "{{base_url}}/timetabling/runs/latest" }
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/timetabling/runs/latest"
+          }
         },
         {
           "name": "Publish Run",
-          "request": { "method": "PUT", "url": "{{base_url}}/timetabling/runs/:id/publish" }
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/timetabling/runs/:id/publish"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SIS",
+      "description": "Canonical learners and guardians, explicit guardian relationships, applications, and Academics-backed enrolments.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "List Eligible Login Accounts",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/account-candidates?profile_kind=learner&profile_id=&search="
+          }
+        },
+        {
+          "name": "List Learners",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/learners?page=1&per_page=20&search=&status="
+          }
+        },
+        {
+          "name": "Get Learner",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/learners/:id"
+          }
+        },
+        {
+          "name": "Create Learner",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/learners",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"learner_number\": \"STU-001\",\n  \"display_name\": \"Example Learner\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Learner\",\n  \"date_of_birth\": \"2012-01-01\",\n  \"email\": null,\n  \"phone\": null,\n  \"status\": \"prospective\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Learner",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/learners/:id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"learner_number\": \"STU-001\",\n  \"display_name\": \"Example Learner\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Learner\",\n  \"date_of_birth\": \"2012-01-01\",\n  \"email\": null,\n  \"phone\": null,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Link Learner Login Account",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/learners/:id/account",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Learner",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/sis/learners/:id"
+          }
+        },
+        {
+          "name": "List Guardians",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/guardians?page=1&per_page=20&search=&status="
+          }
+        },
+        {
+          "name": "Get Guardian",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/guardians/:id"
+          }
+        },
+        {
+          "name": "Create Guardian",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/guardians",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Example Guardian\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Guardian\",\n  \"email\": \"guardian@example.com\",\n  \"phone\": null,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Guardian",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/guardians/:id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Example Guardian\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Guardian\",\n  \"email\": \"guardian@example.com\",\n  \"phone\": null,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Link Guardian Login Account",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/guardians/:id/account",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Guardian",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/sis/guardians/:id"
+          }
+        },
+        {
+          "name": "List Guardian Relationships",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/guardian-relationships?page=1&per_page=20&search=&status=&learner_id=&guardian_id="
+          }
+        },
+        {
+          "name": "Get Guardian Relationship",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/guardian-relationships/:id"
+          }
+        },
+        {
+          "name": "Create Guardian Relationship",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/guardian-relationships",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"guardian_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"relationship_type\": \"guardian\",\n  \"is_primary\": true,\n  \"can_collect\": true,\n  \"receives_communications\": true,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Guardian Relationship",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/guardian-relationships/:id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"relationship_type\": \"guardian\",\n  \"is_primary\": true,\n  \"can_collect\": true,\n  \"receives_communications\": true,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Guardian Relationship",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/sis/guardian-relationships/:id"
+          }
+        },
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/applications?page=1&per_page=20&search=&status=&academic_year_id=&learner_id="
+          }
+        },
+        {
+          "name": "Get Application",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/applications/:id"
+          }
+        },
+        {
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/applications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application_number\": \"APP-001\",\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"target_class_group_id\": null,\n  \"submitted_on\": null,\n  \"status\": \"draft\",\n  \"notes\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Application",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/applications/:id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application_number\": \"APP-001\",\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"target_class_group_id\": null,\n  \"submitted_on\": \"2026-08-28\",\n  \"status\": \"submitted\",\n  \"notes\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Draft Application",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/sis/applications/:id"
+          }
+        },
+        {
+          "name": "List Enrolments",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/enrolments?page=1&per_page=20&search=&status=&academic_year_id=&class_group_id=&learner_id="
+          }
+        },
+        {
+          "name": "Get Enrolment",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/enrolments/:id"
+          }
+        },
+        {
+          "name": "Create Enrolment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/enrolments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"source_application_id\": null,\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": null,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Enrolment",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/enrolments/:id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"class_group_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"source_application_id\": null,\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": null,\n  \"status\": \"completed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     },

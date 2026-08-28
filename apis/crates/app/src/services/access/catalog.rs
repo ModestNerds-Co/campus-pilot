@@ -49,7 +49,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/sis",
             "sis",
             false,
-            "foundation",
+            "available",
             &["view", "create", "edit", "delete"],
         ),
         module(
@@ -457,6 +457,7 @@ mod tests {
             "academics",
             "fleet",
             "hr_payroll",
+            "sis",
             "timetabling",
         ] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
@@ -477,17 +478,13 @@ mod tests {
             } else if module_key == "hr_payroll" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 6);
+            } else if module_key == "sis" {
+                assert!(module.release_ready());
+                assert_eq!(module.executable_capabilities(), 11);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 2);
             }
         }
-        assert_eq!(
-            coverage
-                .entry("sis")
-                .unwrap_or_else(|| unreachable!())
-                .stage(),
-            cp_agent::ModuleDeliveryStage::Foundation
-        );
     }
 }

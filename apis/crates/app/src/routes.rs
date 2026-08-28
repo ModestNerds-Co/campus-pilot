@@ -50,7 +50,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .wrap(AuthMiddleware)
                     .configure(cp_vehicle_log::routes::routes),
             )
-            .service(scope("/sis").configure(cp_sis::routes::routes))
+            .service(
+                scope("/sis")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_sis::routes::routes),
+            )
             .service(
                 scope("/academics")
                     .wrap(AuthMiddleware)

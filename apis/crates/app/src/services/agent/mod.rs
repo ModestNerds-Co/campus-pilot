@@ -5,6 +5,7 @@ mod administration;
 mod administration_access;
 mod fleet;
 mod hr;
+mod sis;
 mod timetabling;
 
 use cp_agent::CapabilityRegistry;
@@ -32,6 +33,9 @@ use fleet::{
 use hr::{
     HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeReadCapability,
     HrEmployeesListCapability, HrPositionReadCapability, HrPositionsListCapability,
+};
+use sis::{
+    AccountCandidatesCapability, SisListCapability, SisListKind, SisReadCapability, SisReadKind,
 };
 use timetabling::{LatestTimetableRunCapability, TimetableConfigurationCapability};
 
@@ -96,6 +100,31 @@ pub fn build_capability_registry(
     registry
         .register(TeacherCandidatesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Academics teacher-candidates capability: {error}"));
+    for kind in [
+        SisListKind::Learners,
+        SisListKind::Guardians,
+        SisListKind::GuardianRelationships,
+        SisListKind::Applications,
+        SisListKind::Enrolments,
+    ] {
+        registry
+            .register(SisListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [
+        SisReadKind::Learner,
+        SisReadKind::Guardian,
+        SisReadKind::GuardianRelationship,
+        SisReadKind::Application,
+        SisReadKind::Enrolment,
+    ] {
+        registry
+            .register(SisReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
+        .register(AccountCandidatesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid SIS account-candidates capability: {error}"));
     registry
         .register(HrDepartmentsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR departments-list capability: {error}"));
@@ -214,6 +243,7 @@ mod tests {
                 "users:view".to_string(),
                 "school_settings:view".to_string(),
                 "licensing:view".to_string(),
+                "sis:view".to_string(),
                 "academics:view".to_string(),
                 "hr_payroll:view".to_string(),
                 "fleet:view".to_string(),
@@ -222,6 +252,7 @@ mod tests {
             enabled_modules: vec![
                 "agent".to_string(),
                 "administration".to_string(),
+                "sis".to_string(),
                 "academics".to_string(),
                 "hr_payroll".to_string(),
                 "fleet".to_string(),
@@ -235,6 +266,7 @@ mod tests {
                         "administration".to_string(),
                         ModuleEntitlementState::Enabled,
                     ),
+                    ("sis".to_string(), ModuleEntitlementState::Enabled),
                     ("academics".to_string(), ModuleEntitlementState::Enabled),
                     ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                     ("fleet".to_string(), ModuleEntitlementState::Enabled),
@@ -303,6 +335,17 @@ mod tests {
                 "hr_payroll.employees.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
+                "sis.account_candidates.list",
+                "sis.applications.list",
+                "sis.applications.read",
+                "sis.enrolments.list",
+                "sis.enrolments.read",
+                "sis.guardian_relationships.list",
+                "sis.guardian_relationships.read",
+                "sis.guardians.list",
+                "sis.guardians.read",
+                "sis.learners.list",
+                "sis.learners.read",
                 "timetabling.configuration.read",
                 "timetabling.runs.read_latest"
             ]

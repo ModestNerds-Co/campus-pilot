@@ -308,6 +308,250 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             false,
         ),
+        // SIS: canonical people, admissions, and enrolment records.
+        route(
+            Method::GET,
+            "/api/1.0/sis/account-candidates",
+            "sis.account_candidates.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/learners",
+            "sis.learners.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/learners/{id}",
+            "sis.learners.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/learners",
+            "sis.learners.create",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/learners/{id}",
+            "sis.learners.update",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/learners/{id}/account",
+            "sis.learners.link_account",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/sis/learners/{id}",
+            "sis.learners.delete",
+            "sis",
+            "sis:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/guardians",
+            "sis.guardians.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/guardians/{id}",
+            "sis.guardians.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/guardians",
+            "sis.guardians.create",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/guardians/{id}",
+            "sis.guardians.update",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/guardians/{id}/account",
+            "sis.guardians.link_account",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/sis/guardians/{id}",
+            "sis.guardians.delete",
+            "sis",
+            "sis:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/guardian-relationships",
+            "sis.guardian_relationships.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/guardian-relationships/{id}",
+            "sis.guardian_relationships.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/guardian-relationships",
+            "sis.guardian_relationships.create",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/guardian-relationships/{id}",
+            "sis.guardian_relationships.update",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/sis/guardian-relationships/{id}",
+            "sis.guardian_relationships.delete",
+            "sis",
+            "sis:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/applications",
+            "sis.applications.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/applications/{id}",
+            "sis.applications.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/applications",
+            "sis.applications.create",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/applications/{id}",
+            "sis.applications.update",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/sis/applications/{id}",
+            "sis.applications.delete",
+            "sis",
+            "sis:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/enrolments",
+            "sis.enrolments.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/enrolments/{id}",
+            "sis.enrolments.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/enrolments",
+            "sis.enrolments.create",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/enrolments/{id}",
+            "sis.enrolments.update",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
         // Academics: canonical teaching structure.
         route(
             Method::GET,
@@ -902,7 +1146,9 @@ fn route(
         agent_exposure_for(key),
         license_required,
     );
-    let operation = if key.starts_with("academics.teacher")
+    let operation = if key.starts_with("sis.") {
+        operation.requiring_modules(["academics".to_string()])
+    } else if key.starts_with("academics.teacher")
         || key.starts_with("academics.teaching_assignments")
     {
         operation.requiring_modules(["hr_payroll".to_string()])
@@ -952,6 +1198,17 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.roles.read"
         | "administration.users.list"
         | "administration.users.read"
+        | "sis.account_candidates.list"
+        | "sis.learners.list"
+        | "sis.learners.read"
+        | "sis.guardians.list"
+        | "sis.guardians.read"
+        | "sis.guardian_relationships.list"
+        | "sis.guardian_relationships.read"
+        | "sis.applications.list"
+        | "sis.applications.read"
+        | "sis.enrolments.list"
+        | "sis.enrolments.read"
         | "academics.academic_years.list"
         | "academics.academic_years.read"
         | "academics.subjects.list"
@@ -986,6 +1243,22 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.users.deactivate"
         | "administration.licensing.refresh"
         | "administration.licensing.disable_module"
+        | "sis.learners.create"
+        | "sis.learners.update"
+        | "sis.learners.link_account"
+        | "sis.learners.delete"
+        | "sis.guardians.create"
+        | "sis.guardians.update"
+        | "sis.guardians.link_account"
+        | "sis.guardians.delete"
+        | "sis.guardian_relationships.create"
+        | "sis.guardian_relationships.update"
+        | "sis.guardian_relationships.delete"
+        | "sis.applications.create"
+        | "sis.applications.update"
+        | "sis.applications.delete"
+        | "sis.enrolments.create"
+        | "sis.enrolments.update"
         | "academics.academic_years.create"
         | "academics.academic_years.update"
         | "academics.academic_years.delete"
@@ -1074,6 +1347,7 @@ mod tests {
                     ModuleEntitlementState::Enabled,
                 ),
                 ("academics".to_string(), ModuleEntitlementState::Enabled),
+                ("sis".to_string(), ModuleEntitlementState::Enabled),
                 ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
@@ -1104,7 +1378,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 86);
+        assert_eq!(operation_catalog().len(), 113);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1156,7 +1430,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [34, 45, 7, 0]);
+        assert_eq!(counts, [45, 61, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

@@ -39,6 +39,11 @@ import { Route as AdminFeesRouteImport } from './routes/admin/fees'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments'
 import { Route as AdminClassesRouteImport } from './routes/admin/classes'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
+import { Route as ModulesSisLearnersRouteImport } from './routes/modules/sis/learners'
+import { Route as ModulesSisGuardiansRouteImport } from './routes/modules/sis/guardians'
+import { Route as ModulesSisGuardianRelationshipsRouteImport } from './routes/modules/sis/guardian-relationships'
+import { Route as ModulesSisEnrolmentsRouteImport } from './routes/modules/sis/enrolments'
+import { Route as ModulesSisApplicationsRouteImport } from './routes/modules/sis/applications'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
 import { Route as ModulesHrPayrollEmployeesRouteImport } from './routes/modules/hr-payroll/employees'
 import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/modules/hr-payroll/departments'
@@ -203,6 +208,32 @@ const AdminFleetIndexRoute = AdminFleetIndexRouteImport.update({
   path: '/fleet/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesSisLearnersRoute = ModulesSisLearnersRouteImport.update({
+  id: '/sis/learners',
+  path: '/sis/learners',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesSisGuardiansRoute = ModulesSisGuardiansRouteImport.update({
+  id: '/sis/guardians',
+  path: '/sis/guardians',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesSisGuardianRelationshipsRoute =
+  ModulesSisGuardianRelationshipsRouteImport.update({
+    id: '/sis/guardian-relationships',
+    path: '/sis/guardian-relationships',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesSisEnrolmentsRoute = ModulesSisEnrolmentsRouteImport.update({
+  id: '/sis/enrolments',
+  path: '/sis/enrolments',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesSisApplicationsRoute = ModulesSisApplicationsRouteImport.update({
+  id: '/sis/applications',
+  path: '/sis/applications',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesHrPayrollPositionsRoute =
   ModulesHrPayrollPositionsRouteImport.update({
     id: '/hr-payroll/positions',
@@ -319,6 +350,11 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/sis/applications': typeof ModulesSisApplicationsRoute
+  '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
+  '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
+  '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
+  '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesByTo {
@@ -363,6 +399,11 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/sis/applications': typeof ModulesSisApplicationsRoute
+  '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
+  '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
+  '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
+  '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
 export interface FileRoutesById {
@@ -409,6 +450,11 @@ export interface FileRoutesById {
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/sis/applications': typeof ModulesSisApplicationsRoute
+  '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
+  '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
+  '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
+  '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
 }
 export interface FileRouteTypes {
@@ -456,6 +502,11 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
     | '/modules/hr-payroll/positions'
+    | '/modules/sis/applications'
+    | '/modules/sis/enrolments'
+    | '/modules/sis/guardian-relationships'
+    | '/modules/sis/guardians'
+    | '/modules/sis/learners'
     | '/admin/fleet'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -500,6 +551,11 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
     | '/modules/hr-payroll/positions'
+    | '/modules/sis/applications'
+    | '/modules/sis/enrolments'
+    | '/modules/sis/guardian-relationships'
+    | '/modules/sis/guardians'
+    | '/modules/sis/learners'
     | '/admin/fleet'
   id:
     | '__root__'
@@ -545,6 +601,11 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
     | '/modules/hr-payroll/positions'
+    | '/modules/sis/applications'
+    | '/modules/sis/enrolments'
+    | '/modules/sis/guardian-relationships'
+    | '/modules/sis/guardians'
+    | '/modules/sis/learners'
     | '/admin/fleet/'
   fileRoutesById: FileRoutesById
 }
@@ -773,6 +834,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/sis/learners': {
+      id: '/modules/sis/learners'
+      path: '/sis/learners'
+      fullPath: '/modules/sis/learners'
+      preLoaderRoute: typeof ModulesSisLearnersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/sis/guardians': {
+      id: '/modules/sis/guardians'
+      path: '/sis/guardians'
+      fullPath: '/modules/sis/guardians'
+      preLoaderRoute: typeof ModulesSisGuardiansRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/sis/guardian-relationships': {
+      id: '/modules/sis/guardian-relationships'
+      path: '/sis/guardian-relationships'
+      fullPath: '/modules/sis/guardian-relationships'
+      preLoaderRoute: typeof ModulesSisGuardianRelationshipsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/sis/enrolments': {
+      id: '/modules/sis/enrolments'
+      path: '/sis/enrolments'
+      fullPath: '/modules/sis/enrolments'
+      preLoaderRoute: typeof ModulesSisEnrolmentsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/sis/applications': {
+      id: '/modules/sis/applications'
+      path: '/sis/applications'
+      fullPath: '/modules/sis/applications'
+      preLoaderRoute: typeof ModulesSisApplicationsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/hr-payroll/positions': {
       id: '/modules/hr-payroll/positions'
       path: '/hr-payroll/positions'
@@ -930,6 +1026,11 @@ interface ModulesRouteChildren {
   ModulesHrPayrollDepartmentsRoute: typeof ModulesHrPayrollDepartmentsRoute
   ModulesHrPayrollEmployeesRoute: typeof ModulesHrPayrollEmployeesRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
+  ModulesSisApplicationsRoute: typeof ModulesSisApplicationsRoute
+  ModulesSisEnrolmentsRoute: typeof ModulesSisEnrolmentsRoute
+  ModulesSisGuardianRelationshipsRoute: typeof ModulesSisGuardianRelationshipsRoute
+  ModulesSisGuardiansRoute: typeof ModulesSisGuardiansRoute
+  ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
 }
 
 const ModulesRouteChildren: ModulesRouteChildren = {
@@ -946,6 +1047,11 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHrPayrollDepartmentsRoute: ModulesHrPayrollDepartmentsRoute,
   ModulesHrPayrollEmployeesRoute: ModulesHrPayrollEmployeesRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
+  ModulesSisApplicationsRoute: ModulesSisApplicationsRoute,
+  ModulesSisEnrolmentsRoute: ModulesSisEnrolmentsRoute,
+  ModulesSisGuardianRelationshipsRoute: ModulesSisGuardianRelationshipsRoute,
+  ModulesSisGuardiansRoute: ModulesSisGuardiansRoute,
+  ModulesSisLearnersRoute: ModulesSisLearnersRoute,
 }
 
 const ModulesRouteWithChildren =

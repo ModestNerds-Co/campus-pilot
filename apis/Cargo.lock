@@ -1498,8 +1498,15 @@ name = "cp-sis"
 version = "1.0.0"
 dependencies = [
  "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-academics",
  "cp-common",
+ "serde",
  "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]
