@@ -1,5 +1,68 @@
 export type DirectoryStatus = "active" | "inactive";
 export type EmploymentStatus = "active" | "inactive" | "suspended" | "terminated";
+export type HrImportStatus = "uploaded" | "preview_ready" | "committed";
+export type HrImportDateFormat = "yyyy_mm_dd" | "dd_mm_yyyy" | "mm_dd_yyyy";
+
+export interface HrImportRecord {
+  id: string;
+  entity_key: "employees";
+  file_name: string;
+  content_type: string;
+  source_format: "csv" | "xlsx";
+  source_size_bytes: number;
+  source_row_count: number;
+  source_headers: string[];
+  status: HrImportStatus;
+  created_at: string;
+  latest_preview_id: string | null;
+  mapping_version: number | null;
+  ready_rows: number | null;
+  invalid_rows: number | null;
+  duplicate_rows: number | null;
+  created_rows: number | null;
+  skipped_rows: number | null;
+  failed_rows: number | null;
+  committed_at: string | null;
+}
+
+export interface HrImportMapping {
+  columns: Record<string, string>;
+  date_format: HrImportDateFormat | null;
+}
+
+export interface HrImportPreviewRow {
+  id: string;
+  row_number: number;
+  canonical_data: Record<string, unknown>;
+  outcome: "ready" | "invalid" | "duplicate";
+  issues: string[];
+  duplicate_record_id: string | null;
+}
+
+export interface HrImportPreview {
+  id: string;
+  import_id: string;
+  mapping_version: number;
+  mapping: HrImportMapping;
+  ready_rows: number;
+  invalid_rows: number;
+  duplicate_rows: number;
+  created_at: string;
+  rows: HrImportPreviewRow[];
+  total_rows: number;
+}
+
+export interface HrImportCommit {
+  id: string;
+  import_id: string;
+  preview_id: string;
+  created_rows: number;
+  skipped_rows: number;
+  failed_rows: number;
+  committed_at: string;
+}
+
+export interface HrImportsResponse { imports: HrImportRecord[] }
 
 export interface Department {
   id: string;

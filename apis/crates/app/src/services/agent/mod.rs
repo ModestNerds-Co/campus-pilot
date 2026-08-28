@@ -34,6 +34,7 @@ use hr::{
     HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeAvailabilityListCapability,
     HrEmployeeAvailabilityReadCapability, HrEmployeeReadCapability, HrEmployeesListCapability,
     HrEmploymentEngagementReadCapability, HrEmploymentEngagementsListCapability,
+    HrImportPreviewCapability, HrImportReadCapability, HrImportsListCapability,
     HrPositionReadCapability, HrPositionsListCapability,
 };
 use sis::{
@@ -144,6 +145,15 @@ pub fn build_capability_registry(
     registry
         .register(SisImportPreviewCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid SIS import-preview capability: {error}"));
+    registry
+        .register(HrImportsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR imports-list capability: {error}"));
+    registry
+        .register(HrImportReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR import-read capability: {error}"));
+    registry
+        .register(HrImportPreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR import-preview capability: {error}"));
     registry
         .register(HrDepartmentsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR departments-list capability: {error}"));
@@ -382,6 +392,9 @@ mod tests {
                 "hr_payroll.employees.read",
                 "hr_payroll.employment_engagements.list",
                 "hr_payroll.employment_engagements.read",
+                "hr_payroll.imports.list",
+                "hr_payroll.imports.preview.read",
+                "hr_payroll.imports.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
                 "sis.account_candidates.list",

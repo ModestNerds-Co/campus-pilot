@@ -6,12 +6,15 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
+use actix_multipart::Multipart;
 use actix_web::http::StatusCode;
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, delete, get, post, put, web};
-use cp_audit::AuditActor;
+use cp_audit::{AuditActor, RequestContext};
 use cp_common::{
     ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
 };
+use cp_imports::{MAX_SOURCE_BYTES, parse_source};
+use futures_util::StreamExt;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -28,11 +31,211 @@ use crate::{
         UpdateEmployeeAvailabilityRequest, UpdateEmployeeRequest,
         UpdateEmploymentEngagementRequest, UpdatePositionRequest,
     },
+    imports::{
+        CommitImportRequest, HrImportListResponse, HrImportMapping, HrImportOps, ImportListQuery,
+        NewHrImport, PreviewRowsQuery,
+    },
     ops::{
         DeleteOutcome, DepartmentOps, EmployeeAvailabilityOps, EmployeeOps,
         EmploymentEngagementOps, PositionOps,
     },
 };
+
+#[get("")]
+async fn list_imports(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<ImportListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match HrImportOps::list(
+        pool.get_ref(),
+        tenant.into_inner().into_inner(),
+        page,
+        per_page,
+    )
+    .await
+    {
+        Ok((imports, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(HrImportListResponse { imports }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => internal_error("Employee imports could not be loaded", error),
+    }
+}
+
+#[post("")]
+async fn upload_import(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    mut payload: Multipart,
+) -> HttpResponse {
+    let mut file_name = None;
+    let mut content_type = None;
+    let mut source_bytes = None;
+
+    while let Some(item) = payload.next().await {
+        let mut field = match item {
+            Ok(field) => field,
+            Err(_) => return bad_request("The import upload is malformed."),
+        };
+        let disposition = field.content_disposition();
+        let field_name = disposition
+            .and_then(|value| value.get_name())
+            .unwrap_or_default();
+        if field_name != "file" {
+            return bad_request("The import upload contains an unknown field.");
+        }
+        if source_bytes.is_some() {
+            return bad_request("Upload one import file at a time.");
+        }
+        file_name = disposition
+            .and_then(|value| value.get_filename())
+            .map(ToOwned::to_owned);
+        content_type = field.content_type().map(ToString::to_string);
+        source_bytes = match read_bounded_field(&mut field, MAX_SOURCE_BYTES).await {
+            Ok(bytes) => Some(bytes),
+            Err(message) => return bad_request(message),
+        };
+    }
+
+    let Some(file_name) = file_name else {
+        return bad_request("Choose a CSV or XLSX file.");
+    };
+    let Some(source_bytes) = source_bytes else {
+        return bad_request("Choose a CSV or XLSX file.");
+    };
+    let parse_name = file_name.clone();
+    let parse_bytes = source_bytes.clone();
+    let parsed = match web::block(move || parse_source(&parse_name, &parse_bytes)).await {
+        Ok(Ok(parsed)) => parsed,
+        Ok(Err(error)) => return bad_request(&error.to_string()),
+        Err(_) => return internal_error_simple("The import file could not be read."),
+    };
+    import_created_or_error(
+        HrImportOps::create(
+            pool.get_ref(),
+            tenant.into_inner().into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            NewHrImport {
+                file_name,
+                content_type: content_type
+                    .unwrap_or_else(|| "application/octet-stream".to_string()),
+                source_bytes,
+                parsed,
+            },
+        )
+        .await,
+    )
+}
+
+#[get("/{id}")]
+async fn read_import(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    match HrImportOps::get(
+        pool.get_ref(),
+        tenant.into_inner().into_inner(),
+        id.into_inner(),
+    )
+    .await
+    {
+        Ok(Some(record)) => ok(record),
+        Ok(None) => not_found("Employee import was not found"),
+        Err(error) => internal_error("Employee import could not be loaded", error),
+    }
+}
+
+#[put("/{id}/mapping")]
+async fn preview_import_mapping(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    id: web::Path<Uuid>,
+    mapping: web::Json<HrImportMapping>,
+) -> HttpResponse {
+    let tenant_id = tenant.into_inner().into_inner();
+    let import_id = id.into_inner();
+    let source = match HrImportOps::retained_source(pool.get_ref(), tenant_id, import_id).await {
+        Ok(Some(source)) => source,
+        Ok(None) => return not_found("Employee import was not found"),
+        Err(error) => {
+            return internal_error("The retained import source could not be loaded", error);
+        }
+    };
+    let parse_name = source.file_name;
+    let parse_bytes = source.source_bytes;
+    let table = match web::block(move || parse_source(&parse_name, &parse_bytes)).await {
+        Ok(Ok(parsed)) => parsed.table,
+        Ok(Err(error)) => return bad_request(&error.to_string()),
+        Err(_) => return internal_error_simple("The retained import source could not be read."),
+    };
+    import_updated_or_error(
+        HrImportOps::create_preview(
+            pool.get_ref(),
+            tenant_id,
+            actor.into_inner(),
+            request_context.into_inner(),
+            import_id,
+            mapping.into_inner(),
+            &table,
+        )
+        .await,
+    )
+}
+
+#[get("/{id}/preview")]
+async fn read_import_preview(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+    query: web::Query<PreviewRowsQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match HrImportOps::preview(
+        pool.get_ref(),
+        tenant.into_inner().into_inner(),
+        id.into_inner(),
+        page,
+        per_page,
+    )
+    .await
+    {
+        Ok(Some(preview)) => ok(preview),
+        Ok(None) => not_found("Employee import preview was not found"),
+        Err(error) => internal_error("Employee import preview could not be loaded", error),
+    }
+}
+
+#[post("/{id}/commit")]
+async fn commit_import(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    id: web::Path<Uuid>,
+    body: web::Json<CommitImportRequest>,
+) -> HttpResponse {
+    import_updated_or_error(
+        HrImportOps::commit(
+            pool.get_ref(),
+            tenant.into_inner().into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            id.into_inner(),
+            body.preview_id,
+        )
+        .await,
+    )
+}
 
 #[get("")]
 async fn list_departments(
@@ -588,6 +791,16 @@ async fn delete_employee_availability(
 
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
+        web::scope("/imports")
+            .wrap(RequirePermission::new("hr_payroll"))
+            .service(list_imports)
+            .service(upload_import)
+            .service(read_import)
+            .service(preview_import_mapping)
+            .service(read_import_preview)
+            .service(commit_import),
+    )
+    .service(
         web::scope("/departments")
             .wrap(RequirePermission::new("hr_payroll"))
             .service(list_departments)
@@ -672,6 +885,69 @@ fn created<T: serde::Serialize>(value: T) -> HttpResponse {
         Some(value),
         None,
     ))
+}
+
+fn bad_request(message: &str) -> HttpResponse {
+    HttpResponse::BadRequest().json(ApiResponse::from_status(
+        StatusCode::BAD_REQUEST,
+        None::<()>,
+        Some(vec![message.to_string()]),
+    ))
+}
+
+fn import_created_or_error<T: serde::Serialize>(result: anyhow::Result<T>) -> HttpResponse {
+    match result {
+        Ok(value) => created(value),
+        Err(error) => import_operation_error(error),
+    }
+}
+
+fn import_updated_or_error<T: serde::Serialize>(result: anyhow::Result<T>) -> HttpResponse {
+    match result {
+        Ok(value) => ok(value),
+        Err(error) => import_operation_error(error),
+    }
+}
+
+fn import_operation_error(error: anyhow::Error) -> HttpResponse {
+    if let Some(database) = error.root_cause().downcast_ref::<sqlx::Error>() {
+        if let sqlx::Error::Database(database) = database
+            && database.code().as_deref() == Some("23505")
+        {
+            return HttpResponse::Conflict().json(ApiResponse::from_status(
+                StatusCode::CONFLICT,
+                None::<()>,
+                Some(vec![
+                    "That employee conflicts with an existing record.".to_string(),
+                ]),
+            ));
+        }
+        return internal_error_simple("The employee import could not be saved.");
+    }
+    bad_request(&error.to_string())
+}
+
+fn internal_error_simple(message: &str) -> HttpResponse {
+    HttpResponse::InternalServerError().json(ApiResponse::from_status(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        None::<()>,
+        Some(vec![message.to_string()]),
+    ))
+}
+
+async fn read_bounded_field(
+    field: &mut actix_multipart::Field,
+    maximum_bytes: usize,
+) -> Result<Vec<u8>, &'static str> {
+    let mut bytes = Vec::new();
+    while let Some(chunk) = field.next().await {
+        let chunk = chunk.map_err(|_| "The import upload could not be read.")?;
+        if bytes.len().saturating_add(chunk.len()) > maximum_bytes {
+            return Err("The import file exceeds the 5 MB limit.");
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
 }
 
 fn not_found(message: &str) -> HttpResponse {

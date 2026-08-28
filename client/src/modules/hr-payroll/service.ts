@@ -20,6 +20,11 @@ import type {
   EmploymentEngagementInput,
   EmploymentEngagementListParams,
   EmploymentEngagementsResponse,
+  HrImportCommit,
+  HrImportMapping,
+  HrImportPreview,
+  HrImportRecord,
+  HrImportsResponse,
   Position,
   PositionInput,
   PositionsResponse,
@@ -44,6 +49,22 @@ export function hrResponseMessage<T>(response: ApiEnvelope<T>, fallback: string)
 }
 
 export const hrPayrollService = {
+  listImports: (params?: { page?: number; per_page?: number }) =>
+    request<HrImportsResponse>(() => httpClient.get(`${BASE_URL}/imports`, { params })),
+  uploadImport: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<HrImportRecord>(() => httpClient.post(`${BASE_URL}/imports`, form));
+  },
+  getImport: (id: string) =>
+    request<HrImportRecord>(() => httpClient.get(`${BASE_URL}/imports/${id}`)),
+  createImportPreview: (id: string, mapping: HrImportMapping) =>
+    request<HrImportPreview>(() => httpClient.put(`${BASE_URL}/imports/${id}/mapping`, mapping)),
+  getImportPreview: (id: string, params?: { page?: number; per_page?: number }) =>
+    request<HrImportPreview>(() => httpClient.get(`${BASE_URL}/imports/${id}/preview`, { params })),
+  commitImport: (id: string, previewId: string) =>
+    request<HrImportCommit>(() => httpClient.post(`${BASE_URL}/imports/${id}/commit`, { preview_id: previewId })),
+
   listDepartments: (params?: DirectoryListParams) =>
     request<DepartmentsResponse>(() => httpClient.get(`${BASE_URL}/departments`, { params })),
   createDepartment: (data: DepartmentInput) =>

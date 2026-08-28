@@ -46,6 +46,7 @@ import { Route as ModulesSisGuardianRelationshipsRouteImport } from './routes/mo
 import { Route as ModulesSisEnrolmentsRouteImport } from './routes/modules/sis/enrolments'
 import { Route as ModulesSisApplicationsRouteImport } from './routes/modules/sis/applications'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
+import { Route as ModulesHrPayrollImportsRouteImport } from './routes/modules/hr-payroll/imports'
 import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
 import { Route as ModulesHrPayrollEmployeesRouteImport } from './routes/modules/hr-payroll/employees'
 import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/modules/hr-payroll/departments'
@@ -250,6 +251,11 @@ const ModulesHrPayrollPositionsRoute =
     path: '/hr-payroll/positions',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesHrPayrollImportsRoute = ModulesHrPayrollImportsRouteImport.update({
+  id: '/hr-payroll/imports',
+  path: '/hr-payroll/imports',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesHrPayrollEmploymentRoute =
   ModulesHrPayrollEmploymentRouteImport.update({
     id: '/hr-payroll/employment',
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
+  '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
+  '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
@@ -496,6 +504,7 @@ export interface FileRoutesById {
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
+  '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
     | '/modules/hr-payroll/employment'
+    | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
     | '/modules/hr-payroll/employment'
+    | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
     | '/modules/hr-payroll/employment'
+    | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
@@ -946,6 +958,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesHrPayrollPositionsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/hr-payroll/imports': {
+      id: '/modules/hr-payroll/imports'
+      path: '/hr-payroll/imports'
+      fullPath: '/modules/hr-payroll/imports'
+      preLoaderRoute: typeof ModulesHrPayrollImportsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/hr-payroll/employment': {
       id: '/modules/hr-payroll/employment'
       path: '/hr-payroll/employment'
@@ -1127,6 +1146,7 @@ interface ModulesRouteChildren {
   ModulesHrPayrollDepartmentsRoute: typeof ModulesHrPayrollDepartmentsRoute
   ModulesHrPayrollEmployeesRoute: typeof ModulesHrPayrollEmployeesRoute
   ModulesHrPayrollEmploymentRoute: typeof ModulesHrPayrollEmploymentRoute
+  ModulesHrPayrollImportsRoute: typeof ModulesHrPayrollImportsRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
   ModulesSisApplicationsRoute: typeof ModulesSisApplicationsRoute
   ModulesSisEnrolmentsRoute: typeof ModulesSisEnrolmentsRoute
@@ -1153,6 +1173,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHrPayrollDepartmentsRoute: ModulesHrPayrollDepartmentsRoute,
   ModulesHrPayrollEmployeesRoute: ModulesHrPayrollEmployeesRoute,
   ModulesHrPayrollEmploymentRoute: ModulesHrPayrollEmploymentRoute,
+  ModulesHrPayrollImportsRoute: ModulesHrPayrollImportsRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
   ModulesSisApplicationsRoute: ModulesSisApplicationsRoute,
   ModulesSisEnrolmentsRoute: ModulesSisEnrolmentsRoute,

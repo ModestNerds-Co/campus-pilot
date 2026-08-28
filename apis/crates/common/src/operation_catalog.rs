@@ -934,6 +934,60 @@ fn build_catalog() -> Vec<RoutedOperation> {
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
+            "/api/1.0/hr-payroll/imports",
+            "hr_payroll.imports.list",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hr-payroll/imports",
+            "hr_payroll.imports.upload",
+            "hr_payroll",
+            "hr_payroll:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/imports/{id}",
+            "hr_payroll.imports.read",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hr-payroll/imports/{id}/mapping",
+            "hr_payroll.imports.preview",
+            "hr_payroll",
+            "hr_payroll:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hr-payroll/imports/{id}/preview",
+            "hr_payroll.imports.preview.read",
+            "hr_payroll",
+            "hr_payroll:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hr-payroll/imports/{id}/commit",
+            "hr_payroll.imports.commit",
+            "hr_payroll",
+            "hr_payroll:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/hr-payroll/departments",
             "hr_payroll.departments.list",
             "hr_payroll",
@@ -1479,6 +1533,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.classes.read"
         | "academics.teaching_assignments.list"
         | "academics.teaching_assignments.read"
+        | "hr_payroll.imports.list"
+        | "hr_payroll.imports.read"
+        | "hr_payroll.imports.preview.read"
         | "hr_payroll.departments.list"
         | "hr_payroll.departments.read"
         | "hr_payroll.positions.list"
@@ -1548,6 +1605,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.teaching_assignments.create"
         | "academics.teaching_assignments.update"
         | "academics.teaching_assignments.delete"
+        | "hr_payroll.imports.upload"
+        | "hr_payroll.imports.preview"
+        | "hr_payroll.imports.commit"
         | "hr_payroll.departments.create"
         | "hr_payroll.departments.update"
         | "hr_payroll.departments.delete"
@@ -1658,7 +1718,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 141);
+        assert_eq!(operation_catalog().len(), 147);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1710,7 +1770,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [58, 76, 7, 0]);
+        assert_eq!(counts, [61, 79, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

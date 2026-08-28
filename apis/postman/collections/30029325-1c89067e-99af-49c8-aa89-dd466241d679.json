@@ -1675,6 +1675,169 @@
           ]
         },
         {
+          "name": "Employee Imports",
+          "description": "Staged CSV/XLSX employee imports. Source files stay private; mapping creates an immutable preview before explicit commit.",
+          "item": [
+            {
+              "name": "List Employee Imports",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/imports?page=1&per_page=20",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "imports"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "per_page", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Upload Employee Import",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": [],
+                      "description": "CSV or XLSX, maximum 5 MB and 5,000 data rows"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/imports",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "imports"]
+                }
+              }
+            },
+            {
+              "name": "Get Employee Import",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/imports/:id",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "imports", ":id"],
+                  "variable": [
+                    { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Employee Import Preview",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"columns\": {\n    \"employee_number\": \"Employee number\",\n    \"display_name\": \"Name\",\n    \"work_email\": \"Work email\",\n    \"department\": \"Department\",\n    \"position\": \"Position\",\n    \"hire_date\": \"Hire date\"\n  },\n  \"date_format\": \"yyyy_mm_dd\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/imports/:id/mapping",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "imports", ":id", "mapping"],
+                  "variable": [
+                    { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Employee Import Preview",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/imports/:id/preview?page=1&per_page=100",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "imports", ":id", "preview"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "per_page", "value": "100" }
+                  ],
+                  "variable": [
+                    { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Commit Employee Import",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"preview_id\": \"00000000-0000-0000-0000-000000000000\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/imports/:id/commit",
+                  "host": ["{{base_url}}"],
+                  "path": ["hr-payroll", "imports", ":id", "commit"],
+                  "variable": [
+                    { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "Employment Engagements",
           "item": [
             {

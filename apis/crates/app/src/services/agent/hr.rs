@@ -15,12 +15,13 @@ use cp_hr_payroll::{
         PaginatedEmployeeAvailabilityResponse, PaginatedEmployeesResponse,
         PaginatedEmploymentEngagementsResponse, PaginatedPositionsResponse, PositionResponse,
     },
+    imports::HrImportOps,
     ops::{
         DepartmentOps, EmployeeAvailabilityOps, EmployeeOps, EmploymentEngagementOps, PositionOps,
     },
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -787,6 +788,189 @@ impl Capability for HrEmployeeAvailabilityReadCapability {
         Ok(ReadEmployeeAvailabilityOutput {
             availability: EmployeeAvailabilityResponse::from(record),
         })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct HrImportsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+pub(super) struct HrImportsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrImportsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.imports.list",
+                "List employee imports",
+                "Returns employee import metadata and validation or commit totals without source bytes.",
+                json!({
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+                }),
+                json!({ "imports": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "hr_payroll.imports",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrImportsListCapability {
+    type Input = HrImportsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (imports, total) =
+            HrImportOps::list(&self.pool, context.principal().tenant_id(), page, per_page)
+                .await
+                .map_err(|_| dependency_failure("Employee imports could not be loaded."))?;
+        Ok(json!({
+            "imports": imports,
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct HrImportReadInput {
+    import_id: Uuid,
+}
+
+pub(super) struct HrImportReadCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrImportReadCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.imports.read",
+                "Read employee import",
+                "Returns one employee import and its latest totals without source bytes.",
+                json!({ "import_id": { "type": "string", "format": "uuid" } }),
+                json!({ "import": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "hr_payroll.imports",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrImportReadCapability {
+    type Input = HrImportReadInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("data_import", input.import_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let record = HrImportOps::get(&self.pool, context.principal().tenant_id(), input.import_id)
+            .await
+            .map_err(|_| dependency_failure("The employee import could not be loaded."))?
+            .ok_or_else(|| not_found("The employee import was not found."))?;
+        Ok(json!({ "import": record }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct HrImportPreviewInput {
+    import_id: Uuid,
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+pub(super) struct HrImportPreviewCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrImportPreviewCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.imports.preview.read",
+                "Read employee import preview",
+                "Returns bounded validated employee rows and issues. The retained source file and unmapped columns are never returned.",
+                json!({
+                    "import_id": { "type": "string", "format": "uuid" },
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+                }),
+                json!({ "preview": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "hr_payroll.import_previews",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrImportPreviewCapability {
+    type Input = HrImportPreviewInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("data_import", input.import_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let preview = HrImportOps::preview(
+            &self.pool,
+            context.principal().tenant_id(),
+            input.import_id,
+            page,
+            per_page,
+        )
+        .await
+        .map_err(|_| dependency_failure("The employee import preview could not be loaded."))?
+        .ok_or_else(|| not_found("The employee import preview was not found."))?;
+        Ok(json!({ "preview": preview }))
     }
 }
 
