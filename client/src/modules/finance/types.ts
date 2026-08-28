@@ -5,6 +5,7 @@ export type FiscalYearStatus = "draft" | "open" | "closed";
 export type AccountingPeriodStatus = "planned" | "open" | "closed";
 export type PeriodCadence = "monthly" | "quarterly";
 export type JournalStatus = "draft" | "submitted" | "approved" | "rejected" | "posted" | "reversed";
+export type PostingRequestStatus = "pending" | "converted" | "rejected" | "cancelled";
 
 export interface FinanceCurrency {
   id: string;
@@ -184,6 +185,54 @@ export interface JournalValidation {
   reporting_credit_minor: number;
 }
 
+export interface FinancePostingRequestSummary {
+  id: string;
+  source_module_key: string;
+  source_record_type: string;
+  source_record_id: string;
+  source_event_key: string;
+  posting_date: string;
+  transaction_currency_id: string;
+  transaction_currency_code: string;
+  transaction_currency_minor_units: number;
+  description: string;
+  reference: string | null;
+  status: PostingRequestStatus;
+  version: number;
+  journal_id: string | null;
+  line_count: number;
+  debit_minor: number;
+  credit_minor: number;
+  created_by: string;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  resolution_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinancePostingRequestLine {
+  id: string;
+  line_number: number;
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  description: string | null;
+  debit_minor: number;
+  credit_minor: number;
+}
+
+export interface FinancePostingRequest extends FinancePostingRequestSummary {
+  lines: FinancePostingRequestLine[];
+}
+
+export interface PostingRequestConversionLine {
+  line_id: string;
+  reporting_debit_minor: number;
+  reporting_credit_minor: number;
+  exchange_rate: string | null;
+}
+
 export interface ListParams {
   page?: number;
   per_page?: number;
@@ -193,6 +242,7 @@ export interface ListParams {
   currency_mode?: string;
   starts_on?: string;
   ends_on?: string;
+  source_module?: string;
 }
 
 export interface PaginationMeta {
@@ -217,3 +267,4 @@ export interface AccountsResponse { accounts: FinanceAccount[] }
 export interface FiscalYearsResponse { fiscal_years: FinanceFiscalYear[] }
 export interface AccountingPeriodsResponse { periods: FinanceAccountingPeriod[] }
 export interface JournalsResponse { journals: FinanceJournalSummary[] }
+export interface PostingRequestsResponse { posting_requests: FinancePostingRequestSummary[] }

@@ -10,6 +10,7 @@ use cp_common::PaginationMeta;
 use cp_finance::journals::JournalOps;
 use cp_finance::ledger::{AccountOps, CurrencyOps};
 use cp_finance::periods::{AccountingPeriodOps, FiscalYearOps};
+use cp_finance::posting_requests::PostingRequestOps;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -180,6 +181,7 @@ pub(super) enum FinanceReadKind {
     Account,
     FiscalYear,
     Journal,
+    PostingRequest,
 }
 impl FinanceReadKind {
     const fn operation_key(self) -> &'static str {
@@ -188,6 +190,7 @@ impl FinanceReadKind {
             Self::Account => "finance.accounts.read",
             Self::FiscalYear => "finance.fiscal_years.read",
             Self::Journal => "finance.journals.read",
+            Self::PostingRequest => "finance.posting_requests.read",
         }
     }
 }
@@ -224,6 +227,12 @@ impl FinanceReadCapability {
                 "finance.journals",
                 DataSensitivity::Sensitive,
             ),
+            FinanceReadKind::PostingRequest => (
+                "Read finance posting request",
+                "Returns one immutable operational posting request and its Finance resolution state.",
+                "finance.posting_requests",
+                DataSensitivity::Sensitive,
+            ),
         };
         Self {
             pool,
@@ -254,6 +263,7 @@ impl Capability for FinanceReadCapability {
             FinanceReadKind::Account => "finance_account",
             FinanceReadKind::FiscalYear => "finance_fiscal_year",
             FinanceReadKind::Journal => "finance_journal",
+            FinanceReadKind::PostingRequest => "finance_posting_request",
         };
         CapabilityScope::resources([resource(kind, input.record_id)])
             .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
@@ -286,6 +296,13 @@ impl Capability for FinanceReadCapability {
                     .await
                     .map(|record| record.map(|value| json!(value)))
             }
+            FinanceReadKind::PostingRequest => PostingRequestOps::get_by_id(
+                &self.pool,
+                context.principal().tenant_id(),
+                input.record_id,
+            )
+            .await
+            .map(|record| record.map(|value| json!(value))),
         }
         .map_err(|_| dependency_failure("The finance record could not be loaded."))?
         .ok_or_else(|| {
@@ -295,6 +312,81 @@ impl Capability for FinanceReadCapability {
             )
         })?;
         Ok(json!({ "record": record }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FinancePostingRequestsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    status: Option<String>,
+    source_module: Option<String>,
+}
+
+pub(super) struct FinancePostingRequestsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FinancePostingRequestsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "finance.posting_requests.list",
+                "List finance posting requests",
+                "Returns balanced operational requests awaiting or carrying a Finance resolution.",
+                json!({
+                    "page": page_schema(),
+                    "per_page": per_page_schema(),
+                    "search": search_schema(),
+                    "status": { "type": ["string", "null"], "enum": ["pending", "converted", "rejected", "cancelled", null] },
+                    "source_module": { "type": ["string", "null"], "maxLength": 64 }
+                }),
+                json!({ "posting_requests": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "finance.posting_requests",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FinancePostingRequestsListCapability {
+    type Input = FinancePostingRequestsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (posting_requests, total) = PostingRequestOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            trimmed(input.status.as_deref()),
+            trimmed(input.source_module.as_deref()),
+        )
+        .await
+        .map_err(|_| dependency_failure("Finance posting requests could not be loaded."))?;
+        Ok(json!({
+            "posting_requests": posting_requests,
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
     }
 }
 

@@ -38,7 +38,8 @@ use fees::{
 };
 use finance::{
     FinanceJournalValidationCapability, FinanceJournalsListCapability, FinanceListCapability,
-    FinanceListKind, FinancePeriodsCapability, FinanceReadCapability, FinanceReadKind,
+    FinanceListKind, FinancePeriodsCapability, FinancePostingRequestsListCapability,
+    FinanceReadCapability, FinanceReadKind,
 };
 use fleet::{
     FleetDriverCandidatesListCapability, FleetDriverReadCapability, FleetDriversListCapability,
@@ -160,6 +161,7 @@ pub fn build_capability_registry(
         FinanceReadKind::Account,
         FinanceReadKind::FiscalYear,
         FinanceReadKind::Journal,
+        FinanceReadKind::PostingRequest,
     ] {
         registry
             .register(FinanceReadCapability::new(pool.clone(), kind))
@@ -183,6 +185,11 @@ pub fn build_capability_registry(
         .register(FinanceJournalsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Finance journals-list capability: {error}"));
     registry
+        .register(FinancePostingRequestsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Finance posting-requests-list capability: {error}")
+        });
+    registry
         .register(FinanceJournalValidationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Finance journal-validation capability: {error}"));
     registry
@@ -191,12 +198,20 @@ pub fn build_capability_registry(
     registry
         .register(FeesLearnerCandidatesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fees learner-candidates capability: {error}"));
-    for kind in [FeesListKind::BillingAccounts, FeesListKind::FeeStructures] {
+    for kind in [
+        FeesListKind::BillingAccounts,
+        FeesListKind::FeeStructures,
+        FeesListKind::Invoices,
+    ] {
         registry
             .register(FeesListCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
-    for kind in [FeesReadKind::BillingAccount, FeesReadKind::FeeStructure] {
+    for kind in [
+        FeesReadKind::BillingAccount,
+        FeesReadKind::FeeStructure,
+        FeesReadKind::Invoice,
+    ] {
         registry
             .register(FeesReadCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
@@ -470,6 +485,8 @@ mod tests {
                 "fees.billing_accounts.read",
                 "fees.fee_structures.list",
                 "fees.fee_structures.read",
+                "fees.invoices.list",
+                "fees.invoices.read",
                 "fees.learner_candidates.list",
                 "fees.reference_data.read",
                 "finance.accounting_periods.list",
@@ -482,6 +499,8 @@ mod tests {
                 "finance.journals.list",
                 "finance.journals.read",
                 "finance.journals.validation.read",
+                "finance.posting_requests.list",
+                "finance.posting_requests.read",
                 "fleet.driver_candidates.list",
                 "fleet.drivers.list",
                 "fleet.drivers.read",

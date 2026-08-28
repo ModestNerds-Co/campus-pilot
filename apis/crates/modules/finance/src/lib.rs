@@ -8,4 +8,5 @@
 pub mod journals;
 pub mod ledger;
 pub mod periods;
+pub mod posting_requests;
 pub mod routes;

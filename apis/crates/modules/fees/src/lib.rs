@@ -9,4 +9,5 @@
 //  the accounting ledger and receives only typed, balanced posting requests.
 
 pub mod foundation;
+pub mod invoices;
 pub mod routes;

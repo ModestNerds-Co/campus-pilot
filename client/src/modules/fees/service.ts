@@ -5,7 +5,7 @@ import { httpClient } from "@/lib/http-client";
 import type {
   ApiEnvelope, BillingAccount, BillingAccountsResponse, BillingAccountStatus,
   FeeStructure, FeeStructureInput, FeeStructuresResponse, FeesReferenceData,
-  LearnerCandidatesResponse, ListParams,
+  Invoice, InvoiceInput, InvoicesResponse, LearnerCandidatesResponse, ListParams,
 } from "./types";
 
 const BASE_URL = "/api/1.0/fees";
@@ -33,6 +33,11 @@ export const feesService = {
   deleteFeeStructure: (id: string, expectedVersion: number) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/fee-structures/${id}`, { params: { expected_version: expectedVersion } })),
   activateFeeStructure: (id: string, expectedVersion: number) => request<FeeStructure>(() => httpClient.post(`${BASE_URL}/fee-structures/${id}/activate`, { expected_version: expectedVersion })),
   retireFeeStructure: (id: string, expectedVersion: number) => request<FeeStructure>(() => httpClient.post(`${BASE_URL}/fee-structures/${id}/retire`, { expected_version: expectedVersion })),
+  listInvoices: (params?: ListParams) => request<InvoicesResponse>(() => httpClient.get(`${BASE_URL}/invoices`, { params })),
+  readInvoice: (id: string) => request<Invoice>(() => httpClient.get(`${BASE_URL}/invoices/${id}`)),
+  createInvoice: (data: InvoiceInput & { idempotency_key: string }) => request<Invoice>(() => httpClient.post(`${BASE_URL}/invoices`, data)),
+  issueInvoice: (id: string, expectedVersion: number) => request<Invoice>(() => httpClient.post(`${BASE_URL}/invoices/${id}/issue`, { expected_version: expectedVersion })),
+  deleteInvoice: (id: string, expectedVersion: number) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/invoices/${id}`, { params: { expected_version: expectedVersion } })),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

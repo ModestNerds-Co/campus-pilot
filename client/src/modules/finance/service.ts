@@ -7,6 +7,7 @@ import type {
   CurrencyInput, FinanceAccount, FinanceAccountingPeriod, FinanceCurrency, FinanceFiscalYear,
   FiscalYearInput, FiscalYearsResponse, AccountingPeriodsResponse, ListParams,
   FinanceJournal, JournalInput, JournalsResponse, JournalValidation,
+  FinancePostingRequest, PostingRequestConversionLine, PostingRequestsResponse,
 } from "./types";
 
 const BASE_URL = "/api/1.0/finance";
@@ -49,6 +50,10 @@ export const financeService = {
   rejectJournal: (id: string, expectedVersion: number, reason: string) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/reject`, { expected_version: expectedVersion, reason })),
   postJournal: (id: string, expectedVersion: number) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/post`, { expected_version: expectedVersion })),
   reverseJournal: (id: string, expectedVersion: number, journalDate: string, reason: string) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/reverse`, { expected_version: expectedVersion, journal_date: journalDate, reason, idempotency_key: crypto.randomUUID() })),
+  listPostingRequests: (params?: ListParams) => request<PostingRequestsResponse>(() => httpClient.get(`${BASE_URL}/posting-requests`, { params })),
+  getPostingRequest: (id: string) => request<FinancePostingRequest>(() => httpClient.get(`${BASE_URL}/posting-requests/${id}`)),
+  convertPostingRequest: (id: string, expectedVersion: number, lines: PostingRequestConversionLine[]) => request<FinancePostingRequest>(() => httpClient.post(`${BASE_URL}/posting-requests/${id}/convert`, { expected_version: expectedVersion, idempotency_key: crypto.randomUUID(), lines })),
+  rejectPostingRequest: (id: string, expectedVersion: number, reason: string) => request<FinancePostingRequest>(() => httpClient.post(`${BASE_URL}/posting-requests/${id}/reject`, { expected_version: expectedVersion, reason })),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

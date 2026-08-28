@@ -23,6 +23,10 @@ use crate::foundation::{
     LearnerCandidatesResponse, PaginatedBillingAccountsResponse, PaginatedFeeStructuresResponse,
     UpdateBillingAccountRequest, UpdateFeeStructureRequest, VersionRequest,
 };
+use crate::invoices::{
+    CreateInvoiceRequest, InvoiceDeleteOutcome, InvoiceListQuery, InvoiceOps, IssueInvoiceRequest,
+    PaginatedInvoicesResponse,
+};
 
 #[get("/reference-data")]
 async fn read_reference_data(
@@ -330,6 +334,155 @@ async fn retire_fee_structure(
     )
 }
 
+#[get("/invoices")]
+async fn list_invoices(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    access: web::ReqData<AccessContext>,
+    query: web::Query<InvoiceListQuery>,
+) -> HttpResponse {
+    let tenant_id = tenant_id(tenant);
+    let visible_learner_ids = match billing_scope(
+        pool.get_ref(),
+        tenant_id,
+        actor.into_inner(),
+        access.into_inner(),
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match InvoiceOps::list(
+        pool.get_ref(),
+        tenant_id,
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        trimmed(query.status.as_deref()),
+        visible_learner_ids.as_deref(),
+    )
+    .await
+    {
+        Ok((invoices, total)) => paginated(
+            PaginatedInvoicesResponse { invoices },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/invoices/{id}")]
+async fn read_invoice(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    access: web::ReqData<AccessContext>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let tenant_id = tenant_id(tenant);
+    let visible_learner_ids = match billing_scope(
+        pool.get_ref(),
+        tenant_id,
+        actor.into_inner(),
+        access.into_inner(),
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    match InvoiceOps::get_by_id(
+        pool.get_ref(),
+        tenant_id,
+        path.into_inner(),
+        visible_learner_ids.as_deref(),
+    )
+    .await
+    {
+        Ok(value) => found(value, "Invoice"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/invoices")]
+async fn create_invoice(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<CreateInvoiceRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    created_or_error(
+        InvoiceOps::create(
+            pool.get_ref(),
+            tenant_id(tenant),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[post("/invoices/{id}/issue")]
+async fn issue_invoice(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<IssueInvoiceRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        InvoiceOps::issue(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Invoice",
+    )
+}
+
+#[delete("/invoices/{id}")]
+async fn delete_invoice(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    query: web::Query<VersionRequest>,
+) -> HttpResponse {
+    match InvoiceOps::delete(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        query.expected_version,
+        actor.into_inner(),
+        request_context.into_inner(),
+    )
+    .await
+    {
+        Ok(InvoiceDeleteOutcome::Deleted) => ok(serde_json::json!({ "deleted": true })),
+        Ok(InvoiceDeleteOutcome::NotFound) => not_found("Invoice"),
+        Err(error) => operation_error(error),
+    }
+}
+
 async fn billing_scope(
     pool: &PgPool,
     tenant_id: Uuid,
@@ -495,6 +648,11 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(update_fee_structure)
             .service(delete_fee_structure)
             .service(activate_fee_structure)
-            .service(retire_fee_structure),
+            .service(retire_fee_structure)
+            .service(list_invoices)
+            .service(read_invoice)
+            .service(create_invoice)
+            .service(issue_invoice)
+            .service(delete_invoice),
     );
 }

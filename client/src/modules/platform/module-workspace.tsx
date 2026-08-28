@@ -107,6 +107,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
           <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="finance-workspaces">Set the accounting foundation</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <FinanceLink description="Review operational requests before creating journal drafts." label="Posting requests" to="/modules/finance/posting-requests" />
             <FinanceLink description="Prepare, approve, post, and reverse balanced ledger entries." label="Journals" to="/modules/finance/journals" />
             <FinanceLink description="Set the reporting currency and currencies used in transactions." label="Currencies" to="/modules/finance/currencies" />
             <FinanceLink description="Maintain summary and posting accounts for the campus ledger." label="Chart of accounts" to="/modules/finance/chart-of-accounts" />
@@ -125,6 +126,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
           <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="fees-workspaces">Configure learner billing</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <FeesLink description="Create learner invoices and track their Finance request state." label="Invoices" to="/modules/fees/invoices" />
             <FeesLink description="Open and maintain the Fees record linked to each learner." label="Billing accounts" to="/modules/fees/billing-accounts" />
             <FeesLink description="Define amounts, academic scope, currency, and Finance posting accounts." label="Fee structures" to="/modules/fees/fee-structures" />
           </div>
@@ -220,14 +222,14 @@ const AcademicLink: React.FC<{ description: string; label: string; to: "/modules
   </Link>
 );
 
-const FinanceLink: React.FC<{ description: string; label: string; to: "/modules/finance/journals" | "/modules/finance/currencies" | "/modules/finance/chart-of-accounts" | "/modules/finance/accounting-periods" }> = ({ description, label, to }) => (
+const FinanceLink: React.FC<{ description: string; label: string; to: "/modules/finance/posting-requests" | "/modules/finance/journals" | "/modules/finance/currencies" | "/modules/finance/chart-of-accounts" | "/modules/finance/accounting-periods" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
   </Link>
 );
 
-const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fees/billing-accounts" | "/modules/fees/fee-structures" }> = ({ description, label, to }) => (
+const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fees/invoices" | "/modules/fees/billing-accounts" | "/modules/fees/fee-structures" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

@@ -485,10 +485,10 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 14);
             } else if module_key == "finance" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 10);
+                assert_eq!(module.executable_capabilities(), 12);
             } else if module_key == "fees" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 6);
+                assert_eq!(module.executable_capabilities(), 8);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

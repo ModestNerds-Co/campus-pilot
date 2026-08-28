@@ -1,5 +1,6 @@
 export type BillingAccountStatus = "active" | "on_hold" | "closed";
 export type FeeStructureStatus = "draft" | "active" | "retired";
+export type InvoiceStatus = "draft" | "issued";
 
 export interface PaginationMeta {
   current_page: number;
@@ -122,6 +123,62 @@ export interface FeeStructureInput {
   amount_minor: number;
 }
 
+export interface InvoiceSummary {
+  id: string;
+  billing_account_id: string;
+  billing_account_number: string;
+  learner_id: string;
+  learner_number: string;
+  learner_name: string;
+  academic_year_id: string;
+  academic_year_name: string;
+  academic_term_id: string | null;
+  academic_term_name: string | null;
+  currency_id: string;
+  currency_code: string;
+  currency_minor_units: number;
+  posting_request_id: string | null;
+  posting_request_status: string | null;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  description: string | null;
+  reference: string | null;
+  total_minor: number;
+  status: InvoiceStatus;
+  version: number;
+  line_count: number;
+  created_by: string;
+  issued_by: string | null;
+  issued_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceLine {
+  id: string;
+  line_number: number;
+  fee_structure_id: string;
+  receivable_account_id: string;
+  revenue_account_id: string;
+  fee_code: string;
+  description: string;
+  amount_minor: number;
+}
+
+export interface Invoice extends InvoiceSummary { lines: InvoiceLine[] }
+
+export interface InvoiceInput {
+  billing_account_id: string;
+  academic_year_id: string;
+  academic_term_id: string | null;
+  invoice_date: string;
+  due_date: string;
+  description: string | null;
+  reference: string | null;
+  fee_structure_ids: string[];
+}
+
 export interface ListParams {
   page?: number;
   per_page?: number;
@@ -132,3 +189,4 @@ export interface ListParams {
 export interface BillingAccountsResponse { billing_accounts: BillingAccount[] }
 export interface FeeStructuresResponse { fee_structures: FeeStructure[] }
 export interface LearnerCandidatesResponse { learners: LearnerCandidate[] }
+export interface InvoicesResponse { invoices: InvoiceSummary[] }

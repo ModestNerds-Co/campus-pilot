@@ -25,6 +25,10 @@ use crate::periods::{
     AccountingPeriodOps, AccountingPeriodsResponse, CalendarOutcome, CreateFiscalYearRequest,
     FiscalYearListQuery, FiscalYearOps, PaginatedFiscalYearsResponse, UpdateFiscalYearRequest,
 };
+use crate::posting_requests::{
+    ConvertPostingRequestRequest, PaginatedPostingRequestsResponse, PostingRequestListQuery,
+    PostingRequestOps, RejectPostingRequestRequest,
+};
 
 #[get("/currencies")]
 async fn list_currencies(
@@ -49,6 +53,98 @@ async fn list_currencies(
         per_page,
         total,
     ))
+}
+
+#[get("/posting-requests")]
+async fn list_posting_requests(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<PostingRequestListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match PostingRequestOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        trimmed(query.status.as_deref()),
+        trimmed(query.source_module.as_deref()),
+    )
+    .await
+    {
+        Ok((posting_requests, total)) => paginated(
+            PaginatedPostingRequestsResponse { posting_requests },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/posting-requests/{id}")]
+async fn read_posting_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match PostingRequestOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(value) => found(value, "Posting request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/posting-requests/{id}/convert")]
+async fn convert_posting_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ConvertPostingRequestRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        PostingRequestOps::convert_to_journal(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Posting request",
+    )
+}
+
+#[post("/posting-requests/{id}/reject")]
+async fn reject_posting_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<RejectPostingRequestRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        PostingRequestOps::reject(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Posting request",
+    )
 }
 
 #[get("/currencies/{id}")]
@@ -708,6 +804,9 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         || safe_message.starts_with("Reversal reason")
         || safe_message.starts_with("Idempotency key")
         || safe_message.starts_with("Source ")
+        || safe_message.starts_with("Posting request")
+        || safe_message.starts_with("The posting")
+        || safe_message.starts_with("Every posting")
     {
         return HttpResponse::BadRequest().json(ApiResponse::from_status(
             StatusCode::BAD_REQUEST,
@@ -746,6 +845,10 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(list_accounting_periods)
             .service(close_accounting_period)
             .service(reopen_accounting_period)
+            .service(list_posting_requests)
+            .service(read_posting_request)
+            .service(convert_posting_request)
+            .service(reject_posting_request)
             .service(list_journals)
             .service(read_journal)
             .service(validate_journal)

@@ -7,6 +7,7 @@ use cp_agent::{
 };
 use cp_common::PaginationMeta;
 use cp_fees::foundation::{BillingAccountOps, FeeStructureOps, FeesReferenceOps};
+use cp_fees::invoices::InvoiceOps;
 use cp_sis::ops::LearnerOps;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -30,6 +31,7 @@ pub(super) struct FeesListInput {
 pub(super) enum FeesListKind {
     BillingAccounts,
     FeeStructures,
+    Invoices,
 }
 
 impl FeesListKind {
@@ -37,6 +39,7 @@ impl FeesListKind {
         match self {
             Self::BillingAccounts => "fees.billing_accounts.list",
             Self::FeeStructures => "fees.fee_structures.list",
+            Self::Invoices => "fees.invoices.list",
         }
     }
 }
@@ -63,6 +66,13 @@ impl FeesListCapability {
                 "fee_structures",
                 DataSensitivity::General,
                 "fees.fee_structures",
+            ),
+            FeesListKind::Invoices => (
+                "List learner invoices",
+                "Returns immutable learner invoice headers and Finance posting-request state within the caller's current learner scope.",
+                "invoices",
+                DataSensitivity::Sensitive,
+                "fees.invoices",
             ),
         };
         Self {
@@ -143,6 +153,26 @@ impl Capability for FeesListCapability {
                     "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
                 }))
             }
+            FeesListKind::Invoices => {
+                let visible_learner_ids =
+                    billing_visibility(&self.pool, principal.tenant_id(), principal.user_id())
+                        .await?;
+                let (invoices, total) = InvoiceOps::list(
+                    &self.pool,
+                    principal.tenant_id(),
+                    page,
+                    per_page,
+                    trimmed(input.search.as_deref()),
+                    trimmed(input.status.as_deref()),
+                    visible_learner_ids.as_deref(),
+                )
+                .await
+                .map_err(|_| dependency_failure("Invoices could not be loaded."))?;
+                Ok(json!({
+                    "invoices": invoices,
+                    "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+                }))
+            }
         }
     }
 }
@@ -157,6 +187,7 @@ pub(super) struct FeesRecordInput {
 pub(super) enum FeesReadKind {
     BillingAccount,
     FeeStructure,
+    Invoice,
 }
 
 impl FeesReadKind {
@@ -164,6 +195,7 @@ impl FeesReadKind {
         match self {
             Self::BillingAccount => "fees.billing_accounts.read",
             Self::FeeStructure => "fees.fee_structures.read",
+            Self::Invoice => "fees.invoices.read",
         }
     }
 }
@@ -188,6 +220,12 @@ impl FeesReadCapability {
                 "Returns one versioned fee definition and its controlled lifecycle.",
                 "fees.fee_structures",
                 DataSensitivity::General,
+            ),
+            FeesReadKind::Invoice => (
+                "Read learner invoice",
+                "Returns one immutable learner invoice and its Finance posting-request state within the caller's current learner scope.",
+                "fees.invoices",
+                DataSensitivity::Sensitive,
             ),
         };
         Self {
@@ -219,6 +257,7 @@ impl Capability for FeesReadCapability {
         let kind = match self.kind {
             FeesReadKind::BillingAccount => "fees_billing_account",
             FeesReadKind::FeeStructure => "fees_fee_structure",
+            FeesReadKind::Invoice => "fees_invoice",
         };
         CapabilityScope::resources([resource(kind, input.record_id)])
             .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
@@ -248,6 +287,19 @@ impl Capability for FeesReadCapability {
                 FeeStructureOps::get_by_id(&self.pool, principal.tenant_id(), input.record_id)
                     .await
                     .map(|value| value.map(|record| json!(record)))
+            }
+            FeesReadKind::Invoice => {
+                let visible_learner_ids =
+                    billing_visibility(&self.pool, principal.tenant_id(), principal.user_id())
+                        .await?;
+                InvoiceOps::get_by_id(
+                    &self.pool,
+                    principal.tenant_id(),
+                    input.record_id,
+                    visible_learner_ids.as_deref(),
+                )
+                .await
+                .map(|value| value.map(|record| json!(record)))
             }
         }
         .map_err(|_| dependency_failure("The fees record could not be loaded."))?

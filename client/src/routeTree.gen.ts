@@ -54,10 +54,12 @@ import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modul
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
+import { Route as ModulesFinancePostingRequestsRouteImport } from './routes/modules/finance/posting-requests'
 import { Route as ModulesFinanceJournalsRouteImport } from './routes/modules/finance/journals'
 import { Route as ModulesFinanceCurrenciesRouteImport } from './routes/modules/finance/currencies'
 import { Route as ModulesFinanceChartOfAccountsRouteImport } from './routes/modules/finance/chart-of-accounts'
 import { Route as ModulesFinanceAccountingPeriodsRouteImport } from './routes/modules/finance/accounting-periods'
+import { Route as ModulesFeesInvoicesRouteImport } from './routes/modules/fees/invoices'
 import { Route as ModulesFeesFeeStructuresRouteImport } from './routes/modules/fees/fee-structures'
 import { Route as ModulesFeesBillingAccountsRouteImport } from './routes/modules/fees/billing-accounts'
 import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
@@ -302,6 +304,12 @@ const ModulesFleetDailyLogRoute = ModulesFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesFinancePostingRequestsRoute =
+  ModulesFinancePostingRequestsRouteImport.update({
+    id: '/finance/posting-requests',
+    path: '/finance/posting-requests',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesFinanceJournalsRoute = ModulesFinanceJournalsRouteImport.update({
   id: '/finance/journals',
   path: '/finance/journals',
@@ -325,6 +333,11 @@ const ModulesFinanceAccountingPeriodsRoute =
     path: '/finance/accounting-periods',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesFeesInvoicesRoute = ModulesFeesInvoicesRouteImport.update({
+  id: '/fees/invoices',
+  path: '/fees/invoices',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesFeesFeeStructuresRoute =
   ModulesFeesFeeStructuresRouteImport.update({
     id: '/fees/fee-structures',
@@ -436,10 +449,12 @@ export interface FileRoutesByFullPath {
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
+  '/modules/fees/invoices': typeof ModulesFeesInvoicesRoute
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
   '/modules/finance/journals': typeof ModulesFinanceJournalsRoute
+  '/modules/finance/posting-requests': typeof ModulesFinancePostingRequestsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -498,10 +513,12 @@ export interface FileRoutesByTo {
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
+  '/modules/fees/invoices': typeof ModulesFeesInvoicesRoute
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
   '/modules/finance/journals': typeof ModulesFinanceJournalsRoute
+  '/modules/finance/posting-requests': typeof ModulesFinancePostingRequestsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -562,10 +579,12 @@ export interface FileRoutesById {
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
+  '/modules/fees/invoices': typeof ModulesFeesInvoicesRoute
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
   '/modules/finance/journals': typeof ModulesFinanceJournalsRoute
+  '/modules/finance/posting-requests': typeof ModulesFinancePostingRequestsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -627,10 +646,12 @@ export interface FileRouteTypes {
     | '/modules/academics/terms'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
+    | '/modules/fees/invoices'
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
     | '/modules/finance/journals'
+    | '/modules/finance/posting-requests'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -689,10 +710,12 @@ export interface FileRouteTypes {
     | '/modules/academics/terms'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
+    | '/modules/fees/invoices'
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
     | '/modules/finance/journals'
+    | '/modules/finance/posting-requests'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -752,10 +775,12 @@ export interface FileRouteTypes {
     | '/modules/academics/terms'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
+    | '/modules/fees/invoices'
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
     | '/modules/finance/journals'
+    | '/modules/finance/posting-requests'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -1104,6 +1129,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFleetDailyLogRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/finance/posting-requests': {
+      id: '/modules/finance/posting-requests'
+      path: '/finance/posting-requests'
+      fullPath: '/modules/finance/posting-requests'
+      preLoaderRoute: typeof ModulesFinancePostingRequestsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/finance/journals': {
       id: '/modules/finance/journals'
       path: '/finance/journals'
@@ -1130,6 +1162,13 @@ declare module '@tanstack/react-router' {
       path: '/finance/accounting-periods'
       fullPath: '/modules/finance/accounting-periods'
       preLoaderRoute: typeof ModulesFinanceAccountingPeriodsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/fees/invoices': {
+      id: '/modules/fees/invoices'
+      path: '/fees/invoices'
+      fullPath: '/modules/fees/invoices'
+      preLoaderRoute: typeof ModulesFeesInvoicesRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/fees/fee-structures': {
@@ -1281,10 +1320,12 @@ interface ModulesRouteChildren {
   ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
   ModulesFeesBillingAccountsRoute: typeof ModulesFeesBillingAccountsRoute
   ModulesFeesFeeStructuresRoute: typeof ModulesFeesFeeStructuresRoute
+  ModulesFeesInvoicesRoute: typeof ModulesFeesInvoicesRoute
   ModulesFinanceAccountingPeriodsRoute: typeof ModulesFinanceAccountingPeriodsRoute
   ModulesFinanceChartOfAccountsRoute: typeof ModulesFinanceChartOfAccountsRoute
   ModulesFinanceCurrenciesRoute: typeof ModulesFinanceCurrenciesRoute
   ModulesFinanceJournalsRoute: typeof ModulesFinanceJournalsRoute
+  ModulesFinancePostingRequestsRoute: typeof ModulesFinancePostingRequestsRoute
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
@@ -1315,10 +1356,12 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
   ModulesFeesBillingAccountsRoute: ModulesFeesBillingAccountsRoute,
   ModulesFeesFeeStructuresRoute: ModulesFeesFeeStructuresRoute,
+  ModulesFeesInvoicesRoute: ModulesFeesInvoicesRoute,
   ModulesFinanceAccountingPeriodsRoute: ModulesFinanceAccountingPeriodsRoute,
   ModulesFinanceChartOfAccountsRoute: ModulesFinanceChartOfAccountsRoute,
   ModulesFinanceCurrenciesRoute: ModulesFinanceCurrenciesRoute,
   ModulesFinanceJournalsRoute: ModulesFinanceJournalsRoute,
+  ModulesFinancePostingRequestsRoute: ModulesFinancePostingRequestsRoute,
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,

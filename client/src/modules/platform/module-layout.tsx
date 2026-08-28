@@ -14,6 +14,7 @@ import {
   GraduationCap,
   FileUp,
   FileCheck2,
+  FileInput,
   LayoutDashboard,
   ListOrdered,
   Landmark,
@@ -101,6 +102,7 @@ const sisNavigation: LocalNavItem[] = [
 ];
 
 const financeNavigation: LocalNavItem[] = [
+  { label: "Posting requests", path: "/modules/finance/posting-requests", icon: FileInput },
   { label: "Journals", path: "/modules/finance/journals", icon: FileCheck2 },
   { label: "Currencies", path: "/modules/finance/currencies", icon: Coins },
   { label: "Chart of accounts", path: "/modules/finance/chart-of-accounts", icon: Landmark },
@@ -108,6 +110,7 @@ const financeNavigation: LocalNavItem[] = [
 ];
 
 const feesNavigation: LocalNavItem[] = [
+  { label: "Invoices", path: "/modules/fees/invoices", icon: FileCheck2 },
   { label: "Billing accounts", path: "/modules/fees/billing-accounts", icon: UsersRound },
   { label: "Fee structures", path: "/modules/fees/fee-structures", icon: ReceiptText },
 ];
@@ -275,8 +278,10 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/finance/chart-of-accounts") return <Link className={navClass(active)} to="/modules/finance/chart-of-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/accounting-periods") return <Link className={navClass(active)} to="/modules/finance/accounting-periods"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/journals") return <Link className={navClass(active)} to="/modules/finance/journals"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/finance/posting-requests") return <Link className={navClass(active)} to="/modules/finance/posting-requests"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fees/billing-accounts") return <Link className={navClass(active)} to="/modules/fees/billing-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fees/fee-structures") return <Link className={navClass(active)} to="/modules/fees/fee-structures"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/fees/invoices") return <Link className={navClass(active)} to="/modules/fees/invoices"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

@@ -1204,6 +1204,42 @@ fn build_catalog() -> Vec<RoutedOperation> {
         ),
         route(
             Method::GET,
+            "/api/1.0/finance/posting-requests",
+            "finance.posting_requests.list",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/posting-requests/{id}",
+            "finance.posting_requests.read",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/posting-requests/{id}/convert",
+            "finance.posting_requests.convert",
+            "finance",
+            "finance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/posting-requests/{id}/reject",
+            "finance.posting_requests.reject",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/finance/journals",
             "finance.journals.list",
             "finance",
@@ -1417,6 +1453,51 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "fees",
             "fees:edit",
             OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/invoices",
+            "fees.invoices.list",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/invoices/{id}",
+            "fees.invoices.read",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/invoices",
+            "fees.invoices.create",
+            "fees",
+            "fees:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/invoices/{id}/issue",
+            "fees.invoices.issue",
+            "fees",
+            "fees:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/fees/invoices/{id}",
+            "fees.invoices.delete",
+            "fees",
+            "fees:delete",
+            OperationEffect::Destructive,
             true,
         ),
         // HR and payroll: canonical workforce directory.
@@ -2042,12 +2123,16 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.journals.list"
         | "finance.journals.read"
         | "finance.journals.validation.read"
+        | "finance.posting_requests.list"
+        | "finance.posting_requests.read"
         | "fees.reference_data.read"
         | "fees.learner_candidates.list"
         | "fees.billing_accounts.list"
         | "fees.billing_accounts.read"
         | "fees.fee_structures.list"
         | "fees.fee_structures.read"
+        | "fees.invoices.list"
+        | "fees.invoices.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2147,6 +2232,8 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.journals.reject"
         | "finance.journals.post"
         | "finance.journals.reverse"
+        | "finance.posting_requests.convert"
+        | "finance.posting_requests.reject"
         | "fees.billing_accounts.create"
         | "fees.billing_accounts.update"
         | "fees.fee_structures.create"
@@ -2154,6 +2241,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "fees.fee_structures.delete"
         | "fees.fee_structures.activate"
         | "fees.fee_structures.retire"
+        | "fees.invoices.create"
+        | "fees.invoices.issue"
+        | "fees.invoices.delete"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2269,7 +2359,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 201);
+        assert_eq!(operation_catalog().len(), 210);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2321,7 +2411,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [81, 113, 7, 0]);
+        assert_eq!(counts, [85, 118, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
