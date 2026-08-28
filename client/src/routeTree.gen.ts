@@ -58,6 +58,8 @@ import { Route as ModulesFinanceJournalsRouteImport } from './routes/modules/fin
 import { Route as ModulesFinanceCurrenciesRouteImport } from './routes/modules/finance/currencies'
 import { Route as ModulesFinanceChartOfAccountsRouteImport } from './routes/modules/finance/chart-of-accounts'
 import { Route as ModulesFinanceAccountingPeriodsRouteImport } from './routes/modules/finance/accounting-periods'
+import { Route as ModulesFeesFeeStructuresRouteImport } from './routes/modules/fees/fee-structures'
+import { Route as ModulesFeesBillingAccountsRouteImport } from './routes/modules/fees/billing-accounts'
 import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
@@ -323,6 +325,18 @@ const ModulesFinanceAccountingPeriodsRoute =
     path: '/finance/accounting-periods',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesFeesFeeStructuresRoute =
+  ModulesFeesFeeStructuresRouteImport.update({
+    id: '/fees/fee-structures',
+    path: '/fees/fee-structures',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesFeesBillingAccountsRoute =
+  ModulesFeesBillingAccountsRouteImport.update({
+    id: '/fees/billing-accounts',
+    path: '/fees/billing-accounts',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAcademicsTermsRoute = ModulesAcademicsTermsRouteImport.update({
   id: '/academics/terms',
   path: '/academics/terms',
@@ -420,6 +434,8 @@ export interface FileRoutesByFullPath {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
+  '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
@@ -480,6 +496,8 @@ export interface FileRoutesByTo {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
+  '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
@@ -542,6 +560,8 @@ export interface FileRoutesById {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
+  '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
@@ -605,6 +625,8 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/fees/billing-accounts'
+    | '/modules/fees/fee-structures'
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
@@ -665,6 +687,8 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/fees/billing-accounts'
+    | '/modules/fees/fee-structures'
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
@@ -726,6 +750,8 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/fees/billing-accounts'
+    | '/modules/fees/fee-structures'
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
@@ -1106,6 +1132,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFinanceAccountingPeriodsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/fees/fee-structures': {
+      id: '/modules/fees/fee-structures'
+      path: '/fees/fee-structures'
+      fullPath: '/modules/fees/fee-structures'
+      preLoaderRoute: typeof ModulesFeesFeeStructuresRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/fees/billing-accounts': {
+      id: '/modules/fees/billing-accounts'
+      path: '/fees/billing-accounts'
+      fullPath: '/modules/fees/billing-accounts'
+      preLoaderRoute: typeof ModulesFeesBillingAccountsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/academics/terms': {
       id: '/modules/academics/terms'
       path: '/academics/terms'
@@ -1239,6 +1279,8 @@ interface ModulesRouteChildren {
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
   ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
+  ModulesFeesBillingAccountsRoute: typeof ModulesFeesBillingAccountsRoute
+  ModulesFeesFeeStructuresRoute: typeof ModulesFeesFeeStructuresRoute
   ModulesFinanceAccountingPeriodsRoute: typeof ModulesFinanceAccountingPeriodsRoute
   ModulesFinanceChartOfAccountsRoute: typeof ModulesFinanceChartOfAccountsRoute
   ModulesFinanceCurrenciesRoute: typeof ModulesFinanceCurrenciesRoute
@@ -1271,6 +1313,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsTeachingAssignmentsRoute:
     ModulesAcademicsTeachingAssignmentsRoute,
   ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
+  ModulesFeesBillingAccountsRoute: ModulesFeesBillingAccountsRoute,
+  ModulesFeesFeeStructuresRoute: ModulesFeesFeeStructuresRoute,
   ModulesFinanceAccountingPeriodsRoute: ModulesFinanceAccountingPeriodsRoute,
   ModulesFinanceChartOfAccountsRoute: ModulesFinanceChartOfAccountsRoute,
   ModulesFinanceCurrenciesRoute: ModulesFinanceCurrenciesRoute,

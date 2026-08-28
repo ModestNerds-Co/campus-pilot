@@ -104,7 +104,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/fees",
             "fees",
             false,
-            "foundation",
+            "available",
             &["view", "create", "edit", "delete"],
         ),
         module(
@@ -460,6 +460,7 @@ mod tests {
             "sis",
             "timetabling",
             "finance",
+            "fees",
         ] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -485,6 +486,9 @@ mod tests {
             } else if module_key == "finance" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 10);
+            } else if module_key == "fees" {
+                assert!(module.release_ready());
+                assert_eq!(module.executable_capabilities(), 6);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

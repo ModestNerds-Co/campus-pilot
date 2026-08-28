@@ -26,6 +26,15 @@ pub struct LearnerWithAccount {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Minimum SIS-owned projection for authorised billing workflows.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LearnerBillingReference {
+    pub id: Uuid,
+    pub learner_number: String,
+    pub display_name: String,
+    pub status: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct GuardianWithAccount {
     pub id: Uuid,

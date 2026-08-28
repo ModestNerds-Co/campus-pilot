@@ -4,6 +4,7 @@ mod academic_assessments;
 mod academics;
 mod administration;
 mod administration_access;
+mod fees;
 mod finance;
 mod fleet;
 mod hr;
@@ -30,6 +31,10 @@ use administration::{
 use administration_access::{
     AdministrationRoleReadCapability, AdministrationRolesListCapability,
     AdministrationUserReadCapability, AdministrationUsersListCapability,
+};
+use fees::{
+    FeesLearnerCandidatesCapability, FeesListCapability, FeesListKind, FeesReadCapability,
+    FeesReadKind, FeesReferenceDataCapability,
 };
 use finance::{
     FinanceJournalValidationCapability, FinanceJournalsListCapability, FinanceListCapability,
@@ -180,6 +185,22 @@ pub fn build_capability_registry(
     registry
         .register(FinanceJournalValidationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Finance journal-validation capability: {error}"));
+    registry
+        .register(FeesReferenceDataCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fees reference-data capability: {error}"));
+    registry
+        .register(FeesLearnerCandidatesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fees learner-candidates capability: {error}"));
+    for kind in [FeesListKind::BillingAccounts, FeesListKind::FeeStructures] {
+        registry
+            .register(FeesListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [FeesReadKind::BillingAccount, FeesReadKind::FeeStructure] {
+        registry
+            .register(FeesReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     for kind in [
         SisReadKind::Learner,
         SisReadKind::Guardian,
@@ -358,6 +379,7 @@ mod tests {
                 "fleet:view".to_string(),
                 "timetabling:view".to_string(),
                 "finance:view".to_string(),
+                "fees:view".to_string(),
             ],
             enabled_modules: vec![
                 "agent".to_string(),
@@ -368,6 +390,7 @@ mod tests {
                 "fleet".to_string(),
                 "timetabling".to_string(),
                 "finance".to_string(),
+                "fees".to_string(),
             ],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
@@ -383,6 +406,7 @@ mod tests {
                     ("fleet".to_string(), ModuleEntitlementState::Enabled),
                     ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                     ("finance".to_string(), ModuleEntitlementState::Enabled),
+                    ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ],
                 Vec::<String>::new(),
             )
@@ -442,6 +466,12 @@ mod tests {
                 "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read",
+                "fees.billing_accounts.list",
+                "fees.billing_accounts.read",
+                "fees.fee_structures.list",
+                "fees.fee_structures.read",
+                "fees.learner_candidates.list",
+                "fees.reference_data.read",
                 "finance.accounting_periods.list",
                 "finance.accounts.list",
                 "finance.accounts.read",

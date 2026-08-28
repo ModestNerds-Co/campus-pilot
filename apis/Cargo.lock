@@ -1447,8 +1447,18 @@ name = "cp-fees"
 version = "1.0.0"
 dependencies = [
  "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-academics",
+ "cp-audit",
  "cp-common",
+ "cp-finance",
+ "cp-sis",
+ "serde",
  "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]

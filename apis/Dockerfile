@@ -10,6 +10,7 @@ COPY migrations ./migrations
 COPY .sqlx ./.sqlx
 RUN --mount=type=cache,id=campus-pilot-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=campus-pilot-target,target=/app/target \
+    touch crates/app/src/db/mod.rs && \
     cargo build --release && cp target/release/campus-pilot /tmp/campus-pilot
 
 FROM debian:bookworm-slim AS runtime

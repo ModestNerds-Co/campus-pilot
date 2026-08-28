@@ -18,7 +18,8 @@ use crate::{
     },
     models::{
         AccountCandidate, Application, ApplicationWithDetails, Enrolment, EnrolmentWithDetails,
-        GuardianRelationshipWithDetails, GuardianWithAccount, LearnerWithAccount,
+        GuardianRelationshipWithDetails, GuardianWithAccount, LearnerBillingReference,
+        LearnerWithAccount,
     },
 };
 
@@ -93,6 +94,53 @@ impl AccountCandidateOps {
 pub struct LearnerOps;
 
 impl LearnerOps {
+    /// Returns the minimum learner fields Fees needs to open or identify a
+    /// billing account without granting SIS management access.
+    pub async fn billing_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<LearnerBillingReference>> {
+        let search = search.map(|value| format!("%{value}%"));
+        sqlx::query_as::<_, LearnerBillingReference>(
+            r#"
+            SELECT id, learner_number, display_name, status
+              FROM learners
+             WHERE tenant_id = $1 AND deleted_at IS NULL
+               AND ($2::TEXT IS NULL OR learner_number ILIKE $2 OR display_name ILIKE $2)
+             ORDER BY display_name, learner_number
+             LIMIT $3
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(pool)
+        .await
+        .context("Failed to list learner billing references")
+    }
+
+    /// Resolves learner identities linked to one authenticated account. Fees
+    /// uses this for self-service account reads without joining SIS tables.
+    pub async fn ids_for_linked_account(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+    ) -> Result<Vec<Uuid>> {
+        sqlx::query_scalar::<_, Uuid>(
+            r#"
+            SELECT id FROM learners
+             WHERE tenant_id = $1 AND account_id = $2 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(account_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve account-linked learners")
+    }
+
     pub async fn list(
         pool: &PgPool,
         tenant_id: Uuid,

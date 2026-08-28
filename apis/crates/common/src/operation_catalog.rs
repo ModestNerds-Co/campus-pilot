@@ -1301,6 +1301,124 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Fees and Billing: learner accounts and versioned fee structures.
+        route(
+            Method::GET,
+            "/api/1.0/fees/reference-data",
+            "fees.reference_data.read",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/learner-candidates",
+            "fees.learner_candidates.list",
+            "fees",
+            "fees:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/billing-accounts",
+            "fees.billing_accounts.list",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/billing-accounts/{id}",
+            "fees.billing_accounts.read",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/billing-accounts",
+            "fees.billing_accounts.create",
+            "fees",
+            "fees:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/fees/billing-accounts/{id}",
+            "fees.billing_accounts.update",
+            "fees",
+            "fees:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/fee-structures",
+            "fees.fee_structures.list",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/fee-structures/{id}",
+            "fees.fee_structures.read",
+            "fees",
+            "fees:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/fee-structures",
+            "fees.fee_structures.create",
+            "fees",
+            "fees:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/fees/fee-structures/{id}",
+            "fees.fee_structures.update",
+            "fees",
+            "fees:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/fees/fee-structures/{id}",
+            "fees.fee_structures.delete",
+            "fees",
+            "fees:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/fee-structures/{id}/activate",
+            "fees.fee_structures.activate",
+            "fees",
+            "fees:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/fee-structures/{id}/retire",
+            "fees.fee_structures.retire",
+            "fees",
+            "fees:edit",
+            OperationEffect::Write,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -1831,6 +1949,12 @@ fn route(
         operation.requiring_modules(["hr_payroll".to_string()])
     } else if key.starts_with("timetabling.") {
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
+    } else if key.starts_with("fees.") {
+        operation.requiring_modules([
+            "sis".to_string(),
+            "academics".to_string(),
+            "finance".to_string(),
+        ])
     } else {
         operation
     };
@@ -1918,6 +2042,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.journals.list"
         | "finance.journals.read"
         | "finance.journals.validation.read"
+        | "fees.reference_data.read"
+        | "fees.learner_candidates.list"
+        | "fees.billing_accounts.list"
+        | "fees.billing_accounts.read"
+        | "fees.fee_structures.list"
+        | "fees.fee_structures.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2017,6 +2147,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.journals.reject"
         | "finance.journals.post"
         | "finance.journals.reverse"
+        | "fees.billing_accounts.create"
+        | "fees.billing_accounts.update"
+        | "fees.fee_structures.create"
+        | "fees.fee_structures.update"
+        | "fees.fee_structures.delete"
+        | "fees.fee_structures.activate"
+        | "fees.fee_structures.retire"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2104,6 +2241,7 @@ mod tests {
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
+                ("fees".to_string(), ModuleEntitlementState::Enabled),
             ],
             vec![],
         )
@@ -2131,7 +2269,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 188);
+        assert_eq!(operation_catalog().len(), 201);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2183,7 +2321,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [75, 106, 7, 0]);
+        assert_eq!(counts, [81, 113, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
