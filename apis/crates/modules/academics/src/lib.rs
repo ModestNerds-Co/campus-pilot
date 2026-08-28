@@ -3,6 +3,8 @@
 //! Teachers are employee-backed profiles. This crate never duplicates HR
 //! identity or creates login accounts.
 
+pub mod assessment_routes;
+pub mod assessments;
 pub mod dtos;
 pub mod models;
 pub mod ops;

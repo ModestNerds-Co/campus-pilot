@@ -866,7 +866,8 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(read_assignment)
             .service(create_assignment)
             .service(update_assignment)
-            .service(delete_assignment),
+            .service(delete_assignment)
+            .configure(crate::assessment_routes::routes),
     );
 }
 

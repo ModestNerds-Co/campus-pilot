@@ -931,6 +931,96 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/assessment-cycles",
+            "academics.assessment_cycles.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/assessment-cycles/{id}",
+            "academics.assessment_cycles.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/assessment-cycles",
+            "academics.assessment_cycles.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/assessment-cycles/{id}",
+            "academics.assessment_cycles.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/assessment-cycles/{id}",
+            "academics.assessment_cycles.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/assessment-cycles/{cycle_id}/components",
+            "academics.assessment_components.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/assessment-components/{id}",
+            "academics.assessment_components.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/assessment-cycles/{cycle_id}/components",
+            "academics.assessment_components.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/assessment-components/{id}",
+            "academics.assessment_components.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/assessment-components/{id}",
+            "academics.assessment_components.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -1456,6 +1546,7 @@ fn route(
         operation.requiring_modules(["academics".to_string()])
     } else if key.starts_with("academics.teacher")
         || key.starts_with("academics.teaching_assignments")
+        || key.starts_with("academics.assessment_components")
     {
         operation.requiring_modules(["hr_payroll".to_string()])
     } else if key.starts_with("timetabling.") {
@@ -1533,6 +1624,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.classes.read"
         | "academics.teaching_assignments.list"
         | "academics.teaching_assignments.read"
+        | "academics.assessment_cycles.list"
+        | "academics.assessment_cycles.read"
+        | "academics.assessment_components.list"
+        | "academics.assessment_components.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -1605,6 +1700,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.teaching_assignments.create"
         | "academics.teaching_assignments.update"
         | "academics.teaching_assignments.delete"
+        | "academics.assessment_cycles.create"
+        | "academics.assessment_cycles.update"
+        | "academics.assessment_cycles.delete"
+        | "academics.assessment_components.create"
+        | "academics.assessment_components.update"
+        | "academics.assessment_components.delete"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -1718,7 +1819,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 147);
+        assert_eq!(operation_catalog().len(), 157);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1770,7 +1871,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [61, 79, 7, 0]);
+        assert_eq!(counts, [65, 85, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

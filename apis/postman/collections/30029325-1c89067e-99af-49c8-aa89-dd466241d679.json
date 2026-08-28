@@ -2624,7 +2624,7 @@
     },
     {
       "name": "Academics",
-      "description": "Academic years, non-overlapping terms, subjects, employee-backed teachers, classes, and canonical teaching assignments.",
+      "description": "Academic years, non-overlapping terms, subjects, employee-backed teachers, classes, teaching assignments, and term assessment structures.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -3012,6 +3012,112 @@
           "request": {
             "method": "DELETE",
             "url": "{{base_url}}/academics/teaching-assignments/:id"
+          }
+        },
+        {
+          "name": "List Assessment Cycles",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/assessment-cycles?page=1&per_page=20&academic_term_id="
+          }
+        },
+        {
+          "name": "Get Assessment Cycle",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/assessment-cycles/:id"
+          }
+        },
+        {
+          "name": "Create Assessment Cycle",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_term_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"T1-CONTINUOUS\",\n  \"name\": \"Term 1 continuous assessment\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/assessment-cycles"
+          }
+        },
+        {
+          "name": "Update Assessment Cycle",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_term_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"T1-CONTINUOUS\",\n  \"name\": \"Term 1 continuous assessment\",\n  \"status\": \"open\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/assessment-cycles/:id"
+          }
+        },
+        {
+          "name": "Delete Assessment Cycle",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/assessment-cycles/:id"
+          }
+        },
+        {
+          "name": "List Assessment Components",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/assessment-cycles/:cycle_id/components?page=1&per_page=20"
+          }
+        },
+        {
+          "name": "Get Assessment Component",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/assessment-components/:id"
+          }
+        },
+        {
+          "name": "Create Assessment Component",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teaching_assignment_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"TEST-1\",\n  \"name\": \"Mid-term test\",\n  \"assessment_kind\": \"test\",\n  \"maximum_marks\": 100,\n  \"weight_basis_points\": 10000,\n  \"occurs_on\": \"2027-02-19\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/assessment-cycles/:cycle_id/components"
+          }
+        },
+        {
+          "name": "Update Assessment Component",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teaching_assignment_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"TEST-1\",\n  \"name\": \"Mid-term test\",\n  \"assessment_kind\": \"test\",\n  \"maximum_marks\": 100,\n  \"weight_basis_points\": 10000,\n  \"occurs_on\": \"2027-02-19\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/assessment-components/:id"
+          }
+        },
+        {
+          "name": "Delete Assessment Component",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/assessment-components/:id"
           }
         }
       ]

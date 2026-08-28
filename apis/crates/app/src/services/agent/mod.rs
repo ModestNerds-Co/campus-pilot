@@ -1,5 +1,6 @@
 //! Assembles production Agent capability adapters over existing domain services.
 
+mod academic_assessments;
 mod academics;
 mod administration;
 mod administration_access;
@@ -13,6 +14,10 @@ use sqlx::PgPool;
 
 use crate::config::LicenseConfig;
 
+use academic_assessments::{
+    AssessmentComponentReadCapability, AssessmentComponentsListCapability,
+    AssessmentCycleReadCapability, AssessmentCyclesListCapability,
+};
 use academics::{
     AcademicsListCapability, AcademicsListKind, AcademicsReadCapability, AcademicsReadKind,
     TeacherCandidatesCapability,
@@ -111,6 +116,26 @@ pub fn build_capability_registry(
     registry
         .register(TeacherCandidatesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Academics teacher-candidates capability: {error}"));
+    registry
+        .register(AssessmentCyclesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Academics assessment-cycles list capability: {error}")
+        });
+    registry
+        .register(AssessmentCycleReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Academics assessment-cycle read capability: {error}")
+        });
+    registry
+        .register(AssessmentComponentsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Academics assessment-components list capability: {error}")
+        });
+    registry
+        .register(AssessmentComponentReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Academics assessment-component read capability: {error}")
+        });
     for kind in [
         SisListKind::Learners,
         SisListKind::Guardians,
@@ -356,6 +381,10 @@ mod tests {
             vec![
                 "academics.academic_years.list",
                 "academics.academic_years.read",
+                "academics.assessment_components.list",
+                "academics.assessment_components.read",
+                "academics.assessment_cycles.list",
+                "academics.assessment_cycles.read",
                 "academics.classes.list",
                 "academics.classes.read",
                 "academics.grade_levels.list",

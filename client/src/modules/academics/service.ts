@@ -14,6 +14,12 @@ import type {
   AcademicTerm,
   AcademicTermInput,
   AcademicTermsResponse,
+  AssessmentComponent,
+  AssessmentComponentInput,
+  AssessmentComponentsResponse,
+  AssessmentCycle,
+  AssessmentCycleInput,
+  AssessmentCyclesResponse,
   ApiEnvelope,
   ClassesResponse,
   ClassGroup,
@@ -77,6 +83,18 @@ export const academicsService = {
   createTeachingAssignment: (data: TeachingAssignmentInput) => request<TeachingAssignment>(() => httpClient.post(`${BASE_URL}/teaching-assignments`, data)),
   updateTeachingAssignment: (id: string, data: TeachingAssignmentInput) => request<TeachingAssignment>(() => httpClient.put(`${BASE_URL}/teaching-assignments/${id}`, data)),
   deleteTeachingAssignment: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/teaching-assignments/${id}`)),
+
+  listAssessmentCycles: (params?: ListParams) => request<AssessmentCyclesResponse>(() => httpClient.get(`${BASE_URL}/assessment-cycles`, { params })),
+  readAssessmentCycle: (id: string) => request<AssessmentCycle>(() => httpClient.get(`${BASE_URL}/assessment-cycles/${id}`)),
+  createAssessmentCycle: (data: AssessmentCycleInput) => request<AssessmentCycle>(() => httpClient.post(`${BASE_URL}/assessment-cycles`, data)),
+  updateAssessmentCycle: (id: string, data: AssessmentCycleInput) => request<AssessmentCycle>(() => httpClient.put(`${BASE_URL}/assessment-cycles/${id}`, data)),
+  deleteAssessmentCycle: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/assessment-cycles/${id}`)),
+
+  listAssessmentComponents: (cycleId: string, params?: ListParams) => request<AssessmentComponentsResponse>(() => httpClient.get(`${BASE_URL}/assessment-cycles/${cycleId}/components`, { params })),
+  readAssessmentComponent: (id: string) => request<AssessmentComponent>(() => httpClient.get(`${BASE_URL}/assessment-components/${id}`)),
+  createAssessmentComponent: (cycleId: string, data: AssessmentComponentInput) => request<AssessmentComponent>(() => httpClient.post(`${BASE_URL}/assessment-cycles/${cycleId}/components`, data)),
+  updateAssessmentComponent: (id: string, data: AssessmentComponentInput) => request<AssessmentComponent>(() => httpClient.put(`${BASE_URL}/assessment-components/${id}`, data)),
+  deleteAssessmentComponent: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/assessment-components/${id}`)),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

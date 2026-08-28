@@ -2,6 +2,8 @@
 
 export type DirectoryStatus = "active" | "inactive";
 export type AcademicYearStatus = "planned" | "active" | "closed";
+export type AssessmentCycleStatus = "draft" | "open" | "closed";
+export type AssessmentKind = "assignment" | "quiz" | "test" | "project" | "exam" | "practical" | "other";
 
 export interface AcademicYear {
   id: string;
@@ -84,6 +86,43 @@ export interface TeachingAssignment {
   status: DirectoryStatus;
 }
 
+export interface AssessmentCycle {
+  id: string;
+  academic_term_id: string;
+  academic_term_code: string;
+  academic_term_name: string;
+  academic_year_id: string;
+  academic_year_name: string;
+  code: string;
+  name: string;
+  status: AssessmentCycleStatus;
+  component_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssessmentComponent {
+  id: string;
+  assessment_cycle_id: string;
+  assessment_cycle_name: string;
+  teaching_assignment_id: string;
+  class_group_id: string;
+  class_group_name: string;
+  subject_id: string;
+  subject_name: string;
+  teacher_profile_id: string;
+  teacher_name: string;
+  code: string;
+  name: string;
+  assessment_kind: AssessmentKind;
+  maximum_marks: number;
+  weight_basis_points: number;
+  occurs_on: string | null;
+  status: DirectoryStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AcademicYearInput {
   name: string;
   starts_on: string;
@@ -130,6 +169,24 @@ export interface TeachingAssignmentInput {
   status?: DirectoryStatus;
 }
 
+export interface AssessmentCycleInput {
+  academic_term_id: string;
+  code: string;
+  name: string;
+  status?: AssessmentCycleStatus;
+}
+
+export interface AssessmentComponentInput {
+  teaching_assignment_id: string;
+  code: string;
+  name: string;
+  assessment_kind: AssessmentKind;
+  maximum_marks: number;
+  weight_basis_points: number;
+  occurs_on: string | null;
+  status?: DirectoryStatus;
+}
+
 export interface ListParams {
   page?: number;
   per_page?: number;
@@ -139,6 +196,8 @@ export interface ListParams {
   grade_level_id?: string;
   class_group_id?: string;
   teacher_profile_id?: string;
+  academic_term_id?: string;
+  teaching_assignment_id?: string;
 }
 
 export interface PaginationMeta {
@@ -166,3 +225,5 @@ export interface TeachersResponse { teachers: TeacherProfile[] }
 export interface TeacherCandidatesResponse { employees: EmployeeCandidate[] }
 export interface ClassesResponse { classes: ClassGroup[] }
 export interface TeachingAssignmentsResponse { assignments: TeachingAssignment[] }
+export interface AssessmentCyclesResponse { assessment_cycles: AssessmentCycle[] }
+export interface AssessmentComponentsResponse { assessment_components: AssessmentComponent[] }
