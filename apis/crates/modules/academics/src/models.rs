@@ -127,6 +127,7 @@ pub struct TeachingAssignmentWithDetails {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimetablingReferenceData {
     pub academic_year: AcademicYear,
+    pub active_term: Option<AcademicTerm>,
     pub classes: Vec<ClassGroupWithYear>,
     pub subjects: Vec<Subject>,
     pub teachers: Vec<TeacherProfileWithEmployee>,

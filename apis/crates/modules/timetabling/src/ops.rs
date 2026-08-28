@@ -6,15 +6,18 @@
 use std::collections::HashMap;
 
 use anyhow::{Context, Result, bail};
+use chrono::{DateTime, NaiveTime, Utc};
 use cp_academics::{models::TimetablingReferenceData, ops::TeachingAssignmentOps};
+use cp_hr_payroll::{models::EmployeeAvailabilityReference, ops::EmployeeAvailabilityOps};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
     generator::{generate, validate_configuration},
     models::{
-        LessonRequirement, NamedResource, TeacherResource, TimetableConfiguration, TimetableRun,
-        TimetableRunRow,
+        AcademicPeriodResource, LessonRequirement, NamedResource, TeacherResource,
+        TimetableConfiguration, TimetableRun, TimetableRunRow, TimetableRunSummary,
+        WorkforceAvailabilityConstraint,
     },
 };
 
@@ -28,7 +31,8 @@ impl TimetablingOps {
     ) -> Result<TimetableConfiguration> {
         let stored = load_stored_configuration(pool, tenant_id).await?;
         let references = TeachingAssignmentOps::timetabling_reference_data(pool, tenant_id).await?;
-        Ok(hydrate_configuration(stored, references))
+        let availability = load_workforce_constraints(pool, tenant_id, references.as_ref()).await?;
+        Ok(hydrate_configuration(stored, references, availability))
     }
 
     /// Saves scheduling-owned settings after replacing client academic copies.
@@ -38,7 +42,8 @@ impl TimetablingOps {
         requested: TimetableConfiguration,
     ) -> Result<TimetableConfiguration> {
         let references = TeachingAssignmentOps::timetabling_reference_data(pool, tenant_id).await?;
-        let configuration = hydrate_configuration(requested, references);
+        let availability = load_workforce_constraints(pool, tenant_id, references.as_ref()).await?;
+        let configuration = hydrate_configuration(requested, references, availability);
         if let Err(issues) = validate_configuration(&configuration) {
             bail!(issues.join("\n"));
         }
@@ -78,6 +83,9 @@ impl TimetablingOps {
 
     pub async fn generate(pool: &PgPool, tenant_id: Uuid) -> Result<TimetableRun> {
         let configuration = Self::get_configuration(pool, tenant_id).await?;
+        if configuration.academic_period.is_none() {
+            bail!("Activate an academic term in Academics before generating a timetable");
+        }
         if configuration.lesson_requirements.is_empty() {
             bail!("Add active teaching assignments in Academics before generating a timetable");
         }
@@ -124,6 +132,74 @@ impl TimetablingOps {
         row.map(TimetableRun::try_from)
             .transpose()
             .context("Failed to decode latest timetable run")
+    }
+
+    pub async fn list_runs(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        status: Option<&str>,
+    ) -> Result<(Vec<TimetableRunSummary>, i64)> {
+        validate_run_status(status)?;
+        let page = page.max(1);
+        let per_page = per_page.clamp(1, 100);
+        let offset = (page - 1) * per_page;
+        let runs = sqlx::query_as::<_, TimetableRunSummary>(
+            r#"
+            SELECT id, status,
+                   configuration_snapshot -> 'academic_period' ->> 'academic_year_name'
+                       AS academic_year_name,
+                   configuration_snapshot -> 'academic_period' ->> 'academic_term_name'
+                       AS academic_term_name,
+                   COALESCE(jsonb_array_length(entries), 0)::BIGINT AS entry_count,
+                   COALESCE(jsonb_array_length(unresolved), 0)::BIGINT AS unresolved_count,
+                   quality_score, created_at, published_at
+            FROM timetable_runs
+            WHERE tenant_id = $1 AND ($2::TEXT IS NULL OR status = $2)
+            ORDER BY created_at DESC, id
+            LIMIT $3 OFFSET $4
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(status)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list timetable runs")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM timetable_runs WHERE tenant_id = $1 AND ($2::TEXT IS NULL OR status = $2)",
+        )
+        .bind(tenant_id)
+        .bind(status)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count timetable runs")?;
+        Ok((runs, total))
+    }
+
+    pub async fn get_run(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        run_id: Uuid,
+    ) -> Result<Option<TimetableRun>> {
+        let row = sqlx::query_as::<_, TimetableRunRow>(
+            r#"
+            SELECT id, status, configuration_snapshot, entries, unresolved,
+                   quality_score, created_at, published_at
+            FROM timetable_runs
+            WHERE tenant_id = $1 AND id = $2
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(run_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load timetable run")?;
+        row.map(TimetableRun::try_from)
+            .transpose()
+            .context("Failed to decode timetable run")
     }
 
     pub async fn publish(
@@ -198,6 +274,8 @@ async fn load_stored_configuration(
     };
     Ok(TimetableConfiguration {
         cycle_name: row.try_get("cycle_name")?,
+        academic_period: None,
+        workforce_constraints: Vec::new(),
         days: serde_json::from_value(row.try_get("days")?)?,
         periods: serde_json::from_value(row.try_get("periods")?)?,
         classes: serde_json::from_value(row.try_get("classes")?)?,
@@ -211,8 +289,11 @@ async fn load_stored_configuration(
 fn hydrate_configuration(
     mut configuration: TimetableConfiguration,
     references: Option<TimetablingReferenceData>,
+    workforce_constraints: Vec<WorkforceAvailabilityConstraint>,
 ) -> TimetableConfiguration {
     let Some(references) = references else {
+        configuration.academic_period = None;
+        configuration.workforce_constraints.clear();
         configuration.classes.clear();
         configuration.subjects.clear();
         configuration.teachers.clear();
@@ -230,7 +311,23 @@ fn hydrate_configuration(
         .map(|requirement| (requirement.id, requirement.room_id))
         .collect::<HashMap<_, _>>();
 
-    configuration.cycle_name = references.academic_year.name;
+    configuration.academic_period =
+        references
+            .active_term
+            .as_ref()
+            .map(|term| AcademicPeriodResource {
+                academic_year_id: references.academic_year.id,
+                academic_year_name: references.academic_year.name.clone(),
+                academic_term_id: term.id,
+                academic_term_name: term.name.clone(),
+                starts_on: term.starts_on,
+                ends_on: term.ends_on,
+            });
+    configuration.workforce_constraints = workforce_constraints;
+    configuration.cycle_name = references.active_term.as_ref().map_or_else(
+        || references.academic_year.name.clone(),
+        |term| format!("{} · {}", references.academic_year.name, term.name),
+    );
     configuration.classes = references
         .classes
         .into_iter()
@@ -277,11 +374,77 @@ fn hydrate_configuration(
     configuration
 }
 
+async fn load_workforce_constraints(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    references: Option<&TimetablingReferenceData>,
+) -> Result<Vec<WorkforceAvailabilityConstraint>> {
+    let Some(references) = references else {
+        return Ok(Vec::new());
+    };
+    let Some(term) = references.active_term.as_ref() else {
+        return Ok(Vec::new());
+    };
+    let employee_to_teacher = references
+        .teachers
+        .iter()
+        .map(|teacher| (teacher.employee_id, teacher.id))
+        .collect::<HashMap<_, _>>();
+    let employee_ids = employee_to_teacher.keys().copied().collect::<Vec<_>>();
+    let starts_at =
+        DateTime::<Utc>::from_naive_utc_and_offset(term.starts_on.and_time(NaiveTime::MIN), Utc);
+    let end_of_day =
+        NaiveTime::from_hms_nano_opt(23, 59, 59, 999_999_999).unwrap_or_else(|| unreachable!());
+    let ends_at =
+        DateTime::<Utc>::from_naive_utc_and_offset(term.ends_on.and_time(end_of_day), Utc);
+    let availability = EmployeeAvailabilityOps::list_approved_for_window(
+        pool,
+        tenant_id,
+        &employee_ids,
+        starts_at,
+        ends_at,
+    )
+    .await?;
+    Ok(map_workforce_constraints(
+        availability,
+        &employee_to_teacher,
+    ))
+}
+
+fn map_workforce_constraints(
+    availability: Vec<EmployeeAvailabilityReference>,
+    employee_to_teacher: &HashMap<Uuid, Uuid>,
+) -> Vec<WorkforceAvailabilityConstraint> {
+    availability
+        .into_iter()
+        .filter_map(|period| {
+            employee_to_teacher
+                .get(&period.employee_id)
+                .copied()
+                .map(|teacher_id| WorkforceAvailabilityConstraint {
+                    id: period.id,
+                    teacher_id,
+                    employee_id: period.employee_id,
+                    kind: period.kind,
+                    starts_at: period.starts_at,
+                    ends_at: period.ends_at,
+                })
+        })
+        .collect()
+}
+
+fn validate_run_status(status: Option<&str>) -> Result<()> {
+    if status.is_some_and(|value| !matches!(value, "draft" | "published" | "superseded")) {
+        bail!("Timetable run status is invalid");
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::{NaiveDate, Utc};
     use cp_academics::models::{
-        AcademicYear, ClassGroupWithYear, Subject, TeacherProfileWithEmployee,
+        AcademicTerm, AcademicYear, ClassGroupWithYear, Subject, TeacherProfileWithEmployee,
         TeachingAssignmentWithDetails, TimetablingReferenceData,
     };
     use uuid::Uuid;
@@ -319,6 +482,20 @@ mod tests {
                 updated_at: now,
                 deleted_at: None,
             },
+            active_term: Some(AcademicTerm {
+                id: Uuid::new_v4(),
+                tenant_id: Uuid::new_v4(),
+                academic_year_id: year_id,
+                academic_year_name: "2027".to_string(),
+                code: "T1".to_string(),
+                name: "Term 1".to_string(),
+                starts_on: NaiveDate::from_ymd_opt(2027, 1, 11).unwrap_or_else(|| unreachable!()),
+                ends_on: NaiveDate::from_ymd_opt(2027, 4, 2).unwrap_or_else(|| unreachable!()),
+                status: "active".to_string(),
+                created_at: now,
+                updated_at: now,
+                deleted_at: None,
+            }),
             classes: vec![ClassGroupWithYear {
                 id: class_id,
                 tenant_id: Uuid::new_v4(),
@@ -373,8 +550,15 @@ mod tests {
             }],
         };
 
-        let hydrated = hydrate_configuration(configuration, Some(references));
-        assert_eq!(hydrated.cycle_name, "2027");
+        let hydrated = hydrate_configuration(configuration, Some(references), Vec::new());
+        assert_eq!(hydrated.cycle_name, "2027 · Term 1");
+        assert_eq!(
+            hydrated
+                .academic_period
+                .as_ref()
+                .map(|period| period.academic_term_name.as_str()),
+            Some("Term 1")
+        );
         assert_eq!(hydrated.teachers[0].name, "Canonical Teacher");
         assert_eq!(hydrated.teachers[0].unavailable_slots.len(), 1);
         assert_eq!(hydrated.lesson_requirements[0].periods_per_cycle, 5);

@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Clock3,
   Edit3,
+  History,
   Loader2,
   Plus,
   Search,
@@ -30,6 +31,7 @@ import type {
   TeacherResource,
   TimetableConfiguration,
   TimetableRun,
+  TimetableRunSummary,
 } from "./types";
 
 type RegistryKind = "classes" | "subjects" | "teachers" | "rooms";
@@ -55,15 +57,18 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   const canGenerate = permissions.includes("*") || permissions.includes("timetabling:create");
   const [configuration, setConfiguration] = useState<TimetableConfiguration | null>(null);
   const [latestRun, setLatestRun] = useState<TimetableRun | null>(null);
+  const [runHistory, setRunHistory] = useState<TimetableRunSummary[]>([]);
   const [drawer, setDrawer] = useState<DrawerState>(null);
-  const [activeView, setActiveView] = useState<"setup" | "review">("setup");
+  const [activeView, setActiveView] = useState<"setup" | "review" | "history">("setup");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isOpeningRun, setIsOpeningRun] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   usePageChrome("Overview");
 
@@ -71,9 +76,10 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [configResponse, runResponse] = await Promise.all([
+      const [configResponse, runResponse, historyResponse] = await Promise.all([
         timetablingService.getConfiguration(),
         timetablingService.getLatestRun(),
+        timetablingService.listRuns(),
       ]);
       if (!configResponse.success || !configResponse.data) {
         setLoadError(configResponse.message || "The timetable configuration could not be loaded.");
@@ -81,6 +87,8 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
       }
       setConfiguration(configResponse.data);
       setLatestRun(runResponse.success ? runResponse.data : null);
+      setRunHistory(historyResponse.success ? historyResponse.data ?? [] : []);
+      setHistoryError(historyResponse.success ? null : historyResponse.message || "Run history could not be loaded.");
       setSelectedClassId(runResponse.data?.configuration.classes[0]?.id ?? configResponse.data.classes[0]?.id ?? null);
       setIsDirty(false);
     } catch {
@@ -100,6 +108,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   const readiness = useMemo(() => {
     if (!configuration) return [];
     return [
+      { label: "Academic term", ready: Boolean(configuration.academic_period), detail: configuration.academic_period ? `${configuration.academic_period.academic_year_name} · ${configuration.academic_period.academic_term_name}` : "Activate a term in Academics" },
       { label: "Teaching week", ready: configuration.days.length > 0 && configuration.periods.length > 0, detail: `${configuration.days.length} days · ${configuration.periods.length} periods` },
       { label: "Classes and subjects", ready: configuration.classes.length > 0 && configuration.subjects.length > 0, detail: `${configuration.classes.length} classes · ${configuration.subjects.length} subjects` },
       { label: "Teacher assignments", ready: configuration.teachers.length > 0, detail: `${configuration.teachers.length} teachers` },
@@ -141,6 +150,8 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
       }
       setLatestRun(response.data);
       setSelectedClassId(response.data.configuration.classes[0]?.id ?? null);
+      const historyResponse = await timetablingService.listRuns();
+      if (historyResponse.success) setRunHistory(historyResponse.data ?? []);
       setActiveView("review");
       toast.success(response.data.unresolved.length === 0 ? "Conflict-free draft generated" : "Draft generated with unresolved lessons");
     } catch {
@@ -160,11 +171,32 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
         return;
       }
       setLatestRun(response.data);
+      const historyResponse = await timetablingService.listRuns();
+      if (historyResponse.success) setRunHistory(historyResponse.data ?? []);
       toast.success("Timetable published");
     } catch {
       toast.error("The timetable could not be published");
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const openRun = async (runId: string) => {
+    if (isOpeningRun) return;
+    setIsOpeningRun(runId);
+    try {
+      const response = await timetablingService.getRun(runId);
+      if (!response.success || !response.data) {
+        toast.error(response.message || "The timetable run could not be opened");
+        return;
+      }
+      setLatestRun(response.data);
+      setSelectedClassId(response.data.configuration.classes[0]?.id ?? null);
+      setActiveView("review");
+    } catch {
+      toast.error("The timetable run could not be opened");
+    } finally {
+      setIsOpeningRun(null);
     }
   };
 
@@ -193,11 +225,12 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
       <div className="flex gap-1 border-b border-[var(--border)]" role="tablist" aria-label="Timetable workflow">
         <ViewTab active={activeView === "setup"} label="Rules and setup" onClick={() => setActiveView("setup")} />
         <ViewTab active={activeView === "review"} label={latestRun ? "Review draft" : "Review"} onClick={() => setActiveView("review")} />
+        <ViewTab active={activeView === "history"} label="Run history" onClick={() => setActiveView("history")} />
       </div>
 
       {activeView === "setup" ? (
         <div className="space-y-8">
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Generation readiness">
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Generation readiness">
             {readiness.map((item) => (
               <div className="border border-[var(--border)] bg-[var(--surface)] p-4" key={item.label}>
                 <div className="flex items-center justify-between gap-3">
@@ -222,6 +255,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
                 <div>
                   <Label htmlFor="cycle-name">Academic cycle</Label>
                   <Input className="mt-2" disabled id="cycle-name" value={configuration.cycle_name} />
+                  {configuration.academic_period ? <p className="mt-2 text-xs text-[var(--text-muted)]">{formatDate(configuration.academic_period.starts_on)} – {formatDate(configuration.academic_period.ends_on)}</p> : <p className="mt-2 text-xs text-[var(--tone-warning-strong)]">Activate an academic term before generating.</p>}
                 </div>
                 <p className="pb-2 text-sm text-[var(--text-muted)]">{configuration.days.map((day) => day.label.slice(0, 3)).join(" · ")} · {configuration.periods.length} periods</p>
               </div>
@@ -229,13 +263,15 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
 
             <aside className="bg-[var(--surface-muted)] p-5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]"><Sparkles className="size-3.5" />Constraint policy</div>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">Generation blocks overlapping classes, teachers, and rooms. Teacher unavailability is a hard rule; balanced teaching days are optimized as a preference.</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">Classes, teachers, and rooms cannot overlap. Recurring timetable slots are hard rules. Dated HR availability is shown separately for planning.</p>
             </aside>
           </section>
 
+          <WorkforceConstraints configuration={configuration} />
+
           <section aria-labelledby="registries-heading">
             <div className="border-b border-[var(--border)] pb-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">02 · Academic setup</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">03 · Academic setup</p>
               <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="registries-heading">Scheduling registries</h2>
             </div>
             <div className="grid gap-5 pt-5 md:grid-cols-2">
@@ -262,8 +298,10 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
             onEdit={(item) => setDrawer({ kind: "lesson", item })}
           />
         </div>
-      ) : (
+      ) : activeView === "review" ? (
         <RunReview canPublish={canEdit} isPublishing={isPublishing} onPublish={() => void publish()} run={latestRun} selectedClassId={selectedClassId} setSelectedClassId={setSelectedClassId} />
+      ) : (
+        <RunHistory error={historyError} isOpeningRun={isOpeningRun} onOpen={(runId) => void openRun(runId)} runs={runHistory} />
       )}
 
       <WeekDrawer configuration={configuration} onClose={() => setDrawer(null)} onSave={updateConfiguration} open={drawer?.kind === "week"} />
@@ -297,7 +335,7 @@ const RegistryCard: React.FC<{ canAdd: boolean; canEdit: boolean; canRemove: boo
 const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableConfiguration; onEdit: (item: LessonRequirement) => void }> = ({ canEdit, configuration, onEdit }) => (
   <section aria-labelledby="requirements-heading">
     <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-3 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">03 · Teaching load</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="requirements-heading">Teaching assignments</h2></div>
+      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">04 · Teaching load</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="requirements-heading">Teaching assignments</h2></div>
       <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/academics/teaching-assignments">Manage in Academics</Link>
     </div>
     {configuration.lesson_requirements.length === 0 ? (
@@ -316,6 +354,68 @@ const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableC
     )}
   </section>
 );
+
+const WorkforceConstraints: React.FC<{ configuration: TimetableConfiguration }> = ({ configuration }) => (
+  <section aria-labelledby="workforce-constraints-heading">
+    <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">02 · Workforce availability</p>
+        <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="workforce-constraints-heading">Approved HR constraints</h2>
+      </div>
+      <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/hr-payroll/availability">Manage in HR</Link>
+    </div>
+    <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">These dated records overlap the active term. They remain planning warnings; they are not converted into permanent weekly unavailable slots.</p>
+    {configuration.workforce_constraints.length === 0 ? (
+      <p className="mt-4 border border-dashed border-[var(--border-strong)] px-5 py-6 text-sm text-[var(--text-muted)]">No approved HR availability overlaps this term.</p>
+    ) : (
+      <div className="mt-4 divide-y divide-[var(--border-subtle)] border-y border-[var(--border)]">
+        {configuration.workforce_constraints.map((constraint) => (
+          <div className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center" key={constraint.id}>
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-strong)]">{nameFor(configuration.teachers, constraint.teacher_id)}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{displayLabel(constraint.kind)}</p>
+            </div>
+            <p className="text-sm text-[var(--text-muted)]">{formatDateTime(constraint.starts_at)} – {formatDateTime(constraint.ends_at)}</p>
+            <span className="w-fit rounded-full bg-[var(--tone-warning-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--tone-warning-strong)]">Planning constraint</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+);
+
+const RunHistory: React.FC<{
+  error: string | null;
+  isOpeningRun: string | null;
+  onOpen: (runId: string) => void;
+  runs: TimetableRunSummary[];
+}> = ({ error, isOpeningRun, onOpen, runs }) => {
+  if (error) return <StateMessage description={error} title="Run history could not be loaded" />;
+  if (runs.length === 0) return <StateMessage description="Generated timetable runs will appear here." title="No timetable runs yet" />;
+  return (
+    <section aria-labelledby="run-history-heading">
+      <div className="border-b border-[var(--border)] pb-4">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]"><History className="size-3.5" />Timetabling</div>
+        <h2 className="mt-2 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="run-history-heading">Run history</h2>
+      </div>
+      <div className="divide-y divide-[var(--border-subtle)] border-b border-[var(--border)]">
+        {runs.map((run) => (
+          <div className="grid gap-4 py-5 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center" key={run.id}>
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-strong)]">{run.academic_year_name && run.academic_term_name ? `${run.academic_year_name} · ${run.academic_term_name}` : "Legacy timetable run"}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Generated {formatDateTime(run.created_at)}</p>
+            </div>
+            <div>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${run.status === "published" ? "bg-[var(--tone-success-soft)] text-[var(--tone-success)]" : "bg-[var(--brand-soft)] text-[var(--brand-strong)]"}`}>{displayLabel(run.status)}</span>
+            </div>
+            <p className="text-sm text-[var(--text-muted)]">{run.entry_count} periods · {run.unresolved_count} unresolved · score {run.quality_score}</p>
+            <Button disabled={Boolean(isOpeningRun)} onClick={() => onOpen(run.id)} size="sm" variant="secondary">{isOpeningRun === run.id ? <Loader2 className="size-4 animate-spin" /> : null}Open</Button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 const RunReview: React.FC<{ canPublish: boolean; isPublishing: boolean; onPublish: () => void; run: TimetableRun | null; selectedClassId: string | null; setSelectedClassId: (id: string | null) => void }> = ({ canPublish, isPublishing, onPublish, run, selectedClassId, setSelectedClassId }) => {
   if (!run) return <StateMessage description="Complete the timetable setup, then generate a draft." title="No timetable draft yet" />;
@@ -412,6 +512,18 @@ const StateMessage: React.FC<{ action?: React.ReactNode; description: string; ti
 
 function nameFor(items: NamedResource[], id: string) {
   return items.find((item) => item.id === id)?.name ?? "Unknown";
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function displayLabel(value: string) {
+  return value.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function removeRegistryItem(configuration: TimetableConfiguration, registry: RegistryKind, id: string, update: (next: TimetableConfiguration) => void) {

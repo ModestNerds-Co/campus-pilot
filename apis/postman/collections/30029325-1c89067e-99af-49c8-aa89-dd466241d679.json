@@ -2802,7 +2802,7 @@
     },
     {
       "name": "Timetabling",
-      "description": "Consumes active Academics records. Timetabling owns schedule rules, rooms, availability, generated snapshots, and publication.",
+      "description": "Consumes the active Academics term and approved HR availability. Timetabling owns recurring schedule rules, rooms, generated snapshots, and publication.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -2828,7 +2828,7 @@
             "description": "Academic classes, subjects, teachers, and teaching assignments in this body are replaced by current Academics records. Only timetable-owned settings persist.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"cycle_name\": \"\",\n  \"days\": [{\"key\": \"monday\", \"label\": \"Monday\"}],\n  \"periods\": [{\"key\": \"period-1\", \"label\": \"Period 1\", \"start_time\": null, \"end_time\": null}],\n  \"classes\": [],\n  \"subjects\": [],\n  \"teachers\": [],\n  \"rooms\": [],\n  \"lesson_requirements\": []\n}",
+            "raw": "{\n  \"cycle_name\": \"\",\n  \"academic_period\": null,\n  \"workforce_constraints\": [],\n  \"days\": [{\"key\": \"monday\", \"label\": \"Monday\"}],\n  \"periods\": [{\"key\": \"period-1\", \"label\": \"Period 1\", \"start_time\": null, \"end_time\": null}],\n  \"classes\": [],\n  \"subjects\": [],\n  \"teachers\": [],\n  \"rooms\": [],\n  \"lesson_requirements\": []\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2845,13 +2845,27 @@
             "url": "{{base_url}}/timetabling/generate"
           }
         },
-        {
-          "name": "Get Latest Run",
+      {
+        "name": "Get Latest Run",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/timetabling/runs/latest"
-          }
-        },
+          "url": "{{base_url}}/timetabling/runs/latest"
+        }
+      },
+      {
+        "name": "List Runs",
+        "request": {
+          "method": "GET",
+          "url": "{{base_url}}/timetabling/runs?page=1&per_page=20&status=draft"
+        }
+      },
+      {
+        "name": "Get Run",
+        "request": {
+          "method": "GET",
+          "url": "{{base_url}}/timetabling/runs/:id"
+        }
+      },
         {
           "name": "Publish Run",
           "request": {

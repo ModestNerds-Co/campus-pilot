@@ -483,7 +483,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 11);
             } else {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 2);
+                assert_eq!(module.executable_capabilities(), 4);
             }
         }
     }

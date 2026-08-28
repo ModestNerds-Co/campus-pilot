@@ -1252,6 +1252,24 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         route(
+            Method::GET,
+            "/api/1.0/timetabling/runs",
+            "timetabling.runs.list",
+            "timetabling",
+            "timetabling:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/timetabling/runs/{id}",
+            "timetabling.runs.read",
+            "timetabling",
+            "timetabling:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
             Method::PUT,
             "/api/1.0/timetabling/runs/{id}/publish",
             "timetabling.runs.publish",
@@ -1288,7 +1306,7 @@ fn route(
     {
         operation.requiring_modules(["hr_payroll".to_string()])
     } else if key.starts_with("timetabling.") {
-        operation.requiring_modules(["academics".to_string()])
+        operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
     } else {
         operation
     };
@@ -1375,6 +1393,8 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "fleet.vehicle_logs.list"
         | "fleet.vehicle_logs.read"
         | "timetabling.configuration.read"
+        | "timetabling.runs.list"
+        | "timetabling.runs.read"
         | "timetabling.runs.read_latest" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
@@ -1528,7 +1548,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 128);
+        assert_eq!(operation_catalog().len(), 130);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1580,7 +1600,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [51, 70, 7, 0]);
+        assert_eq!(counts, [53, 70, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

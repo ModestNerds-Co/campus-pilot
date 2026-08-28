@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -31,6 +31,26 @@ pub struct TeacherResource {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AcademicPeriodResource {
+    pub academic_year_id: Uuid,
+    pub academic_year_name: String,
+    pub academic_term_id: Uuid,
+    pub academic_term_name: String,
+    pub starts_on: NaiveDate,
+    pub ends_on: NaiveDate,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct WorkforceAvailabilityConstraint {
+    pub id: Uuid,
+    pub teacher_id: Uuid,
+    pub employee_id: Uuid,
+    pub kind: String,
+    pub starts_at: DateTime<Utc>,
+    pub ends_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LessonRequirement {
     pub id: String,
     pub class_id: String,
@@ -43,6 +63,10 @@ pub struct LessonRequirement {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TimetableConfiguration {
     pub cycle_name: String,
+    #[serde(default)]
+    pub academic_period: Option<AcademicPeriodResource>,
+    #[serde(default)]
+    pub workforce_constraints: Vec<WorkforceAvailabilityConstraint>,
     pub days: Vec<TimetableDay>,
     pub periods: Vec<TimetablePeriod>,
     pub classes: Vec<NamedResource>,
@@ -71,6 +95,8 @@ impl Default for TimetableConfiguration {
             .collect();
         Self {
             cycle_name: "Current academic cycle".to_string(),
+            academic_period: None,
+            workforce_constraints: Vec::new(),
             days,
             periods,
             classes: Vec::new(),
@@ -118,6 +144,19 @@ pub struct TimetableRunRow {
     pub configuration_snapshot: serde_json::Value,
     pub entries: serde_json::Value,
     pub unresolved: serde_json::Value,
+    pub quality_score: i32,
+    pub created_at: DateTime<Utc>,
+    pub published_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TimetableRunSummary {
+    pub id: Uuid,
+    pub status: String,
+    pub academic_year_name: Option<String>,
+    pub academic_term_name: Option<String>,
+    pub entry_count: i64,
+    pub unresolved_count: i64,
     pub quality_score: i32,
     pub created_at: DateTime<Utc>,
     pub published_at: Option<DateTime<Utc>>,

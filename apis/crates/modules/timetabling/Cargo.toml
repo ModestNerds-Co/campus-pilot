@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 cp-common = { path = "../../common" }
 cp-academics = { path = "../academics" }
+cp-hr-payroll = { path = "../hr-payroll" }
 
 actix-web = { workspace = true }
 sqlx = { workspace = true }

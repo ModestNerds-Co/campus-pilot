@@ -1519,6 +1519,7 @@ dependencies = [
  "chrono",
  "cp-academics",
  "cp-common",
+ "cp-hr-payroll",
  "log",
  "serde",
  "serde_json",

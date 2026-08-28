@@ -2,7 +2,8 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, get, post, put, web};
-use cp_common::{ApiResponse, RequirePermission, TenantId};
+use cp_common::{ApiResponse, PaginationMeta, RequirePermission, TenantId};
+use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -64,6 +65,63 @@ async fn latest_run(
     Ok(ok(run))
 }
 
+#[derive(Debug, Deserialize)]
+struct RunListQuery {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    status: Option<String>,
+}
+
+#[get("/runs")]
+async fn list_runs(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<RunListQuery>,
+) -> HttpResponse {
+    let page = query.page.unwrap_or(1).max(1);
+    let per_page = query.per_page.unwrap_or(20).clamp(1, 100);
+    match TimetablingOps::list_runs(
+        pool.get_ref(),
+        tenant.into_inner().into_inner(),
+        page,
+        per_page,
+        query.status.as_deref(),
+    )
+    .await
+    {
+        Ok((runs, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(runs),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => bad_request_or_internal(error),
+    }
+}
+
+#[get("/runs/{id}")]
+async fn get_run(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let run = TimetablingOps::get_run(
+        pool.get_ref(),
+        tenant.into_inner().into_inner(),
+        path.into_inner(),
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(match run {
+        Some(run) => ok(Some(run)),
+        None => HttpResponse::NotFound().json(ApiResponse::from_status(
+            StatusCode::NOT_FOUND,
+            None::<()>,
+            Some(vec!["Timetable run not found".to_string()]),
+        )),
+    })
+}
+
 #[put("/runs/{id}/publish")]
 async fn publish_run(
     pool: web::Data<PgPool>,
@@ -94,7 +152,9 @@ fn ok<T: serde::Serialize>(value: Option<T>) -> HttpResponse {
 fn bad_request_or_internal(error: anyhow::Error) -> HttpResponse {
     let message = error.to_string();
     let operational = message.starts_with("Add ")
+        || message.starts_with("Activate ")
         || message.starts_with("Resolve ")
+        || message.starts_with("Timetable run status")
         || message.contains('\n')
         || message.contains("required")
         || message.contains("Configure ")
@@ -124,6 +184,8 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(save_configuration)
             .service(generate_timetable)
             .service(latest_run)
+            .service(list_runs)
+            .service(get_run)
             .service(publish_run),
     );
 }

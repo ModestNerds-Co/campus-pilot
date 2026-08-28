@@ -39,7 +39,10 @@ use hr::{
 use sis::{
     AccountCandidatesCapability, SisListCapability, SisListKind, SisReadCapability, SisReadKind,
 };
-use timetabling::{LatestTimetableRunCapability, TimetableConfigurationCapability};
+use timetabling::{
+    LatestTimetableRunCapability, TimetableConfigurationCapability, TimetableRunReadCapability,
+    TimetableRunsListCapability,
+};
 
 #[must_use]
 pub fn build_capability_registry(
@@ -187,6 +190,12 @@ pub fn build_capability_registry(
     registry
         .register(TimetableConfigurationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
+    registry
+        .register(TimetableRunsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Timetabling runs-list capability: {error}"));
+    registry
+        .register(TimetableRunReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Timetabling run-read capability: {error}"));
     registry
         .register(LatestTimetableRunCapability::new(pool))
         .unwrap_or_else(|error| panic!("invalid Timetabling latest-run capability: {error}"));
@@ -373,6 +382,8 @@ mod tests {
                 "sis.learners.list",
                 "sis.learners.read",
                 "timetabling.configuration.read",
+                "timetabling.runs.list",
+                "timetabling.runs.read",
                 "timetabling.runs.read_latest"
             ]
         );

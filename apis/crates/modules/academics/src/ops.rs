@@ -343,6 +343,33 @@ impl AcademicTermOps {
         load_term(pool, tenant_id, id).await
     }
 
+    pub async fn get_active_for_year(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        academic_year_id: Uuid,
+    ) -> Result<Option<AcademicTerm>> {
+        sqlx::query_as::<_, AcademicTerm>(
+            r#"
+            SELECT term.id, term.tenant_id, term.academic_year_id,
+                   academic_year.name AS academic_year_name, term.code, term.name,
+                   term.starts_on, term.ends_on, term.status, term.created_at,
+                   term.updated_at, term.deleted_at
+            FROM academic_terms AS term
+            INNER JOIN academic_years AS academic_year
+              ON academic_year.id = term.academic_year_id
+             AND academic_year.tenant_id = term.tenant_id
+            WHERE term.tenant_id = $1 AND term.academic_year_id = $2
+              AND term.status = 'active' AND term.deleted_at IS NULL
+              AND academic_year.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(academic_year_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load the active academic term")
+    }
+
     pub async fn create(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -1199,6 +1226,8 @@ impl TeachingAssignmentOps {
         let Some(academic_year) = AcademicYearOps::get_active(pool, tenant_id).await? else {
             return Ok(None);
         };
+        let active_term =
+            AcademicTermOps::get_active_for_year(pool, tenant_id, academic_year.id).await?;
         let (classes, _) = ClassGroupOps::list(
             pool,
             tenant_id,
@@ -1226,6 +1255,7 @@ impl TeachingAssignmentOps {
         .await?;
         Ok(Some(TimetablingReferenceData {
             academic_year,
+            active_term,
             classes,
             subjects,
             teachers,

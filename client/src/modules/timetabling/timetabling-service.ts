@@ -2,7 +2,7 @@ import { AxiosError } from "axios";
 
 import { httpClient } from "@/lib/http-client";
 import type { ApiEnvelope } from "@/modules/users/types";
-import type { TimetableConfiguration, TimetableRun } from "./types";
+import type { TimetableConfiguration, TimetableRun, TimetableRunSummary } from "./types";
 
 class TimetablingService {
   private readonly baseUrl = "/api/1.0/timetabling";
@@ -17,6 +17,16 @@ class TimetablingService {
 
   getLatestRun() {
     return this.request<TimetableRun>(() => httpClient.get(`${this.baseUrl}/runs/latest`));
+  }
+
+  listRuns(status?: TimetableRunSummary["status"]) {
+    return this.request<TimetableRunSummary[]>(() => httpClient.get(`${this.baseUrl}/runs`, {
+      params: { page: 1, per_page: 100, status },
+    }));
+  }
+
+  getRun(runId: string) {
+    return this.request<TimetableRun>(() => httpClient.get(`${this.baseUrl}/runs/${runId}`));
   }
 
   generate() {
@@ -35,6 +45,7 @@ class TimetablingService {
       throw error;
     }
   }
+
 }
 
 export const timetablingService = new TimetablingService();
