@@ -66,6 +66,8 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
           <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="hr-workspaces">Manage the workforce directory</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <HrLink description="Maintain the canonical record used across campus modules." label="Employees" to="/modules/hr-payroll/employees" />
+            <HrLink description="Keep dated contract and assignment history." label="Employment" to="/modules/hr-payroll/employment" />
+            <HrLink description="Record reviewed workforce scheduling constraints." label="Availability" to="/modules/hr-payroll/availability" />
             <HrLink description="Organize employees by operational area." label="Departments" to="/modules/hr-payroll/departments" />
             <HrLink description="Maintain the positions employees may hold." label="Positions" to="/modules/hr-payroll/positions" />
           </div>
@@ -165,7 +167,7 @@ const FleetLink: React.FC<{ description: string; label: string; to: "/modules/fl
   </Link>
 );
 
-const HrLink: React.FC<{ description: string; label: string; to: "/modules/hr-payroll/employees" | "/modules/hr-payroll/departments" | "/modules/hr-payroll/positions" }> = ({ description, label, to }) => (
+const HrLink: React.FC<{ description: string; label: string; to: "/modules/hr-payroll/employees" | "/modules/hr-payroll/employment" | "/modules/hr-payroll/availability" | "/modules/hr-payroll/departments" | "/modules/hr-payroll/positions" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

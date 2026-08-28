@@ -6,6 +6,7 @@ import {
   BookOpen,
   BriefcaseBusiness,
   Building2,
+  CalendarClock,
   CalendarRange,
   ClipboardList,
   GraduationCap,
@@ -66,6 +67,8 @@ const fleetNavigation: LocalNavItem[] = [
 
 const hrNavigation: LocalNavItem[] = [
   { label: "Employees", path: "/modules/hr-payroll/employees", icon: UsersRound },
+  { label: "Employment", path: "/modules/hr-payroll/employment", icon: BriefcaseBusiness },
+  { label: "Availability", path: "/modules/hr-payroll/availability", icon: CalendarClock },
   { label: "Departments", path: "/modules/hr-payroll/departments", icon: Building2 },
   { label: "Positions", path: "/modules/hr-payroll/positions", icon: BriefcaseBusiness },
 ];
@@ -232,6 +235,8 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/fleet/drivers") return <Link className={navClass(active)} to="/modules/fleet/drivers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fleet/daily-log") return <Link className={navClass(active)} to="/modules/fleet/daily-log"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/hr-payroll/employees") return <Link className={navClass(active)} to="/modules/hr-payroll/employees"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/hr-payroll/employment") return <Link className={navClass(active)} to="/modules/hr-payroll/employment"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/hr-payroll/availability") return <Link className={navClass(active)} to="/modules/hr-payroll/availability"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/hr-payroll/departments") return <Link className={navClass(active)} to="/modules/hr-payroll/departments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/hr-payroll/positions") return <Link className={navClass(active)} to="/modules/hr-payroll/positions"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/academic-years") return <Link className={navClass(active)} to="/modules/academics/academic-years"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

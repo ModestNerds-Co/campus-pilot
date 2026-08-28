@@ -21,7 +21,7 @@ export const DialogPanel = React.forwardRef<
     aria-labelledby="dialog-title"
     aria-modal="true"
     className={cn(
-      "cp-drawer-panel relative ml-auto flex h-[100dvh] w-full max-w-[640px] flex-col overflow-hidden border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)] [&>form]:flex [&>form]:min-h-0 [&>form]:flex-1 [&>form]:flex-col",
+      "cp-drawer-panel relative ml-auto flex h-[100dvh] min-w-0 w-full max-w-full flex-col overflow-hidden border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-modal)] sm:max-w-[640px] [&>form]:flex [&>form]:min-h-0 [&>form]:min-w-0 [&>form]:flex-1 [&>form]:flex-col",
       className
     )}
     ref={ref}
@@ -59,7 +59,7 @@ export function DialogHeader({ className, title, onClose, ...props }: React.Comp
 }
 
 export function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6", className)} data-drawer-body {...props} />;
+  return <div className={cn("min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-5 sm:p-6", className)} data-drawer-body {...props} />;
 }
 
 export function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {

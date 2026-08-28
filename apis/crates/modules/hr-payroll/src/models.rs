@@ -72,6 +72,56 @@ pub struct EmployeeReference {
     pub employment_status: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EmploymentEngagementWithDetails {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub employee_id: Uuid,
+    pub employee_number: String,
+    pub employee_name: String,
+    pub reference: Option<String>,
+    pub employment_type: String,
+    pub department_id: Option<Uuid>,
+    pub department_name: Option<String>,
+    pub position_id: Option<Uuid>,
+    pub position_title: Option<String>,
+    pub status: String,
+    pub start_date: Option<NaiveDate>,
+    pub end_date: Option<NaiveDate>,
+    pub workload_basis_points: i32,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EmployeeAvailabilityWithDetails {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub employee_id: Uuid,
+    pub employee_number: String,
+    pub employee_name: String,
+    pub kind: String,
+    pub starts_at: DateTime<Utc>,
+    pub ends_at: DateTime<Utc>,
+    pub status: String,
+    pub notes: Option<String>,
+    pub decided_by: Option<Uuid>,
+    pub decided_by_name: Option<String>,
+    pub decided_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EmployeeAvailabilityReference {
+    pub id: Uuid,
+    pub employee_id: Uuid,
+    pub kind: String,
+    pub starts_at: DateTime<Utc>,
+    pub ends_at: DateTime<Utc>,
+}
+
 impl From<EmployeeWithDetails> for EmployeeReference {
     fn from(value: EmployeeWithDetails) -> Self {
         Self {

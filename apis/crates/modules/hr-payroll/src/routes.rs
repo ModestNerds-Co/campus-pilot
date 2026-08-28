@@ -7,7 +7,8 @@
 //
 
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, delete, get, post, put, web};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, delete, get, post, put, web};
+use cp_audit::AuditActor;
 use cp_common::{
     ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
 };
@@ -16,13 +17,21 @@ use validator::Validate;
 
 use crate::{
     dtos::{
-        CreateDepartmentRequest, CreateEmployeeRequest, CreatePositionRequest, DepartmentResponse,
-        DirectoryListQuery, DirectoryStatus, EmployeeListQuery, EmployeeResponse,
-        LinkEmployeeAccountRequest, PaginatedDepartmentsResponse, PaginatedEmployeesResponse,
+        CreateDepartmentRequest, CreateEmployeeAvailabilityRequest, CreateEmployeeRequest,
+        CreateEmploymentEngagementRequest, CreatePositionRequest, DepartmentResponse,
+        DirectoryListQuery, DirectoryStatus, EmployeeAvailabilityListQuery,
+        EmployeeAvailabilityResponse, EmployeeListQuery, EmployeeResponse,
+        EmploymentEngagementListQuery, EmploymentEngagementResponse, LinkEmployeeAccountRequest,
+        PaginatedDepartmentsResponse, PaginatedEmployeeAvailabilityResponse,
+        PaginatedEmployeesResponse, PaginatedEmploymentEngagementsResponse,
         PaginatedPositionsResponse, PositionResponse, UpdateDepartmentRequest,
-        UpdateEmployeeRequest, UpdatePositionRequest,
+        UpdateEmployeeAvailabilityRequest, UpdateEmployeeRequest,
+        UpdateEmploymentEngagementRequest, UpdatePositionRequest,
     },
-    ops::{DeleteOutcome, DepartmentOps, EmployeeOps, PositionOps},
+    ops::{
+        DeleteOutcome, DepartmentOps, EmployeeAvailabilityOps, EmployeeOps,
+        EmploymentEngagementOps, PositionOps,
+    },
 };
 
 #[get("")]
@@ -331,6 +340,252 @@ async fn delete_employee(
     )
 }
 
+#[get("")]
+async fn list_employment_engagements(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<EmploymentEngagementListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match EmploymentEngagementOps::list(
+        &pool,
+        tenant.into_inner().into_inner(),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        query.employee_id,
+        query.status.map(|value| value.as_str()),
+        query.employment_type.map(|value| value.as_str()),
+    )
+    .await
+    {
+        Ok((engagements, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(PaginatedEmploymentEngagementsResponse {
+                employment_engagements: engagements
+                    .into_iter()
+                    .map(EmploymentEngagementResponse::from)
+                    .collect(),
+            }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => internal_error("Employment engagements could not be loaded", error),
+    }
+}
+
+#[get("/{id}")]
+async fn get_employment_engagement(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    match EmploymentEngagementOps::get_by_id(
+        &pool,
+        tenant.into_inner().into_inner(),
+        id.into_inner(),
+    )
+    .await
+    {
+        Ok(Some(value)) => ok(EmploymentEngagementResponse::from(value)),
+        Ok(None) => not_found("Employment engagement was not found"),
+        Err(error) => internal_error("Employment engagement could not be loaded", error),
+    }
+}
+
+#[post("")]
+async fn create_employment_engagement(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    request: web::Json<CreateEmploymentEngagementRequest>,
+) -> HttpResponse {
+    if let Err(error) = request.validate() {
+        return validation_error(error);
+    }
+    match EmploymentEngagementOps::create(&pool, tenant.into_inner().into_inner(), &request).await {
+        Ok(value) => created(EmploymentEngagementResponse::from(value)),
+        Err(error) => write_error("Employment engagement could not be created", error),
+    }
+}
+
+#[put("/{id}")]
+async fn update_employment_engagement(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+    request: web::Json<UpdateEmploymentEngagementRequest>,
+) -> HttpResponse {
+    if let Err(error) = request.validate() {
+        return validation_error(error);
+    }
+    match EmploymentEngagementOps::update(
+        &pool,
+        tenant.into_inner().into_inner(),
+        id.into_inner(),
+        &request,
+    )
+    .await
+    {
+        Ok(Some(value)) => ok(EmploymentEngagementResponse::from(value)),
+        Ok(None) => not_found("Employment engagement was not found"),
+        Err(error) => write_error("Employment engagement could not be updated", error),
+    }
+}
+
+#[delete("/{id}")]
+async fn delete_employment_engagement(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    match EmploymentEngagementOps::delete(&pool, tenant.into_inner().into_inner(), id.into_inner())
+        .await
+    {
+        Ok(DeleteOutcome::Deleted) => ok(serde_json::json!({ "success": true })),
+        Ok(DeleteOutcome::NotFound) => not_found("Employment engagement was not found"),
+        Ok(DeleteOutcome::InUse) => HttpResponse::Conflict().json(ApiResponse::from_status(
+            StatusCode::CONFLICT,
+            None::<()>,
+            Some(vec![
+                "Only draft employment engagements can be removed".to_string(),
+            ]),
+        )),
+        Err(error) => internal_error("Employment engagement could not be removed", error),
+    }
+}
+
+#[get("")]
+async fn list_employee_availability(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<EmployeeAvailabilityListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match EmployeeAvailabilityOps::list(
+        &pool,
+        tenant.into_inner().into_inner(),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        query.employee_id,
+        query.status.map(|value| value.as_str()),
+        query.kind.map(|value| value.as_str()),
+        query.from,
+        query.to,
+    )
+    .await
+    {
+        Ok((periods, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(PaginatedEmployeeAvailabilityResponse {
+                availability_periods: periods
+                    .into_iter()
+                    .map(EmployeeAvailabilityResponse::from)
+                    .collect(),
+            }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => internal_error("Employee availability could not be loaded", error),
+    }
+}
+
+#[get("/{id}")]
+async fn get_employee_availability(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    match EmployeeAvailabilityOps::get_by_id(
+        &pool,
+        tenant.into_inner().into_inner(),
+        id.into_inner(),
+    )
+    .await
+    {
+        Ok(Some(value)) => ok(EmployeeAvailabilityResponse::from(value)),
+        Ok(None) => not_found("Employee availability period was not found"),
+        Err(error) => internal_error("Employee availability could not be loaded", error),
+    }
+}
+
+#[post("")]
+async fn create_employee_availability(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    http_request: HttpRequest,
+    request: web::Json<CreateEmployeeAvailabilityRequest>,
+) -> HttpResponse {
+    if let Err(error) = request.validate() {
+        return validation_error(error);
+    }
+    let Some(actor_user_id) = request_actor_user_id(&http_request) else {
+        return missing_actor();
+    };
+    match EmployeeAvailabilityOps::create(
+        &pool,
+        tenant.into_inner().into_inner(),
+        actor_user_id,
+        &request,
+    )
+    .await
+    {
+        Ok(value) => created(EmployeeAvailabilityResponse::from(value)),
+        Err(error) => write_error("Employee availability could not be created", error),
+    }
+}
+
+#[put("/{id}")]
+async fn update_employee_availability(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    http_request: HttpRequest,
+    id: web::Path<Uuid>,
+    request: web::Json<UpdateEmployeeAvailabilityRequest>,
+) -> HttpResponse {
+    if let Err(error) = request.validate() {
+        return validation_error(error);
+    }
+    let Some(actor_user_id) = request_actor_user_id(&http_request) else {
+        return missing_actor();
+    };
+    match EmployeeAvailabilityOps::update(
+        &pool,
+        tenant.into_inner().into_inner(),
+        actor_user_id,
+        id.into_inner(),
+        &request,
+    )
+    .await
+    {
+        Ok(Some(value)) => ok(EmployeeAvailabilityResponse::from(value)),
+        Ok(None) => not_found("Employee availability period was not found"),
+        Err(error) => write_error("Employee availability could not be updated", error),
+    }
+}
+
+#[delete("/{id}")]
+async fn delete_employee_availability(
+    pool: web::Data<sqlx::PgPool>,
+    tenant: web::ReqData<TenantId>,
+    id: web::Path<Uuid>,
+) -> HttpResponse {
+    match EmployeeAvailabilityOps::delete(&pool, tenant.into_inner().into_inner(), id.into_inner())
+        .await
+    {
+        Ok(DeleteOutcome::Deleted) => ok(serde_json::json!({ "success": true })),
+        Ok(DeleteOutcome::NotFound) => not_found("Employee availability period was not found"),
+        Ok(DeleteOutcome::InUse) => HttpResponse::Conflict().json(ApiResponse::from_status(
+            StatusCode::CONFLICT,
+            None::<()>,
+            Some(vec![
+                "Only draft availability periods can be removed".to_string(),
+            ]),
+        )),
+        Err(error) => internal_error("Employee availability period could not be removed", error),
+    }
+}
+
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/departments")
@@ -359,7 +614,41 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(update_employee)
             .service(link_employee_account)
             .service(delete_employee),
+    )
+    .service(
+        web::scope("/employment-engagements")
+            .wrap(RequirePermission::new("hr_payroll"))
+            .service(list_employment_engagements)
+            .service(get_employment_engagement)
+            .service(create_employment_engagement)
+            .service(update_employment_engagement)
+            .service(delete_employment_engagement),
+    )
+    .service(
+        web::scope("/availability")
+            .wrap(RequirePermission::new("hr_payroll"))
+            .service(list_employee_availability)
+            .service(get_employee_availability)
+            .service(create_employee_availability)
+            .service(update_employee_availability)
+            .service(delete_employee_availability),
     );
+}
+
+fn request_actor_user_id(request: &HttpRequest) -> Option<Uuid> {
+    request
+        .extensions()
+        .get::<AuditActor>()
+        .copied()
+        .and_then(AuditActor::user_id)
+}
+
+fn missing_actor() -> HttpResponse {
+    HttpResponse::Unauthorized().json(ApiResponse::from_status(
+        StatusCode::UNAUTHORIZED,
+        None::<()>,
+        Some(vec!["Authenticated actor is required".to_string()]),
+    ))
 }
 
 fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {

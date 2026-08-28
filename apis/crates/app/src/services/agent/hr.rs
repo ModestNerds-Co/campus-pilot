@@ -1,6 +1,7 @@
 //! Adapts the canonical HR directory reads to typed Agent capabilities.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use cp_agent::{
     AuthorizedCapabilityContext, Capability, CapabilityDescriptor, CapabilityExecutionError,
     CapabilityExecutionErrorCode, CapabilityResource, CapabilityScope, DataSensitivity,
@@ -8,11 +9,15 @@ use cp_agent::{
 use cp_common::PaginationMeta;
 use cp_hr_payroll::{
     dtos::{
-        DepartmentResponse, DirectoryStatus, EmployeeResponse, EmploymentStatus,
-        PaginatedDepartmentsResponse, PaginatedEmployeesResponse, PaginatedPositionsResponse,
-        PositionResponse,
+        AvailabilityKind, AvailabilityStatus, DepartmentResponse, DirectoryStatus,
+        EmployeeAvailabilityResponse, EmployeeResponse, EmploymentEngagementResponse,
+        EmploymentStatus, EmploymentType, EngagementStatus, PaginatedDepartmentsResponse,
+        PaginatedEmployeeAvailabilityResponse, PaginatedEmployeesResponse,
+        PaginatedEmploymentEngagementsResponse, PaginatedPositionsResponse, PositionResponse,
     },
-    ops::{DepartmentOps, EmployeeOps, PositionOps},
+    ops::{
+        DepartmentOps, EmployeeAvailabilityOps, EmployeeOps, EmploymentEngagementOps, PositionOps,
+    },
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -457,6 +462,330 @@ impl Capability for HrEmployeeReadCapability {
         .ok_or_else(|| not_found("The employee was not found."))?;
         Ok(ReadEmployeeOutput {
             employee: EmployeeResponse::from(employee),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct EmploymentEngagementListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    employee_id: Option<Uuid>,
+    status: Option<EngagementStatus>,
+    employment_type: Option<EmploymentType>,
+}
+
+#[derive(Serialize)]
+pub(super) struct ListEmploymentEngagementsOutput {
+    employment_engagements: PaginatedEmploymentEngagementsResponse,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct HrEmploymentEngagementsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrEmploymentEngagementsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.employment_engagements.list",
+                "List employment engagements",
+                "Returns dated employment history for authorized tenant employees.",
+                json!({
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+                    "search": { "type": ["string", "null"], "maxLength": 200 },
+                    "employee_id": { "type": ["string", "null"], "format": "uuid" },
+                    "status": { "type": ["string", "null"], "enum": ["draft", "active", "ended", "cancelled", null] },
+                    "employment_type": { "type": ["string", "null"], "enum": ["permanent", "fixed_term", "temporary", "casual", "contractor", "intern", null] }
+                }),
+                json!({
+                    "employment_engagements": { "type": "object" },
+                    "pagination": { "type": "object" }
+                }),
+                DataSensitivity::Personal,
+                "hr_payroll.employment_engagements",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrEmploymentEngagementsListCapability {
+    type Input = EmploymentEngagementListInput;
+    type Output = ListEmploymentEngagementsOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        input.employee_id.map_or(CapabilityScope::TenantWide, |id| {
+            resource_scope("employee", id)
+        })
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (records, total) = EmploymentEngagementOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            input.employee_id,
+            input.status.map(EngagementStatus::as_str),
+            input.employment_type.map(EmploymentType::as_str),
+        )
+        .await
+        .map_err(|_| dependency_failure("Employment engagements could not be loaded."))?;
+        Ok(ListEmploymentEngagementsOutput {
+            employment_engagements: PaginatedEmploymentEngagementsResponse {
+                employment_engagements: records
+                    .into_iter()
+                    .map(EmploymentEngagementResponse::from)
+                    .collect(),
+            },
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ReadEmploymentEngagementInput {
+    employment_engagement_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct ReadEmploymentEngagementOutput {
+    employment_engagement: EmploymentEngagementResponse,
+}
+
+pub(super) struct HrEmploymentEngagementReadCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrEmploymentEngagementReadCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.employment_engagements.read",
+                "Read employment engagement",
+                "Returns one dated employment engagement by its stable identifier.",
+                json!({ "employment_engagement_id": { "type": "string", "format": "uuid" } }),
+                json!({ "employment_engagement": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "hr_payroll.employment_engagements",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrEmploymentEngagementReadCapability {
+    type Input = ReadEmploymentEngagementInput;
+    type Output = ReadEmploymentEngagementOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("employment_engagement", input.employment_engagement_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let record = EmploymentEngagementOps::get_by_id(
+            &self.pool,
+            context.principal().tenant_id(),
+            input.employment_engagement_id,
+        )
+        .await
+        .map_err(|_| dependency_failure("The employment engagement could not be loaded."))?
+        .ok_or_else(|| not_found("The employment engagement was not found."))?;
+        Ok(ReadEmploymentEngagementOutput {
+            employment_engagement: EmploymentEngagementResponse::from(record),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct EmployeeAvailabilityListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    employee_id: Option<Uuid>,
+    status: Option<AvailabilityStatus>,
+    kind: Option<AvailabilityKind>,
+    from: Option<DateTime<Utc>>,
+    to: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize)]
+pub(super) struct ListEmployeeAvailabilityOutput {
+    availability: PaginatedEmployeeAvailabilityResponse,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct HrEmployeeAvailabilityListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrEmployeeAvailabilityListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.availability.list",
+                "List employee availability",
+                "Returns authorized employee availability periods for workforce scheduling.",
+                json!({
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+                    "search": { "type": ["string", "null"], "maxLength": 200 },
+                    "employee_id": { "type": ["string", "null"], "format": "uuid" },
+                    "status": { "type": ["string", "null"], "enum": ["draft", "submitted", "approved", "rejected", "cancelled", null] },
+                    "kind": { "type": ["string", "null"], "enum": ["leave", "training", "medical", "personal", "other", null] },
+                    "from": { "type": ["string", "null"], "format": "date-time" },
+                    "to": { "type": ["string", "null"], "format": "date-time" }
+                }),
+                json!({
+                    "availability": { "type": "object" },
+                    "pagination": { "type": "object" }
+                }),
+                DataSensitivity::Sensitive,
+                "hr_payroll.availability",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrEmployeeAvailabilityListCapability {
+    type Input = EmployeeAvailabilityListInput;
+    type Output = ListEmployeeAvailabilityOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        input.employee_id.map_or(CapabilityScope::TenantWide, |id| {
+            resource_scope("employee", id)
+        })
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (records, total) = EmployeeAvailabilityOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            input.employee_id,
+            input.status.map(AvailabilityStatus::as_str),
+            input.kind.map(AvailabilityKind::as_str),
+            input.from,
+            input.to,
+        )
+        .await
+        .map_err(|_| dependency_failure("Employee availability could not be loaded."))?;
+        Ok(ListEmployeeAvailabilityOutput {
+            availability: PaginatedEmployeeAvailabilityResponse {
+                availability_periods: records
+                    .into_iter()
+                    .map(EmployeeAvailabilityResponse::from)
+                    .collect(),
+            },
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ReadEmployeeAvailabilityInput {
+    availability_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct ReadEmployeeAvailabilityOutput {
+    availability: EmployeeAvailabilityResponse,
+}
+
+pub(super) struct HrEmployeeAvailabilityReadCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl HrEmployeeAvailabilityReadCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "hr_payroll.availability.read",
+                "Read employee availability",
+                "Returns one employee availability period by its stable identifier.",
+                json!({ "availability_id": { "type": "string", "format": "uuid" } }),
+                json!({ "availability": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "hr_payroll.availability",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for HrEmployeeAvailabilityReadCapability {
+    type Input = ReadEmployeeAvailabilityInput;
+    type Output = ReadEmployeeAvailabilityOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("employee_availability", input.availability_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let record = EmployeeAvailabilityOps::get_by_id(
+            &self.pool,
+            context.principal().tenant_id(),
+            input.availability_id,
+        )
+        .await
+        .map_err(|_| dependency_failure("The employee availability period could not be loaded."))?
+        .ok_or_else(|| not_found("The employee availability period was not found."))?;
+        Ok(ReadEmployeeAvailabilityOutput {
+            availability: EmployeeAvailabilityResponse::from(record),
         })
     }
 }

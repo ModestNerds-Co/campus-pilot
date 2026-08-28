@@ -477,7 +477,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 7);
             } else if module_key == "hr_payroll" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 6);
+                assert_eq!(module.executable_capabilities(), 10);
             } else if module_key == "sis" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 11);

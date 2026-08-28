@@ -45,8 +45,10 @@ import { Route as ModulesSisGuardianRelationshipsRouteImport } from './routes/mo
 import { Route as ModulesSisEnrolmentsRouteImport } from './routes/modules/sis/enrolments'
 import { Route as ModulesSisApplicationsRouteImport } from './routes/modules/sis/applications'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
+import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
 import { Route as ModulesHrPayrollEmployeesRouteImport } from './routes/modules/hr-payroll/employees'
 import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/modules/hr-payroll/departments'
+import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modules/hr-payroll/availability'
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
@@ -240,6 +242,12 @@ const ModulesHrPayrollPositionsRoute =
     path: '/hr-payroll/positions',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesHrPayrollEmploymentRoute =
+  ModulesHrPayrollEmploymentRouteImport.update({
+    id: '/hr-payroll/employment',
+    path: '/hr-payroll/employment',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesHrPayrollEmployeesRoute =
   ModulesHrPayrollEmployeesRouteImport.update({
     id: '/hr-payroll/employees',
@@ -250,6 +258,12 @@ const ModulesHrPayrollDepartmentsRoute =
   ModulesHrPayrollDepartmentsRouteImport.update({
     id: '/hr-payroll/departments',
     path: '/hr-payroll/departments',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesHrPayrollAvailabilityRoute =
+  ModulesHrPayrollAvailabilityRouteImport.update({
+    id: '/hr-payroll/availability',
+    path: '/hr-payroll/availability',
     getParentRoute: () => ModulesRoute,
   } as any)
 const ModulesFleetVehiclesRoute = ModulesFleetVehiclesRouteImport.update({
@@ -347,8 +361,10 @@ export interface FileRoutesByFullPath {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
+  '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
@@ -396,8 +412,10 @@ export interface FileRoutesByTo {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
+  '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
@@ -447,8 +465,10 @@ export interface FileRoutesById {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
+  '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
@@ -499,8 +519,10 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
+    | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/positions'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
@@ -548,8 +570,10 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
+    | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/positions'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
@@ -598,8 +622,10 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
+    | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/positions'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
@@ -876,6 +902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesHrPayrollPositionsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/hr-payroll/employment': {
+      id: '/modules/hr-payroll/employment'
+      path: '/hr-payroll/employment'
+      fullPath: '/modules/hr-payroll/employment'
+      preLoaderRoute: typeof ModulesHrPayrollEmploymentRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/hr-payroll/employees': {
       id: '/modules/hr-payroll/employees'
       path: '/hr-payroll/employees'
@@ -888,6 +921,13 @@ declare module '@tanstack/react-router' {
       path: '/hr-payroll/departments'
       fullPath: '/modules/hr-payroll/departments'
       preLoaderRoute: typeof ModulesHrPayrollDepartmentsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/hr-payroll/availability': {
+      id: '/modules/hr-payroll/availability'
+      path: '/hr-payroll/availability'
+      fullPath: '/modules/hr-payroll/availability'
+      preLoaderRoute: typeof ModulesHrPayrollAvailabilityRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/fleet/vehicles': {
@@ -1023,8 +1063,10 @@ interface ModulesRouteChildren {
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
+  ModulesHrPayrollAvailabilityRoute: typeof ModulesHrPayrollAvailabilityRoute
   ModulesHrPayrollDepartmentsRoute: typeof ModulesHrPayrollDepartmentsRoute
   ModulesHrPayrollEmployeesRoute: typeof ModulesHrPayrollEmployeesRoute
+  ModulesHrPayrollEmploymentRoute: typeof ModulesHrPayrollEmploymentRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
   ModulesSisApplicationsRoute: typeof ModulesSisApplicationsRoute
   ModulesSisEnrolmentsRoute: typeof ModulesSisEnrolmentsRoute
@@ -1044,8 +1086,10 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,
+  ModulesHrPayrollAvailabilityRoute: ModulesHrPayrollAvailabilityRoute,
   ModulesHrPayrollDepartmentsRoute: ModulesHrPayrollDepartmentsRoute,
   ModulesHrPayrollEmployeesRoute: ModulesHrPayrollEmployeesRoute,
+  ModulesHrPayrollEmploymentRoute: ModulesHrPayrollEmploymentRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
   ModulesSisApplicationsRoute: ModulesSisApplicationsRoute,
   ModulesSisEnrolmentsRoute: ModulesSisEnrolmentsRoute,

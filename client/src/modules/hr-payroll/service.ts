@@ -8,10 +8,18 @@ import type {
   DepartmentInput,
   DepartmentsResponse,
   DirectoryListParams,
+  EmployeeAvailability,
+  EmployeeAvailabilityInput,
+  EmployeeAvailabilityListParams,
+  EmployeeAvailabilityResponse,
   Employee,
   EmployeeInput,
   EmployeeListParams,
   EmployeesResponse,
+  EmploymentEngagement,
+  EmploymentEngagementInput,
+  EmploymentEngagementListParams,
+  EmploymentEngagementsResponse,
   Position,
   PositionInput,
   PositionsResponse,
@@ -26,6 +34,13 @@ async function request<T>(work: () => Promise<{ data: ApiEnvelope<T> }>): Promis
     if (error instanceof AxiosError && error.response) return error.response.data as ApiEnvelope<T>;
     throw error;
   }
+}
+
+export function hrResponseMessage<T>(response: ApiEnvelope<T>, fallback: string): string {
+  if (response.message) return response.message;
+  const issue = response.issues?.[0];
+  if (typeof issue === "string") return issue;
+  return issue?.detail || fallback;
 }
 
 export const hrPayrollService = {
@@ -57,4 +72,22 @@ export const hrPayrollService = {
     request<Employee>(() => httpClient.put(`${BASE_URL}/employees/${id}/account`, { account_id: accountId })),
   deleteEmployee: (id: string) =>
     request<{ success: boolean }>(() => httpClient.delete(`${BASE_URL}/employees/${id}`)),
+
+  listEmploymentEngagements: (params?: EmploymentEngagementListParams) =>
+    request<EmploymentEngagementsResponse>(() => httpClient.get(`${BASE_URL}/employment-engagements`, { params })),
+  createEmploymentEngagement: (data: EmploymentEngagementInput & { employee_id: string }) =>
+    request<EmploymentEngagement>(() => httpClient.post(`${BASE_URL}/employment-engagements`, data)),
+  updateEmploymentEngagement: (id: string, data: EmploymentEngagementInput) =>
+    request<EmploymentEngagement>(() => httpClient.put(`${BASE_URL}/employment-engagements/${id}`, data)),
+  deleteEmploymentEngagement: (id: string) =>
+    request<{ success: boolean }>(() => httpClient.delete(`${BASE_URL}/employment-engagements/${id}`)),
+
+  listEmployeeAvailability: (params?: EmployeeAvailabilityListParams) =>
+    request<EmployeeAvailabilityResponse>(() => httpClient.get(`${BASE_URL}/availability`, { params })),
+  createEmployeeAvailability: (data: EmployeeAvailabilityInput & { employee_id: string }) =>
+    request<EmployeeAvailability>(() => httpClient.post(`${BASE_URL}/availability`, data)),
+  updateEmployeeAvailability: (id: string, data: EmployeeAvailabilityInput) =>
+    request<EmployeeAvailability>(() => httpClient.put(`${BASE_URL}/availability/${id}`, data)),
+  deleteEmployeeAvailability: (id: string) =>
+    request<{ success: boolean }>(() => httpClient.delete(`${BASE_URL}/availability/${id}`)),
 };

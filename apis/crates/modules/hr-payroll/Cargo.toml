@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 cp-common = { path = "../../common" }
+cp-audit = { path = "../../platform/audit" }
 actix-web = { workspace = true }
 sqlx = { workspace = true }
 serde = { workspace = true }

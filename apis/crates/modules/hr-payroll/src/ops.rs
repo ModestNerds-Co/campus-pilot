@@ -7,15 +7,21 @@
 //
 
 use anyhow::{Context, Result, bail};
-use sqlx::PgPool;
+use chrono::{DateTime, NaiveDate, Utc};
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::{
     dtos::{
-        CreateDepartmentRequest, CreateEmployeeRequest, CreatePositionRequest,
-        UpdateDepartmentRequest, UpdateEmployeeRequest, UpdatePositionRequest,
+        CreateDepartmentRequest, CreateEmployeeAvailabilityRequest, CreateEmployeeRequest,
+        CreateEmploymentEngagementRequest, CreatePositionRequest, UpdateDepartmentRequest,
+        UpdateEmployeeAvailabilityRequest, UpdateEmployeeRequest,
+        UpdateEmploymentEngagementRequest, UpdatePositionRequest,
     },
-    models::{Department, EmployeeReference, EmployeeWithDetails, Position},
+    models::{
+        Department, EmployeeAvailabilityReference, EmployeeAvailabilityWithDetails,
+        EmployeeReference, EmployeeWithDetails, EmploymentEngagementWithDetails, Position,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -727,7 +733,21 @@ impl EmployeeOps {
             return Ok(DeleteOutcome::NotFound);
         }
         let in_use = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM drivers WHERE tenant_id = $1 AND employee_id = $2 AND deleted_at IS NULL)",
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM drivers
+                WHERE tenant_id = $1 AND employee_id = $2 AND deleted_at IS NULL
+                UNION ALL
+                SELECT 1 FROM teacher_profiles
+                WHERE tenant_id = $1 AND employee_id = $2 AND deleted_at IS NULL
+                UNION ALL
+                SELECT 1 FROM employment_engagements
+                WHERE tenant_id = $1 AND employee_id = $2 AND deleted_at IS NULL
+                UNION ALL
+                SELECT 1 FROM employee_availability_periods
+                WHERE tenant_id = $1 AND employee_id = $2 AND deleted_at IS NULL
+            )
+            "#,
         )
         .bind(tenant_id)
         .bind(id)
@@ -747,6 +767,887 @@ impl EmployeeOps {
         .context("Failed to delete employee")?;
         Ok(DeleteOutcome::Deleted)
     }
+}
+
+pub struct EmploymentEngagementOps;
+
+impl EmploymentEngagementOps {
+    #[allow(clippy::too_many_arguments)]
+    pub async fn list(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        employee_id: Option<Uuid>,
+        status: Option<&str>,
+        employment_type: Option<&str>,
+    ) -> Result<(Vec<EmploymentEngagementWithDetails>, i64)> {
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let rows = sqlx::query_as::<_, EmploymentEngagementWithDetails>(
+            r#"
+            SELECT engagement.id, engagement.tenant_id, engagement.employee_id,
+                   employee.employee_number, employee.display_name AS employee_name,
+                   engagement.reference, engagement.employment_type,
+                   engagement.department_id, department.name AS department_name,
+                   engagement.position_id, position.title AS position_title,
+                   engagement.status, engagement.start_date, engagement.end_date,
+                   engagement.workload_basis_points, engagement.notes,
+                   engagement.created_at, engagement.updated_at
+            FROM employment_engagements AS engagement
+            JOIN employees AS employee
+              ON employee.id = engagement.employee_id
+             AND employee.tenant_id = engagement.tenant_id
+             AND employee.deleted_at IS NULL
+            LEFT JOIN departments AS department
+              ON department.id = engagement.department_id
+             AND department.tenant_id = engagement.tenant_id
+             AND department.deleted_at IS NULL
+            LEFT JOIN positions AS position
+              ON position.id = engagement.position_id
+             AND position.tenant_id = engagement.tenant_id
+             AND position.deleted_at IS NULL
+            WHERE engagement.tenant_id = $1 AND engagement.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR engagement.reference ILIKE $2
+                   OR employee.employee_number ILIKE $2 OR employee.display_name ILIKE $2)
+              AND ($3::UUID IS NULL OR engagement.employee_id = $3)
+              AND ($4::TEXT IS NULL OR engagement.status = $4)
+              AND ($5::TEXT IS NULL OR engagement.employment_type = $5)
+            ORDER BY engagement.start_date DESC NULLS LAST, employee.display_name, engagement.created_at DESC
+            LIMIT $6 OFFSET $7
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(employee_id)
+        .bind(status)
+        .bind(employment_type)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list employment engagements")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM employment_engagements AS engagement
+            JOIN employees AS employee
+              ON employee.id = engagement.employee_id
+             AND employee.tenant_id = engagement.tenant_id
+             AND employee.deleted_at IS NULL
+            WHERE engagement.tenant_id = $1 AND engagement.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR engagement.reference ILIKE $2
+                   OR employee.employee_number ILIKE $2 OR employee.display_name ILIKE $2)
+              AND ($3::UUID IS NULL OR engagement.employee_id = $3)
+              AND ($4::TEXT IS NULL OR engagement.status = $4)
+              AND ($5::TEXT IS NULL OR engagement.employment_type = $5)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(employee_id)
+        .bind(status)
+        .bind(employment_type)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count employment engagements")?;
+        Ok((rows, total))
+    }
+
+    pub async fn get_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> Result<Option<EmploymentEngagementWithDetails>> {
+        load_engagement(pool, tenant_id, id).await
+    }
+
+    pub async fn create(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        request: &CreateEmploymentEngagementRequest,
+    ) -> Result<EmploymentEngagementWithDetails> {
+        ensure_employee(pool, tenant_id, request.employee_id).await?;
+        validate_employee_references(
+            pool,
+            tenant_id,
+            None,
+            request.department_id,
+            request.position_id,
+        )
+        .await?;
+        let status = request.status.map_or("draft", |value| value.as_str());
+        if !matches!(status, "draft" | "active") {
+            bail!("A new employment engagement must be draft or active");
+        }
+        validate_engagement(
+            request.employment_type.as_str(),
+            status,
+            Some(request.start_date),
+            request.end_date,
+        )?;
+
+        let mut transaction = pool
+            .begin()
+            .await
+            .context("Failed to begin employment change")?;
+        lock_employee(&mut transaction, tenant_id, request.employee_id).await?;
+        if status == "active" {
+            ensure_no_other_active_engagement(
+                &mut transaction,
+                tenant_id,
+                request.employee_id,
+                None,
+            )
+            .await?;
+        }
+        let id = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            INSERT INTO employment_engagements (
+                tenant_id, employee_id, reference, employment_type,
+                department_id, position_id, status, start_date, end_date,
+                workload_basis_points, notes
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(request.employee_id)
+        .bind(trimmed_owned(request.reference.as_deref()))
+        .bind(request.employment_type.as_str())
+        .bind(request.department_id)
+        .bind(request.position_id)
+        .bind(status)
+        .bind(request.start_date)
+        .bind(request.end_date)
+        .bind(request.workload_basis_points.unwrap_or(10_000))
+        .bind(trimmed_owned(request.notes.as_deref()))
+        .fetch_one(&mut *transaction)
+        .await
+        .context("Failed to create employment engagement")?;
+        if status == "active" {
+            sync_employee_projection(
+                &mut transaction,
+                tenant_id,
+                request.employee_id,
+                request.department_id,
+                request.position_id,
+                Some(request.start_date),
+                request.end_date,
+                "active",
+            )
+            .await?;
+        }
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit employment engagement")?;
+        Self::get_by_id(pool, tenant_id, id)
+            .await?
+            .context("Created employment engagement could not be reloaded")
+    }
+
+    pub async fn update(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        request: &UpdateEmploymentEngagementRequest,
+    ) -> Result<Option<EmploymentEngagementWithDetails>> {
+        validate_employee_references(
+            pool,
+            tenant_id,
+            None,
+            request.department_id,
+            request.position_id,
+        )
+        .await?;
+        validate_engagement(
+            request.employment_type.as_str(),
+            request.status.as_str(),
+            Some(request.start_date),
+            request.end_date,
+        )?;
+
+        let mut transaction = pool
+            .begin()
+            .await
+            .context("Failed to begin employment change")?;
+        let Some((employee_id, current_status)) = sqlx::query_as::<_, (Uuid, String)>(
+            r#"
+            SELECT employee_id, status
+            FROM employment_engagements
+            WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+            FOR UPDATE
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .context("Failed to load employment engagement")?
+        else {
+            return Ok(None);
+        };
+        lock_employee(&mut transaction, tenant_id, employee_id).await?;
+        if matches!(current_status.as_str(), "ended" | "cancelled") {
+            bail!(
+                "Ended and cancelled employment engagements are historical records and cannot be edited"
+            );
+        }
+        validate_engagement_transition(&current_status, request.status.as_str())?;
+        if request.status.as_str() == "active" {
+            ensure_no_other_active_engagement(&mut transaction, tenant_id, employee_id, Some(id))
+                .await?;
+        }
+
+        sqlx::query(
+            r#"
+            UPDATE employment_engagements
+            SET reference = $1, employment_type = $2, department_id = $3,
+                position_id = $4, status = $5, start_date = $6, end_date = $7,
+                workload_basis_points = $8, notes = $9, updated_at = NOW()
+            WHERE tenant_id = $10 AND id = $11 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(trimmed_owned(request.reference.as_deref()))
+        .bind(request.employment_type.as_str())
+        .bind(request.department_id)
+        .bind(request.position_id)
+        .bind(request.status.as_str())
+        .bind(request.start_date)
+        .bind(request.end_date)
+        .bind(request.workload_basis_points)
+        .bind(trimmed_owned(request.notes.as_deref()))
+        .bind(tenant_id)
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .context("Failed to update employment engagement")?;
+
+        if request.status.as_str() == "active" {
+            sync_employee_projection(
+                &mut transaction,
+                tenant_id,
+                employee_id,
+                request.department_id,
+                request.position_id,
+                Some(request.start_date),
+                request.end_date,
+                "active",
+            )
+            .await?;
+        } else if current_status == "active" && request.status.as_str() == "ended" {
+            sync_employee_projection(
+                &mut transaction,
+                tenant_id,
+                employee_id,
+                request.department_id,
+                request.position_id,
+                Some(request.start_date),
+                request.end_date,
+                "terminated",
+            )
+            .await?;
+        }
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit employment engagement")?;
+        Self::get_by_id(pool, tenant_id, id).await
+    }
+
+    pub async fn delete(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<DeleteOutcome> {
+        let status = sqlx::query_scalar::<_, String>(
+            "SELECT status FROM employment_engagements WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load employment engagement")?;
+        let Some(status) = status else {
+            return Ok(DeleteOutcome::NotFound);
+        };
+        if status != "draft" {
+            return Ok(DeleteOutcome::InUse);
+        }
+        sqlx::query(
+            "UPDATE employment_engagements SET deleted_at = NOW() WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .execute(pool)
+        .await
+        .context("Failed to delete employment engagement")?;
+        Ok(DeleteOutcome::Deleted)
+    }
+}
+
+pub struct EmployeeAvailabilityOps;
+
+impl EmployeeAvailabilityOps {
+    /// Returns approved scheduling constraints for typed cross-module use.
+    /// Notes and decision metadata are deliberately excluded.
+    pub async fn list_approved_for_window(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        employee_ids: &[Uuid],
+        starts_at: DateTime<Utc>,
+        ends_at: DateTime<Utc>,
+    ) -> Result<Vec<EmployeeAvailabilityReference>> {
+        validate_availability_times(starts_at, ends_at)?;
+        if employee_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, EmployeeAvailabilityReference>(
+            r#"
+            SELECT id, employee_id, kind, starts_at, ends_at
+            FROM employee_availability_periods
+            WHERE tenant_id = $1 AND employee_id = ANY($2)
+              AND status = 'approved' AND deleted_at IS NULL
+              AND starts_at < $4 AND ends_at > $3
+            ORDER BY employee_id, starts_at, id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(employee_ids)
+        .bind(starts_at)
+        .bind(ends_at)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load approved employee availability")
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn list(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        employee_id: Option<Uuid>,
+        status: Option<&str>,
+        kind: Option<&str>,
+        from: Option<DateTime<Utc>>,
+        to: Option<DateTime<Utc>>,
+    ) -> Result<(Vec<EmployeeAvailabilityWithDetails>, i64)> {
+        if let (Some(from), Some(to)) = (from, to)
+            && to < from
+        {
+            bail!("Availability range end cannot be before its start");
+        }
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let rows = sqlx::query_as::<_, EmployeeAvailabilityWithDetails>(
+            r#"
+            SELECT availability.id, availability.tenant_id, availability.employee_id,
+                   employee.employee_number, employee.display_name AS employee_name,
+                   availability.kind, availability.starts_at, availability.ends_at,
+                   availability.status, availability.notes, availability.decided_by,
+                   decision_user.full_name AS decided_by_name, availability.decided_at,
+                   availability.created_at, availability.updated_at
+            FROM employee_availability_periods AS availability
+            JOIN employees AS employee
+              ON employee.id = availability.employee_id
+             AND employee.tenant_id = availability.tenant_id
+             AND employee.deleted_at IS NULL
+            LEFT JOIN users AS decision_user
+              ON decision_user.id = availability.decided_by
+             AND decision_user.tenant_id = availability.tenant_id
+            WHERE availability.tenant_id = $1 AND availability.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR employee.employee_number ILIKE $2
+                   OR employee.display_name ILIKE $2)
+              AND ($3::UUID IS NULL OR availability.employee_id = $3)
+              AND ($4::TEXT IS NULL OR availability.status = $4)
+              AND ($5::TEXT IS NULL OR availability.kind = $5)
+              AND ($6::TIMESTAMPTZ IS NULL OR availability.ends_at >= $6)
+              AND ($7::TIMESTAMPTZ IS NULL OR availability.starts_at <= $7)
+            ORDER BY availability.starts_at DESC, employee.display_name
+            LIMIT $8 OFFSET $9
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(employee_id)
+        .bind(status)
+        .bind(kind)
+        .bind(from)
+        .bind(to)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list employee availability")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM employee_availability_periods AS availability
+            JOIN employees AS employee
+              ON employee.id = availability.employee_id
+             AND employee.tenant_id = availability.tenant_id
+             AND employee.deleted_at IS NULL
+            WHERE availability.tenant_id = $1 AND availability.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR employee.employee_number ILIKE $2
+                   OR employee.display_name ILIKE $2)
+              AND ($3::UUID IS NULL OR availability.employee_id = $3)
+              AND ($4::TEXT IS NULL OR availability.status = $4)
+              AND ($5::TEXT IS NULL OR availability.kind = $5)
+              AND ($6::TIMESTAMPTZ IS NULL OR availability.ends_at >= $6)
+              AND ($7::TIMESTAMPTZ IS NULL OR availability.starts_at <= $7)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(employee_id)
+        .bind(status)
+        .bind(kind)
+        .bind(from)
+        .bind(to)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count employee availability")?;
+        Ok((rows, total))
+    }
+
+    pub async fn get_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> Result<Option<EmployeeAvailabilityWithDetails>> {
+        load_availability(pool, tenant_id, id).await
+    }
+
+    pub async fn create(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        actor_user_id: Uuid,
+        request: &CreateEmployeeAvailabilityRequest,
+    ) -> Result<EmployeeAvailabilityWithDetails> {
+        ensure_employee(pool, tenant_id, request.employee_id).await?;
+        validate_availability_times(request.starts_at, request.ends_at)?;
+        let status = request.status.map_or("draft", |value| value.as_str());
+        if !matches!(status, "draft" | "submitted") {
+            bail!("A new availability period must be draft or submitted");
+        }
+        ensure_actor(pool, tenant_id, actor_user_id).await?;
+        let id = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            INSERT INTO employee_availability_periods (
+                tenant_id, employee_id, kind, starts_at, ends_at, status, notes
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(request.employee_id)
+        .bind(request.kind.as_str())
+        .bind(request.starts_at)
+        .bind(request.ends_at)
+        .bind(status)
+        .bind(trimmed_owned(request.notes.as_deref()))
+        .fetch_one(pool)
+        .await
+        .context("Failed to create employee availability")?;
+        Self::get_by_id(pool, tenant_id, id)
+            .await?
+            .context("Created availability period could not be reloaded")
+    }
+
+    pub async fn update(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        actor_user_id: Uuid,
+        id: Uuid,
+        request: &UpdateEmployeeAvailabilityRequest,
+    ) -> Result<Option<EmployeeAvailabilityWithDetails>> {
+        validate_availability_times(request.starts_at, request.ends_at)?;
+        ensure_actor(pool, tenant_id, actor_user_id).await?;
+        let mut transaction = pool
+            .begin()
+            .await
+            .context("Failed to begin availability change")?;
+        let Some((employee_id, current_kind, current_starts_at, current_ends_at, current_status)) =
+            sqlx::query_as::<_, (Uuid, String, DateTime<Utc>, DateTime<Utc>, String)>(
+                r#"
+                SELECT employee_id, kind, starts_at, ends_at, status
+                FROM employee_availability_periods
+                WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+                FOR UPDATE
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(id)
+            .fetch_optional(&mut *transaction)
+            .await
+            .context("Failed to load employee availability")?
+        else {
+            return Ok(None);
+        };
+        lock_employee(&mut transaction, tenant_id, employee_id).await?;
+        if matches!(current_status.as_str(), "rejected" | "cancelled") {
+            bail!(
+                "Rejected and cancelled availability periods are historical decisions and cannot be edited"
+            );
+        }
+        if current_status == "approved" && request.status.as_str() == "approved" {
+            bail!("Approved availability is immutable; cancel it to record a replacement");
+        }
+        validate_availability_transition(&current_status, request.status.as_str())?;
+        if current_status == "approved"
+            && (request.kind.as_str() != current_kind
+                || request.starts_at != current_starts_at
+                || request.ends_at != current_ends_at)
+        {
+            bail!(
+                "Approved availability dates and type cannot be rewritten; cancel and create a replacement"
+            );
+        }
+        if request.status.as_str() == "approved" {
+            ensure_no_approved_availability_overlap(
+                &mut transaction,
+                tenant_id,
+                employee_id,
+                id,
+                request.starts_at,
+                request.ends_at,
+            )
+            .await?;
+        }
+        let decision = matches!(request.status.as_str(), "approved" | "rejected")
+            && !matches!(current_status.as_str(), "approved" | "rejected");
+        sqlx::query(
+            r#"
+            UPDATE employee_availability_periods
+            SET kind = $1, starts_at = $2, ends_at = $3, status = $4,
+                notes = CASE WHEN status = 'approved' THEN notes ELSE $5 END,
+                decided_by = CASE WHEN $6 THEN $7 ELSE decided_by END,
+                decided_at = CASE WHEN $6 THEN NOW() ELSE decided_at END,
+                updated_at = NOW()
+            WHERE tenant_id = $8 AND id = $9 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(request.kind.as_str())
+        .bind(request.starts_at)
+        .bind(request.ends_at)
+        .bind(request.status.as_str())
+        .bind(trimmed_owned(request.notes.as_deref()))
+        .bind(decision)
+        .bind(actor_user_id)
+        .bind(tenant_id)
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .context("Failed to update employee availability")?;
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit employee availability")?;
+        Self::get_by_id(pool, tenant_id, id).await
+    }
+
+    pub async fn delete(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<DeleteOutcome> {
+        let status = sqlx::query_scalar::<_, String>(
+            "SELECT status FROM employee_availability_periods WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load employee availability")?;
+        let Some(status) = status else {
+            return Ok(DeleteOutcome::NotFound);
+        };
+        if status != "draft" {
+            return Ok(DeleteOutcome::InUse);
+        }
+        sqlx::query(
+            "UPDATE employee_availability_periods SET deleted_at = NOW() WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .execute(pool)
+        .await
+        .context("Failed to delete employee availability")?;
+        Ok(DeleteOutcome::Deleted)
+    }
+}
+
+async fn load_engagement(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<Option<EmploymentEngagementWithDetails>> {
+    sqlx::query_as::<_, EmploymentEngagementWithDetails>(
+        r#"
+        SELECT engagement.id, engagement.tenant_id, engagement.employee_id,
+               employee.employee_number, employee.display_name AS employee_name,
+               engagement.reference, engagement.employment_type,
+               engagement.department_id, department.name AS department_name,
+               engagement.position_id, position.title AS position_title,
+               engagement.status, engagement.start_date, engagement.end_date,
+               engagement.workload_basis_points, engagement.notes,
+               engagement.created_at, engagement.updated_at
+        FROM employment_engagements AS engagement
+        JOIN employees AS employee
+          ON employee.id = engagement.employee_id
+         AND employee.tenant_id = engagement.tenant_id
+         AND employee.deleted_at IS NULL
+        LEFT JOIN departments AS department
+          ON department.id = engagement.department_id
+         AND department.tenant_id = engagement.tenant_id
+         AND department.deleted_at IS NULL
+        LEFT JOIN positions AS position
+          ON position.id = engagement.position_id
+         AND position.tenant_id = engagement.tenant_id
+         AND position.deleted_at IS NULL
+        WHERE engagement.tenant_id = $1 AND engagement.id = $2
+          AND engagement.deleted_at IS NULL
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .context("Failed to load employment engagement")
+}
+
+async fn load_availability(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<Option<EmployeeAvailabilityWithDetails>> {
+    sqlx::query_as::<_, EmployeeAvailabilityWithDetails>(
+        r#"
+        SELECT availability.id, availability.tenant_id, availability.employee_id,
+               employee.employee_number, employee.display_name AS employee_name,
+               availability.kind, availability.starts_at, availability.ends_at,
+               availability.status, availability.notes, availability.decided_by,
+               decision_user.full_name AS decided_by_name, availability.decided_at,
+               availability.created_at, availability.updated_at
+        FROM employee_availability_periods AS availability
+        JOIN employees AS employee
+          ON employee.id = availability.employee_id
+         AND employee.tenant_id = availability.tenant_id
+         AND employee.deleted_at IS NULL
+        LEFT JOIN users AS decision_user
+          ON decision_user.id = availability.decided_by
+         AND decision_user.tenant_id = availability.tenant_id
+        WHERE availability.tenant_id = $1 AND availability.id = $2
+          AND availability.deleted_at IS NULL
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .context("Failed to load employee availability")
+}
+
+async fn lock_employee(
+    transaction: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    employee_id: Uuid,
+) -> Result<()> {
+    let exists = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM employees WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE",
+    )
+    .bind(tenant_id)
+    .bind(employee_id)
+    .fetch_optional(&mut **transaction)
+    .await
+    .context("Failed to lock employee")?;
+    if exists.is_none() {
+        bail!("Employee was not found for this campus");
+    }
+    Ok(())
+}
+
+async fn ensure_no_other_active_engagement(
+    transaction: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    employee_id: Uuid,
+    excluding_id: Option<Uuid>,
+) -> Result<()> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(
+            SELECT 1 FROM employment_engagements
+            WHERE tenant_id = $1 AND employee_id = $2 AND status = 'active'
+              AND deleted_at IS NULL AND ($3::UUID IS NULL OR id <> $3)
+        )
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(employee_id)
+    .bind(excluding_id)
+    .fetch_one(&mut **transaction)
+    .await
+    .context("Failed to check active employment")?;
+    if exists {
+        bail!("Employee already has an active employment engagement");
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn sync_employee_projection(
+    transaction: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    employee_id: Uuid,
+    department_id: Option<Uuid>,
+    position_id: Option<Uuid>,
+    hire_date: Option<NaiveDate>,
+    end_date: Option<NaiveDate>,
+    employment_status: &str,
+) -> Result<()> {
+    sqlx::query(
+        r#"
+        UPDATE employees
+        SET department_id = $1, position_id = $2, hire_date = $3, end_date = $4,
+            employment_status = $5, updated_at = NOW()
+        WHERE tenant_id = $6 AND id = $7 AND deleted_at IS NULL
+        "#,
+    )
+    .bind(department_id)
+    .bind(position_id)
+    .bind(hire_date)
+    .bind(end_date)
+    .bind(employment_status)
+    .bind(tenant_id)
+    .bind(employee_id)
+    .execute(&mut **transaction)
+    .await
+    .context("Failed to update the employee employment projection")?;
+    Ok(())
+}
+
+async fn ensure_no_approved_availability_overlap(
+    transaction: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    employee_id: Uuid,
+    id: Uuid,
+    starts_at: DateTime<Utc>,
+    ends_at: DateTime<Utc>,
+) -> Result<()> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(
+            SELECT 1 FROM employee_availability_periods
+            WHERE tenant_id = $1 AND employee_id = $2 AND id <> $3
+              AND status = 'approved' AND deleted_at IS NULL
+              AND starts_at < $5 AND ends_at > $4
+        )
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(employee_id)
+    .bind(id)
+    .bind(starts_at)
+    .bind(ends_at)
+    .fetch_one(&mut **transaction)
+    .await
+    .context("Failed to check approved availability")?;
+    if exists {
+        bail!("Approved availability periods cannot overlap for the same employee");
+    }
+    Ok(())
+}
+
+async fn ensure_employee(pool: &PgPool, tenant_id: Uuid, employee_id: Uuid) -> Result<()> {
+    if EmployeeOps::get_by_id(pool, tenant_id, employee_id)
+        .await?
+        .is_none()
+    {
+        bail!("Employee was not found for this campus");
+    }
+    Ok(())
+}
+
+async fn ensure_actor(pool: &PgPool, tenant_id: Uuid, actor_user_id: Uuid) -> Result<()> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+    )
+    .bind(tenant_id)
+    .bind(actor_user_id)
+    .fetch_one(pool)
+    .await
+    .context("Failed to validate the availability decision actor")?;
+    if !exists {
+        bail!("Availability decision actor was not found for this campus");
+    }
+    Ok(())
+}
+
+fn validate_engagement(
+    employment_type: &str,
+    status: &str,
+    start_date: Option<NaiveDate>,
+    end_date: Option<NaiveDate>,
+) -> Result<()> {
+    if let (Some(start_date), Some(end_date)) = (start_date, end_date)
+        && end_date < start_date
+    {
+        bail!("Employment end date cannot be before the start date");
+    }
+    if employment_type == "fixed_term" && end_date.is_none() {
+        bail!("Fixed-term employment requires an end date");
+    }
+    if status == "ended" && end_date.is_none() {
+        bail!("Ended employment requires an end date");
+    }
+    if matches!(status, "active" | "ended") && start_date.is_none() {
+        bail!("Active and ended employment requires a start date");
+    }
+    Ok(())
+}
+
+fn validate_engagement_transition(current: &str, next: &str) -> Result<()> {
+    let allowed = matches!(
+        (current, next),
+        ("draft", "draft" | "active" | "cancelled")
+            | ("active", "active" | "ended")
+            | ("ended", "ended")
+            | ("cancelled", "cancelled")
+    );
+    if !allowed {
+        bail!("Employment engagement cannot move from {current} to {next}");
+    }
+    Ok(())
+}
+
+fn validate_availability_times(starts_at: DateTime<Utc>, ends_at: DateTime<Utc>) -> Result<()> {
+    if ends_at <= starts_at {
+        bail!("Availability end must be after its start");
+    }
+    Ok(())
+}
+
+fn validate_availability_transition(current: &str, next: &str) -> Result<()> {
+    let allowed = matches!(
+        (current, next),
+        ("draft", "draft" | "submitted" | "cancelled")
+            | (
+                "submitted",
+                "submitted" | "approved" | "rejected" | "cancelled"
+            )
+            | ("approved", "approved" | "cancelled")
+            | ("rejected", "rejected")
+            | ("cancelled", "cancelled")
+    );
+    if !allowed {
+        bail!("Availability period cannot move from {current} to {next}");
+    }
+    Ok(())
+}
+
+fn trimmed_owned(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
 }
 
 async fn ensure_department(pool: &PgPool, tenant_id: Uuid, id: Option<Uuid>) -> Result<()> {
@@ -816,9 +1717,12 @@ fn validate_employment_dates(
 
 #[cfg(test)]
 mod tests {
-    use chrono::NaiveDate;
+    use chrono::{NaiveDate, TimeZone, Utc};
 
-    use super::{DeleteOutcome, validate_employment_dates};
+    use super::{
+        DeleteOutcome, validate_availability_times, validate_availability_transition,
+        validate_employment_dates, validate_engagement, validate_engagement_transition,
+    };
 
     #[test]
     fn employment_dates_reject_reverse_ranges() {
@@ -827,5 +1731,37 @@ mod tests {
         assert!(validate_employment_dates(Some(hire), Some(end)).is_err());
         assert!(validate_employment_dates(Some(hire), None).is_ok());
         assert_eq!(DeleteOutcome::InUse, DeleteOutcome::InUse);
+    }
+
+    #[test]
+    fn employment_lifecycle_is_forward_only() {
+        let start = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap_or_else(|| unreachable!());
+        let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap_or_else(|| unreachable!());
+        assert!(validate_engagement("fixed_term", "active", Some(start), None).is_err());
+        assert!(validate_engagement("fixed_term", "active", Some(start), Some(end)).is_ok());
+        assert!(validate_engagement_transition("draft", "active").is_ok());
+        assert!(validate_engagement_transition("active", "ended").is_ok());
+        assert!(validate_engagement_transition("ended", "active").is_err());
+        assert!(validate_engagement_transition("cancelled", "draft").is_err());
+    }
+
+    #[test]
+    fn availability_lifecycle_preserves_decisions() {
+        assert!(validate_availability_transition("draft", "submitted").is_ok());
+        assert!(validate_availability_transition("submitted", "approved").is_ok());
+        assert!(validate_availability_transition("approved", "cancelled").is_ok());
+        assert!(validate_availability_transition("approved", "submitted").is_err());
+        assert!(validate_availability_transition("rejected", "approved").is_err());
+
+        let start = Utc
+            .with_ymd_and_hms(2026, 8, 28, 8, 0, 0)
+            .single()
+            .unwrap_or_else(|| unreachable!());
+        let end = Utc
+            .with_ymd_and_hms(2026, 8, 28, 17, 0, 0)
+            .single()
+            .unwrap_or_else(|| unreachable!());
+        assert!(validate_availability_times(start, end).is_ok());
+        assert!(validate_availability_times(end, start).is_err());
     }
 }

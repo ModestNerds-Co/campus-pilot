@@ -59,7 +59,7 @@ export function EmployeesList() {
     </TBody></Table></TableScroll>}</TableWrap>
     <EmployeeDrawer employee={drawerEmployee ?? null} onClose={() => setDrawerEmployee(undefined)} onSaved={() => { setDrawerEmployee(undefined); void load(); }} open={drawerEmployee !== undefined} />
     <AccountDrawer employee={accountEmployee} onClose={() => setAccountEmployee(null)} onSaved={() => { setAccountEmployee(null); void load(); }} />
-    <ConfirmDrawer confirmLabel="Remove employee" description={`Remove ${deleteEmployee?.display_name || "this employee"}? Active module profiles, such as a Fleet driver profile, must be removed first.`} onClose={() => setDeleteEmployee(null)} onConfirm={() => void remove()} open={deleteEmployee !== null} title="Remove employee?" />
+    <ConfirmDrawer confirmLabel="Remove employee" description={`Remove ${deleteEmployee?.display_name || "this employee"}? Employees with employment history, availability, or active module profiles remain part of the campus record and cannot be removed.`} onClose={() => setDeleteEmployee(null)} onConfirm={() => void remove()} open={deleteEmployee !== null} title="Remove employee?" />
   </div>;
 }
 

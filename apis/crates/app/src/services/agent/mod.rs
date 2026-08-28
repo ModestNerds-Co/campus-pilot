@@ -31,8 +31,10 @@ use fleet::{
     FleetVehiclesListCapability,
 };
 use hr::{
-    HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeReadCapability,
-    HrEmployeesListCapability, HrPositionReadCapability, HrPositionsListCapability,
+    HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeAvailabilityListCapability,
+    HrEmployeeAvailabilityReadCapability, HrEmployeeReadCapability, HrEmployeesListCapability,
+    HrEmploymentEngagementReadCapability, HrEmploymentEngagementsListCapability,
+    HrPositionReadCapability, HrPositionsListCapability,
 };
 use sis::{
     AccountCandidatesCapability, SisListCapability, SisListKind, SisReadCapability, SisReadKind,
@@ -143,6 +145,22 @@ pub fn build_capability_registry(
     registry
         .register(HrEmployeeReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR employee-read capability: {error}"));
+    registry
+        .register(HrEmploymentEngagementsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid HR employment-engagements-list capability: {error}")
+        });
+    registry
+        .register(HrEmploymentEngagementReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid HR employment-engagement-read capability: {error}")
+        });
+    registry
+        .register(HrEmployeeAvailabilityListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR availability-list capability: {error}"));
+    registry
+        .register(HrEmployeeAvailabilityReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid HR availability-read capability: {error}"));
     registry
         .register(FleetDriverCandidatesListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fleet driver-candidates capability: {error}"));
@@ -329,10 +347,14 @@ mod tests {
                 "fleet.vehicle_logs.read",
                 "fleet.vehicles.list",
                 "fleet.vehicles.read",
+                "hr_payroll.availability.list",
+                "hr_payroll.availability.read",
                 "hr_payroll.departments.list",
                 "hr_payroll.departments.read",
                 "hr_payroll.employees.list",
                 "hr_payroll.employees.read",
+                "hr_payroll.employment_engagements.list",
+                "hr_payroll.employment_engagements.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
                 "sis.account_candidates.list",

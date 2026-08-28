@@ -1673,6 +1673,364 @@
               }
             }
           ]
+        },
+        {
+          "name": "Employment Engagements",
+          "item": [
+            {
+              "name": "List Employment Engagements",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employment-engagements?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employment-engagements"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Employment Engagement",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employment-engagements/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employment-engagements",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Employment Engagement",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"reference\": \"EMP-2026-001\",\n  \"employment_type\": \"permanent\",\n  \"department_id\": null,\n  \"position_id\": null,\n  \"status\": \"draft\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": null,\n  \"workload_basis_points\": 10000,\n  \"notes\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employment-engagements",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employment-engagements"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Employment Engagement",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"EMP-2026-001\",\n  \"employment_type\": \"permanent\",\n  \"department_id\": null,\n  \"position_id\": null,\n  \"status\": \"draft\",\n  \"start_date\": \"2026-01-01\",\n  \"end_date\": null,\n  \"workload_basis_points\": 10000,\n  \"notes\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employment-engagements/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employment-engagements",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Employment Engagement",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/employment-engagements/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "employment-engagements",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Employee Availability",
+          "item": [
+            {
+              "name": "List Employee Availability",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/availability?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "availability"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Employee Availability",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/availability/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "availability",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Employee Availability",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employee_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"kind\": \"leave\",\n  \"starts_at\": \"2026-09-01T06:00:00Z\",\n  \"ends_at\": \"2026-09-05T15:00:00Z\",\n  \"status\": \"draft\",\n  \"notes\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/availability",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "availability"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Employee Availability",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"kind\": \"leave\",\n  \"starts_at\": \"2026-09-01T06:00:00Z\",\n  \"ends_at\": \"2026-09-05T15:00:00Z\",\n  \"status\": \"draft\",\n  \"notes\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/availability/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "availability",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Employee Availability",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/hr-payroll/availability/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "hr-payroll",
+                    "availability",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "00000000-0000-0000-0000-000000000000"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
         }
       ]
     },

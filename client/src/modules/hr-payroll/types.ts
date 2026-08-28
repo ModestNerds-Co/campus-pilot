@@ -104,3 +104,88 @@ export interface ApiEnvelope<T> {
 export interface DepartmentsResponse { departments: Department[] }
 export interface PositionsResponse { positions: Position[] }
 export interface EmployeesResponse { employees: Employee[] }
+
+export type EmploymentType = "permanent" | "fixed_term" | "temporary" | "casual" | "contractor" | "intern";
+export type EngagementStatus = "draft" | "active" | "ended" | "cancelled";
+
+export interface EmploymentEngagement {
+  id: string;
+  employee_id: string;
+  employee_number: string;
+  employee_name: string;
+  reference: string | null;
+  employment_type: EmploymentType;
+  department_id: string | null;
+  department_name: string | null;
+  position_id: string | null;
+  position_title: string | null;
+  status: EngagementStatus;
+  start_date: string | null;
+  end_date: string | null;
+  workload_basis_points: number;
+  notes: string | null;
+}
+
+export interface EmploymentEngagementInput {
+  employee_id?: string;
+  reference?: string | null;
+  employment_type: EmploymentType;
+  department_id?: string | null;
+  position_id?: string | null;
+  status: EngagementStatus;
+  start_date: string;
+  end_date?: string | null;
+  workload_basis_points: number;
+  notes?: string | null;
+}
+
+export interface EmploymentEngagementListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  employee_id?: string;
+  status?: EngagementStatus;
+  employment_type?: EmploymentType;
+}
+
+export interface EmploymentEngagementsResponse { employment_engagements: EmploymentEngagement[] }
+
+export type AvailabilityKind = "leave" | "training" | "medical" | "personal" | "other";
+export type AvailabilityStatus = "draft" | "submitted" | "approved" | "rejected" | "cancelled";
+
+export interface EmployeeAvailability {
+  id: string;
+  employee_id: string;
+  employee_number: string;
+  employee_name: string;
+  kind: AvailabilityKind;
+  starts_at: string;
+  ends_at: string;
+  status: AvailabilityStatus;
+  notes: string | null;
+  decided_by: string | null;
+  decided_by_name: string | null;
+  decided_at: string | null;
+}
+
+export interface EmployeeAvailabilityInput {
+  employee_id?: string;
+  kind: AvailabilityKind;
+  starts_at: string;
+  ends_at: string;
+  status: AvailabilityStatus;
+  notes?: string | null;
+}
+
+export interface EmployeeAvailabilityListParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  employee_id?: string;
+  status?: AvailabilityStatus;
+  kind?: AvailabilityKind;
+  from?: string;
+  to?: string;
+}
+
+export interface EmployeeAvailabilityResponse { availability_periods: EmployeeAvailability[] }
