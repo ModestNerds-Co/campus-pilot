@@ -7,6 +7,8 @@ import type {
   Enrolment, EnrolmentInput, EnrolmentsResponse, Guardian, GuardianInput,
   GuardianRelationship, GuardianRelationshipInput, GuardianRelationshipsResponse,
   GuardiansResponse, Learner, LearnerInput, LearnersResponse, ListParams,
+  SisImportCommit, SisImportMapping, SisImportPreview, SisImportRecord,
+  SisImportsResponse, SisImportTarget,
 } from "./types";
 
 const BASE_URL = "/api/1.0/sis";
@@ -21,6 +23,18 @@ async function request<T>(work: () => Promise<{ data: ApiEnvelope<T> }>): Promis
 }
 
 export const sisService = {
+  listImports: (params?: { page?: number; per_page?: number; target?: SisImportTarget }) => request<SisImportsResponse>(() => httpClient.get(`${BASE_URL}/imports`, { params })),
+  uploadImport: (target: SisImportTarget, file: File) => {
+    const form = new FormData();
+    form.append("target", target);
+    form.append("file", file);
+    return request<SisImportRecord>(() => httpClient.post(`${BASE_URL}/imports`, form));
+  },
+  getImport: (id: string) => request<SisImportRecord>(() => httpClient.get(`${BASE_URL}/imports/${id}`)),
+  createImportPreview: (id: string, mapping: SisImportMapping) => request<SisImportPreview>(() => httpClient.put(`${BASE_URL}/imports/${id}/mapping`, mapping)),
+  getImportPreview: (id: string, params?: { page?: number; per_page?: number }) => request<SisImportPreview>(() => httpClient.get(`${BASE_URL}/imports/${id}/preview`, { params })),
+  commitImport: (id: string, previewId: string) => request<SisImportCommit>(() => httpClient.post(`${BASE_URL}/imports/${id}/commit`, { preview_id: previewId })),
+
   listLearners: (params?: ListParams) => request<LearnersResponse>(() => httpClient.get(`${BASE_URL}/learners`, { params })),
   createLearner: (data: LearnerInput) => request<Learner>(() => httpClient.post(`${BASE_URL}/learners`, data)),
   updateLearner: (id: string, data: LearnerInput) => request<Learner>(() => httpClient.put(`${BASE_URL}/learners/${id}`, data)),

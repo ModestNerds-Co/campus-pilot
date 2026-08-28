@@ -4,6 +4,7 @@ members = [
     "crates/common",
     "crates/agent",
     "crates/platform/audit",
+    "crates/platform/imports",
     "crates/app",
     "crates/modules/fleet",
     "crates/modules/vehicle-log",
@@ -32,6 +33,7 @@ validator = { version = "0.20.0", features = ["derive"] }
 log = "0.4"
 futures-util = "0.3.31"
 semver = "1.0"
+sha2 = "0.10"
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

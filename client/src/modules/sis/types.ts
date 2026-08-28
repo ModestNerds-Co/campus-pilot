@@ -9,6 +9,9 @@ export type DirectoryStatus = "active" | "inactive";
 export type RelationshipType = "mother" | "father" | "parent" | "guardian" | "carer" | "sponsor" | "other";
 export type ApplicationStatus = "draft" | "submitted" | "under_review" | "offered" | "accepted" | "rejected" | "withdrawn";
 export type EnrolmentStatus = "active" | "completed" | "withdrawn";
+export type SisImportTarget = "learners" | "guardians";
+export type SisImportStatus = "uploaded" | "preview_ready" | "committed";
+export type ImportDateFormat = "yyyy_mm_dd" | "dd_mm_yyyy" | "mm_dd_yyyy";
 
 export interface Learner {
   id: string;
@@ -83,6 +86,65 @@ export interface Enrolment {
 
 export interface AccountCandidate { id: string; full_name: string; email: string }
 
+export interface SisImportRecord {
+  id: string;
+  entity_key: SisImportTarget;
+  file_name: string;
+  content_type: string;
+  source_format: "csv" | "xlsx";
+  source_size_bytes: number;
+  source_row_count: number;
+  source_headers: string[];
+  status: SisImportStatus;
+  created_at: string;
+  latest_preview_id: string | null;
+  mapping_version: number | null;
+  ready_rows: number | null;
+  invalid_rows: number | null;
+  duplicate_rows: number | null;
+  created_rows: number | null;
+  skipped_rows: number | null;
+  failed_rows: number | null;
+  committed_at: string | null;
+}
+
+export interface SisImportMapping {
+  columns: Record<string, string>;
+  date_format: ImportDateFormat | null;
+}
+
+export interface SisImportPreviewRow {
+  id: string;
+  row_number: number;
+  canonical_data: Record<string, unknown>;
+  outcome: "ready" | "invalid" | "duplicate";
+  issues: string[];
+  duplicate_record_id: string | null;
+}
+
+export interface SisImportPreview {
+  id: string;
+  import_id: string;
+  mapping_version: number;
+  mapping: SisImportMapping;
+  ready_rows: number;
+  invalid_rows: number;
+  duplicate_rows: number;
+  created_at: string;
+  rows: SisImportPreviewRow[];
+  total_rows: number;
+}
+
+export interface SisImportCommit {
+  id: string;
+  import_id: string;
+  preview_id: string;
+  created_rows: number;
+  skipped_rows: number;
+  failed_rows: number;
+  committed_at: string;
+}
+
 export interface LearnerInput {
   learner_number: string;
   display_name: string;
@@ -151,3 +213,4 @@ export interface GuardianRelationshipsResponse { relationships: GuardianRelation
 export interface ApplicationsResponse { applications: Application[] }
 export interface EnrolmentsResponse { enrolments: Enrolment[] }
 export interface AccountCandidatesResponse { accounts: AccountCandidate[] }
+export interface SisImportsResponse { imports: SisImportRecord[] }

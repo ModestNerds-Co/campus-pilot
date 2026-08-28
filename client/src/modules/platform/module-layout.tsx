@@ -11,6 +11,7 @@ import {
   CalendarRange,
   ClipboardList,
   GraduationCap,
+  FileUp,
   LayoutDashboard,
   ListOrdered,
   LogOut,
@@ -91,6 +92,7 @@ const sisNavigation: LocalNavItem[] = [
   { label: "Guardian relationships", path: "/modules/sis/guardian-relationships", icon: UserRoundCheck },
   { label: "Applications", path: "/modules/sis/applications", icon: ClipboardList },
   { label: "Enrolments", path: "/modules/sis/enrolments", icon: School },
+  { label: "Data imports", path: "/modules/sis/imports", icon: FileUp },
 ];
 
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
@@ -254,6 +256,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/applications") return <Link className={navClass(active)} to="/modules/sis/applications"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/sis/imports") return <Link className={navClass(active)} to="/modules/sis/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   return <Link className={navClass(active)} to="/modules/sis/enrolments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
 };
 

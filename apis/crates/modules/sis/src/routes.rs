@@ -4,11 +4,15 @@
 //! applies SIS permissions while the operation evaluator enforces licensing
 //! and the Academics dependency for every request.
 
+use actix_multipart::Multipart;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
+use cp_audit::{AuditActor, RequestContext};
 use cp_common::{
     ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
 };
+use cp_imports::{MAX_SOURCE_BYTES, parse_source};
+use futures_util::StreamExt;
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -25,11 +29,218 @@ use crate::{
         UpdateApplicationRequest, UpdateEnrolmentRequest, UpdateGuardianRelationshipRequest,
         UpdateGuardianRequest, UpdateLearnerRequest,
     },
+    imports::{
+        CommitImportRequest, ImportListQuery, NewSisImport, PreviewRowsQuery,
+        SisImportListResponse, SisImportMapping, SisImportOps, SisImportTarget,
+    },
     ops::{
         AccountCandidateOps, ApplicationOps, DeleteOutcome, EnrolmentOps, GuardianOps,
         GuardianRelationshipOps, LearnerOps,
     },
 };
+
+#[get("/imports")]
+async fn list_imports(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<ImportListQuery>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    let (imports, total) = SisImportOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        query.target,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(paginated(
+        SisImportListResponse { imports },
+        page,
+        per_page,
+        total,
+    ))
+}
+
+#[post("/imports")]
+async fn upload_import(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    mut payload: Multipart,
+) -> HttpResponse {
+    let mut target = None;
+    let mut file_name = None;
+    let mut content_type = None;
+    let mut source_bytes = None;
+
+    while let Some(item) = payload.next().await {
+        let mut field = match item {
+            Ok(field) => field,
+            Err(_) => return bad_request("The import upload is malformed."),
+        };
+        let disposition = field.content_disposition();
+        let field_name = disposition
+            .and_then(|value| value.get_name())
+            .unwrap_or_default()
+            .to_string();
+        if field_name == "target" {
+            let bytes = match read_bounded_field(&mut field, 64).await {
+                Ok(bytes) => bytes,
+                Err(message) => return bad_request(message),
+            };
+            let value = match String::from_utf8(bytes) {
+                Ok(value) => value,
+                Err(_) => return bad_request("The import target is invalid."),
+            };
+            target = match SisImportTarget::parse(value.trim()) {
+                Ok(target) => Some(target),
+                Err(error) => return bad_request(&error.to_string()),
+            };
+        } else if field_name == "file" {
+            if source_bytes.is_some() {
+                return bad_request("Upload one import file at a time.");
+            }
+            file_name = disposition
+                .and_then(|value| value.get_filename())
+                .map(ToOwned::to_owned);
+            content_type = field.content_type().map(ToString::to_string);
+            source_bytes = match read_bounded_field(&mut field, MAX_SOURCE_BYTES).await {
+                Ok(bytes) => Some(bytes),
+                Err(message) => return bad_request(message),
+            };
+        } else {
+            return bad_request("The import upload contains an unknown field.");
+        }
+    }
+
+    let Some(target) = target else {
+        return bad_request("Choose whether the file contains learners or guardians.");
+    };
+    let Some(file_name) = file_name else {
+        return bad_request("Choose a CSV or XLSX file.");
+    };
+    let Some(source_bytes) = source_bytes else {
+        return bad_request("Choose a CSV or XLSX file.");
+    };
+    let parse_name = file_name.clone();
+    let parse_bytes = source_bytes.clone();
+    let parsed = match web::block(move || parse_source(&parse_name, &parse_bytes)).await {
+        Ok(Ok(parsed)) => parsed,
+        Ok(Err(error)) => return bad_request(&error.to_string()),
+        Err(_) => return internal_error("The import file could not be read."),
+    };
+    created_or_error(
+        SisImportOps::create(
+            pool.get_ref(),
+            tenant_id(tenant),
+            actor.into_inner(),
+            request_context.into_inner(),
+            NewSisImport {
+                target,
+                file_name,
+                content_type: content_type
+                    .unwrap_or_else(|| "application/octet-stream".to_string()),
+                source_bytes,
+                parsed,
+            },
+        )
+        .await,
+    )
+}
+
+#[get("/imports/{id}")]
+async fn read_import(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let record = SisImportOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner())
+        .await
+        .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(found(record, "Import"))
+}
+
+#[put("/imports/{id}/mapping")]
+async fn preview_import_mapping(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<SisImportMapping>,
+) -> HttpResponse {
+    let import_id = path.into_inner();
+    let tenant_id = tenant_id(tenant);
+    let source = match SisImportOps::retained_source(pool.get_ref(), tenant_id, import_id).await {
+        Ok(Some(source)) => source,
+        Ok(None) => return not_found("Import"),
+        Err(_) => return internal_error("The retained import source could not be loaded."),
+    };
+    let parse_name = source.file_name.clone();
+    let parse_bytes = source.source_bytes;
+    let table = match web::block(move || parse_source(&parse_name, &parse_bytes)).await {
+        Ok(Ok(parsed)) => parsed.table,
+        Ok(Err(error)) => return bad_request(&error.to_string()),
+        Err(_) => return internal_error("The retained import source could not be read."),
+    };
+    updated_value_or_error(
+        SisImportOps::create_preview(
+            pool.get_ref(),
+            tenant_id,
+            actor.into_inner(),
+            request_context.into_inner(),
+            import_id,
+            body.into_inner(),
+            &table,
+        )
+        .await,
+    )
+}
+
+#[get("/imports/{id}/preview")]
+async fn read_import_preview(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+    query: web::Query<PreviewRowsQuery>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    let preview = SisImportOps::preview(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        page,
+        per_page,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(found(preview, "Import preview"))
+}
+
+#[post("/imports/{id}/commit")]
+async fn commit_import(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CommitImportRequest>,
+) -> HttpResponse {
+    updated_value_or_error(
+        SisImportOps::commit(
+            pool.get_ref(),
+            tenant_id(tenant),
+            actor.into_inner(),
+            request_context.into_inner(),
+            path.into_inner(),
+            body.preview_id,
+        )
+        .await,
+    )
+}
 
 #[get("/account-candidates")]
 async fn list_account_candidates(
@@ -606,6 +817,36 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
     bad_request(&error.to_string())
 }
 
+fn updated_value_or_error<T: Serialize>(result: anyhow::Result<T>) -> HttpResponse {
+    match result {
+        Ok(value) => ok(value),
+        Err(error) => operation_error(error),
+    }
+}
+
+fn internal_error(message: &str) -> HttpResponse {
+    HttpResponse::InternalServerError().json(ApiResponse::from_status(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        None::<()>,
+        Some(vec![message.to_string()]),
+    ))
+}
+
+async fn read_bounded_field(
+    field: &mut actix_multipart::Field,
+    maximum_bytes: usize,
+) -> Result<Vec<u8>, &'static str> {
+    let mut bytes = Vec::new();
+    while let Some(chunk) = field.next().await {
+        let chunk = chunk.map_err(|_| "The import upload could not be read.")?;
+        if bytes.len().saturating_add(chunk.len()) > maximum_bytes {
+            return Err("The import file exceeds the 5 MB limit.");
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
+}
+
 fn delete_response(outcome: DeleteOutcome, label: &str, in_use_message: &str) -> HttpResponse {
     match outcome {
         DeleteOutcome::Deleted => ok(serde_json::json!({ "deleted": true })),
@@ -623,6 +864,12 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
         web::scope("")
             .wrap(RequirePermission::new("sis"))
             .service(list_account_candidates)
+            .service(list_imports)
+            .service(upload_import)
+            .service(read_import)
+            .service(preview_import_mapping)
+            .service(read_import_preview)
+            .service(commit_import)
             .service(list_learners)
             .service(read_learner)
             .service(create_learner)

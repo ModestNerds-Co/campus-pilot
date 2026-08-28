@@ -2950,6 +2950,84 @@
           }
         },
         {
+          "name": "List Data Imports",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/imports?page=1&per_page=20&target="
+          }
+        },
+        {
+          "name": "Upload Data Import",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/imports",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "target",
+                  "value": "learners",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "description": "Retains a bounded CSV/XLSX source privately. Accepted targets are learners and guardians."
+          }
+        },
+        {
+          "name": "Get Data Import",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/imports/:id"
+          }
+        },
+        {
+          "name": "Create Data Import Preview",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/sis/imports/:id/mapping",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"columns\": {\n    \"learner_number\": \"Student Number\",\n    \"display_name\": \"Full Name\",\n    \"date_of_birth\": \"Date of Birth\",\n    \"email\": \"Email\"\n  },\n  \"date_format\": \"yyyy_mm_dd\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Creates a new immutable mapping version and validation preview without changing SIS records."
+          }
+        },
+        {
+          "name": "Get Data Import Preview",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/imports/:id/preview?page=1&per_page=100"
+          }
+        },
+        {
+          "name": "Commit Data Import",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/sis/imports/:id/commit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preview_id\": \"00000000-0000-0000-0000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Idempotently creates only preview rows marked ready. Invalid and duplicate rows remain in the retained results."
+          }
+        },
+        {
           "name": "List Learners",
           "request": {
             "method": "GET",

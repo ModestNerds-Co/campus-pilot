@@ -11,6 +11,7 @@ use cp_agent::{
 use cp_common::PaginationMeta;
 use cp_sis::{
     dtos::{AccountProfileKind, GuardianResponse, LearnerResponse},
+    imports::{SisImportOps, SisImportTarget},
     ops::{
         AccountCandidateOps, ApplicationOps, EnrolmentOps, GuardianOps, GuardianRelationshipOps,
         LearnerOps,
@@ -483,6 +484,196 @@ impl Capability for AccountCandidatesCapability {
         .await
         .map_err(|_| dependency_failure("Account candidates could not be loaded."))?;
         Ok(json!({ "accounts": accounts }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SisImportsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    target: Option<SisImportTarget>,
+}
+
+pub(super) struct SisImportsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl SisImportsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "sis.imports.list",
+                "List SIS imports",
+                "Returns retained import metadata and validation or commit totals without source bytes.",
+                json!({
+                    "page": page_schema(),
+                    "per_page": per_page_schema(),
+                    "target": { "type": ["string", "null"], "enum": ["learners", "guardians", null] }
+                }),
+                json!({ "imports": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "sis.imports",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for SisImportsListCapability {
+    type Input = SisImportsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (imports, total) = SisImportOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            input.target,
+        )
+        .await
+        .map_err(|_| dependency_failure("SIS imports could not be loaded."))?;
+        Ok(list_output("imports", imports, page, per_page, total))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SisImportReadInput {
+    import_id: Uuid,
+}
+
+pub(super) struct SisImportReadCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl SisImportReadCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "sis.imports.read",
+                "Read SIS import",
+                "Returns one import's source metadata and latest validation or commit totals without source bytes.",
+                json!({ "import_id": { "type": "string", "format": "uuid" } }),
+                json!({ "import": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "sis.imports",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for SisImportReadCapability {
+    type Input = SisImportReadInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::resources([resource("data_import", input.import_id)])
+            .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let record =
+            SisImportOps::get(&self.pool, context.principal().tenant_id(), input.import_id)
+                .await
+                .map_err(|_| dependency_failure("The SIS import could not be loaded."))?
+                .ok_or_else(|| not_found("The SIS import was not found."))?;
+        Ok(json!({ "import": record }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SisImportPreviewInput {
+    import_id: Uuid,
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+pub(super) struct SisImportPreviewCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl SisImportPreviewCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "sis.imports.preview.read",
+                "Read SIS import preview",
+                "Returns bounded, validated SIS import preview rows and issues. The retained source file is never returned.",
+                json!({
+                    "import_id": { "type": "string", "format": "uuid" },
+                    "page": page_schema(),
+                    "per_page": per_page_schema()
+                }),
+                json!({ "preview": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "sis.import_previews",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for SisImportPreviewCapability {
+    type Input = SisImportPreviewInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::resources([resource("data_import", input.import_id)])
+            .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let preview = SisImportOps::preview(
+            &self.pool,
+            context.principal().tenant_id(),
+            input.import_id,
+            page,
+            per_page,
+        )
+        .await
+        .map_err(|_| dependency_failure("The SIS import preview could not be loaded."))?
+        .ok_or_else(|| not_found("The SIS import preview was not found."))?;
+        Ok(json!({ "preview": preview }))
     }
 }
 

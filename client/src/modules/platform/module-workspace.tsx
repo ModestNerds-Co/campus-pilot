@@ -110,6 +110,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
             <SisLink description="Connect learners to guardians and their responsibilities." label="Guardian relationships" to="/modules/sis/guardian-relationships" />
             <SisLink description="Track applications against an academic year and target grade." label="Applications" to="/modules/sis/applications" />
             <SisLink description="Place learners in an Academics class for an academic year." label="Enrolments" to="/modules/sis/enrolments" />
+            <SisLink description="Map and validate existing learner or guardian records before importing them." label="Data imports" to="/modules/sis/imports" />
           </div>
         </section>
       </div>
@@ -183,7 +184,7 @@ const AcademicLink: React.FC<{ description: string; label: string; to: "/modules
   </Link>
 );
 
-const SisLink: React.FC<{ description: string; label: string; to: "/modules/sis/learners" | "/modules/sis/guardians" | "/modules/sis/guardian-relationships" | "/modules/sis/applications" | "/modules/sis/enrolments" }> = ({ description, label, to }) => (
+const SisLink: React.FC<{ description: string; label: string; to: "/modules/sis/learners" | "/modules/sis/guardians" | "/modules/sis/guardian-relationships" | "/modules/sis/applications" | "/modules/sis/enrolments" | "/modules/sis/imports" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

@@ -320,6 +320,60 @@ fn build_catalog() -> Vec<RoutedOperation> {
         ),
         route(
             Method::GET,
+            "/api/1.0/sis/imports",
+            "sis.imports.list",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/imports",
+            "sis.imports.upload",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/imports/{id}",
+            "sis.imports.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/imports/{id}/mapping",
+            "sis.imports.preview",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/sis/imports/{id}/preview",
+            "sis.imports.preview.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/sis/imports/{id}/commit",
+            "sis.imports.commit",
+            "sis",
+            "sis:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/sis/learners",
             "sis.learners.list",
             "sis",
@@ -1397,6 +1451,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.users.list"
         | "administration.users.read"
         | "sis.account_candidates.list"
+        | "sis.imports.list"
+        | "sis.imports.read"
+        | "sis.imports.preview.read"
         | "sis.learners.list"
         | "sis.learners.read"
         | "sis.guardians.list"
@@ -1452,6 +1509,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.licensing.refresh"
         | "administration.licensing.disable_module"
         | "sis.learners.create"
+        | "sis.imports.upload"
+        | "sis.imports.preview"
+        | "sis.imports.commit"
         | "sis.learners.update"
         | "sis.learners.link_account"
         | "sis.learners.delete"
@@ -1598,7 +1658,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 135);
+        assert_eq!(operation_catalog().len(), 141);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1650,7 +1710,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [55, 73, 7, 0]);
+        assert_eq!(counts, [58, 76, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

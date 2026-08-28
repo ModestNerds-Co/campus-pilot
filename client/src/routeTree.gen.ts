@@ -40,6 +40,7 @@ import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments
 import { Route as AdminClassesRouteImport } from './routes/admin/classes'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
 import { Route as ModulesSisLearnersRouteImport } from './routes/modules/sis/learners'
+import { Route as ModulesSisImportsRouteImport } from './routes/modules/sis/imports'
 import { Route as ModulesSisGuardiansRouteImport } from './routes/modules/sis/guardians'
 import { Route as ModulesSisGuardianRelationshipsRouteImport } from './routes/modules/sis/guardian-relationships'
 import { Route as ModulesSisEnrolmentsRouteImport } from './routes/modules/sis/enrolments'
@@ -217,6 +218,11 @@ const ModulesSisLearnersRoute = ModulesSisLearnersRouteImport.update({
   path: '/sis/learners',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesSisImportsRoute = ModulesSisImportsRouteImport.update({
+  id: '/sis/imports',
+  path: '/sis/imports',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesSisGuardiansRoute = ModulesSisGuardiansRouteImport.update({
   id: '/sis/guardians',
   path: '/sis/guardians',
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
   '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
   '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
+  '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
@@ -438,6 +445,7 @@ export interface FileRoutesByTo {
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
   '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
   '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
+  '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
 }
@@ -493,6 +501,7 @@ export interface FileRoutesById {
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
   '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
   '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
+  '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
 }
@@ -549,6 +558,7 @@ export interface FileRouteTypes {
     | '/modules/sis/enrolments'
     | '/modules/sis/guardian-relationships'
     | '/modules/sis/guardians'
+    | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/admin/fleet'
   fileRoutesByTo: FileRoutesByTo
@@ -602,6 +612,7 @@ export interface FileRouteTypes {
     | '/modules/sis/enrolments'
     | '/modules/sis/guardian-relationships'
     | '/modules/sis/guardians'
+    | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/admin/fleet'
   id:
@@ -656,6 +667,7 @@ export interface FileRouteTypes {
     | '/modules/sis/enrolments'
     | '/modules/sis/guardian-relationships'
     | '/modules/sis/guardians'
+    | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/admin/fleet/'
   fileRoutesById: FileRoutesById
@@ -892,6 +904,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesSisLearnersRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/sis/imports': {
+      id: '/modules/sis/imports'
+      path: '/sis/imports'
+      fullPath: '/modules/sis/imports'
+      preLoaderRoute: typeof ModulesSisImportsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/sis/guardians': {
       id: '/modules/sis/guardians'
       path: '/sis/guardians'
@@ -1113,6 +1132,7 @@ interface ModulesRouteChildren {
   ModulesSisEnrolmentsRoute: typeof ModulesSisEnrolmentsRoute
   ModulesSisGuardianRelationshipsRoute: typeof ModulesSisGuardianRelationshipsRoute
   ModulesSisGuardiansRoute: typeof ModulesSisGuardiansRoute
+  ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
 }
 
@@ -1138,6 +1158,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisEnrolmentsRoute: ModulesSisEnrolmentsRoute,
   ModulesSisGuardianRelationshipsRoute: ModulesSisGuardianRelationshipsRoute,
   ModulesSisGuardiansRoute: ModulesSisGuardiansRoute,
+  ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
 }
 

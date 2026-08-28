@@ -480,7 +480,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 10);
             } else if module_key == "sis" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 11);
+                assert_eq!(module.executable_capabilities(), 14);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

@@ -37,7 +37,8 @@ use hr::{
     HrPositionReadCapability, HrPositionsListCapability,
 };
 use sis::{
-    AccountCandidatesCapability, SisListCapability, SisListKind, SisReadCapability, SisReadKind,
+    AccountCandidatesCapability, SisImportPreviewCapability, SisImportReadCapability,
+    SisImportsListCapability, SisListCapability, SisListKind, SisReadCapability, SisReadKind,
 };
 use timetabling::{
     LatestTimetableRunCapability, TimetableConfigurationCapability, TimetableRunReadCapability,
@@ -134,6 +135,15 @@ pub fn build_capability_registry(
     registry
         .register(AccountCandidatesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid SIS account-candidates capability: {error}"));
+    registry
+        .register(SisImportsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid SIS imports-list capability: {error}"));
+    registry
+        .register(SisImportReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid SIS import-read capability: {error}"));
+    registry
+        .register(SisImportPreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid SIS import-preview capability: {error}"));
     registry
         .register(HrDepartmentsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR departments-list capability: {error}"));
@@ -383,6 +393,9 @@ mod tests {
                 "sis.guardian_relationships.read",
                 "sis.guardians.list",
                 "sis.guardians.read",
+                "sis.imports.list",
+                "sis.imports.preview.read",
+                "sis.imports.read",
                 "sis.learners.list",
                 "sis.learners.read",
                 "timetabling.configuration.read",
