@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  Boxes,
   BriefcaseBusiness,
   Building2,
   CalendarClock,
@@ -29,6 +30,7 @@ import {
   Truck,
   UserRoundCheck,
   UsersRound,
+  Warehouse,
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -129,6 +131,11 @@ const procurementNavigation: LocalNavItem[] = [
   { label: "Suppliers", path: "/modules/procurement/suppliers", icon: PackageSearch },
 ];
 
+const assetsInventoryNavigation: LocalNavItem[] = [
+  { label: "Items", path: "/modules/assets-inventory/items", icon: Boxes },
+  { label: "Stores", path: "/modules/assets-inventory/stores", icon: Warehouse },
+];
+
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
   <PageChromeProvider>
     <ModuleLayoutShell>{children}</ModuleLayoutShell>
@@ -151,7 +158,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : [])
+  const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
     .filter((item) => !item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission));
 
   useEffect(() => {
@@ -302,6 +309,8 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/procurement/purchase-orders") return <Link className={navClass(active)} to="/modules/procurement/purchase-orders"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/procurement/goods-receipts") return <Link className={navClass(active)} to="/modules/procurement/goods-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/procurement/suppliers") return <Link className={navClass(active)} to="/modules/procurement/suppliers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/assets-inventory/items") return <Link className={navClass(active)} to="/modules/assets-inventory/items"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/assets-inventory/stores") return <Link className={navClass(active)} to="/modules/assets-inventory/stores"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

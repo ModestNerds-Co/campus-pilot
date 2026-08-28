@@ -5,6 +5,7 @@ mod academics;
 mod administration;
 mod administration_access;
 mod ai_providers;
+mod assets_inventory;
 mod fees;
 mod finance;
 mod fleet;
@@ -37,6 +38,10 @@ use administration_access::{
 use ai_providers::{
     AiProviderCatalogCapability, AiProviderConnectionReadCapability,
     AiProviderConnectionsListCapability, AiProviderModelsListCapability,
+};
+use assets_inventory::{
+    AssetsInventoryListCapability, AssetsInventoryListKind, AssetsInventoryReadCapability,
+    AssetsInventoryReadKind,
 };
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
@@ -124,6 +129,22 @@ pub fn build_capability_registry(
     registry
         .register(AiProviderModelsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid AI provider-models capability: {error}"));
+    for kind in [
+        AssetsInventoryListKind::Items,
+        AssetsInventoryListKind::Stores,
+    ] {
+        registry
+            .register(AssetsInventoryListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [
+        AssetsInventoryReadKind::Item,
+        AssetsInventoryReadKind::Store,
+    ] {
+        registry
+            .register(AssetsInventoryReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     for kind in [
         AcademicsListKind::AcademicYears,
         AcademicsListKind::Terms,
@@ -471,6 +492,7 @@ mod tests {
                 "fees:view".to_string(),
                 "procurement:view".to_string(),
                 "procurement:create".to_string(),
+                "assets_inventory:view".to_string(),
                 "ai_providers:view".to_string(),
             ],
             enabled_modules: vec![
@@ -484,6 +506,7 @@ mod tests {
                 "finance".to_string(),
                 "fees".to_string(),
                 "procurement".to_string(),
+                "assets_inventory".to_string(),
             ],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
@@ -501,6 +524,10 @@ mod tests {
                     ("finance".to_string(), ModuleEntitlementState::Enabled),
                     ("fees".to_string(), ModuleEntitlementState::Enabled),
                     ("procurement".to_string(), ModuleEntitlementState::Enabled),
+                    (
+                        "assets_inventory".to_string(),
+                        ModuleEntitlementState::Enabled,
+                    ),
                 ],
                 Vec::<String>::new(),
             )
@@ -564,6 +591,10 @@ mod tests {
                 "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read",
+                "assets_inventory.items.list",
+                "assets_inventory.items.read",
+                "assets_inventory.stores.list",
+                "assets_inventory.stores.read",
                 "fees.billing_accounts.list",
                 "fees.billing_accounts.read",
                 "fees.fee_structures.list",
@@ -960,5 +991,85 @@ mod tests {
             .err()
             .unwrap_or_else(|| unreachable!());
         assert_eq!(irrelevant_filter.code(), BrokerErrorCode::InvalidInput);
+    }
+
+    #[tokio::test]
+    async fn production_assets_inventory_capabilities_are_typed_and_fail_safely() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        pool.close().await;
+        let broker = CapabilityBroker::new(
+            build_capability_registry(pool, license_config()),
+            Arc::new(TestAuthorityLoader(authority())),
+            Arc::new(TenantWideScope),
+            Arc::new(TestAudit),
+        );
+        let principal =
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4());
+        let request_context = RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4());
+        for (key, input) in [
+            ("assets_inventory.items.list", json!({ "page": 1 })),
+            (
+                "assets_inventory.items.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+            (
+                "assets_inventory.stores.list",
+                json!({ "status": "active" }),
+            ),
+            (
+                "assets_inventory.stores.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+        ] {
+            let error = broker
+                .invoke(
+                    principal,
+                    CapabilityCall::parse(key, 1, input, request_context)
+                        .unwrap_or_else(|_| unreachable!()),
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| unreachable!());
+            assert_eq!(error.code(), BrokerErrorCode::ExecutionFailed, "{key}");
+            assert_eq!(
+                error.safe_message(),
+                "The capability could not be completed.",
+                "unsafe failure message for {key}"
+            );
+        }
+
+        let invalid = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "assets_inventory.items.list",
+                    1,
+                    json!({ "tenant_id": Uuid::new_v4() }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid.code(), BrokerErrorCode::InvalidInput);
+
+        let invalid_status = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "assets_inventory.stores.list",
+                    1,
+                    json!({ "status": "deleted" }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid_status.code(), BrokerErrorCode::InvalidInput);
     }
 }

@@ -177,11 +177,11 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "assets_inventory",
             "Assets and inventory",
             "Finance and resources",
-            "Track school assets, stores, stock movements, and custodianship.",
+            "Maintain item definitions and inventory stores.",
             "/modules/assets-inventory",
             "assets_inventory",
             false,
-            "planned",
+            "available",
             &["view", "create", "edit", "delete"],
         ),
         module(
@@ -502,6 +502,7 @@ mod tests {
             "finance",
             "fees",
             "procurement",
+            "assets_inventory",
         ] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -533,6 +534,9 @@ mod tests {
             } else if module_key == "procurement" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 10);
+            } else if module_key == "assets_inventory" {
+                assert!(module.release_ready());
+                assert_eq!(module.executable_capabilities(), 4);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

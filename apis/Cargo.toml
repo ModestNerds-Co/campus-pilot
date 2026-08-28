@@ -15,6 +15,7 @@ members = [
     "crates/modules/fees",
     "crates/modules/hr-payroll",
     "crates/modules/procurement",
+    "crates/modules/assets-inventory",
     "crates/modules/library",
     "crates/modules/messaging",
     "crates/modules/hostel",

@@ -92,6 +92,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .wrap(AuthMiddleware)
                     .configure(cp_procurement::routes::routes),
             )
+            .service(
+                scope("/assets-inventory")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_assets_inventory::routes::routes),
+            )
             .service(scope("/library").configure(cp_library::routes::routes))
             .service(scope("/messaging").configure(cp_messaging::routes::routes))
             .service(scope("/hostel").configure(cp_hostel::routes::routes))
@@ -387,6 +392,66 @@ mod route_wiring_tests {
                 format!("/api/1.0/procurement/goods-receipts/{record_id}/post"),
                 "/api/1.0/procurement/goods-receipts/{id}/post",
                 "procurement.goods_receipts.post",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/items".to_string(),
+                "/api/1.0/assets-inventory/items",
+                "assets_inventory.items.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/assets-inventory/items/{record_id}"),
+                "/api/1.0/assets-inventory/items/{id}",
+                "assets_inventory.items.read",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/items".to_string(),
+                "/api/1.0/assets-inventory/items",
+                "assets_inventory.items.create",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/assets-inventory/items/{record_id}"),
+                "/api/1.0/assets-inventory/items/{id}",
+                "assets_inventory.items.update",
+            ),
+            (
+                Method::DELETE,
+                format!("/api/1.0/assets-inventory/items/{record_id}?expected_version=1"),
+                "/api/1.0/assets-inventory/items/{id}",
+                "assets_inventory.items.delete",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stores".to_string(),
+                "/api/1.0/assets-inventory/stores",
+                "assets_inventory.stores.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/assets-inventory/stores/{record_id}"),
+                "/api/1.0/assets-inventory/stores/{id}",
+                "assets_inventory.stores.read",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stores".to_string(),
+                "/api/1.0/assets-inventory/stores",
+                "assets_inventory.stores.create",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/assets-inventory/stores/{record_id}"),
+                "/api/1.0/assets-inventory/stores/{id}",
+                "assets_inventory.stores.update",
+            ),
+            (
+                Method::DELETE,
+                format!("/api/1.0/assets-inventory/stores/{record_id}?expected_version=1"),
+                "/api/1.0/assets-inventory/stores/{id}",
+                "assets_inventory.stores.delete",
             ),
         ];
 

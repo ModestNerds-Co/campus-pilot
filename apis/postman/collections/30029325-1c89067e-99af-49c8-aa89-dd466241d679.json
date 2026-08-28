@@ -3992,6 +3992,206 @@
       ]
     },
     {
+      "name": "Assets & Inventory",
+      "description": "The 10 shipped Assets and inventory item/store master-data routes. These operations require only the Assets and inventory entitlement. Server-generated item/store references and item quantity scales are immutable; stock ledger, movement, valuation, custodianship, and Procurement receipt allocation are not part of this foundation.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Items",
+          "item": [
+            {
+              "name": "List Inventory Items",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/assets-inventory/items?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "assets-inventory",
+                    "items"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Optional item catalogue search."
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "disabled": true,
+                      "description": "active or inactive"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Inventory Item",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/assets-inventory/items/{{assets_inventory_item_id}}"
+              }
+            },
+            {
+              "name": "Create Inventory Item",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"A4 exercise book\",\n  \"description\": \"Eighty-page ruled exercise book\",\n  \"barcode\": \"600000000001\",\n  \"unit_label\": \"book\",\n  \"quantity_scale\": 0,\n  \"reorder_level_minor\": 50,\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/items",
+                "description": "Creates an active version-one item with a server-generated ITM reference. quantity_scale is fixed at creation and reorder_level_minor uses that exact scale."
+              }
+            },
+            {
+              "name": "Update Inventory Item",
+              "request": {
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"A4 exercise book\",\n  \"description\": \"Eighty-page ruled exercise book\",\n  \"barcode\": \"600000000001\",\n  \"reorder_level_minor\": 75,\n  \"status\": \"active\",\n  \"expected_version\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/items/{{assets_inventory_item_id}}",
+                "description": "The item number, unit label, and quantity scale are immutable and therefore absent from the update DTO."
+              }
+            },
+            {
+              "name": "Delete Inventory Item",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/assets-inventory/items/{{assets_inventory_item_id}}?expected_version=1",
+                "description": "Uses the required optimistic expected_version query parameter. Only an inactive item can be removed."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stores",
+          "item": [
+            {
+              "name": "List Inventory Stores",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/assets-inventory/stores?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "assets-inventory",
+                    "stores"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Optional store directory search."
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "disabled": true,
+                      "description": "active or inactive"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Inventory Store",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/assets-inventory/stores/{{assets_inventory_store_id}}"
+              }
+            },
+            {
+              "name": "Create Inventory Store",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main administration store\",\n  \"location_label\": \"Administration block, ground floor\",\n  \"notes\": \"Primary receiving and stationery store\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/stores",
+                "description": "Creates an active version-one store with a server-generated STR reference."
+              }
+            },
+            {
+              "name": "Update Inventory Store",
+              "request": {
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main administration store\",\n  \"location_label\": \"Administration block, ground floor\",\n  \"notes\": \"Primary receiving and stationery store\",\n  \"status\": \"active\",\n  \"expected_version\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/stores/{{assets_inventory_store_id}}",
+                "description": "The server-generated store number is immutable and absent from the update DTO."
+              }
+            },
+            {
+              "name": "Delete Inventory Store",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/assets-inventory/stores/{{assets_inventory_store_id}}?expected_version=1",
+                "description": "Uses the required optimistic expected_version query parameter. Only an inactive store can be removed."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Timetabling",
       "description": "Consumes the active Academics term and approved HR availability. Timetabling owns recurring schedule rules, rooms, generated snapshots, and publication.",
       "auth": {
@@ -4793,6 +4993,16 @@
     },
     {
       "key": "procurement_goods_receipt_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "assets_inventory_item_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "assets_inventory_store_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }

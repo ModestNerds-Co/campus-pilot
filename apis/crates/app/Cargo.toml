@@ -16,6 +16,7 @@ cp-finance = { path = "../modules/finance" }
 cp-fees = { path = "../modules/fees" }
 cp-hr-payroll = { path = "../modules/hr-payroll" }
 cp-procurement = { path = "../modules/procurement" }
+cp-assets-inventory = { path = "../modules/assets-inventory" }
 cp-library = { path = "../modules/library" }
 cp-messaging = { path = "../modules/messaging" }
 cp-hostel = { path = "../modules/hostel" }

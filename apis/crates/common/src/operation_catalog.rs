@@ -1908,6 +1908,97 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Assets and inventory: item master and store directory.
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/items",
+            "assets_inventory.items.list",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/items/{id}",
+            "assets_inventory.items.read",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/items",
+            "assets_inventory.items.create",
+            "assets_inventory",
+            "assets_inventory:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/assets-inventory/items/{id}",
+            "assets_inventory.items.update",
+            "assets_inventory",
+            "assets_inventory:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/assets-inventory/items/{id}",
+            "assets_inventory.items.delete",
+            "assets_inventory",
+            "assets_inventory:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stores",
+            "assets_inventory.stores.list",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stores/{id}",
+            "assets_inventory.stores.read",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stores",
+            "assets_inventory.stores.create",
+            "assets_inventory",
+            "assets_inventory:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/assets-inventory/stores/{id}",
+            "assets_inventory.stores.update",
+            "assets_inventory",
+            "assets_inventory:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/assets-inventory/stores/{id}",
+            "assets_inventory.stores.delete",
+            "assets_inventory",
+            "assets_inventory:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -2563,6 +2654,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "procurement.purchase_orders.read"
         | "procurement.goods_receipts.list"
         | "procurement.goods_receipts.read"
+        | "assets_inventory.items.list"
+        | "assets_inventory.items.read"
+        | "assets_inventory.stores.list"
+        | "assets_inventory.stores.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2698,6 +2793,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "procurement.goods_receipts.create"
         | "procurement.goods_receipts.update"
         | "procurement.goods_receipts.post"
+        | "assets_inventory.items.create"
+        | "assets_inventory.items.update"
+        | "assets_inventory.items.delete"
+        | "assets_inventory.stores.create"
+        | "assets_inventory.stores.update"
+        | "assets_inventory.stores.delete"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2794,6 +2895,10 @@ mod tests {
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
+                (
+                    "assets_inventory".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
                 ("agent".to_string(), ModuleEntitlementState::Enabled),
             ],
             vec![],
@@ -2822,7 +2927,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 255);
+        assert_eq!(operation_catalog().len(), 265);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2874,7 +2979,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [103, 142, 10, 0]);
+        assert_eq!(counts, [107, 148, 10, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -3140,6 +3245,103 @@ mod tests {
         ] {
             assert!(!allowed(key, &["procurement:edit"]), "{key}");
             assert!(allowed(key, &["procurement:receive"]), "{key}");
+        }
+    }
+
+    #[test]
+    fn assets_inventory_operations_are_fully_governed() {
+        for (key, permission, exposure) in [
+            (
+                "assets_inventory.items.list",
+                "assets_inventory:view",
+                "exposed",
+            ),
+            (
+                "assets_inventory.items.read",
+                "assets_inventory:view",
+                "exposed",
+            ),
+            (
+                "assets_inventory.items.create",
+                "assets_inventory:create",
+                "approval_required",
+            ),
+            (
+                "assets_inventory.items.update",
+                "assets_inventory:edit",
+                "approval_required",
+            ),
+            (
+                "assets_inventory.items.delete",
+                "assets_inventory:delete",
+                "approval_required",
+            ),
+            (
+                "assets_inventory.stores.list",
+                "assets_inventory:view",
+                "exposed",
+            ),
+            (
+                "assets_inventory.stores.read",
+                "assets_inventory:view",
+                "exposed",
+            ),
+            (
+                "assets_inventory.stores.create",
+                "assets_inventory:create",
+                "approval_required",
+            ),
+            (
+                "assets_inventory.stores.update",
+                "assets_inventory:edit",
+                "approval_required",
+            ),
+            (
+                "assets_inventory.stores.delete",
+                "assets_inventory:delete",
+                "approval_required",
+            ),
+        ] {
+            let operation = operation(key);
+            assert_eq!(operation.module_key(), "assets_inventory", "{key}");
+            assert_eq!(operation.permission(), permission, "{key}");
+            assert!(operation.license_required(), "{key}");
+            assert_eq!(operation.required_modules().count(), 0, "{key}");
+            assert_eq!(operation.agent_exposure().as_str(), exposure, "{key}");
+        }
+    }
+
+    #[test]
+    fn assets_inventory_foundation_crud_succeeds_with_standalone_entitlement() {
+        let snapshot = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            vec![(
+                "assets_inventory".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            vec![],
+        )
+        .unwrap_or_else(|_| unreachable!());
+        for (key, permission) in [
+            ("assets_inventory.items.list", "assets_inventory:view"),
+            ("assets_inventory.items.read", "assets_inventory:view"),
+            ("assets_inventory.items.create", "assets_inventory:create"),
+            ("assets_inventory.items.update", "assets_inventory:edit"),
+            ("assets_inventory.items.delete", "assets_inventory:delete"),
+            ("assets_inventory.stores.list", "assets_inventory:view"),
+            ("assets_inventory.stores.read", "assets_inventory:view"),
+            ("assets_inventory.stores.create", "assets_inventory:create"),
+            ("assets_inventory.stores.update", "assets_inventory:edit"),
+            ("assets_inventory.stores.delete", "assets_inventory:delete"),
+        ] {
+            let operation = operation(key);
+            let decision = evaluate_operation(
+                operation,
+                &snapshot,
+                &[permission.to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(decision.allowed, "{key}: {}", decision.reason.as_str());
         }
     }
 

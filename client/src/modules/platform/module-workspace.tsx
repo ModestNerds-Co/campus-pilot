@@ -177,6 +177,22 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
     );
   }
 
+  if (module.key === "assets_inventory") {
+    return (
+      <div className="space-y-8">
+        <ModuleIntroduction module={module} />
+        <section aria-labelledby="assets-inventory-workspaces">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="assets-inventory-workspaces">Configure inventory records</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <AssetsInventoryLink description="Maintain item definitions, quantity precision, and reorder levels." label="Items" to="/modules/assets-inventory/items" />
+            <AssetsInventoryLink description="Maintain the stores used to hold inventory." label="Stores" to="/modules/assets-inventory/stores" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <ModuleIntroduction module={module} />
@@ -259,6 +275,13 @@ const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fee
 );
 
 const ProcurementLink: React.FC<{ description: string; label: string; to: "/modules/procurement/requisitions" | "/modules/procurement/purchase-orders" | "/modules/procurement/goods-receipts" | "/modules/procurement/suppliers" }> = ({ description, label, to }) => (
+  <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
+    <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+    <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
+  </Link>
+);
+
+const AssetsInventoryLink: React.FC<{ description: string; label: string; to: "/modules/assets-inventory/items" | "/modules/assets-inventory/stores" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

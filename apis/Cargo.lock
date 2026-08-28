@@ -1413,6 +1413,7 @@ dependencies = [
  "cp-academics",
  "cp-agent",
  "cp-ai-providers",
+ "cp-assets-inventory",
  "cp-audit",
  "cp-common",
  "cp-fees",
@@ -1675,6 +1676,23 @@ dependencies = [
  "thiserror 2.0.16",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "cp-assets-inventory"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-audit",
+ "cp-common",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]
