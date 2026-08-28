@@ -2580,6 +2580,59 @@
           }
         },
         {
+          "name": "List Grade Levels",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/grade-levels?page=1&per_page=20"
+          }
+        },
+        {
+          "name": "Get Grade Level",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/grade-levels/:id"
+          }
+        },
+        {
+          "name": "Create Grade Level",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"FORM-1\",\n  \"name\": \"Form 1\",\n  \"sequence_number\": 1,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/grade-levels"
+          }
+        },
+        {
+          "name": "Update Grade Level",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"FORM-1\",\n  \"name\": \"Form 1\",\n  \"sequence_number\": 1,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/grade-levels/:id"
+          }
+        },
+        {
+          "name": "Delete Grade Level",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/grade-levels/:id"
+          }
+        },
+        {
           "name": "List Subjects",
           "request": {
             "method": "GET",
@@ -2696,7 +2749,7 @@
           "name": "List Classes",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/academics/classes?page=1&per_page=20&academic_year_id="
+            "url": "{{base_url}}/academics/classes?page=1&per_page=20&academic_year_id=&grade_level_id="
           }
         },
         {
@@ -2712,7 +2765,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}",
+              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"active\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2728,7 +2781,7 @@
             "method": "PUT",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level\": \"Form 1\",\n  \"status\": \"active\"\n}",
+              "raw": "{\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"code\": \"F1A\",\n  \"name\": \"Form 1A\",\n  \"grade_level_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"active\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3091,7 +3144,7 @@
           "name": "List Applications",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/sis/applications?page=1&per_page=20&search=&status=&academic_year_id=&learner_id="
+            "url": "{{base_url}}/sis/applications?page=1&per_page=20&search=&status=&academic_year_id=&target_grade_level_id=&learner_id="
           }
         },
         {
@@ -3108,7 +3161,7 @@
             "url": "{{base_url}}/sis/applications",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"application_number\": \"APP-001\",\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"target_class_group_id\": null,\n  \"submitted_on\": null,\n  \"status\": \"draft\",\n  \"notes\": null\n}",
+              "raw": "{\n  \"application_number\": \"APP-001\",\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"target_grade_level_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"submitted_on\": null,\n  \"status\": \"draft\",\n  \"notes\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3124,7 +3177,7 @@
             "url": "{{base_url}}/sis/applications/:id",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"application_number\": \"APP-001\",\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"target_class_group_id\": null,\n  \"submitted_on\": \"2026-08-28\",\n  \"status\": \"submitted\",\n  \"notes\": null\n}",
+              "raw": "{\n  \"application_number\": \"APP-001\",\n  \"learner_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"academic_year_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"target_grade_level_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"submitted_on\": \"2026-08-28\",\n  \"status\": \"submitted\",\n  \"notes\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -9,8 +9,8 @@ use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::models::{
-    AcademicTerm, AcademicYear, ClassGroupWithYear, Subject, TeacherProfileWithEmployee,
-    TeachingAssignmentWithDetails,
+    AcademicGradeLevel, AcademicTerm, AcademicYear, ClassGroupWithYear, Subject,
+    TeacherProfileWithEmployee, TeachingAssignmentWithDetails,
 };
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -232,6 +232,54 @@ pub struct PaginatedSubjectsResponse {
     pub subjects: Vec<SubjectResponse>,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateAcademicGradeLevelRequest {
+    #[validate(length(min = 1, max = 40))]
+    pub code: String,
+    #[validate(length(min = 1, max = 120))]
+    pub name: String,
+    #[validate(range(min = 0, max = 999))]
+    pub sequence_number: i16,
+    pub status: Option<ActiveStatus>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateAcademicGradeLevelRequest {
+    #[validate(length(min = 1, max = 40))]
+    pub code: String,
+    #[validate(length(min = 1, max = 120))]
+    pub name: String,
+    #[validate(range(min = 0, max = 999))]
+    pub sequence_number: i16,
+    pub status: ActiveStatus,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AcademicGradeLevelResponse {
+    pub id: Uuid,
+    pub code: String,
+    pub name: String,
+    pub sequence_number: i16,
+    pub status: String,
+}
+
+impl From<AcademicGradeLevel> for AcademicGradeLevelResponse {
+    fn from(value: AcademicGradeLevel) -> Self {
+        Self {
+            id: value.id,
+            code: value.code,
+            name: value.name,
+            sequence_number: value.sequence_number,
+            status: value.status,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedAcademicGradeLevelsResponse {
+    pub grade_levels: Vec<AcademicGradeLevelResponse>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct TeacherListQuery {
     pub page: Option<i64>,
@@ -295,6 +343,7 @@ pub struct ClassGroupListQuery {
     pub search: Option<String>,
     pub status: Option<ActiveStatus>,
     pub academic_year_id: Option<Uuid>,
+    pub grade_level_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -304,8 +353,7 @@ pub struct CreateClassGroupRequest {
     pub code: String,
     #[validate(length(min = 1, max = 160))]
     pub name: String,
-    #[validate(length(max = 80))]
-    pub grade_level: Option<String>,
+    pub grade_level_id: Option<Uuid>,
     pub status: Option<ActiveStatus>,
 }
 
@@ -316,8 +364,7 @@ pub struct UpdateClassGroupRequest {
     pub code: String,
     #[validate(length(min = 1, max = 160))]
     pub name: String,
-    #[validate(length(max = 80))]
-    pub grade_level: Option<String>,
+    pub grade_level_id: Option<Uuid>,
     pub status: ActiveStatus,
 }
 
@@ -328,6 +375,7 @@ pub struct ClassGroupResponse {
     pub academic_year_name: String,
     pub code: String,
     pub name: String,
+    pub grade_level_id: Option<Uuid>,
     pub grade_level: Option<String>,
     pub status: String,
 }
@@ -340,6 +388,7 @@ impl From<ClassGroupWithYear> for ClassGroupResponse {
             academic_year_name: value.academic_year_name,
             code: value.code,
             name: value.name,
+            grade_level_id: value.grade_level_id,
             grade_level: value.grade_level,
             status: value.status,
         }

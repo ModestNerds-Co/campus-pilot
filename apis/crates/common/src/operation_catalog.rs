@@ -690,6 +690,51 @@ fn build_catalog() -> Vec<RoutedOperation> {
         ),
         route(
             Method::GET,
+            "/api/1.0/academics/grade-levels",
+            "academics.grade_levels.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/grade-levels/{id}",
+            "academics.grade_levels.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/grade-levels",
+            "academics.grade_levels.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/grade-levels/{id}",
+            "academics.grade_levels.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/grade-levels/{id}",
+            "academics.grade_levels.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/academics/teacher-candidates",
             "academics.teacher_candidates.list",
             "academics",
@@ -1368,6 +1413,8 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.terms.read"
         | "academics.subjects.list"
         | "academics.subjects.read"
+        | "academics.grade_levels.list"
+        | "academics.grade_levels.read"
         | "academics.teacher_candidates.list"
         | "academics.teachers.list"
         | "academics.teachers.read"
@@ -1429,6 +1476,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.subjects.create"
         | "academics.subjects.update"
         | "academics.subjects.delete"
+        | "academics.grade_levels.create"
+        | "academics.grade_levels.update"
+        | "academics.grade_levels.delete"
         | "academics.teachers.create"
         | "academics.teachers.update"
         | "academics.teachers.delete"
@@ -1548,7 +1598,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 130);
+        assert_eq!(operation_catalog().len(), 135);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1600,7 +1650,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [53, 70, 7, 0]);
+        assert_eq!(counts, [55, 73, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

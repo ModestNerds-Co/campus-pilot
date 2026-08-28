@@ -503,6 +503,7 @@ mod tests {
                 academic_year_name: "2027".to_string(),
                 code: "F1A".to_string(),
                 name: "Form 1A".to_string(),
+                grade_level_id: Some(Uuid::new_v4()),
                 grade_level: Some("Form 1".to_string()),
                 status: "active".to_string(),
                 created_at: now,

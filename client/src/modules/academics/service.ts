@@ -5,6 +5,9 @@ import { AxiosError } from "axios";
 import { httpClient } from "@/lib/http-client";
 
 import type {
+  AcademicGradeLevel,
+  AcademicGradeLevelInput,
+  AcademicGradeLevelsResponse,
   AcademicYear,
   AcademicYearInput,
   AcademicYearsResponse,
@@ -48,6 +51,11 @@ export const academicsService = {
   createAcademicTerm: (data: AcademicTermInput) => request<AcademicTerm>(() => httpClient.post(`${BASE_URL}/terms`, data)),
   updateAcademicTerm: (id: string, data: AcademicTermInput) => request<AcademicTerm>(() => httpClient.put(`${BASE_URL}/terms/${id}`, data)),
   deleteAcademicTerm: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/terms/${id}`)),
+
+  listGradeLevels: (params?: ListParams) => request<AcademicGradeLevelsResponse>(() => httpClient.get(`${BASE_URL}/grade-levels`, { params })),
+  createGradeLevel: (data: AcademicGradeLevelInput) => request<AcademicGradeLevel>(() => httpClient.post(`${BASE_URL}/grade-levels`, data)),
+  updateGradeLevel: (id: string, data: AcademicGradeLevelInput) => request<AcademicGradeLevel>(() => httpClient.put(`${BASE_URL}/grade-levels/${id}`, data)),
+  deleteGradeLevel: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/grade-levels/${id}`)),
 
   listSubjects: (params?: ListParams) => request<SubjectsResponse>(() => httpClient.get(`${BASE_URL}/subjects`, { params })),
   createSubject: (data: SubjectInput) => request<Subject>(() => httpClient.post(`${BASE_URL}/subjects`, data)),

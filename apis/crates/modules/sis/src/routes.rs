@@ -369,6 +369,7 @@ async fn list_applications(
         trimmed(query.search.as_deref()),
         query.status.map(crate::dtos::ApplicationStatus::as_str),
         query.academic_year_id,
+        query.target_grade_level_id,
         query.learner_id,
     )
     .await

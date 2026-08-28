@@ -6,12 +6,12 @@
 use async_trait::async_trait;
 use cp_academics::{
     dtos::{
-        AcademicTermResponse, AcademicYearResponse, ClassGroupResponse, SubjectResponse,
-        TeacherProfileResponse, TeachingAssignmentResponse,
+        AcademicGradeLevelResponse, AcademicTermResponse, AcademicYearResponse, ClassGroupResponse,
+        SubjectResponse, TeacherProfileResponse, TeachingAssignmentResponse,
     },
     ops::{
-        AcademicTermOps, AcademicYearOps, ClassGroupOps, SubjectOps, TeacherProfileOps,
-        TeachingAssignmentOps,
+        AcademicGradeLevelOps, AcademicTermOps, AcademicYearOps, ClassGroupOps, SubjectOps,
+        TeacherProfileOps, TeachingAssignmentOps,
     },
 };
 use cp_agent::{
@@ -30,6 +30,7 @@ use super::administration::read_descriptor;
 pub(super) enum AcademicsListKind {
     AcademicYears,
     Terms,
+    GradeLevels,
     Subjects,
     Teachers,
     Classes,
@@ -41,6 +42,7 @@ impl AcademicsListKind {
         match self {
             Self::AcademicYears => "academics.academic_years.list",
             Self::Terms => "academics.terms.list",
+            Self::GradeLevels => "academics.grade_levels.list",
             Self::Subjects => "academics.subjects.list",
             Self::Teachers => "academics.teachers.list",
             Self::Classes => "academics.classes.list",
@@ -52,6 +54,7 @@ impl AcademicsListKind {
         match self {
             Self::AcademicYears => "List academic years",
             Self::Terms => "List academic terms",
+            Self::GradeLevels => "List academic grade levels",
             Self::Subjects => "List subjects",
             Self::Teachers => "List teachers",
             Self::Classes => "List classes",
@@ -63,6 +66,7 @@ impl AcademicsListKind {
         match self {
             Self::AcademicYears => "academic_years",
             Self::Terms => "terms",
+            Self::GradeLevels => "grade_levels",
             Self::Subjects => "subjects",
             Self::Teachers => "teachers",
             Self::Classes => "classes",
@@ -73,9 +77,11 @@ impl AcademicsListKind {
     const fn sensitivity(self) -> DataSensitivity {
         match self {
             Self::Teachers | Self::TeachingAssignments => DataSensitivity::Personal,
-            Self::AcademicYears | Self::Terms | Self::Subjects | Self::Classes => {
-                DataSensitivity::General
-            }
+            Self::AcademicYears
+            | Self::Terms
+            | Self::GradeLevels
+            | Self::Subjects
+            | Self::Classes => DataSensitivity::General,
         }
     }
 }
@@ -112,7 +118,9 @@ impl AcademicsListCapability {
                 "status": { "type": ["string", "null"], "enum": ["planned", "active", "closed", null] },
                 "academic_year_id": nullable_uuid_schema()
             }),
-            AcademicsListKind::Subjects | AcademicsListKind::Teachers => json!({
+            AcademicsListKind::GradeLevels
+            | AcademicsListKind::Subjects
+            | AcademicsListKind::Teachers => json!({
                 "page": page_schema(), "per_page": per_page_schema(),
                 "search": search_schema(),
                 "status": active_status_schema()
@@ -146,6 +154,7 @@ impl AcademicsListCapability {
                 match kind {
                     AcademicsListKind::AcademicYears => "academics.academic_years",
                     AcademicsListKind::Terms => "academics.terms",
+                    AcademicsListKind::GradeLevels => "academics.grade_levels",
                     AcademicsListKind::Subjects => "academics.subjects",
                     AcademicsListKind::Teachers => "academics.teachers",
                     AcademicsListKind::Classes => "academics.classes",
@@ -236,6 +245,27 @@ impl Capability for AcademicsListCapability {
                     total,
                 ))
             }
+            AcademicsListKind::GradeLevels => {
+                let (rows, total) = AcademicGradeLevelOps::list(
+                    &self.pool,
+                    tenant_id,
+                    page,
+                    per_page,
+                    trimmed(input.search.as_deref()),
+                    status,
+                )
+                .await
+                .map_err(|_| dependency_failure("Academic grade levels could not be loaded."))?;
+                Ok(list_output(
+                    "grade_levels",
+                    rows.into_iter()
+                        .map(AcademicGradeLevelResponse::from)
+                        .collect::<Vec<_>>(),
+                    page,
+                    per_page,
+                    total,
+                ))
+            }
             AcademicsListKind::Subjects => {
                 let (rows, total) = SubjectOps::list(
                     &self.pool,
@@ -287,6 +317,7 @@ impl Capability for AcademicsListCapability {
                     trimmed(input.search.as_deref()),
                     status,
                     input.academic_year_id,
+                    None,
                 )
                 .await
                 .map_err(|_| dependency_failure("Classes could not be loaded."))?;
@@ -331,6 +362,7 @@ impl Capability for AcademicsListCapability {
 pub(super) enum AcademicsReadKind {
     AcademicYear,
     Term,
+    GradeLevel,
     Subject,
     Teacher,
     Class,
@@ -342,6 +374,7 @@ impl AcademicsReadKind {
         match self {
             Self::AcademicYear => "academics.academic_years.read",
             Self::Term => "academics.terms.read",
+            Self::GradeLevel => "academics.grade_levels.read",
             Self::Subject => "academics.subjects.read",
             Self::Teacher => "academics.teachers.read",
             Self::Class => "academics.classes.read",
@@ -353,6 +386,7 @@ impl AcademicsReadKind {
         match self {
             Self::AcademicYear => "Read academic year",
             Self::Term => "Read academic term",
+            Self::GradeLevel => "Read academic grade level",
             Self::Subject => "Read subject",
             Self::Teacher => "Read teacher",
             Self::Class => "Read class",
@@ -364,6 +398,7 @@ impl AcademicsReadKind {
         match self {
             Self::AcademicYear => "academic_year",
             Self::Term => "academic_term",
+            Self::GradeLevel => "academic_grade_level",
             Self::Subject => "subject",
             Self::Teacher => "teacher",
             Self::Class => "class",
@@ -374,7 +409,7 @@ impl AcademicsReadKind {
     const fn sensitivity(self) -> DataSensitivity {
         match self {
             Self::Teacher | Self::TeachingAssignment => DataSensitivity::Personal,
-            Self::AcademicYear | Self::Term | Self::Subject | Self::Class => {
+            Self::AcademicYear | Self::Term | Self::GradeLevel | Self::Subject | Self::Class => {
                 DataSensitivity::General
             }
         }
@@ -444,6 +479,15 @@ impl Capability for AcademicsReadCapability {
                     .await
                     .map_err(|_| dependency_failure("The academic term could not be loaded."))?
                     .map(AcademicTermResponse::from)
+                    .map(|value| json!(value))
+            }
+            AcademicsReadKind::GradeLevel => {
+                AcademicGradeLevelOps::get_by_id(&self.pool, tenant_id, input.record_id)
+                    .await
+                    .map_err(|_| {
+                        dependency_failure("The academic grade level could not be loaded.")
+                    })?
+                    .map(AcademicGradeLevelResponse::from)
                     .map(|value| json!(value))
             }
             AcademicsReadKind::Subject => {

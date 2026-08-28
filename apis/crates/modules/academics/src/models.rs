@@ -47,6 +47,19 @@ pub struct Subject {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AcademicGradeLevel {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub code: String,
+    pub name: String,
+    pub sequence_number: i16,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct TeacherProfile {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -98,6 +111,7 @@ pub struct ClassGroupWithYear {
     pub academic_year_name: String,
     pub code: String,
     pub name: String,
+    pub grade_level_id: Option<Uuid>,
     pub grade_level: Option<String>,
     pub status: String,
     pub created_at: DateTime<Utc>,

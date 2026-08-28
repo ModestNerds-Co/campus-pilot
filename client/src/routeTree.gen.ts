@@ -56,6 +56,7 @@ import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/acad
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
 import { Route as ModulesAcademicsSubjectsRouteImport } from './routes/modules/academics/subjects'
+import { Route as ModulesAcademicsGradeLevelsRouteImport } from './routes/modules/academics/grade-levels'
 import { Route as ModulesAcademicsClassesRouteImport } from './routes/modules/academics/classes'
 import { Route as ModulesAcademicsAcademicYearsRouteImport } from './routes/modules/academics/academic-years'
 import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
@@ -305,6 +306,12 @@ const ModulesAcademicsSubjectsRoute =
     path: '/academics/subjects',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAcademicsGradeLevelsRoute =
+  ModulesAcademicsGradeLevelsRouteImport.update({
+    id: '/academics/grade-levels',
+    path: '/academics/grade-levels',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAcademicsClassesRoute = ModulesAcademicsClassesRouteImport.update({
   id: '/academics/classes',
   path: '/academics/classes',
@@ -361,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
   '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
+  '/modules/academics/grade-levels': typeof ModulesAcademicsGradeLevelsRoute
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -413,6 +421,7 @@ export interface FileRoutesByTo {
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
   '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
+  '/modules/academics/grade-levels': typeof ModulesAcademicsGradeLevelsRoute
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -467,6 +476,7 @@ export interface FileRoutesById {
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
   '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
+  '/modules/academics/grade-levels': typeof ModulesAcademicsGradeLevelsRoute
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
     | '/modules/academics/classes'
+    | '/modules/academics/grade-levels'
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
@@ -574,6 +585,7 @@ export interface FileRouteTypes {
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
     | '/modules/academics/classes'
+    | '/modules/academics/grade-levels'
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
@@ -627,6 +639,7 @@ export interface FileRouteTypes {
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
     | '/modules/academics/classes'
+    | '/modules/academics/grade-levels'
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
@@ -991,6 +1004,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAcademicsSubjectsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/academics/grade-levels': {
+      id: '/modules/academics/grade-levels'
+      path: '/academics/grade-levels'
+      fullPath: '/modules/academics/grade-levels'
+      preLoaderRoute: typeof ModulesAcademicsGradeLevelsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/academics/classes': {
       id: '/modules/academics/classes'
       path: '/academics/classes'
@@ -1076,6 +1096,7 @@ interface ModulesRouteChildren {
   ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
   ModulesAcademicsAcademicYearsRoute: typeof ModulesAcademicsAcademicYearsRoute
   ModulesAcademicsClassesRoute: typeof ModulesAcademicsClassesRoute
+  ModulesAcademicsGradeLevelsRoute: typeof ModulesAcademicsGradeLevelsRoute
   ModulesAcademicsSubjectsRoute: typeof ModulesAcademicsSubjectsRoute
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -1099,6 +1120,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesModuleKeyRoute: ModulesModuleKeyRoute,
   ModulesAcademicsAcademicYearsRoute: ModulesAcademicsAcademicYearsRoute,
   ModulesAcademicsClassesRoute: ModulesAcademicsClassesRoute,
+  ModulesAcademicsGradeLevelsRoute: ModulesAcademicsGradeLevelsRoute,
   ModulesAcademicsSubjectsRoute: ModulesAcademicsSubjectsRoute,
   ModulesAcademicsTeachersRoute: ModulesAcademicsTeachersRoute,
   ModulesAcademicsTeachingAssignmentsRoute:

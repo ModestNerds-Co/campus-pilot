@@ -164,6 +164,7 @@ pub struct ApplicationListQuery {
     pub search: Option<String>,
     pub status: Option<ApplicationStatus>,
     pub academic_year_id: Option<Uuid>,
+    pub target_grade_level_id: Option<Uuid>,
     pub learner_id: Option<Uuid>,
 }
 
@@ -293,7 +294,7 @@ pub struct CreateApplicationRequest {
     pub application_number: String,
     pub learner_id: Uuid,
     pub academic_year_id: Uuid,
-    pub target_class_group_id: Option<Uuid>,
+    pub target_grade_level_id: Uuid,
     pub submitted_on: Option<NaiveDate>,
     pub status: Option<ApplicationStatus>,
     #[validate(length(max = 4_000))]
@@ -306,7 +307,7 @@ pub struct UpdateApplicationRequest {
     pub application_number: String,
     pub learner_id: Uuid,
     pub academic_year_id: Uuid,
-    pub target_class_group_id: Option<Uuid>,
+    pub target_grade_level_id: Uuid,
     pub submitted_on: Option<NaiveDate>,
     pub status: ApplicationStatus,
     #[validate(length(max = 4_000))]

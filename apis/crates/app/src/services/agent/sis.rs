@@ -83,6 +83,7 @@ pub(super) struct SisListInput {
     learner_id: Option<Uuid>,
     guardian_id: Option<Uuid>,
     academic_year_id: Option<Uuid>,
+    target_grade_level_id: Option<Uuid>,
     class_group_id: Option<Uuid>,
 }
 
@@ -111,7 +112,9 @@ impl SisListCapability {
             SisListKind::Applications => json!({
                 "page": page_schema(), "per_page": per_page_schema(), "search": search_schema(),
                 "status": { "type": ["string", "null"], "enum": ["draft", "submitted", "under_review", "offered", "accepted", "rejected", "withdrawn", null] },
-                "academic_year_id": nullable_uuid_schema(), "learner_id": nullable_uuid_schema()
+                "academic_year_id": nullable_uuid_schema(),
+                "target_grade_level_id": nullable_uuid_schema(),
+                "learner_id": nullable_uuid_schema()
             }),
             SisListKind::Enrolments => json!({
                 "page": page_schema(), "per_page": per_page_schema(), "search": search_schema(),
@@ -159,6 +162,9 @@ impl Capability for SisListCapability {
                 .academic_year_id
                 .map(|id| resource("academic_year", id)),
             input.class_group_id.map(|id| resource("class", id)),
+            input
+                .target_grade_level_id
+                .map(|id| resource("academic_grade_level", id)),
         ]
         .into_iter()
         .flatten()
@@ -242,6 +248,7 @@ impl Capability for SisListCapability {
                     trimmed(input.search.as_deref()),
                     status,
                     input.academic_year_id,
+                    input.target_grade_level_id,
                     input.learner_id,
                 )
                 .await

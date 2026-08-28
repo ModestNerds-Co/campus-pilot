@@ -22,6 +22,14 @@ export interface AcademicTerm {
   status: AcademicYearStatus;
 }
 
+export interface AcademicGradeLevel {
+  id: string;
+  code: string;
+  name: string;
+  sequence_number: number;
+  status: DirectoryStatus;
+}
+
 export interface Subject {
   id: string;
   code: string;
@@ -56,6 +64,7 @@ export interface ClassGroup {
   academic_year_name: string;
   code: string;
   name: string;
+  grade_level_id: string | null;
   grade_level: string | null;
   status: DirectoryStatus;
 }
@@ -97,11 +106,18 @@ export interface SubjectInput {
   status?: DirectoryStatus;
 }
 
+export interface AcademicGradeLevelInput {
+  code: string;
+  name: string;
+  sequence_number: number;
+  status?: DirectoryStatus;
+}
+
 export interface ClassGroupInput {
   academic_year_id: string;
   code: string;
   name: string;
-  grade_level?: string | null;
+  grade_level_id?: string | null;
   status?: DirectoryStatus;
 }
 
@@ -120,6 +136,7 @@ export interface ListParams {
   search?: string;
   status?: string;
   academic_year_id?: string;
+  grade_level_id?: string;
   class_group_id?: string;
   teacher_profile_id?: string;
 }
@@ -143,6 +160,7 @@ export interface ApiEnvelope<T> {
 
 export interface AcademicYearsResponse { academic_years: AcademicYear[] }
 export interface AcademicTermsResponse { terms: AcademicTerm[] }
+export interface AcademicGradeLevelsResponse { grade_levels: AcademicGradeLevel[] }
 export interface SubjectsResponse { subjects: Subject[] }
 export interface TeachersResponse { teachers: TeacherProfile[] }
 export interface TeacherCandidatesResponse { employees: EmployeeCandidate[] }

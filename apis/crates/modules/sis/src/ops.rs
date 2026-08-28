@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result, bail};
 use chrono::Utc;
-use cp_academics::ops::{AcademicYearOps, ClassGroupOps};
+use cp_academics::ops::{AcademicGradeLevelOps, AcademicYearOps, ClassGroupOps};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -698,6 +698,7 @@ impl ApplicationOps {
         search: Option<&str>,
         status: Option<&str>,
         academic_year_id: Option<Uuid>,
+        target_grade_level_id: Option<Uuid>,
         learner_id: Option<Uuid>,
     ) -> Result<(Vec<ApplicationWithDetails>, i64)> {
         let search = search.map(|value| format!("%{value}%"));
@@ -706,7 +707,7 @@ impl ApplicationOps {
             r#"
             SELECT application.id, application.tenant_id, application.application_number,
                    application.learner_id, application.academic_year_id,
-                   application.target_class_group_id, application.submitted_on,
+                   application.target_grade_level_id, application.submitted_on,
                    application.status, application.notes, application.created_at,
                    application.updated_at
             FROM applications AS application
@@ -718,15 +719,17 @@ impl ApplicationOps {
                    OR learner.display_name ILIKE $2 OR learner.learner_number ILIKE $2)
               AND ($3::TEXT IS NULL OR application.status = $3)
               AND ($4::UUID IS NULL OR application.academic_year_id = $4)
-              AND ($5::UUID IS NULL OR application.learner_id = $5)
+              AND ($5::UUID IS NULL OR application.target_grade_level_id = $5)
+              AND ($6::UUID IS NULL OR application.learner_id = $6)
             ORDER BY application.created_at DESC, application.application_number
-            LIMIT $6 OFFSET $7
+            LIMIT $7 OFFSET $8
             "#,
         )
         .bind(tenant_id)
         .bind(&search)
         .bind(status)
         .bind(academic_year_id)
+        .bind(target_grade_level_id)
         .bind(learner_id)
         .bind(per_page)
         .bind(offset)
@@ -745,13 +748,15 @@ impl ApplicationOps {
                    OR learner.display_name ILIKE $2 OR learner.learner_number ILIKE $2)
               AND ($3::TEXT IS NULL OR application.status = $3)
               AND ($4::UUID IS NULL OR application.academic_year_id = $4)
-              AND ($5::UUID IS NULL OR application.learner_id = $5)
+              AND ($5::UUID IS NULL OR application.target_grade_level_id = $5)
+              AND ($6::UUID IS NULL OR application.learner_id = $6)
             "#,
         )
         .bind(tenant_id)
         .bind(&search)
         .bind(status)
         .bind(academic_year_id)
+        .bind(target_grade_level_id)
         .bind(learner_id)
         .fetch_one(pool)
         .await
@@ -778,7 +783,7 @@ impl ApplicationOps {
         sqlx::query_as::<_, Application>(
             r#"
             SELECT id, tenant_id, application_number, learner_id, academic_year_id,
-                   target_class_group_id, submitted_on, status, notes, created_at, updated_at
+                   target_grade_level_id, submitted_on, status, notes, created_at, updated_at
             FROM applications
             WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
             "#,
@@ -796,11 +801,11 @@ impl ApplicationOps {
         request: &CreateApplicationRequest,
     ) -> Result<ApplicationWithDetails> {
         ensure_learner(pool, tenant_id, request.learner_id).await?;
-        validate_academic_placement(
+        validate_application_grade(
             pool,
             tenant_id,
             request.academic_year_id,
-            request.target_class_group_id,
+            request.target_grade_level_id,
             false,
         )
         .await?;
@@ -813,7 +818,7 @@ impl ApplicationOps {
             r#"
             INSERT INTO applications (
                 tenant_id, application_number, learner_id, academic_year_id,
-                target_class_group_id, submitted_on, status, notes
+                target_grade_level_id, submitted_on, status, notes
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id
@@ -823,7 +828,7 @@ impl ApplicationOps {
         .bind(application_number)
         .bind(request.learner_id)
         .bind(request.academic_year_id)
-        .bind(request.target_class_group_id)
+        .bind(request.target_grade_level_id)
         .bind(request.submitted_on)
         .bind(status.as_str())
         .bind(optional_text(request.notes.as_deref()))
@@ -846,18 +851,25 @@ impl ApplicationOps {
         };
         if existing.status != "draft"
             && (existing.learner_id != request.learner_id
-                || existing.academic_year_id != request.academic_year_id)
+                || existing.academic_year_id != request.academic_year_id
+                || existing
+                    .target_grade_level_id
+                    .is_some_and(|target| target != request.target_grade_level_id))
         {
-            bail!("A submitted application cannot be moved to another learner or academic year");
+            bail!(
+                "A submitted application cannot be moved to another learner, academic year, or grade level"
+            );
         }
         ensure_learner(pool, tenant_id, request.learner_id).await?;
-        validate_academic_placement(
+        validate_application_grade(
             pool,
             tenant_id,
             request.academic_year_id,
-            request.target_class_group_id,
+            request.target_grade_level_id,
             existing.academic_year_id == request.academic_year_id
-                && existing.target_class_group_id == request.target_class_group_id,
+                && existing
+                    .target_grade_level_id
+                    .is_none_or(|target| target == request.target_grade_level_id),
         )
         .await?;
         validate_application_state(request.status, request.submitted_on)?;
@@ -866,7 +878,7 @@ impl ApplicationOps {
             r#"
             UPDATE applications
             SET application_number = $1, learner_id = $2, academic_year_id = $3,
-                target_class_group_id = $4, submitted_on = $5, status = $6,
+                target_grade_level_id = $4, submitted_on = $5, status = $6,
                 notes = $7, updated_at = NOW()
             WHERE tenant_id = $8 AND id = $9 AND deleted_at IS NULL
             "#,
@@ -874,7 +886,7 @@ impl ApplicationOps {
         .bind(application_number)
         .bind(request.learner_id)
         .bind(request.academic_year_id)
-        .bind(request.target_class_group_id)
+        .bind(request.target_grade_level_id)
         .bind(request.submitted_on)
         .bind(request.status.as_str())
         .bind(optional_text(request.notes.as_deref()))
@@ -1184,11 +1196,11 @@ async fn hydrate_application(
     let academic_year = AcademicYearOps::get_by_id(pool, tenant_id, row.academic_year_id)
         .await?
         .context("Application academic year was not found")?;
-    let target_class = match row.target_class_group_id {
+    let target_grade_level = match row.target_grade_level_id {
         Some(id) => Some(
-            ClassGroupOps::get_by_id(pool, tenant_id, id)
+            AcademicGradeLevelOps::get_by_id(pool, tenant_id, id)
                 .await?
-                .context("Application target class was not found")?,
+                .context("Application target grade level was not found")?,
         ),
         None => None,
     };
@@ -1201,8 +1213,8 @@ async fn hydrate_application(
         learner_number: learner.learner_number,
         academic_year_id: row.academic_year_id,
         academic_year_name: academic_year.name,
-        target_class_group_id: row.target_class_group_id,
-        target_class_group_name: target_class.map(|class| class.name),
+        target_grade_level_id: row.target_grade_level_id,
+        target_grade_level_name: target_grade_level.map(|grade| grade.name),
         submitted_on: row.submitted_on,
         status: row.status,
         notes: row.notes,
@@ -1302,6 +1314,30 @@ async fn validate_academic_placement(
     Ok(())
 }
 
+async fn validate_application_grade(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    academic_year_id: Uuid,
+    grade_level_id: Uuid,
+    allow_existing_placement: bool,
+) -> Result<()> {
+    validate_academic_placement(
+        pool,
+        tenant_id,
+        academic_year_id,
+        None,
+        allow_existing_placement,
+    )
+    .await?;
+    let grade_level = AcademicGradeLevelOps::get_by_id(pool, tenant_id, grade_level_id)
+        .await?
+        .context("Academic grade level was not found for this campus")?;
+    if grade_level.status != "active" && !allow_existing_placement {
+        bail!("An inactive grade level cannot receive new applications");
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn validate_enrolment_references(
     pool: &PgPool,
@@ -1332,11 +1368,14 @@ async fn validate_enrolment_references(
         if application.status != "accepted" {
             bail!("Only an accepted application can be used for enrolment");
         }
+        let class_group = ClassGroupOps::get_by_id(pool, tenant_id, class_group_id)
+            .await?
+            .context("Class was not found for this campus")?;
         if application.learner_id != learner_id
             || application.academic_year_id != academic_year_id
             || application
-                .target_class_group_id
-                .is_some_and(|target| target != class_group_id)
+                .target_grade_level_id
+                .is_some_and(|target| class_group.grade_level_id != Some(target))
         {
             bail!("The source application does not match the selected learner and placement");
         }

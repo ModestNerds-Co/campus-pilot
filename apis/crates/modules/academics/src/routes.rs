@@ -16,20 +16,22 @@ use validator::Validate;
 
 use crate::{
     dtos::{
-        AcademicTermListQuery, AcademicTermResponse, AcademicYearResponse, AssignmentListQuery,
-        ClassGroupListQuery, ClassGroupResponse, CreateAcademicTermRequest,
-        CreateAcademicYearRequest, CreateClassGroupRequest, CreateSubjectRequest,
-        CreateTeacherProfileRequest, CreateTeachingAssignmentRequest, DirectoryListQuery,
+        AcademicGradeLevelResponse, AcademicTermListQuery, AcademicTermResponse,
+        AcademicYearResponse, AssignmentListQuery, ClassGroupListQuery, ClassGroupResponse,
+        CreateAcademicGradeLevelRequest, CreateAcademicTermRequest, CreateAcademicYearRequest,
+        CreateClassGroupRequest, CreateSubjectRequest, CreateTeacherProfileRequest,
+        CreateTeachingAssignmentRequest, DirectoryListQuery, PaginatedAcademicGradeLevelsResponse,
         PaginatedAcademicTermsResponse, PaginatedAcademicYearsResponse,
         PaginatedClassGroupsResponse, PaginatedSubjectsResponse, PaginatedTeacherProfilesResponse,
         PaginatedTeachingAssignmentsResponse, SubjectResponse, TeacherCandidateQuery,
         TeacherListQuery, TeacherProfileResponse, TeachingAssignmentResponse,
-        UpdateAcademicTermRequest, UpdateAcademicYearRequest, UpdateClassGroupRequest,
-        UpdateSubjectRequest, UpdateTeacherProfileRequest, UpdateTeachingAssignmentRequest,
+        UpdateAcademicGradeLevelRequest, UpdateAcademicTermRequest, UpdateAcademicYearRequest,
+        UpdateClassGroupRequest, UpdateSubjectRequest, UpdateTeacherProfileRequest,
+        UpdateTeachingAssignmentRequest,
     },
     ops::{
-        AcademicTermOps, AcademicYearOps, ClassGroupOps, DeleteOutcome, SubjectOps,
-        TeacherProfileOps, TeachingAssignmentOps,
+        AcademicGradeLevelOps, AcademicTermOps, AcademicYearOps, ClassGroupOps, DeleteOutcome,
+        SubjectOps, TeacherProfileOps, TeachingAssignmentOps,
     },
 };
 
@@ -308,6 +310,103 @@ async fn delete_subject(
     ))
 }
 
+#[get("/grade-levels")]
+async fn list_grade_levels(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<DirectoryListQuery<crate::dtos::ActiveStatus>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    let (grade_levels, total) = AcademicGradeLevelOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        query.status.map(crate::dtos::ActiveStatus::as_str),
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(paginated(
+        PaginatedAcademicGradeLevelsResponse {
+            grade_levels: grade_levels
+                .into_iter()
+                .map(AcademicGradeLevelResponse::from)
+                .collect(),
+        },
+        page,
+        per_page,
+        total,
+    ))
+}
+
+#[get("/grade-levels/{id}")]
+async fn read_grade_level(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let grade_level =
+        AcademicGradeLevelOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(found(
+        grade_level.map(AcademicGradeLevelResponse::from),
+        "Academic grade level",
+    ))
+}
+
+#[post("/grade-levels")]
+async fn create_grade_level(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    body: web::Json<CreateAcademicGradeLevelRequest>,
+) -> Result<HttpResponse, actix_web::Error> {
+    if let Some(response) = validation_response(&*body) {
+        return Ok(response);
+    }
+    Ok(created_or_error(
+        AcademicGradeLevelOps::create(pool.get_ref(), tenant_id(tenant), &body)
+            .await
+            .map(AcademicGradeLevelResponse::from),
+    ))
+}
+
+#[put("/grade-levels/{id}")]
+async fn update_grade_level(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateAcademicGradeLevelRequest>,
+) -> Result<HttpResponse, actix_web::Error> {
+    if let Some(response) = validation_response(&*body) {
+        return Ok(response);
+    }
+    Ok(updated_or_error(
+        AcademicGradeLevelOps::update(pool.get_ref(), tenant_id(tenant), path.into_inner(), &body)
+            .await
+            .map(|value| value.map(AcademicGradeLevelResponse::from)),
+        "Academic grade level",
+    ))
+}
+
+#[delete("/grade-levels/{id}")]
+async fn delete_grade_level(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let outcome =
+        AcademicGradeLevelOps::delete(pool.get_ref(), tenant_id(tenant), path.into_inner())
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(delete_response(
+        outcome,
+        "Academic grade level",
+        "Move or remove its classes before deleting this grade level.",
+    ))
+}
+
 #[get("/teacher-candidates")]
 async fn list_teacher_candidates(
     pool: web::Data<PgPool>,
@@ -426,6 +525,7 @@ async fn list_classes(
         trimmed(query.search.as_deref()),
         query.status.map(crate::dtos::ActiveStatus::as_str),
         query.academic_year_id,
+        query.grade_level_id,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -700,6 +800,7 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         || safe_message.starts_with("An active")
         || safe_message.starts_with("Academic term")
         || safe_message.starts_with("Academic year")
+        || safe_message.starts_with("Academic grade level")
         || safe_message.starts_with("Every academic term")
         || safe_message.starts_with("A closed academic year")
         || safe_message.starts_with("The class")
@@ -745,6 +846,11 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(create_subject)
             .service(update_subject)
             .service(delete_subject)
+            .service(list_grade_levels)
+            .service(read_grade_level)
+            .service(create_grade_level)
+            .service(update_grade_level)
+            .service(delete_grade_level)
             .service(list_teacher_candidates)
             .service(list_teachers)
             .service(read_teacher)

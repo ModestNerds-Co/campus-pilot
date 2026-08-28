@@ -83,6 +83,7 @@ pub fn build_capability_registry(
     for kind in [
         AcademicsListKind::AcademicYears,
         AcademicsListKind::Terms,
+        AcademicsListKind::GradeLevels,
         AcademicsListKind::Subjects,
         AcademicsListKind::Teachers,
         AcademicsListKind::Classes,
@@ -95,6 +96,7 @@ pub fn build_capability_registry(
     for kind in [
         AcademicsReadKind::AcademicYear,
         AcademicsReadKind::Term,
+        AcademicsReadKind::GradeLevel,
         AcademicsReadKind::Subject,
         AcademicsReadKind::Teacher,
         AcademicsReadKind::Class,
@@ -336,6 +338,8 @@ mod tests {
                 "academics.academic_years.read",
                 "academics.classes.list",
                 "academics.classes.read",
+                "academics.grade_levels.list",
+                "academics.grade_levels.read",
                 "academics.subjects.list",
                 "academics.subjects.read",
                 "academics.teacher_candidates.list",

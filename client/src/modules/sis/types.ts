@@ -58,8 +58,8 @@ export interface Application {
   learner_number: string;
   academic_year_id: string;
   academic_year_name: string;
-  target_class_group_id: string | null;
-  target_class_group_name: string | null;
+  target_grade_level_id: string | null;
+  target_grade_level_name: string | null;
   submitted_on: string | null;
   status: ApplicationStatus;
   notes: string | null;
@@ -117,7 +117,7 @@ export interface ApplicationInput {
   application_number: string;
   learner_id: string;
   academic_year_id: string;
-  target_class_group_id?: string | null;
+  target_grade_level_id: string;
   submitted_on?: string | null;
   status?: ApplicationStatus;
   notes?: string | null;
@@ -141,6 +141,7 @@ export interface ListParams {
   learner_id?: string;
   guardian_id?: string;
   academic_year_id?: string;
+  target_grade_level_id?: string;
   class_group_id?: string;
 }
 

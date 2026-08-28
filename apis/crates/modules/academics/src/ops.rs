@@ -12,15 +12,16 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        CreateAcademicTermRequest, CreateAcademicYearRequest, CreateClassGroupRequest,
-        CreateSubjectRequest, CreateTeacherProfileRequest, CreateTeachingAssignmentRequest,
+        CreateAcademicGradeLevelRequest, CreateAcademicTermRequest, CreateAcademicYearRequest,
+        CreateClassGroupRequest, CreateSubjectRequest, CreateTeacherProfileRequest,
+        CreateTeachingAssignmentRequest, UpdateAcademicGradeLevelRequest,
         UpdateAcademicTermRequest, UpdateAcademicYearRequest, UpdateClassGroupRequest,
         UpdateSubjectRequest, UpdateTeacherProfileRequest, UpdateTeachingAssignmentRequest,
     },
     models::{
-        AcademicTerm, AcademicYear, ClassGroupWithYear, Subject, TeacherProfile,
-        TeacherProfileWithEmployee, TeachingAssignmentRow, TeachingAssignmentWithDetails,
-        TimetablingReferenceData,
+        AcademicGradeLevel, AcademicTerm, AcademicYear, ClassGroupWithYear, Subject,
+        TeacherProfile, TeacherProfileWithEmployee, TeachingAssignmentRow,
+        TeachingAssignmentWithDetails, TimetablingReferenceData,
     },
 };
 
@@ -648,6 +649,159 @@ impl SubjectOps {
     }
 }
 
+pub struct AcademicGradeLevelOps;
+
+impl AcademicGradeLevelOps {
+    pub async fn list(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+    ) -> Result<(Vec<AcademicGradeLevel>, i64)> {
+        let page = page.max(1);
+        let per_page = per_page.clamp(1, 100);
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let grade_levels = sqlx::query_as::<_, AcademicGradeLevel>(
+            r#"
+            SELECT id, tenant_id, code, name, sequence_number, status,
+                   created_at, updated_at, deleted_at
+            FROM academic_grade_levels
+            WHERE tenant_id = $1 AND deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR code ILIKE $2 OR name ILIKE $2)
+              AND ($3::TEXT IS NULL OR status = $3)
+            ORDER BY sequence_number, name, code
+            LIMIT $4 OFFSET $5
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list academic grade levels")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM academic_grade_levels
+            WHERE tenant_id = $1 AND deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR code ILIKE $2 OR name ILIKE $2)
+              AND ($3::TEXT IS NULL OR status = $3)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count academic grade levels")?;
+        Ok((grade_levels, total))
+    }
+
+    pub async fn get_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> Result<Option<AcademicGradeLevel>> {
+        sqlx::query_as::<_, AcademicGradeLevel>(
+            r#"
+            SELECT id, tenant_id, code, name, sequence_number, status,
+                   created_at, updated_at, deleted_at
+            FROM academic_grade_levels
+            WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load academic grade level")
+    }
+
+    pub async fn create(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        request: &CreateAcademicGradeLevelRequest,
+    ) -> Result<AcademicGradeLevel> {
+        validate_grade_level_names(&request.code, &request.name)?;
+        sqlx::query_as::<_, AcademicGradeLevel>(
+            r#"
+            INSERT INTO academic_grade_levels
+                (tenant_id, code, name, sequence_number, status)
+            VALUES ($1, $2, $3, $4, COALESCE($5, 'active'))
+            RETURNING id, tenant_id, code, name, sequence_number, status,
+                      created_at, updated_at, deleted_at
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(request.code.trim())
+        .bind(request.name.trim())
+        .bind(request.sequence_number)
+        .bind(request.status.map(|value| value.as_str()))
+        .fetch_one(pool)
+        .await
+        .context("Failed to create academic grade level")
+    }
+
+    pub async fn update(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        request: &UpdateAcademicGradeLevelRequest,
+    ) -> Result<Option<AcademicGradeLevel>> {
+        validate_grade_level_names(&request.code, &request.name)?;
+        sqlx::query_as::<_, AcademicGradeLevel>(
+            r#"
+            UPDATE academic_grade_levels
+            SET code = $1, name = $2, sequence_number = $3, status = $4,
+                updated_at = NOW()
+            WHERE tenant_id = $5 AND id = $6 AND deleted_at IS NULL
+            RETURNING id, tenant_id, code, name, sequence_number, status,
+                      created_at, updated_at, deleted_at
+            "#,
+        )
+        .bind(request.code.trim())
+        .bind(request.name.trim())
+        .bind(request.sequence_number)
+        .bind(request.status.as_str())
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to update academic grade level")
+    }
+
+    pub async fn delete(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<DeleteOutcome> {
+        if Self::get_by_id(pool, tenant_id, id).await?.is_none() {
+            return Ok(DeleteOutcome::NotFound);
+        }
+        let in_use = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM class_groups WHERE tenant_id = $1 AND grade_level_id = $2 AND deleted_at IS NULL)",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .context("Failed to check academic grade level references")?;
+        if in_use {
+            return Ok(DeleteOutcome::InUse);
+        }
+        sqlx::query(
+            "UPDATE academic_grade_levels SET deleted_at = NOW() WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .execute(pool)
+        .await
+        .context("Failed to delete academic grade level")?;
+        Ok(DeleteOutcome::Deleted)
+    }
+}
+
 pub struct TeacherProfileOps;
 
 impl TeacherProfileOps {
@@ -845,6 +999,7 @@ impl ClassGroupOps {
         search: Option<&str>,
         status: Option<&str>,
         academic_year_id: Option<Uuid>,
+        grade_level_id: Option<Uuid>,
     ) -> Result<(Vec<ClassGroupWithYear>, i64)> {
         let search = search.map(|value| format!("%{value}%"));
         let offset = (page - 1) * per_page;
@@ -852,25 +1007,33 @@ impl ClassGroupOps {
             r#"
             SELECT class_group.id, class_group.tenant_id, class_group.academic_year_id,
                    academic_year.name AS academic_year_name, class_group.code,
-                   class_group.name, class_group.grade_level, class_group.status,
+                   class_group.name, class_group.grade_level_id,
+                   grade_level.name AS grade_level, class_group.status,
                    class_group.created_at, class_group.updated_at
             FROM class_groups AS class_group
             INNER JOIN academic_years AS academic_year
               ON academic_year.id = class_group.academic_year_id
              AND academic_year.tenant_id = class_group.tenant_id
+            LEFT JOIN academic_grade_levels AS grade_level
+              ON grade_level.id = class_group.grade_level_id
+             AND grade_level.tenant_id = class_group.tenant_id
+             AND grade_level.deleted_at IS NULL
             WHERE class_group.tenant_id = $1 AND class_group.deleted_at IS NULL
               AND academic_year.deleted_at IS NULL
               AND ($2::TEXT IS NULL OR class_group.code ILIKE $2 OR class_group.name ILIKE $2)
               AND ($3::TEXT IS NULL OR class_group.status = $3)
               AND ($4::UUID IS NULL OR class_group.academic_year_id = $4)
-            ORDER BY academic_year.starts_on DESC, class_group.name, class_group.code
-            LIMIT $5 OFFSET $6
+              AND ($5::UUID IS NULL OR class_group.grade_level_id = $5)
+            ORDER BY academic_year.starts_on DESC, grade_level.sequence_number,
+                     class_group.name, class_group.code
+            LIMIT $6 OFFSET $7
             "#,
         )
         .bind(tenant_id)
         .bind(&search)
         .bind(status)
         .bind(academic_year_id)
+        .bind(grade_level_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -883,12 +1046,14 @@ impl ClassGroupOps {
               AND ($2::TEXT IS NULL OR class_group.code ILIKE $2 OR class_group.name ILIKE $2)
               AND ($3::TEXT IS NULL OR class_group.status = $3)
               AND ($4::UUID IS NULL OR class_group.academic_year_id = $4)
+              AND ($5::UUID IS NULL OR class_group.grade_level_id = $5)
             "#,
         )
         .bind(tenant_id)
         .bind(&search)
         .bind(status)
         .bind(academic_year_id)
+        .bind(grade_level_id)
         .fetch_one(pool)
         .await
         .context("Failed to count class groups")?;
@@ -904,12 +1069,17 @@ impl ClassGroupOps {
             r#"
             SELECT class_group.id, class_group.tenant_id, class_group.academic_year_id,
                    academic_year.name AS academic_year_name, class_group.code,
-                   class_group.name, class_group.grade_level, class_group.status,
+                   class_group.name, class_group.grade_level_id,
+                   grade_level.name AS grade_level, class_group.status,
                    class_group.created_at, class_group.updated_at
             FROM class_groups AS class_group
             INNER JOIN academic_years AS academic_year
               ON academic_year.id = class_group.academic_year_id
              AND academic_year.tenant_id = class_group.tenant_id
+            LEFT JOIN academic_grade_levels AS grade_level
+              ON grade_level.id = class_group.grade_level_id
+             AND grade_level.tenant_id = class_group.tenant_id
+             AND grade_level.deleted_at IS NULL
             WHERE class_group.tenant_id = $1 AND class_group.id = $2
               AND class_group.deleted_at IS NULL AND academic_year.deleted_at IS NULL
             "#,
@@ -927,10 +1097,11 @@ impl ClassGroupOps {
         request: &CreateClassGroupRequest,
     ) -> Result<ClassGroupWithYear> {
         ensure_academic_year(pool, tenant_id, request.academic_year_id).await?;
+        ensure_grade_level(pool, tenant_id, request.grade_level_id).await?;
         let id = sqlx::query_scalar::<_, Uuid>(
             r#"
             INSERT INTO class_groups
-                (tenant_id, academic_year_id, code, name, grade_level, status)
+                (tenant_id, academic_year_id, code, name, grade_level_id, status)
             VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'active'))
             RETURNING id
             "#,
@@ -939,7 +1110,7 @@ impl ClassGroupOps {
         .bind(request.academic_year_id)
         .bind(request.code.trim())
         .bind(request.name.trim())
-        .bind(request.grade_level.as_deref().map(str::trim))
+        .bind(request.grade_level_id)
         .bind(request.status.map(|value| value.as_str()))
         .fetch_one(pool)
         .await
@@ -959,10 +1130,11 @@ impl ClassGroupOps {
             return Ok(None);
         }
         ensure_academic_year(pool, tenant_id, request.academic_year_id).await?;
+        ensure_grade_level(pool, tenant_id, request.grade_level_id).await?;
         sqlx::query(
             r#"
             UPDATE class_groups
-            SET academic_year_id = $1, code = $2, name = $3, grade_level = $4,
+            SET academic_year_id = $1, code = $2, name = $3, grade_level_id = $4,
                 status = $5, updated_at = NOW()
             WHERE tenant_id = $6 AND id = $7 AND deleted_at IS NULL
             "#,
@@ -970,7 +1142,7 @@ impl ClassGroupOps {
         .bind(request.academic_year_id)
         .bind(request.code.trim())
         .bind(request.name.trim())
-        .bind(request.grade_level.as_deref().map(str::trim))
+        .bind(request.grade_level_id)
         .bind(request.status.as_str())
         .bind(tenant_id)
         .bind(id)
@@ -1236,6 +1408,7 @@ impl TeachingAssignmentOps {
             None,
             Some("active"),
             Some(academic_year.id),
+            None,
         )
         .await?;
         let (subjects, _) =
@@ -1268,6 +1441,26 @@ async fn ensure_academic_year(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Resul
     AcademicYearOps::get_by_id(pool, tenant_id, id)
         .await?
         .context("Academic year was not found for this campus")?;
+    Ok(())
+}
+
+async fn ensure_grade_level(pool: &PgPool, tenant_id: Uuid, id: Option<Uuid>) -> Result<()> {
+    let Some(id) = id else {
+        return Ok(());
+    };
+    let grade_level = AcademicGradeLevelOps::get_by_id(pool, tenant_id, id)
+        .await?
+        .context("Academic grade level was not found for this campus")?;
+    if grade_level.status != "active" {
+        bail!("Academic grade level must be active before assigning a class");
+    }
+    Ok(())
+}
+
+fn validate_grade_level_names(code: &str, name: &str) -> Result<()> {
+    if code.trim().is_empty() || name.trim().is_empty() {
+        bail!("Academic grade level code and name are required");
+    }
     Ok(())
 }
 
@@ -1563,7 +1756,10 @@ fn assignment_from_row(
 
 #[cfg(test)]
 mod tests {
-    use super::{DeleteOutcome, validate_term_transition, validate_year_transition};
+    use super::{
+        DeleteOutcome, validate_grade_level_names, validate_term_transition,
+        validate_year_transition,
+    };
 
     #[test]
     fn delete_outcomes_are_distinct() {
@@ -1579,5 +1775,12 @@ mod tests {
         assert!(validate_term_transition("planned", "closed").is_ok());
         assert!(validate_term_transition("active", "planned").is_err());
         assert!(validate_term_transition("closed", "closed").is_err());
+    }
+
+    #[test]
+    fn grade_level_references_require_operational_names() {
+        assert!(validate_grade_level_names("FORM-1", "Form 1").is_ok());
+        assert!(validate_grade_level_names("   ", "Form 1").is_err());
+        assert!(validate_grade_level_names("FORM-1", "\n").is_err());
     }
 }

@@ -86,6 +86,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <AcademicLink description="Define the campus academic cycles." label="Academic years" to="/modules/academics/academic-years" />
             <AcademicLink description="Set the dated teaching periods within each academic year." label="Academic terms" to="/modules/academics/terms" />
+            <AcademicLink description="Maintain the grade references used across campus records." label="Grade levels" to="/modules/academics/grade-levels" />
             <AcademicLink description="Maintain the subjects taught across classes." label="Subjects" to="/modules/academics/subjects" />
             <AcademicLink description="Attach teacher profiles to HR employees." label="Teachers" to="/modules/academics/teachers" />
             <AcademicLink description="Organize classes within an academic year." label="Classes" to="/modules/academics/classes" />
@@ -107,7 +108,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
             <SisLink description="Maintain learner records used across admissions and enrolment." label="Learners" to="/modules/sis/learners" />
             <SisLink description="Maintain the people responsible for learners." label="Guardians" to="/modules/sis/guardians" />
             <SisLink description="Connect learners to guardians and their responsibilities." label="Guardian relationships" to="/modules/sis/guardian-relationships" />
-            <SisLink description="Track applications against an academic year and target class." label="Applications" to="/modules/sis/applications" />
+            <SisLink description="Track applications against an academic year and target grade." label="Applications" to="/modules/sis/applications" />
             <SisLink description="Place learners in an Academics class for an academic year." label="Enrolments" to="/modules/sis/enrolments" />
           </div>
         </section>
@@ -175,7 +176,7 @@ const HrLink: React.FC<{ description: string; label: string; to: "/modules/hr-pa
   </Link>
 );
 
-const AcademicLink: React.FC<{ description: string; label: string; to: "/modules/academics/academic-years" | "/modules/academics/terms" | "/modules/academics/subjects" | "/modules/academics/teachers" | "/modules/academics/classes" | "/modules/academics/teaching-assignments" }> = ({ description, label, to }) => (
+const AcademicLink: React.FC<{ description: string; label: string; to: "/modules/academics/academic-years" | "/modules/academics/terms" | "/modules/academics/grade-levels" | "/modules/academics/subjects" | "/modules/academics/teachers" | "/modules/academics/classes" | "/modules/academics/teaching-assignments" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
