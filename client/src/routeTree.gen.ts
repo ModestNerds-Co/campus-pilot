@@ -54,6 +54,8 @@ import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modul
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
+import { Route as ModulesFinanceCurrenciesRouteImport } from './routes/modules/finance/currencies'
+import { Route as ModulesFinanceChartOfAccountsRouteImport } from './routes/modules/finance/chart-of-accounts'
 import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
@@ -296,6 +298,18 @@ const ModulesFleetDailyLogRoute = ModulesFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesFinanceCurrenciesRoute =
+  ModulesFinanceCurrenciesRouteImport.update({
+    id: '/finance/currencies',
+    path: '/finance/currencies',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesFinanceChartOfAccountsRoute =
+  ModulesFinanceChartOfAccountsRouteImport.update({
+    id: '/finance/chart-of-accounts',
+    path: '/finance/chart-of-accounts',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAcademicsTermsRoute = ModulesAcademicsTermsRouteImport.update({
   id: '/academics/terms',
   path: '/academics/terms',
@@ -393,6 +407,8 @@ export interface FileRoutesByFullPath {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
+  '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -449,6 +465,8 @@ export interface FileRoutesByTo {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
+  '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -507,6 +525,8 @@ export interface FileRoutesById {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
+  '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -566,6 +586,8 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/finance/chart-of-accounts'
+    | '/modules/finance/currencies'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -622,6 +644,8 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/finance/chart-of-accounts'
+    | '/modules/finance/currencies'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -679,6 +703,8 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/finance/chart-of-accounts'
+    | '/modules/finance/currencies'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -1027,6 +1053,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFleetDailyLogRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/finance/currencies': {
+      id: '/modules/finance/currencies'
+      path: '/finance/currencies'
+      fullPath: '/modules/finance/currencies'
+      preLoaderRoute: typeof ModulesFinanceCurrenciesRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/finance/chart-of-accounts': {
+      id: '/modules/finance/chart-of-accounts'
+      path: '/finance/chart-of-accounts'
+      fullPath: '/modules/finance/chart-of-accounts'
+      preLoaderRoute: typeof ModulesFinanceChartOfAccountsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/academics/terms': {
       id: '/modules/academics/terms'
       path: '/academics/terms'
@@ -1160,6 +1200,8 @@ interface ModulesRouteChildren {
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
   ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
+  ModulesFinanceChartOfAccountsRoute: typeof ModulesFinanceChartOfAccountsRoute
+  ModulesFinanceCurrenciesRoute: typeof ModulesFinanceCurrenciesRoute
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
@@ -1188,6 +1230,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsTeachingAssignmentsRoute:
     ModulesAcademicsTeachingAssignmentsRoute,
   ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
+  ModulesFinanceChartOfAccountsRoute: ModulesFinanceChartOfAccountsRoute,
+  ModulesFinanceCurrenciesRoute: ModulesFinanceCurrenciesRoute,
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,

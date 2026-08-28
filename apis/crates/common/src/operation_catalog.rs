@@ -1021,6 +1021,97 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // Finance: currencies and chart-of-account structure.
+        route(
+            Method::GET,
+            "/api/1.0/finance/currencies",
+            "finance.currencies.list",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/currencies/{id}",
+            "finance.currencies.read",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/currencies",
+            "finance.currencies.create",
+            "finance",
+            "finance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/finance/currencies/{id}",
+            "finance.currencies.update",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/finance/currencies/{id}",
+            "finance.currencies.delete",
+            "finance",
+            "finance:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/accounts",
+            "finance.accounts.list",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/accounts/{id}",
+            "finance.accounts.read",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/accounts",
+            "finance.accounts.create",
+            "finance",
+            "finance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/finance/accounts/{id}",
+            "finance.accounts.update",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/finance/accounts/{id}",
+            "finance.accounts.delete",
+            "finance",
+            "finance:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -1628,6 +1719,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.assessment_cycles.read"
         | "academics.assessment_components.list"
         | "academics.assessment_components.read"
+        | "finance.currencies.list"
+        | "finance.currencies.read"
+        | "finance.accounts.list"
+        | "finance.accounts.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -1706,6 +1801,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.assessment_components.create"
         | "academics.assessment_components.update"
         | "academics.assessment_components.delete"
+        | "finance.currencies.create"
+        | "finance.currencies.update"
+        | "finance.currencies.delete"
+        | "finance.accounts.create"
+        | "finance.accounts.update"
+        | "finance.accounts.delete"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -1792,6 +1893,7 @@ mod tests {
                 ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
+                ("finance".to_string(), ModuleEntitlementState::Enabled),
             ],
             vec![],
         )
@@ -1819,7 +1921,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 157);
+        assert_eq!(operation_catalog().len(), 167);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1871,7 +1973,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [65, 85, 7, 0]);
+        assert_eq!(counts, [69, 91, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

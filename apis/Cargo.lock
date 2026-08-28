@@ -1456,8 +1456,14 @@ name = "cp-finance"
 version = "1.0.0"
 dependencies = [
  "actix-web",
+ "anyhow",
+ "chrono",
  "cp-common",
+ "serde",
  "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]

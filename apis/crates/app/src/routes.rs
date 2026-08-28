@@ -65,7 +65,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .wrap(AuthMiddleware)
                     .configure(cp_timetabling::routes::routes),
             )
-            .service(scope("/finance").configure(cp_finance::routes::routes))
+            .service(
+                scope("/finance")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_finance::routes::routes),
+            )
             .service(scope("/fees").configure(cp_fees::routes::routes))
             .service(
                 scope("/hr-payroll")

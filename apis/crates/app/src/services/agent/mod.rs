@@ -4,6 +4,7 @@ mod academic_assessments;
 mod academics;
 mod administration;
 mod administration_access;
+mod finance;
 mod fleet;
 mod hr;
 mod sis;
@@ -30,6 +31,7 @@ use administration_access::{
     AdministrationRoleReadCapability, AdministrationRolesListCapability,
     AdministrationUserReadCapability, AdministrationUsersListCapability,
 };
+use finance::{FinanceListCapability, FinanceListKind, FinanceReadCapability, FinanceReadKind};
 use fleet::{
     FleetDriverCandidatesListCapability, FleetDriverReadCapability, FleetDriversListCapability,
     FleetVehicleLogReadCapability, FleetVehicleLogsListCapability, FleetVehicleReadCapability,
@@ -136,6 +138,16 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| {
             panic!("invalid Academics assessment-component read capability: {error}")
         });
+    for kind in [FinanceListKind::Currencies, FinanceListKind::Accounts] {
+        registry
+            .register(FinanceListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid Finance list capability: {error}"));
+    }
+    for kind in [FinanceReadKind::Currency, FinanceReadKind::Account] {
+        registry
+            .register(FinanceReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid Finance read capability: {error}"));
+    }
     for kind in [
         SisListKind::Learners,
         SisListKind::Guardians,
@@ -324,6 +336,7 @@ mod tests {
                 "hr_payroll:view".to_string(),
                 "fleet:view".to_string(),
                 "timetabling:view".to_string(),
+                "finance:view".to_string(),
             ],
             enabled_modules: vec![
                 "agent".to_string(),
@@ -333,6 +346,7 @@ mod tests {
                 "hr_payroll".to_string(),
                 "fleet".to_string(),
                 "timetabling".to_string(),
+                "finance".to_string(),
             ],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
@@ -347,6 +361,7 @@ mod tests {
                     ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                     ("fleet".to_string(), ModuleEntitlementState::Enabled),
                     ("timetabling".to_string(), ModuleEntitlementState::Enabled),
+                    ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ],
                 Vec::<String>::new(),
             )
@@ -406,6 +421,10 @@ mod tests {
                 "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read",
+                "finance.accounts.list",
+                "finance.accounts.read",
+                "finance.currencies.list",
+                "finance.currencies.read",
                 "fleet.driver_candidates.list",
                 "fleet.drivers.list",
                 "fleet.drivers.read",

@@ -3123,6 +3123,128 @@
       ]
     },
     {
+      "name": "Finance",
+      "description": "Multi-currency register and controlled chart-of-account structure. Journals, balances, and payment providers are separate later slices.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "List Finance Currencies",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/currencies?page=1&per_page=20&search=&status="
+          }
+        },
+        {
+          "name": "Get Finance Currency",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/currencies/:id"
+          }
+        },
+        {
+          "name": "Create Finance Currency",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"USD\",\n  \"name\": \"US Dollar\",\n  \"symbol\": \"$\",\n  \"minor_units\": 2,\n  \"is_reporting\": true,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/currencies"
+          }
+        },
+        {
+          "name": "Update Finance Currency",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"USD\",\n  \"name\": \"US Dollar\",\n  \"symbol\": \"$\",\n  \"minor_units\": 2,\n  \"is_reporting\": true,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/currencies/:id"
+          }
+        },
+        {
+          "name": "Delete Finance Currency",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/finance/currencies/:id"
+          }
+        },
+        {
+          "name": "List Finance Accounts",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/accounts?page=1&per_page=20&search=&status=&account_type=&currency_mode="
+          }
+        },
+        {
+          "name": "Get Finance Account",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/accounts/:id"
+          }
+        },
+        {
+          "name": "Create Finance Account",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"1000\",\n  \"name\": \"Cash and bank\",\n  \"description\": null,\n  \"account_type\": \"asset\",\n  \"parent_account_id\": null,\n  \"currency_mode\": \"multi\",\n  \"currency_id\": null,\n  \"accepts_postings\": true,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/accounts"
+          }
+        },
+        {
+          "name": "Update Finance Account",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"1000\",\n  \"name\": \"Cash and bank\",\n  \"description\": \"Campus cash and bank control accounts\",\n  \"account_type\": \"asset\",\n  \"parent_account_id\": null,\n  \"currency_mode\": \"multi\",\n  \"currency_id\": null,\n  \"accepts_postings\": true,\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/accounts/:id"
+          }
+        },
+        {
+          "name": "Delete Finance Account",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/finance/accounts/:id"
+          }
+        }
+      ]
+    },
+    {
       "name": "Timetabling",
       "description": "Consumes the active Academics term and approved HR availability. Timetabling owns recurring schedule rules, rooms, generated snapshots, and publication.",
       "auth": {

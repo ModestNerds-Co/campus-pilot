@@ -10,11 +10,13 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardList,
+  Coins,
   GraduationCap,
   FileUp,
   FileCheck2,
   LayoutDashboard,
   ListOrdered,
+  Landmark,
   LogOut,
   Menu,
   ReceiptText,
@@ -98,6 +100,11 @@ const sisNavigation: LocalNavItem[] = [
   { label: "Data imports", path: "/modules/sis/imports", icon: FileUp },
 ];
 
+const financeNavigation: LocalNavItem[] = [
+  { label: "Currencies", path: "/modules/finance/currencies", icon: Coins },
+  { label: "Chart of accounts", path: "/modules/finance/chart-of-accounts", icon: Landmark },
+];
+
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
   <PageChromeProvider>
     <ModuleLayoutShell>{children}</ModuleLayoutShell>
@@ -120,7 +127,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : [];
+  const localNavigation = moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : [];
 
   useEffect(() => {
     let active = true;
@@ -257,6 +264,8 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/academics/classes") return <Link className={navClass(active)} to="/modules/academics/classes"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/teaching-assignments") return <Link className={navClass(active)} to="/modules/academics/teaching-assignments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/assessments") return <Link className={navClass(active)} to="/modules/academics/assessments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/finance/currencies") return <Link className={navClass(active)} to="/modules/finance/currencies"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/finance/chart-of-accounts") return <Link className={navClass(active)} to="/modules/finance/chart-of-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

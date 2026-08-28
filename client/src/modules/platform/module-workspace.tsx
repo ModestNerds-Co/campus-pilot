@@ -99,6 +99,22 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
     );
   }
 
+  if (module.key === "finance") {
+    return (
+      <div className="space-y-8">
+        <ModuleIntroduction module={module} />
+        <section aria-labelledby="finance-workspaces">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="finance-workspaces">Set the accounting foundation</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <FinanceLink description="Set the reporting currency and currencies used in transactions." label="Currencies" to="/modules/finance/currencies" />
+            <FinanceLink description="Maintain summary and posting accounts for the campus ledger." label="Chart of accounts" to="/modules/finance/chart-of-accounts" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (module.key === "sis") {
     return (
       <div className="space-y-8">
@@ -180,6 +196,13 @@ const HrLink: React.FC<{ description: string; label: string; to: "/modules/hr-pa
 );
 
 const AcademicLink: React.FC<{ description: string; label: string; to: "/modules/academics/academic-years" | "/modules/academics/terms" | "/modules/academics/grade-levels" | "/modules/academics/subjects" | "/modules/academics/teachers" | "/modules/academics/classes" | "/modules/academics/teaching-assignments" | "/modules/academics/assessments" }> = ({ description, label, to }) => (
+  <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
+    <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+    <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
+  </Link>
+);
+
+const FinanceLink: React.FC<{ description: string; label: string; to: "/modules/finance/currencies" | "/modules/finance/chart-of-accounts" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
