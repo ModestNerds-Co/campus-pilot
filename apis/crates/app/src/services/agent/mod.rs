@@ -32,8 +32,8 @@ use administration_access::{
     AdministrationUserReadCapability, AdministrationUsersListCapability,
 };
 use finance::{
-    FinanceListCapability, FinanceListKind, FinancePeriodsCapability, FinanceReadCapability,
-    FinanceReadKind,
+    FinanceJournalValidationCapability, FinanceJournalsListCapability, FinanceListCapability,
+    FinanceListKind, FinancePeriodsCapability, FinanceReadCapability, FinanceReadKind,
 };
 use fleet::{
     FleetDriverCandidatesListCapability, FleetDriverReadCapability, FleetDriversListCapability,
@@ -154,6 +154,7 @@ pub fn build_capability_registry(
         FinanceReadKind::Currency,
         FinanceReadKind::Account,
         FinanceReadKind::FiscalYear,
+        FinanceReadKind::Journal,
     ] {
         registry
             .register(FinanceReadCapability::new(pool.clone(), kind))
@@ -173,6 +174,12 @@ pub fn build_capability_registry(
     registry
         .register(FinancePeriodsCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Finance accounting-periods capability: {error}"));
+    registry
+        .register(FinanceJournalsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Finance journals-list capability: {error}"));
+    registry
+        .register(FinanceJournalValidationCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Finance journal-validation capability: {error}"));
     for kind in [
         SisReadKind::Learner,
         SisReadKind::Guardian,
@@ -442,6 +449,9 @@ mod tests {
                 "finance.currencies.read",
                 "finance.fiscal_years.list",
                 "finance.fiscal_years.read",
+                "finance.journals.list",
+                "finance.journals.read",
+                "finance.journals.validation.read",
                 "fleet.driver_candidates.list",
                 "fleet.drivers.list",
                 "fleet.drivers.read",

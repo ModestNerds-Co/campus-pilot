@@ -484,7 +484,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 14);
             } else if module_key == "finance" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 7);
+                assert_eq!(module.executable_capabilities(), 10);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

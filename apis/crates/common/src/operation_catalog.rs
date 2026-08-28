@@ -1202,6 +1202,105 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/journals",
+            "finance.journals.list",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/journals/{id}",
+            "finance.journals.read",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/journals/{id}/validation",
+            "finance.journals.validation.read",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/journals",
+            "finance.journals.create",
+            "finance",
+            "finance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/finance/journals/{id}",
+            "finance.journals.update",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/finance/journals/{id}",
+            "finance.journals.delete",
+            "finance",
+            "finance:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/journals/{id}/submit",
+            "finance.journals.submit",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/journals/{id}/approve",
+            "finance.journals.approve",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/journals/{id}/reject",
+            "finance.journals.reject",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/journals/{id}/post",
+            "finance.journals.post",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/journals/{id}/reverse",
+            "finance.journals.reverse",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -1816,6 +1915,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.fiscal_years.list"
         | "finance.fiscal_years.read"
         | "finance.accounting_periods.list"
+        | "finance.journals.list"
+        | "finance.journals.read"
+        | "finance.journals.validation.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -1907,6 +2009,14 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.fiscal_years.close"
         | "finance.accounting_periods.close"
         | "finance.accounting_periods.reopen"
+        | "finance.journals.create"
+        | "finance.journals.update"
+        | "finance.journals.delete"
+        | "finance.journals.submit"
+        | "finance.journals.approve"
+        | "finance.journals.reject"
+        | "finance.journals.post"
+        | "finance.journals.reverse"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2021,7 +2131,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 177);
+        assert_eq!(operation_catalog().len(), 188);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2073,7 +2183,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [72, 98, 7, 0]);
+        assert_eq!(counts, [75, 106, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

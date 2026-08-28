@@ -4,6 +4,7 @@ export type CurrencyMode = "reporting" | "single" | "multi";
 export type FiscalYearStatus = "draft" | "open" | "closed";
 export type AccountingPeriodStatus = "planned" | "open" | "closed";
 export type PeriodCadence = "monthly" | "quarterly";
+export type JournalStatus = "draft" | "submitted" | "approved" | "rejected" | "posted" | "reversed";
 
 export interface FinanceCurrency {
   id: string;
@@ -92,6 +93,97 @@ export interface FiscalYearInput {
   period_cadence: PeriodCadence;
 }
 
+export interface JournalSource {
+  module_key: string;
+  record_type: string;
+  record_id: string;
+}
+
+export interface FinanceJournalLine {
+  id: string;
+  line_number: number;
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  transaction_currency_id: string;
+  transaction_currency_code: string;
+  transaction_currency_minor_units: number;
+  description: string | null;
+  debit_minor: number;
+  credit_minor: number;
+  reporting_debit_minor: number;
+  reporting_credit_minor: number;
+  exchange_rate: string | null;
+}
+
+export interface FinanceJournalSummary {
+  id: string;
+  fiscal_year_id: string;
+  fiscal_year_name: string;
+  accounting_period_id: string;
+  accounting_period_name: string;
+  reporting_currency_id: string;
+  reporting_currency_code: string;
+  reporting_currency_minor_units: number;
+  reversal_of_journal_id: string | null;
+  reversal_journal_id: string | null;
+  journal_number: string;
+  journal_date: string;
+  description: string;
+  reference: string | null;
+  source_module_key: string | null;
+  source_record_type: string | null;
+  source_record_id: string | null;
+  status: JournalStatus;
+  version: number;
+  line_count: number;
+  reporting_debit_minor: number;
+  reporting_credit_minor: number;
+  created_by: string;
+  submitted_by: string | null;
+  submitted_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_by: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+  posted_by: string | null;
+  posted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinanceJournal extends FinanceJournalSummary {
+  lines: FinanceJournalLine[];
+}
+
+export interface JournalLineInput {
+  account_id: string;
+  transaction_currency_id: string;
+  description: string | null;
+  debit_minor: number;
+  credit_minor: number;
+  reporting_debit_minor: number;
+  reporting_credit_minor: number;
+  exchange_rate: string | null;
+}
+
+export interface JournalInput {
+  journal_date: string;
+  description: string;
+  reference: string | null;
+  source: JournalSource | null;
+  lines: JournalLineInput[];
+}
+
+export interface JournalValidation {
+  valid: boolean;
+  issues: string[];
+  line_count: number;
+  reporting_debit_minor: number;
+  reporting_credit_minor: number;
+}
+
 export interface ListParams {
   page?: number;
   per_page?: number;
@@ -99,6 +191,8 @@ export interface ListParams {
   status?: string;
   account_type?: string;
   currency_mode?: string;
+  starts_on?: string;
+  ends_on?: string;
 }
 
 export interface PaginationMeta {
@@ -122,3 +216,4 @@ export interface CurrenciesResponse { currencies: FinanceCurrency[] }
 export interface AccountsResponse { accounts: FinanceAccount[] }
 export interface FiscalYearsResponse { fiscal_years: FinanceFiscalYear[] }
 export interface AccountingPeriodsResponse { periods: FinanceAccountingPeriod[] }
+export interface JournalsResponse { journals: FinanceJournalSummary[] }

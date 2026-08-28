@@ -3124,7 +3124,7 @@
     },
     {
       "name": "Finance",
-      "description": "Multi-currency register, controlled chart of accounts, and accounting calendar. Journals, balances, and payment providers are separate later slices.",
+      "description": "Multi-currency register, controlled chart of accounts, accounting calendar, and dual-control journal lifecycle. Payment providers remain outside Finance ledger configuration.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -3328,6 +3328,126 @@
           "request": {
             "method": "POST",
             "url": "{{base_url}}/finance/periods/:id/reopen"
+          }
+        },
+        {
+          "name": "List Finance Journals",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/journals?page=1&per_page=20&search=&status=&starts_on=&ends_on="
+          }
+        },
+        {
+          "name": "Get Finance Journal",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/journals/:id"
+          }
+        },
+        {
+          "name": "Validate Finance Journal",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/journals/:id/validation"
+          }
+        },
+        {
+          "name": "Create Finance Journal",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"journal_date\": \"2027-01-15\",\n  \"description\": \"Record approved campus expense\",\n  \"reference\": \"DOC-001\",\n  \"source\": null,\n  \"idempotency_key\": \"{{$guid}}\",\n  \"lines\": [\n    {\"account_id\": \"00000000-0000-0000-0000-000000000000\", \"transaction_currency_id\": \"00000000-0000-0000-0000-000000000000\", \"description\": \"Expense\", \"debit_minor\": 10000, \"credit_minor\": 0, \"reporting_debit_minor\": 10000, \"reporting_credit_minor\": 0, \"exchange_rate\": null},\n    {\"account_id\": \"00000000-0000-0000-0000-000000000000\", \"transaction_currency_id\": \"00000000-0000-0000-0000-000000000000\", \"description\": \"Cash\", \"debit_minor\": 0, \"credit_minor\": 10000, \"reporting_debit_minor\": 0, \"reporting_credit_minor\": 10000, \"exchange_rate\": null}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/journals"
+          }
+        },
+        {
+          "name": "Update Draft Finance Journal",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"journal_date\": \"2027-01-15\",\n  \"description\": \"Record approved campus expense\",\n  \"reference\": \"DOC-001\",\n  \"source\": null,\n  \"lines\": [\n    {\"account_id\": \"00000000-0000-0000-0000-000000000000\", \"transaction_currency_id\": \"00000000-0000-0000-0000-000000000000\", \"description\": \"Expense\", \"debit_minor\": 10000, \"credit_minor\": 0, \"reporting_debit_minor\": 10000, \"reporting_credit_minor\": 0, \"exchange_rate\": null},\n    {\"account_id\": \"00000000-0000-0000-0000-000000000000\", \"transaction_currency_id\": \"00000000-0000-0000-0000-000000000000\", \"description\": \"Cash\", \"debit_minor\": 0, \"credit_minor\": 10000, \"reporting_debit_minor\": 0, \"reporting_credit_minor\": 10000, \"exchange_rate\": null}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/journals/:id"
+          }
+        },
+        {
+          "name": "Delete Draft Finance Journal",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/finance/journals/:id?expected_version=1"
+          }
+        },
+        {
+          "name": "Submit Finance Journal",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/finance/journals/:id/submit"
+          }
+        },
+        {
+          "name": "Approve Finance Journal",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/finance/journals/:id/approve"
+          }
+        },
+        {
+          "name": "Reject Finance Journal",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2,\n  \"reason\": \"Supporting document is missing\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/finance/journals/:id/reject"
+          }
+        },
+        {
+          "name": "Post Finance Journal",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/finance/journals/:id/post"
+          }
+        },
+        {
+          "name": "Create Journal Reversal",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 4,\n  \"journal_date\": \"2027-02-01\",\n  \"reason\": \"Original entry used the wrong source document\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/finance/journals/:id/reverse"
           }
         }
       ]

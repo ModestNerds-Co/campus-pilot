@@ -54,6 +54,7 @@ import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modul
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
+import { Route as ModulesFinanceJournalsRouteImport } from './routes/modules/finance/journals'
 import { Route as ModulesFinanceCurrenciesRouteImport } from './routes/modules/finance/currencies'
 import { Route as ModulesFinanceChartOfAccountsRouteImport } from './routes/modules/finance/chart-of-accounts'
 import { Route as ModulesFinanceAccountingPeriodsRouteImport } from './routes/modules/finance/accounting-periods'
@@ -299,6 +300,11 @@ const ModulesFleetDailyLogRoute = ModulesFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesFinanceJournalsRoute = ModulesFinanceJournalsRouteImport.update({
+  id: '/finance/journals',
+  path: '/finance/journals',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesFinanceCurrenciesRoute =
   ModulesFinanceCurrenciesRouteImport.update({
     id: '/finance/currencies',
@@ -417,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
+  '/modules/finance/journals': typeof ModulesFinanceJournalsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -476,6 +483,7 @@ export interface FileRoutesByTo {
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
+  '/modules/finance/journals': typeof ModulesFinanceJournalsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -537,6 +545,7 @@ export interface FileRoutesById {
   '/modules/finance/accounting-periods': typeof ModulesFinanceAccountingPeriodsRoute
   '/modules/finance/chart-of-accounts': typeof ModulesFinanceChartOfAccountsRoute
   '/modules/finance/currencies': typeof ModulesFinanceCurrenciesRoute
+  '/modules/finance/journals': typeof ModulesFinanceJournalsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -599,6 +608,7 @@ export interface FileRouteTypes {
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
+    | '/modules/finance/journals'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -658,6 +668,7 @@ export interface FileRouteTypes {
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
+    | '/modules/finance/journals'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -718,6 +729,7 @@ export interface FileRouteTypes {
     | '/modules/finance/accounting-periods'
     | '/modules/finance/chart-of-accounts'
     | '/modules/finance/currencies'
+    | '/modules/finance/journals'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -1066,6 +1078,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFleetDailyLogRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/finance/journals': {
+      id: '/modules/finance/journals'
+      path: '/finance/journals'
+      fullPath: '/modules/finance/journals'
+      preLoaderRoute: typeof ModulesFinanceJournalsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/finance/currencies': {
       id: '/modules/finance/currencies'
       path: '/finance/currencies'
@@ -1223,6 +1242,7 @@ interface ModulesRouteChildren {
   ModulesFinanceAccountingPeriodsRoute: typeof ModulesFinanceAccountingPeriodsRoute
   ModulesFinanceChartOfAccountsRoute: typeof ModulesFinanceChartOfAccountsRoute
   ModulesFinanceCurrenciesRoute: typeof ModulesFinanceCurrenciesRoute
+  ModulesFinanceJournalsRoute: typeof ModulesFinanceJournalsRoute
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
@@ -1254,6 +1274,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesFinanceAccountingPeriodsRoute: ModulesFinanceAccountingPeriodsRoute,
   ModulesFinanceChartOfAccountsRoute: ModulesFinanceChartOfAccountsRoute,
   ModulesFinanceCurrenciesRoute: ModulesFinanceCurrenciesRoute,
+  ModulesFinanceJournalsRoute: ModulesFinanceJournalsRoute,
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,

@@ -6,6 +6,7 @@ import type {
   AccountInput, AccountsResponse, ApiEnvelope, CurrenciesResponse,
   CurrencyInput, FinanceAccount, FinanceAccountingPeriod, FinanceCurrency, FinanceFiscalYear,
   FiscalYearInput, FiscalYearsResponse, AccountingPeriodsResponse, ListParams,
+  FinanceJournal, JournalInput, JournalsResponse, JournalValidation,
 } from "./types";
 
 const BASE_URL = "/api/1.0/finance";
@@ -37,6 +38,17 @@ export const financeService = {
   listAccountingPeriods: (fiscalYearId: string) => request<AccountingPeriodsResponse>(() => httpClient.get(`${BASE_URL}/fiscal-years/${fiscalYearId}/periods`)),
   closeAccountingPeriod: (id: string) => request<FinanceAccountingPeriod>(() => httpClient.post(`${BASE_URL}/periods/${id}/close`)),
   reopenAccountingPeriod: (id: string) => request<FinanceAccountingPeriod>(() => httpClient.post(`${BASE_URL}/periods/${id}/reopen`)),
+  listJournals: (params?: ListParams) => request<JournalsResponse>(() => httpClient.get(`${BASE_URL}/journals`, { params })),
+  getJournal: (id: string) => request<FinanceJournal>(() => httpClient.get(`${BASE_URL}/journals/${id}`)),
+  validateJournal: (id: string) => request<JournalValidation>(() => httpClient.get(`${BASE_URL}/journals/${id}/validation`)),
+  createJournal: (data: JournalInput & { idempotency_key: string }) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals`, data)),
+  updateJournal: (id: string, data: JournalInput & { expected_version: number }) => request<FinanceJournal>(() => httpClient.put(`${BASE_URL}/journals/${id}`, data)),
+  deleteJournal: (id: string, expectedVersion: number) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/journals/${id}`, { params: { expected_version: expectedVersion } })),
+  submitJournal: (id: string, expectedVersion: number) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/submit`, { expected_version: expectedVersion })),
+  approveJournal: (id: string, expectedVersion: number) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/approve`, { expected_version: expectedVersion })),
+  rejectJournal: (id: string, expectedVersion: number, reason: string) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/reject`, { expected_version: expectedVersion, reason })),
+  postJournal: (id: string, expectedVersion: number) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/post`, { expected_version: expectedVersion })),
+  reverseJournal: (id: string, expectedVersion: number, journalDate: string, reason: string) => request<FinanceJournal>(() => httpClient.post(`${BASE_URL}/journals/${id}/reverse`, { expected_version: expectedVersion, journal_date: journalDate, reason, idempotency_key: crypto.randomUUID() })),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

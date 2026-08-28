@@ -1,11 +1,13 @@
 //! Agent read adapters for Finance reference data.
 
 use async_trait::async_trait;
+use chrono::NaiveDate;
 use cp_agent::{
     AuthorizedCapabilityContext, Capability, CapabilityDescriptor, CapabilityExecutionError,
     CapabilityExecutionErrorCode, CapabilityResource, CapabilityScope, DataSensitivity,
 };
 use cp_common::PaginationMeta;
+use cp_finance::journals::JournalOps;
 use cp_finance::ledger::{AccountOps, CurrencyOps};
 use cp_finance::periods::{AccountingPeriodOps, FiscalYearOps};
 use serde::Deserialize;
@@ -177,6 +179,7 @@ pub(super) enum FinanceReadKind {
     Currency,
     Account,
     FiscalYear,
+    Journal,
 }
 impl FinanceReadKind {
     const fn operation_key(self) -> &'static str {
@@ -184,6 +187,7 @@ impl FinanceReadKind {
             Self::Currency => "finance.currencies.read",
             Self::Account => "finance.accounts.read",
             Self::FiscalYear => "finance.fiscal_years.read",
+            Self::Journal => "finance.journals.read",
         }
     }
 }
@@ -195,21 +199,30 @@ pub(super) struct FinanceReadCapability {
 }
 impl FinanceReadCapability {
     pub(super) fn new(pool: PgPool, kind: FinanceReadKind) -> Self {
-        let (title, description, resource) = match kind {
+        let (title, description, resource, sensitivity) = match kind {
             FinanceReadKind::Currency => (
                 "Read finance currency",
                 "Returns one campus currency by stable identifier.",
                 "finance.currencies",
+                DataSensitivity::General,
             ),
             FinanceReadKind::Account => (
                 "Read finance account",
                 "Returns one chart-of-account record without balances or journals.",
                 "finance.accounts",
+                DataSensitivity::General,
             ),
             FinanceReadKind::FiscalYear => (
                 "Read fiscal year",
                 "Returns one fiscal year and its accounting-period lifecycle summary.",
                 "finance.fiscal_years",
+                DataSensitivity::General,
+            ),
+            FinanceReadKind::Journal => (
+                "Read finance journal",
+                "Returns one journal with its controlled lifecycle and multi-currency lines.",
+                "finance.journals",
+                DataSensitivity::Sensitive,
             ),
         };
         Self {
@@ -221,7 +234,7 @@ impl FinanceReadCapability {
                 description,
                 json!({ "record_id": { "type": "string", "format": "uuid" } }),
                 json!({ "record": { "type": "object" } }),
-                DataSensitivity::General,
+                sensitivity,
                 resource,
             ),
         }
@@ -240,6 +253,7 @@ impl Capability for FinanceReadCapability {
             FinanceReadKind::Currency => "finance_currency",
             FinanceReadKind::Account => "finance_account",
             FinanceReadKind::FiscalYear => "finance_fiscal_year",
+            FinanceReadKind::Journal => "finance_journal",
         };
         CapabilityScope::resources([resource(kind, input.record_id)])
             .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
@@ -267,6 +281,11 @@ impl Capability for FinanceReadCapability {
             )
             .await
             .map(|record| record.map(|value| json!(value))),
+            FinanceReadKind::Journal => {
+                JournalOps::get_by_id(&self.pool, context.principal().tenant_id(), input.record_id)
+                    .await
+                    .map(|record| record.map(|value| json!(value)))
+            }
         }
         .map_err(|_| dependency_failure("The finance record could not be loaded."))?
         .ok_or_else(|| {
@@ -276,6 +295,139 @@ impl Capability for FinanceReadCapability {
             )
         })?;
         Ok(json!({ "record": record }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FinanceJournalsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    status: Option<String>,
+    starts_on: Option<NaiveDate>,
+    ends_on: Option<NaiveDate>,
+}
+
+pub(super) struct FinanceJournalsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FinanceJournalsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "finance.journals.list",
+                "List finance journals",
+                "Returns journal headers, lifecycle state, source traceability, and reporting-currency totals.",
+                json!({
+                    "page": page_schema(),
+                    "per_page": per_page_schema(),
+                    "search": search_schema(),
+                    "status": { "type": ["string", "null"], "enum": ["draft", "submitted", "approved", "rejected", "posted", "reversed", null] },
+                    "starts_on": { "type": ["string", "null"], "format": "date" },
+                    "ends_on": { "type": ["string", "null"], "format": "date" }
+                }),
+                json!({ "journals": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "finance.journals",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FinanceJournalsListCapability {
+    type Input = FinanceJournalsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (journals, total) = JournalOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            trimmed(input.status.as_deref()),
+            input.starts_on,
+            input.ends_on,
+        )
+        .await
+        .map_err(|_| dependency_failure("Finance journals could not be loaded."))?;
+        Ok(json!({
+            "journals": journals,
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
+    }
+}
+
+pub(super) struct FinanceJournalValidationCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FinanceJournalValidationCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "finance.journals.validation.read",
+                "Validate finance journal",
+                "Checks whether a stored journal is currently balanced and eligible for its next controlled lifecycle step.",
+                json!({ "record_id": { "type": "string", "format": "uuid" } }),
+                json!({ "validation": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "finance.journals.validation",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FinanceJournalValidationCapability {
+    type Input = FinanceRecordInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::resources([resource("finance_journal", input.record_id)])
+            .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let validation =
+            JournalOps::validation(&self.pool, context.principal().tenant_id(), input.record_id)
+                .await
+                .map_err(|_| dependency_failure("The finance journal could not be validated."))?
+                .ok_or_else(|| {
+                    CapabilityExecutionError::new(
+                        CapabilityExecutionErrorCode::InvalidState,
+                        "The finance journal was not found.",
+                    )
+                })?;
+        Ok(json!({ "validation": validation }))
     }
 }
 

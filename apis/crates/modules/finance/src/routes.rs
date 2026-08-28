@@ -1,7 +1,8 @@
-//! Authenticated Finance reference-data routes.
+//! Authenticated Finance reference, accounting-calendar, and journal routes.
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
+use cp_audit::{AuditActor, RequestContext};
 use cp_common::{
     ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
 };
@@ -10,6 +11,11 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::journals::{
+    CreateJournalRequest, DeleteJournalQuery, JournalDeleteOutcome, JournalListQuery, JournalOps,
+    JournalVersionRequest, PaginatedJournalsResponse, RejectJournalRequest, ReverseJournalRequest,
+    UpdateJournalRequest,
+};
 use crate::ledger::{
     AccountListQuery, AccountOps, CreateAccountRequest, CreateCurrencyRequest, CurrencyListQuery,
     CurrencyOps, DeleteOutcome, PaginatedAccountsResponse, PaginatedCurrenciesResponse,
@@ -316,6 +322,266 @@ async fn reopen_accounting_period(
     )
 }
 
+#[get("/journals")]
+async fn list_journals(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<JournalListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match JournalOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        query.status.as_deref(),
+        query.starts_on,
+        query.ends_on,
+    )
+    .await
+    {
+        Ok((journals, total)) => paginated(
+            PaginatedJournalsResponse { journals },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/journals/{id}")]
+async fn read_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match JournalOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(value) => found(value, "Journal"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/journals/{id}/validation")]
+async fn validate_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match JournalOps::validation(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(value) => found(value, "Journal"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/journals")]
+async fn create_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<CreateJournalRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    created_or_error(
+        JournalOps::create(
+            pool.get_ref(),
+            tenant_id(tenant),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[put("/journals/{id}")]
+async fn update_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateJournalRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        JournalOps::update(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Journal",
+    )
+}
+
+#[delete("/journals/{id}")]
+async fn delete_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    query: web::Query<DeleteJournalQuery>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*query) {
+        return response;
+    }
+    match JournalOps::delete(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        query.expected_version,
+        actor.into_inner(),
+        request_context.into_inner(),
+    )
+    .await
+    {
+        Ok(JournalDeleteOutcome::Deleted) => ok(serde_json::json!({ "deleted": true })),
+        Ok(JournalDeleteOutcome::NotFound) => not_found("Journal"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/journals/{id}/submit")]
+async fn submit_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<JournalVersionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        JournalOps::submit(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Journal",
+    )
+}
+
+#[post("/journals/{id}/approve")]
+async fn approve_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<JournalVersionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        JournalOps::approve(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Journal",
+    )
+}
+
+#[post("/journals/{id}/reject")]
+async fn reject_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<RejectJournalRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        JournalOps::reject(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Journal",
+    )
+}
+
+#[post("/journals/{id}/post")]
+async fn post_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<JournalVersionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        JournalOps::post(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Journal",
+    )
+}
+
+#[post("/journals/{id}/reverse")]
+async fn reverse_journal(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ReverseJournalRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        JournalOps::reverse(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body,
+        )
+        .await,
+        "Journal",
+    )
+}
+
 fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
@@ -393,6 +659,13 @@ fn not_found(label: &str) -> HttpResponse {
 }
 fn operation_error(error: anyhow::Error) -> HttpResponse {
     let safe_message = error.to_string();
+    if safe_message.starts_with("Journal changed") {
+        return HttpResponse::Conflict().json(ApiResponse::from_status(
+            StatusCode::CONFLICT,
+            None::<()>,
+            Some(vec![safe_message]),
+        ));
+    }
     if let Some(database) = error.root_cause().downcast_ref::<sqlx::Error>()
         && let sqlx::Error::Database(database) = database
         && database.code().as_deref() == Some("23505")
@@ -419,6 +692,22 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         || safe_message.starts_with("Every accounting")
         || safe_message.starts_with("Accounting periods")
         || safe_message.starts_with("Open the fiscal")
+        || safe_message.starts_with("Journal ")
+        || safe_message.starts_with("Only a draft")
+        || safe_message.starts_with("Only a submitted")
+        || safe_message.starts_with("Only an approved")
+        || safe_message.starts_with("Only a posted")
+        || safe_message.starts_with("A journal")
+        || safe_message.starts_with("A rejected journal")
+        || safe_message.starts_with("A submitted journal")
+        || safe_message.starts_with("A reporting-currency")
+        || safe_message.starts_with("Foreign-currency")
+        || safe_message.starts_with("Exchange rate")
+        || safe_message.starts_with("This journal")
+        || safe_message.starts_with("Rejection reason")
+        || safe_message.starts_with("Reversal reason")
+        || safe_message.starts_with("Idempotency key")
+        || safe_message.starts_with("Source ")
     {
         return HttpResponse::BadRequest().json(ApiResponse::from_status(
             StatusCode::BAD_REQUEST,
@@ -456,7 +745,18 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(close_fiscal_year)
             .service(list_accounting_periods)
             .service(close_accounting_period)
-            .service(reopen_accounting_period),
+            .service(reopen_accounting_period)
+            .service(list_journals)
+            .service(read_journal)
+            .service(validate_journal)
+            .service(create_journal)
+            .service(update_journal)
+            .service(delete_journal)
+            .service(submit_journal)
+            .service(approve_journal)
+            .service(reject_journal)
+            .service(post_journal)
+            .service(reverse_journal),
     );
 }
 
