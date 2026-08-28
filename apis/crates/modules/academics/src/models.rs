@@ -19,6 +19,22 @@ pub struct AcademicYear {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AcademicTerm {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub academic_year_id: Uuid,
+    pub academic_year_name: String,
+    pub code: String,
+    pub name: String,
+    pub starts_on: NaiveDate,
+    pub ends_on: NaiveDate,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Subject {
     pub id: Uuid,
     pub tenant_id: Uuid,

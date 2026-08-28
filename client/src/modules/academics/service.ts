@@ -8,6 +8,9 @@ import type {
   AcademicYear,
   AcademicYearInput,
   AcademicYearsResponse,
+  AcademicTerm,
+  AcademicTermInput,
+  AcademicTermsResponse,
   ApiEnvelope,
   ClassesResponse,
   ClassGroup,
@@ -40,6 +43,11 @@ export const academicsService = {
   createAcademicYear: (data: AcademicYearInput) => request<AcademicYear>(() => httpClient.post(`${BASE_URL}/academic-years`, data)),
   updateAcademicYear: (id: string, data: AcademicYearInput) => request<AcademicYear>(() => httpClient.put(`${BASE_URL}/academic-years/${id}`, data)),
   deleteAcademicYear: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/academic-years/${id}`)),
+
+  listAcademicTerms: (params?: ListParams) => request<AcademicTermsResponse>(() => httpClient.get(`${BASE_URL}/terms`, { params })),
+  createAcademicTerm: (data: AcademicTermInput) => request<AcademicTerm>(() => httpClient.post(`${BASE_URL}/terms`, data)),
+  updateAcademicTerm: (id: string, data: AcademicTermInput) => request<AcademicTerm>(() => httpClient.put(`${BASE_URL}/terms/${id}`, data)),
+  deleteAcademicTerm: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/terms/${id}`)),
 
   listSubjects: (params?: ListParams) => request<SubjectsResponse>(() => httpClient.get(`${BASE_URL}/subjects`, { params })),
   createSubject: (data: SubjectInput) => request<Subject>(() => httpClient.post(`${BASE_URL}/subjects`, data)),

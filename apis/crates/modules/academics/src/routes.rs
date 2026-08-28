@@ -16,18 +16,20 @@ use validator::Validate;
 
 use crate::{
     dtos::{
-        AcademicYearResponse, AssignmentListQuery, ClassGroupListQuery, ClassGroupResponse,
+        AcademicTermListQuery, AcademicTermResponse, AcademicYearResponse, AssignmentListQuery,
+        ClassGroupListQuery, ClassGroupResponse, CreateAcademicTermRequest,
         CreateAcademicYearRequest, CreateClassGroupRequest, CreateSubjectRequest,
         CreateTeacherProfileRequest, CreateTeachingAssignmentRequest, DirectoryListQuery,
-        PaginatedAcademicYearsResponse, PaginatedClassGroupsResponse, PaginatedSubjectsResponse,
-        PaginatedTeacherProfilesResponse, PaginatedTeachingAssignmentsResponse, SubjectResponse,
-        TeacherCandidateQuery, TeacherListQuery, TeacherProfileResponse,
-        TeachingAssignmentResponse, UpdateAcademicYearRequest, UpdateClassGroupRequest,
+        PaginatedAcademicTermsResponse, PaginatedAcademicYearsResponse,
+        PaginatedClassGroupsResponse, PaginatedSubjectsResponse, PaginatedTeacherProfilesResponse,
+        PaginatedTeachingAssignmentsResponse, SubjectResponse, TeacherCandidateQuery,
+        TeacherListQuery, TeacherProfileResponse, TeachingAssignmentResponse,
+        UpdateAcademicTermRequest, UpdateAcademicYearRequest, UpdateClassGroupRequest,
         UpdateSubjectRequest, UpdateTeacherProfileRequest, UpdateTeachingAssignmentRequest,
     },
     ops::{
-        AcademicYearOps, ClassGroupOps, DeleteOutcome, SubjectOps, TeacherProfileOps,
-        TeachingAssignmentOps,
+        AcademicTermOps, AcademicYearOps, ClassGroupOps, DeleteOutcome, SubjectOps,
+        TeacherProfileOps, TeachingAssignmentOps,
     },
 };
 
@@ -118,8 +120,106 @@ async fn delete_academic_year(
     Ok(delete_response(
         outcome,
         "Academic year",
-        "Remove its classes before deleting this academic year.",
+        "Remove its terms and classes before deleting this academic year.",
     ))
+}
+
+#[get("/terms")]
+async fn list_academic_terms(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<AcademicTermListQuery>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    let (terms, total) = AcademicTermOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        query.status.map(crate::dtos::AcademicYearStatus::as_str),
+        query.academic_year_id,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(paginated(
+        PaginatedAcademicTermsResponse {
+            terms: terms.into_iter().map(AcademicTermResponse::from).collect(),
+        },
+        page,
+        per_page,
+        total,
+    ))
+}
+
+#[get("/terms/{id}")]
+async fn read_academic_term(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let term = AcademicTermOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
+        .await
+        .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(found(term.map(AcademicTermResponse::from), "Academic term"))
+}
+
+#[post("/terms")]
+async fn create_academic_term(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    body: web::Json<CreateAcademicTermRequest>,
+) -> Result<HttpResponse, actix_web::Error> {
+    if let Some(response) = validation_response(&*body) {
+        return Ok(response);
+    }
+    if !body.dates_are_valid() {
+        return Ok(bad_request(
+            "Academic term end date cannot be before its start date",
+        ));
+    }
+    Ok(created_or_error(
+        AcademicTermOps::create(pool.get_ref(), tenant_id(tenant), &body)
+            .await
+            .map(AcademicTermResponse::from),
+    ))
+}
+
+#[put("/terms/{id}")]
+async fn update_academic_term(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateAcademicTermRequest>,
+) -> Result<HttpResponse, actix_web::Error> {
+    if let Some(response) = validation_response(&*body) {
+        return Ok(response);
+    }
+    if !body.dates_are_valid() {
+        return Ok(bad_request(
+            "Academic term end date cannot be before its start date",
+        ));
+    }
+    Ok(updated_or_error(
+        AcademicTermOps::update(pool.get_ref(), tenant_id(tenant), path.into_inner(), &body)
+            .await
+            .map(|value| value.map(AcademicTermResponse::from)),
+        "Academic term",
+    ))
+}
+
+#[delete("/terms/{id}")]
+async fn delete_academic_term(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let result =
+        AcademicTermOps::delete(pool.get_ref(), tenant_id(tenant), path.into_inner()).await;
+    Ok(match result {
+        Ok(outcome) => delete_response(outcome, "Academic term", "This academic term is in use."),
+        Err(error) => operation_error(error),
+    })
 }
 
 #[get("/subjects")]
@@ -597,6 +697,11 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
     }
     if safe_message.starts_with("Only ")
         || safe_message.starts_with("An inactive")
+        || safe_message.starts_with("An active")
+        || safe_message.starts_with("Academic term")
+        || safe_message.starts_with("Academic year")
+        || safe_message.starts_with("Every academic term")
+        || safe_message.starts_with("A closed academic year")
         || safe_message.starts_with("The class")
         || safe_message.ends_with("for this campus")
     {
@@ -630,6 +735,11 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(create_academic_year)
             .service(update_academic_year)
             .service(delete_academic_year)
+            .service(list_academic_terms)
+            .service(read_academic_term)
+            .service(create_academic_term)
+            .service(update_academic_term)
+            .service(delete_academic_term)
             .service(list_subjects)
             .service(read_subject)
             .service(create_subject)

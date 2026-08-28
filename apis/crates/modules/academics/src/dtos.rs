@@ -9,7 +9,7 @@ use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::models::{
-    AcademicYear, ClassGroupWithYear, Subject, TeacherProfileWithEmployee,
+    AcademicTerm, AcademicYear, ClassGroupWithYear, Subject, TeacherProfileWithEmployee,
     TeachingAssignmentWithDetails,
 };
 
@@ -111,6 +111,83 @@ impl From<AcademicYear> for AcademicYearResponse {
 #[derive(Debug, Serialize)]
 pub struct PaginatedAcademicYearsResponse {
     pub academic_years: Vec<AcademicYearResponse>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AcademicTermListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub search: Option<String>,
+    pub status: Option<AcademicYearStatus>,
+    pub academic_year_id: Option<Uuid>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateAcademicTermRequest {
+    pub academic_year_id: Uuid,
+    #[validate(length(min = 1, max = 40))]
+    pub code: String,
+    #[validate(length(min = 1, max = 120))]
+    pub name: String,
+    pub starts_on: NaiveDate,
+    pub ends_on: NaiveDate,
+    pub status: Option<AcademicYearStatus>,
+}
+
+impl CreateAcademicTermRequest {
+    pub fn dates_are_valid(&self) -> bool {
+        self.ends_on >= self.starts_on
+    }
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateAcademicTermRequest {
+    pub academic_year_id: Uuid,
+    #[validate(length(min = 1, max = 40))]
+    pub code: String,
+    #[validate(length(min = 1, max = 120))]
+    pub name: String,
+    pub starts_on: NaiveDate,
+    pub ends_on: NaiveDate,
+    pub status: AcademicYearStatus,
+}
+
+impl UpdateAcademicTermRequest {
+    pub fn dates_are_valid(&self) -> bool {
+        self.ends_on >= self.starts_on
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AcademicTermResponse {
+    pub id: Uuid,
+    pub academic_year_id: Uuid,
+    pub academic_year_name: String,
+    pub code: String,
+    pub name: String,
+    pub starts_on: NaiveDate,
+    pub ends_on: NaiveDate,
+    pub status: String,
+}
+
+impl From<AcademicTerm> for AcademicTermResponse {
+    fn from(value: AcademicTerm) -> Self {
+        Self {
+            id: value.id,
+            academic_year_id: value.academic_year_id,
+            academic_year_name: value.academic_year_name,
+            code: value.code,
+            name: value.name,
+            starts_on: value.starts_on,
+            ends_on: value.ends_on,
+            status: value.status,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedAcademicTermsResponse {
+    pub terms: Vec<AcademicTermResponse>,
 }
 
 #[derive(Debug, Deserialize, Validate)]

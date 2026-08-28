@@ -79,6 +79,7 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| panic!("invalid Administration licensing capability: {error}"));
     for kind in [
         AcademicsListKind::AcademicYears,
+        AcademicsListKind::Terms,
         AcademicsListKind::Subjects,
         AcademicsListKind::Teachers,
         AcademicsListKind::Classes,
@@ -90,6 +91,7 @@ pub fn build_capability_registry(
     }
     for kind in [
         AcademicsReadKind::AcademicYear,
+        AcademicsReadKind::Term,
         AcademicsReadKind::Subject,
         AcademicsReadKind::Teacher,
         AcademicsReadKind::Class,
@@ -332,6 +334,8 @@ mod tests {
                 "academics.teachers.read",
                 "academics.teaching_assignments.list",
                 "academics.teaching_assignments.read",
+                "academics.terms.list",
+                "academics.terms.read",
                 "administration.catalog.read",
                 "administration.licensing.read",
                 "administration.modules.list",

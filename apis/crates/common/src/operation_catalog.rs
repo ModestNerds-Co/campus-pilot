@@ -600,6 +600,51 @@ fn build_catalog() -> Vec<RoutedOperation> {
         ),
         route(
             Method::GET,
+            "/api/1.0/academics/terms",
+            "academics.terms.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/terms/{id}",
+            "academics.terms.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/terms",
+            "academics.terms.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/terms/{id}",
+            "academics.terms.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/terms/{id}",
+            "academics.terms.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/academics/subjects",
             "academics.subjects.list",
             "academics",
@@ -1301,6 +1346,8 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "sis.enrolments.read"
         | "academics.academic_years.list"
         | "academics.academic_years.read"
+        | "academics.terms.list"
+        | "academics.terms.read"
         | "academics.subjects.list"
         | "academics.subjects.read"
         | "academics.teacher_candidates.list"
@@ -1356,6 +1403,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.academic_years.create"
         | "academics.academic_years.update"
         | "academics.academic_years.delete"
+        | "academics.terms.create"
+        | "academics.terms.update"
+        | "academics.terms.delete"
         | "academics.subjects.create"
         | "academics.subjects.update"
         | "academics.subjects.delete"
@@ -1478,7 +1528,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 123);
+        assert_eq!(operation_catalog().len(), 128);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1530,7 +1580,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [49, 67, 7, 0]);
+        assert_eq!(counts, [51, 70, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

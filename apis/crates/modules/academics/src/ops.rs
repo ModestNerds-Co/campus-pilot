@@ -7,19 +7,20 @@ use std::collections::{HashMap, HashSet};
 
 use anyhow::{Context, Result, bail};
 use cp_hr_payroll::{models::EmployeeReference, ops::EmployeeOps};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::{
     dtos::{
-        CreateAcademicYearRequest, CreateClassGroupRequest, CreateSubjectRequest,
-        CreateTeacherProfileRequest, CreateTeachingAssignmentRequest, UpdateAcademicYearRequest,
-        UpdateClassGroupRequest, UpdateSubjectRequest, UpdateTeacherProfileRequest,
-        UpdateTeachingAssignmentRequest,
+        CreateAcademicTermRequest, CreateAcademicYearRequest, CreateClassGroupRequest,
+        CreateSubjectRequest, CreateTeacherProfileRequest, CreateTeachingAssignmentRequest,
+        UpdateAcademicTermRequest, UpdateAcademicYearRequest, UpdateClassGroupRequest,
+        UpdateSubjectRequest, UpdateTeacherProfileRequest, UpdateTeachingAssignmentRequest,
     },
     models::{
-        AcademicYear, ClassGroupWithYear, Subject, TeacherProfile, TeacherProfileWithEmployee,
-        TeachingAssignmentRow, TeachingAssignmentWithDetails, TimetablingReferenceData,
+        AcademicTerm, AcademicYear, ClassGroupWithYear, Subject, TeacherProfile,
+        TeacherProfileWithEmployee, TeachingAssignmentRow, TeachingAssignmentWithDetails,
+        TimetablingReferenceData,
     },
 };
 
@@ -148,7 +149,67 @@ impl AcademicYearOps {
         if !request.dates_are_valid() {
             bail!("Academic year end date cannot be before its start date");
         }
-        sqlx::query_as::<_, AcademicYear>(
+        let mut tx = pool
+            .begin()
+            .await
+            .context("Failed to start academic year update")?;
+        let Some(current) = sqlx::query_as::<_, AcademicYear>(
+            r#"
+            SELECT id, tenant_id, name, starts_on, ends_on, status,
+                   created_at, updated_at, deleted_at
+            FROM academic_years
+            WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+            FOR UPDATE
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("Failed to lock academic year")?
+        else {
+            return Ok(None);
+        };
+        validate_year_transition(&current.status, request.status.as_str())?;
+        let terms_fit = sqlx::query_scalar::<_, bool>(
+            r#"
+            SELECT NOT EXISTS(
+                SELECT 1 FROM academic_terms
+                WHERE tenant_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL
+                  AND (starts_on < $3 OR ends_on > $4)
+            )
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(request.starts_on)
+        .bind(request.ends_on)
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to validate academic term boundaries")?;
+        if !terms_fit {
+            bail!("Academic year dates must contain every existing term");
+        }
+        if request.status.as_str() == "closed" {
+            let has_open_terms = sqlx::query_scalar::<_, bool>(
+                r#"
+                SELECT EXISTS(
+                    SELECT 1 FROM academic_terms
+                    WHERE tenant_id = $1 AND academic_year_id = $2
+                      AND deleted_at IS NULL AND status <> 'closed'
+                )
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await
+            .context("Failed to validate academic term lifecycle")?;
+            if has_open_terms {
+                bail!("Every academic term must be closed before closing the academic year");
+            }
+        }
+        let updated = sqlx::query_as::<_, AcademicYear>(
             r#"
             UPDATE academic_years
             SET name = $1, starts_on = $2, ends_on = $3, status = $4,
@@ -164,9 +225,13 @@ impl AcademicYearOps {
         .bind(request.status.as_str())
         .bind(tenant_id)
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_one(&mut *tx)
         .await
-        .context("Failed to update academic year")
+        .context("Failed to update academic year")?;
+        tx.commit()
+            .await
+            .context("Failed to commit academic year update")?;
+        Ok(Some(updated))
     }
 
     pub async fn delete(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<DeleteOutcome> {
@@ -174,7 +239,15 @@ impl AcademicYearOps {
             return Ok(DeleteOutcome::NotFound);
         }
         let in_use = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM class_groups WHERE tenant_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL)",
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM class_groups
+                WHERE tenant_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL
+                UNION ALL
+                SELECT 1 FROM academic_terms
+                WHERE tenant_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL
+            )
+            "#,
         )
         .bind(tenant_id)
         .bind(id)
@@ -192,6 +265,222 @@ impl AcademicYearOps {
         .execute(pool)
         .await
         .context("Failed to delete academic year")?;
+        Ok(DeleteOutcome::Deleted)
+    }
+}
+
+pub struct AcademicTermOps;
+
+impl AcademicTermOps {
+    pub async fn list(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        academic_year_id: Option<Uuid>,
+    ) -> Result<(Vec<AcademicTerm>, i64)> {
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let terms = sqlx::query_as::<_, AcademicTerm>(
+            r#"
+            SELECT term.id, term.tenant_id, term.academic_year_id,
+                   academic_year.name AS academic_year_name, term.code, term.name,
+                   term.starts_on, term.ends_on, term.status, term.created_at,
+                   term.updated_at, term.deleted_at
+            FROM academic_terms AS term
+            INNER JOIN academic_years AS academic_year
+              ON academic_year.id = term.academic_year_id
+             AND academic_year.tenant_id = term.tenant_id
+            WHERE term.tenant_id = $1 AND term.deleted_at IS NULL
+              AND academic_year.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR term.code ILIKE $2 OR term.name ILIKE $2)
+              AND ($3::TEXT IS NULL OR term.status = $3)
+              AND ($4::UUID IS NULL OR term.academic_year_id = $4)
+            ORDER BY term.starts_on DESC, term.name
+            LIMIT $5 OFFSET $6
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(academic_year_id)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list academic terms")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM academic_terms AS term
+            INNER JOIN academic_years AS academic_year
+              ON academic_year.id = term.academic_year_id
+             AND academic_year.tenant_id = term.tenant_id
+            WHERE term.tenant_id = $1 AND term.deleted_at IS NULL
+              AND academic_year.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR term.code ILIKE $2 OR term.name ILIKE $2)
+              AND ($3::TEXT IS NULL OR term.status = $3)
+              AND ($4::UUID IS NULL OR term.academic_year_id = $4)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(academic_year_id)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count academic terms")?;
+        Ok((terms, total))
+    }
+
+    pub async fn get_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> Result<Option<AcademicTerm>> {
+        load_term(pool, tenant_id, id).await
+    }
+
+    pub async fn create(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        request: &CreateAcademicTermRequest,
+    ) -> Result<AcademicTerm> {
+        if !request.dates_are_valid() {
+            bail!("Academic term end date cannot be before its start date");
+        }
+        let mut tx = pool
+            .begin()
+            .await
+            .context("Failed to start academic term creation")?;
+        let year = lock_academic_year(&mut tx, tenant_id, request.academic_year_id).await?;
+        validate_term_against_year(
+            &year,
+            request.starts_on,
+            request.ends_on,
+            request
+                .status
+                .map(|status| status.as_str())
+                .unwrap_or("planned"),
+        )?;
+        ensure_no_term_overlap(
+            &mut tx,
+            tenant_id,
+            request.academic_year_id,
+            None,
+            request.starts_on,
+            request.ends_on,
+        )
+        .await?;
+        let id = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            INSERT INTO academic_terms
+                (tenant_id, academic_year_id, code, name, starts_on, ends_on, status)
+            VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'planned'))
+            RETURNING id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(request.academic_year_id)
+        .bind(request.code.trim())
+        .bind(request.name.trim())
+        .bind(request.starts_on)
+        .bind(request.ends_on)
+        .bind(request.status.map(|status| status.as_str()))
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to create academic term")?;
+        tx.commit()
+            .await
+            .context("Failed to commit academic term creation")?;
+        load_term(pool, tenant_id, id)
+            .await?
+            .context("Created academic term could not be reloaded")
+    }
+
+    pub async fn update(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        request: &UpdateAcademicTermRequest,
+    ) -> Result<Option<AcademicTerm>> {
+        if !request.dates_are_valid() {
+            bail!("Academic term end date cannot be before its start date");
+        }
+        let mut tx = pool
+            .begin()
+            .await
+            .context("Failed to start academic term update")?;
+        let Some(current) = lock_term(&mut tx, tenant_id, id).await? else {
+            return Ok(None);
+        };
+        validate_term_transition(&current.status, request.status.as_str())?;
+        if current.status == "active"
+            && (current.academic_year_id != request.academic_year_id
+                || !current.code.eq_ignore_ascii_case(request.code.trim())
+                || current.starts_on != request.starts_on
+                || current.ends_on != request.ends_on)
+        {
+            bail!("An active academic term keeps its year, code, and dates");
+        }
+        let year = lock_academic_year(&mut tx, tenant_id, request.academic_year_id).await?;
+        validate_term_against_year(
+            &year,
+            request.starts_on,
+            request.ends_on,
+            request.status.as_str(),
+        )?;
+        ensure_no_term_overlap(
+            &mut tx,
+            tenant_id,
+            request.academic_year_id,
+            Some(id),
+            request.starts_on,
+            request.ends_on,
+        )
+        .await?;
+        sqlx::query(
+            r#"
+            UPDATE academic_terms
+            SET academic_year_id = $1, code = $2, name = $3, starts_on = $4,
+                ends_on = $5, status = $6, updated_at = NOW()
+            WHERE tenant_id = $7 AND id = $8 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(request.academic_year_id)
+        .bind(request.code.trim())
+        .bind(request.name.trim())
+        .bind(request.starts_on)
+        .bind(request.ends_on)
+        .bind(request.status.as_str())
+        .bind(tenant_id)
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .context("Failed to update academic term")?;
+        tx.commit()
+            .await
+            .context("Failed to commit academic term update")?;
+        load_term(pool, tenant_id, id).await
+    }
+
+    pub async fn delete(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<DeleteOutcome> {
+        let Some(term) = Self::get_by_id(pool, tenant_id, id).await? else {
+            return Ok(DeleteOutcome::NotFound);
+        };
+        if term.status != "planned" {
+            bail!("Only planned academic terms can be removed");
+        }
+        sqlx::query(
+            "UPDATE academic_terms SET deleted_at = NOW() WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .execute(pool)
+        .await
+        .context("Failed to delete academic term")?;
         Ok(DeleteOutcome::Deleted)
     }
 }
@@ -952,6 +1241,157 @@ async fn ensure_academic_year(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Resul
     Ok(())
 }
 
+async fn load_term(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<Option<AcademicTerm>> {
+    sqlx::query_as::<_, AcademicTerm>(
+        r#"
+        SELECT term.id, term.tenant_id, term.academic_year_id,
+               academic_year.name AS academic_year_name, term.code, term.name,
+               term.starts_on, term.ends_on, term.status, term.created_at,
+               term.updated_at, term.deleted_at
+        FROM academic_terms AS term
+        INNER JOIN academic_years AS academic_year
+          ON academic_year.id = term.academic_year_id
+         AND academic_year.tenant_id = term.tenant_id
+        WHERE term.tenant_id = $1 AND term.id = $2
+          AND term.deleted_at IS NULL AND academic_year.deleted_at IS NULL
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .context("Failed to load academic term")
+}
+
+async fn lock_term(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<Option<AcademicTerm>> {
+    sqlx::query_as::<_, AcademicTerm>(
+        r#"
+        SELECT term.id, term.tenant_id, term.academic_year_id,
+               academic_year.name AS academic_year_name, term.code, term.name,
+               term.starts_on, term.ends_on, term.status, term.created_at,
+               term.updated_at, term.deleted_at
+        FROM academic_terms AS term
+        INNER JOIN academic_years AS academic_year
+          ON academic_year.id = term.academic_year_id
+         AND academic_year.tenant_id = term.tenant_id
+        WHERE term.tenant_id = $1 AND term.id = $2
+          AND term.deleted_at IS NULL AND academic_year.deleted_at IS NULL
+        FOR UPDATE OF term
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(id)
+    .fetch_optional(&mut **tx)
+    .await
+    .context("Failed to lock academic term")
+}
+
+async fn lock_academic_year(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    id: Uuid,
+) -> Result<AcademicYear> {
+    sqlx::query_as::<_, AcademicYear>(
+        r#"
+        SELECT id, tenant_id, name, starts_on, ends_on, status,
+               created_at, updated_at, deleted_at
+        FROM academic_years
+        WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+        FOR UPDATE
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(id)
+    .fetch_optional(&mut **tx)
+    .await
+    .context("Failed to lock academic year")?
+    .context("Academic year was not found for this campus")
+}
+
+async fn ensure_no_term_overlap(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    academic_year_id: Uuid,
+    excluded_id: Option<Uuid>,
+    starts_on: chrono::NaiveDate,
+    ends_on: chrono::NaiveDate,
+) -> Result<()> {
+    let overlaps = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(
+            SELECT 1 FROM academic_terms
+            WHERE tenant_id = $1 AND academic_year_id = $2 AND deleted_at IS NULL
+              AND ($3::UUID IS NULL OR id <> $3)
+              AND NOT (ends_on < $4 OR starts_on > $5)
+        )
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(academic_year_id)
+    .bind(excluded_id)
+    .bind(starts_on)
+    .bind(ends_on)
+    .fetch_one(&mut **tx)
+    .await
+    .context("Failed to check academic term overlap")?;
+    if overlaps {
+        bail!("Academic term dates cannot overlap another term in the selected year");
+    }
+    Ok(())
+}
+
+fn validate_term_against_year(
+    year: &AcademicYear,
+    starts_on: chrono::NaiveDate,
+    ends_on: chrono::NaiveDate,
+    status: &str,
+) -> Result<()> {
+    if starts_on < year.starts_on || ends_on > year.ends_on {
+        bail!("Academic term dates must fall within the selected academic year");
+    }
+    if status == "active" && year.status != "active" {
+        bail!("Only a term in the active academic year can be activated");
+    }
+    if year.status == "closed" {
+        bail!("A closed academic year cannot accept term changes");
+    }
+    Ok(())
+}
+
+fn validate_year_transition(current: &str, requested: &str) -> Result<()> {
+    let allowed = matches!(
+        (current, requested),
+        ("planned", "planned")
+            | ("planned", "active")
+            | ("planned", "closed")
+            | ("active", "active")
+            | ("active", "closed")
+    );
+    if !allowed {
+        bail!("Academic year lifecycle cannot move backwards or change after closure");
+    }
+    Ok(())
+}
+
+fn validate_term_transition(current: &str, requested: &str) -> Result<()> {
+    let allowed = matches!(
+        (current, requested),
+        ("planned", "planned")
+            | ("planned", "active")
+            | ("planned", "closed")
+            | ("active", "active")
+            | ("active", "closed")
+    );
+    if !allowed {
+        bail!("Academic term lifecycle cannot move backwards or change after closure");
+    }
+    Ok(())
+}
+
 async fn ensure_assignment_references(
     pool: &PgPool,
     tenant_id: Uuid,
@@ -1093,11 +1533,21 @@ fn assignment_from_row(
 
 #[cfg(test)]
 mod tests {
-    use super::DeleteOutcome;
+    use super::{DeleteOutcome, validate_term_transition, validate_year_transition};
 
     #[test]
     fn delete_outcomes_are_distinct() {
         assert_ne!(DeleteOutcome::Deleted, DeleteOutcome::InUse);
         assert_ne!(DeleteOutcome::NotFound, DeleteOutcome::Deleted);
+    }
+
+    #[test]
+    fn academic_lifecycles_only_move_forward() {
+        assert!(validate_year_transition("planned", "active").is_ok());
+        assert!(validate_year_transition("active", "closed").is_ok());
+        assert!(validate_year_transition("closed", "active").is_err());
+        assert!(validate_term_transition("planned", "closed").is_ok());
+        assert!(validate_term_transition("active", "planned").is_err());
+        assert!(validate_term_transition("closed", "closed").is_err());
     }
 }

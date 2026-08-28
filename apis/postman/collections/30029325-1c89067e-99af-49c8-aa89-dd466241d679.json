@@ -2461,7 +2461,7 @@
     },
     {
       "name": "Academics",
-      "description": "Academic years, subjects, employee-backed teachers, classes, and canonical teaching assignments.",
+      "description": "Academic years, non-overlapping terms, subjects, employee-backed teachers, classes, and canonical teaching assignments.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -2524,6 +2524,59 @@
           "request": {
             "method": "DELETE",
             "url": "{{base_url}}/academics/academic-years/:id"
+          }
+        },
+        {
+          "name": "List Academic Terms",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/terms?page=1&per_page=20&academic_year_id={{academic_year_id}}"
+          }
+        },
+        {
+          "name": "Get Academic Term",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/terms/:id"
+          }
+        },
+        {
+          "name": "Create Academic Term",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"code\": \"T1\",\n  \"name\": \"Term 1\",\n  \"starts_on\": \"2027-01-11\",\n  \"ends_on\": \"2027-04-02\",\n  \"status\": \"planned\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/terms"
+          }
+        },
+        {
+          "name": "Update Academic Term",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"code\": \"T1\",\n  \"name\": \"Term 1\",\n  \"starts_on\": \"2027-01-11\",\n  \"ends_on\": \"2027-04-02\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/terms/:id"
+          }
+        },
+        {
+          "name": "Delete Academic Term",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/terms/:id"
           }
         },
         {

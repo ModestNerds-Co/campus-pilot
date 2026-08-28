@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarClock,
+  CalendarDays,
   CalendarRange,
   ClipboardList,
   GraduationCap,
@@ -75,6 +76,7 @@ const hrNavigation: LocalNavItem[] = [
 
 const academicsNavigation: LocalNavItem[] = [
   { label: "Academic years", path: "/modules/academics/academic-years", icon: CalendarRange },
+  { label: "Academic terms", path: "/modules/academics/terms", icon: CalendarDays },
   { label: "Subjects", path: "/modules/academics/subjects", icon: BookOpen },
   { label: "Teachers", path: "/modules/academics/teachers", icon: UserRoundCheck },
   { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap },
@@ -240,6 +242,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/hr-payroll/departments") return <Link className={navClass(active)} to="/modules/hr-payroll/departments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/hr-payroll/positions") return <Link className={navClass(active)} to="/modules/hr-payroll/positions"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/academic-years") return <Link className={navClass(active)} to="/modules/academics/academic-years"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/academics/terms") return <Link className={navClass(active)} to="/modules/academics/terms"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/subjects") return <Link className={navClass(active)} to="/modules/academics/subjects"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/teachers") return <Link className={navClass(active)} to="/modules/academics/teachers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/classes") return <Link className={navClass(active)} to="/modules/academics/classes"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

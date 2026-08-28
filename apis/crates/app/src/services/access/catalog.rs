@@ -471,7 +471,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 8);
             } else if module_key == "academics" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 11);
+                assert_eq!(module.executable_capabilities(), 13);
             } else if module_key == "fleet" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 7);

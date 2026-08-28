@@ -52,6 +52,7 @@ import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modul
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
+import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
 import { Route as ModulesAcademicsSubjectsRouteImport } from './routes/modules/academics/subjects'
@@ -281,6 +282,11 @@ const ModulesFleetDailyLogRoute = ModulesFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesAcademicsTermsRoute = ModulesAcademicsTermsRouteImport.update({
+  id: '/academics/terms',
+  path: '/academics/terms',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesAcademicsTeachingAssignmentsRoute =
   ModulesAcademicsTeachingAssignmentsRouteImport.update({
     id: '/academics/teaching-assignments',
@@ -358,6 +364,7 @@ export interface FileRoutesByFullPath {
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
+  '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -409,6 +416,7 @@ export interface FileRoutesByTo {
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
+  '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -462,6 +470,7 @@ export interface FileRoutesById {
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
+  '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
@@ -516,6 +525,7 @@ export interface FileRouteTypes {
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
+    | '/modules/academics/terms'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -567,6 +577,7 @@ export interface FileRouteTypes {
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
+    | '/modules/academics/terms'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -619,6 +630,7 @@ export interface FileRouteTypes {
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
+    | '/modules/academics/terms'
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
@@ -951,6 +963,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFleetDailyLogRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/academics/terms': {
+      id: '/modules/academics/terms'
+      path: '/academics/terms'
+      fullPath: '/modules/academics/terms'
+      preLoaderRoute: typeof ModulesAcademicsTermsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/academics/teaching-assignments': {
       id: '/modules/academics/teaching-assignments'
       path: '/academics/teaching-assignments'
@@ -1060,6 +1079,7 @@ interface ModulesRouteChildren {
   ModulesAcademicsSubjectsRoute: typeof ModulesAcademicsSubjectsRoute
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
+  ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
@@ -1083,6 +1103,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsTeachersRoute: ModulesAcademicsTeachersRoute,
   ModulesAcademicsTeachingAssignmentsRoute:
     ModulesAcademicsTeachingAssignmentsRoute,
+  ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,

@@ -11,6 +11,17 @@ export interface AcademicYear {
   status: AcademicYearStatus;
 }
 
+export interface AcademicTerm {
+  id: string;
+  academic_year_id: string;
+  academic_year_name: string;
+  code: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  status: AcademicYearStatus;
+}
+
 export interface Subject {
   id: string;
   code: string;
@@ -71,6 +82,15 @@ export interface AcademicYearInput {
   status?: AcademicYearStatus;
 }
 
+export interface AcademicTermInput {
+  academic_year_id: string;
+  code: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  status?: AcademicYearStatus;
+}
+
 export interface SubjectInput {
   code: string;
   name: string;
@@ -122,6 +142,7 @@ export interface ApiEnvelope<T> {
 }
 
 export interface AcademicYearsResponse { academic_years: AcademicYear[] }
+export interface AcademicTermsResponse { terms: AcademicTerm[] }
 export interface SubjectsResponse { subjects: Subject[] }
 export interface TeachersResponse { teachers: TeacherProfile[] }
 export interface TeacherCandidatesResponse { employees: EmployeeCandidate[] }
