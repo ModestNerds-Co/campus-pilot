@@ -15,6 +15,10 @@ use crate::ledger::{
     CurrencyOps, DeleteOutcome, PaginatedAccountsResponse, PaginatedCurrenciesResponse,
     UpdateAccountRequest, UpdateCurrencyRequest,
 };
+use crate::periods::{
+    AccountingPeriodOps, AccountingPeriodsResponse, CalendarOutcome, CreateFiscalYearRequest,
+    FiscalYearListQuery, FiscalYearOps, PaginatedFiscalYearsResponse, UpdateFiscalYearRequest,
+};
 
 #[get("/currencies")]
 async fn list_currencies(
@@ -174,6 +178,144 @@ async fn delete_account(
     )
 }
 
+#[get("/fiscal-years")]
+async fn list_fiscal_years(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<FiscalYearListQuery>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    let (fiscal_years, total) = FiscalYearOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        query.status.as_deref(),
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(paginated(
+        PaginatedFiscalYearsResponse { fiscal_years },
+        page,
+        per_page,
+        total,
+    ))
+}
+
+#[get("/fiscal-years/{id}")]
+async fn read_fiscal_year(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let value = FiscalYearOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
+        .await
+        .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(found(value, "Fiscal year"))
+}
+
+#[post("/fiscal-years")]
+async fn create_fiscal_year(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    body: web::Json<CreateFiscalYearRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    created_or_error(FiscalYearOps::create(pool.get_ref(), tenant_id(tenant), &body).await)
+}
+
+#[put("/fiscal-years/{id}")]
+async fn update_fiscal_year(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateFiscalYearRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    updated_or_error(
+        FiscalYearOps::update(pool.get_ref(), tenant_id(tenant), path.into_inner(), &body).await,
+        "Fiscal year",
+    )
+}
+
+#[delete("/fiscal-years/{id}")]
+async fn delete_fiscal_year(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match FiscalYearOps::delete(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(CalendarOutcome::Changed) => ok(serde_json::json!({ "deleted": true })),
+        Ok(CalendarOutcome::NotFound) => not_found("Fiscal year"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/fiscal-years/{id}/open")]
+async fn open_fiscal_year(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    updated_or_error(
+        FiscalYearOps::open(pool.get_ref(), tenant_id(tenant), path.into_inner()).await,
+        "Fiscal year",
+    )
+}
+
+#[post("/fiscal-years/{id}/close")]
+async fn close_fiscal_year(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    updated_or_error(
+        FiscalYearOps::close(pool.get_ref(), tenant_id(tenant), path.into_inner()).await,
+        "Fiscal year",
+    )
+}
+
+#[get("/fiscal-years/{id}/periods")]
+async fn list_accounting_periods(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let periods = AccountingPeriodOps::list(pool.get_ref(), tenant_id(tenant), path.into_inner())
+        .await
+        .map_err(actix_web::error::ErrorInternalServerError)?;
+    Ok(ok(AccountingPeriodsResponse { periods }))
+}
+
+#[post("/periods/{id}/close")]
+async fn close_accounting_period(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    updated_or_error(
+        AccountingPeriodOps::close(pool.get_ref(), tenant_id(tenant), path.into_inner()).await,
+        "Accounting period",
+    )
+}
+
+#[post("/periods/{id}/reopen")]
+async fn reopen_accounting_period(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    updated_or_error(
+        AccountingPeriodOps::reopen(pool.get_ref(), tenant_id(tenant), path.into_inner()).await,
+        "Accounting period",
+    )
+}
+
 fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
@@ -272,6 +414,11 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         || safe_message.starts_with("Reporting currency")
         || safe_message.starts_with("Account ")
         || safe_message.starts_with("Currency ")
+        || safe_message.starts_with("Fiscal year")
+        || safe_message.starts_with("Only a")
+        || safe_message.starts_with("Every accounting")
+        || safe_message.starts_with("Accounting periods")
+        || safe_message.starts_with("Open the fiscal")
     {
         return HttpResponse::BadRequest().json(ApiResponse::from_status(
             StatusCode::BAD_REQUEST,
@@ -299,7 +446,17 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(read_account)
             .service(create_account)
             .service(update_account)
-            .service(delete_account),
+            .service(delete_account)
+            .service(list_fiscal_years)
+            .service(read_fiscal_year)
+            .service(create_fiscal_year)
+            .service(update_fiscal_year)
+            .service(delete_fiscal_year)
+            .service(open_fiscal_year)
+            .service(close_fiscal_year)
+            .service(list_accounting_periods)
+            .service(close_accounting_period)
+            .service(reopen_accounting_period),
     );
 }
 

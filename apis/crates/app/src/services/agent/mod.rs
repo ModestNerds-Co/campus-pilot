@@ -31,7 +31,10 @@ use administration_access::{
     AdministrationRoleReadCapability, AdministrationRolesListCapability,
     AdministrationUserReadCapability, AdministrationUsersListCapability,
 };
-use finance::{FinanceListCapability, FinanceListKind, FinanceReadCapability, FinanceReadKind};
+use finance::{
+    FinanceListCapability, FinanceListKind, FinancePeriodsCapability, FinanceReadCapability,
+    FinanceReadKind,
+};
 use fleet::{
     FleetDriverCandidatesListCapability, FleetDriverReadCapability, FleetDriversListCapability,
     FleetVehicleLogReadCapability, FleetVehicleLogsListCapability, FleetVehicleReadCapability,
@@ -138,12 +141,20 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| {
             panic!("invalid Academics assessment-component read capability: {error}")
         });
-    for kind in [FinanceListKind::Currencies, FinanceListKind::Accounts] {
+    for kind in [
+        FinanceListKind::Currencies,
+        FinanceListKind::Accounts,
+        FinanceListKind::FiscalYears,
+    ] {
         registry
             .register(FinanceListCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid Finance list capability: {error}"));
     }
-    for kind in [FinanceReadKind::Currency, FinanceReadKind::Account] {
+    for kind in [
+        FinanceReadKind::Currency,
+        FinanceReadKind::Account,
+        FinanceReadKind::FiscalYear,
+    ] {
         registry
             .register(FinanceReadCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid Finance read capability: {error}"));
@@ -159,6 +170,9 @@ pub fn build_capability_registry(
             .register(SisListCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
+    registry
+        .register(FinancePeriodsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Finance accounting-periods capability: {error}"));
     for kind in [
         SisReadKind::Learner,
         SisReadKind::Guardian,
@@ -421,10 +435,13 @@ mod tests {
                 "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read",
+                "finance.accounting_periods.list",
                 "finance.accounts.list",
                 "finance.accounts.read",
                 "finance.currencies.list",
                 "finance.currencies.read",
+                "finance.fiscal_years.list",
+                "finance.fiscal_years.read",
                 "fleet.driver_candidates.list",
                 "fleet.drivers.list",
                 "fleet.drivers.read",

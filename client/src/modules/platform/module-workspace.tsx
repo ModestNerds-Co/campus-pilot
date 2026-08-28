@@ -109,6 +109,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <FinanceLink description="Set the reporting currency and currencies used in transactions." label="Currencies" to="/modules/finance/currencies" />
             <FinanceLink description="Maintain summary and posting accounts for the campus ledger." label="Chart of accounts" to="/modules/finance/chart-of-accounts" />
+            <FinanceLink description="Open and close the dated periods used for journal posting." label="Fiscal years and periods" to="/modules/finance/accounting-periods" />
           </div>
         </section>
       </div>
@@ -202,7 +203,7 @@ const AcademicLink: React.FC<{ description: string; label: string; to: "/modules
   </Link>
 );
 
-const FinanceLink: React.FC<{ description: string; label: string; to: "/modules/finance/currencies" | "/modules/finance/chart-of-accounts" }> = ({ description, label, to }) => (
+const FinanceLink: React.FC<{ description: string; label: string; to: "/modules/finance/currencies" | "/modules/finance/chart-of-accounts" | "/modules/finance/accounting-periods" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

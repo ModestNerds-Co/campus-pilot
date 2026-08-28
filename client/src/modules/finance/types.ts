@@ -1,6 +1,9 @@
 export type RecordStatus = "active" | "inactive";
 export type AccountType = "asset" | "liability" | "equity" | "income" | "expense";
 export type CurrencyMode = "reporting" | "single" | "multi";
+export type FiscalYearStatus = "draft" | "open" | "closed";
+export type AccountingPeriodStatus = "planned" | "open" | "closed";
+export type PeriodCadence = "monthly" | "quarterly";
 
 export interface FinanceCurrency {
   id: string;
@@ -54,6 +57,41 @@ export interface AccountInput {
   status: RecordStatus;
 }
 
+export interface FinanceFiscalYear {
+  id: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  period_cadence: PeriodCadence;
+  status: FiscalYearStatus;
+  opened_at: string | null;
+  closed_at: string | null;
+  period_count: number;
+  open_period_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinanceAccountingPeriod {
+  id: string;
+  fiscal_year_id: string;
+  period_number: number;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  status: AccountingPeriodStatus;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FiscalYearInput {
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  period_cadence: PeriodCadence;
+}
+
 export interface ListParams {
   page?: number;
   per_page?: number;
@@ -82,3 +120,5 @@ export interface ApiEnvelope<T> {
 
 export interface CurrenciesResponse { currencies: FinanceCurrency[] }
 export interface AccountsResponse { accounts: FinanceAccount[] }
+export interface FiscalYearsResponse { fiscal_years: FinanceFiscalYear[] }
+export interface AccountingPeriodsResponse { periods: FinanceAccountingPeriod[] }

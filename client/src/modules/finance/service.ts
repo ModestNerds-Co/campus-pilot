@@ -4,7 +4,8 @@ import { httpClient } from "@/lib/http-client";
 
 import type {
   AccountInput, AccountsResponse, ApiEnvelope, CurrenciesResponse,
-  CurrencyInput, FinanceAccount, FinanceCurrency, ListParams,
+  CurrencyInput, FinanceAccount, FinanceAccountingPeriod, FinanceCurrency, FinanceFiscalYear,
+  FiscalYearInput, FiscalYearsResponse, AccountingPeriodsResponse, ListParams,
 } from "./types";
 
 const BASE_URL = "/api/1.0/finance";
@@ -27,6 +28,15 @@ export const financeService = {
   createAccount: (data: AccountInput) => request<FinanceAccount>(() => httpClient.post(`${BASE_URL}/accounts`, data)),
   updateAccount: (id: string, data: AccountInput) => request<FinanceAccount>(() => httpClient.put(`${BASE_URL}/accounts/${id}`, data)),
   deleteAccount: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/accounts/${id}`)),
+  listFiscalYears: (params?: ListParams) => request<FiscalYearsResponse>(() => httpClient.get(`${BASE_URL}/fiscal-years`, { params })),
+  createFiscalYear: (data: FiscalYearInput) => request<FinanceFiscalYear>(() => httpClient.post(`${BASE_URL}/fiscal-years`, data)),
+  updateFiscalYear: (id: string, data: { name: string }) => request<FinanceFiscalYear>(() => httpClient.put(`${BASE_URL}/fiscal-years/${id}`, data)),
+  deleteFiscalYear: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/fiscal-years/${id}`)),
+  openFiscalYear: (id: string) => request<FinanceFiscalYear>(() => httpClient.post(`${BASE_URL}/fiscal-years/${id}/open`)),
+  closeFiscalYear: (id: string) => request<FinanceFiscalYear>(() => httpClient.post(`${BASE_URL}/fiscal-years/${id}/close`)),
+  listAccountingPeriods: (fiscalYearId: string) => request<AccountingPeriodsResponse>(() => httpClient.get(`${BASE_URL}/fiscal-years/${fiscalYearId}/periods`)),
+  closeAccountingPeriod: (id: string) => request<FinanceAccountingPeriod>(() => httpClient.post(`${BASE_URL}/periods/${id}/close`)),
+  reopenAccountingPeriod: (id: string) => request<FinanceAccountingPeriod>(() => httpClient.post(`${BASE_URL}/periods/${id}/reopen`)),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

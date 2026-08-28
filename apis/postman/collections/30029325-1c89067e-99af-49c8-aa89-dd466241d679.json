@@ -3124,7 +3124,7 @@
     },
     {
       "name": "Finance",
-      "description": "Multi-currency register and controlled chart-of-account structure. Journals, balances, and payment providers are separate later slices.",
+      "description": "Multi-currency register, controlled chart of accounts, and accounting calendar. Journals, balances, and payment providers are separate later slices.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -3240,6 +3240,94 @@
           "request": {
             "method": "DELETE",
             "url": "{{base_url}}/finance/accounts/:id"
+          }
+        },
+        {
+          "name": "List Fiscal Years",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/fiscal-years?page=1&per_page=20&search=&status="
+          }
+        },
+        {
+          "name": "Get Fiscal Year",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/fiscal-years/:id"
+          }
+        },
+        {
+          "name": "Create Fiscal Year",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2027 financial year\",\n  \"starts_on\": \"2027-01-01\",\n  \"ends_on\": \"2027-12-31\",\n  \"period_cadence\": \"monthly\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/fiscal-years"
+          }
+        },
+        {
+          "name": "Rename Draft Fiscal Year",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"FY 2027\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/finance/fiscal-years/:id"
+          }
+        },
+        {
+          "name": "Delete Draft Fiscal Year",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/finance/fiscal-years/:id"
+          }
+        },
+        {
+          "name": "Open Fiscal Year",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/fiscal-years/:id/open"
+          }
+        },
+        {
+          "name": "Close Fiscal Year",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/fiscal-years/:id/close"
+          }
+        },
+        {
+          "name": "List Accounting Periods",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/finance/fiscal-years/:id/periods"
+          }
+        },
+        {
+          "name": "Close Accounting Period",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/periods/:id/close"
+          }
+        },
+        {
+          "name": "Reopen Accounting Period",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/finance/periods/:id/reopen"
           }
         }
       ]

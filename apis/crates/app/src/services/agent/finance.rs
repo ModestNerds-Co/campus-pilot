@@ -7,6 +7,7 @@ use cp_agent::{
 };
 use cp_common::PaginationMeta;
 use cp_finance::ledger::{AccountOps, CurrencyOps};
+use cp_finance::periods::{AccountingPeriodOps, FiscalYearOps};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -29,12 +30,14 @@ pub(super) struct FinanceListInput {
 pub(super) enum FinanceListKind {
     Currencies,
     Accounts,
+    FiscalYears,
 }
 impl FinanceListKind {
     const fn operation_key(self) -> &'static str {
         match self {
             Self::Currencies => "finance.currencies.list",
             Self::Accounts => "finance.accounts.list",
+            Self::FiscalYears => "finance.fiscal_years.list",
         }
     }
 }
@@ -59,6 +62,20 @@ impl FinanceListCapability {
                 "accounts",
                 "finance.accounts",
             ),
+            FinanceListKind::FiscalYears => (
+                "List fiscal years",
+                "Returns the campus fiscal years and their accounting-period lifecycle summary.",
+                "fiscal_years",
+                "finance.fiscal_years",
+            ),
+        };
+        let status_schema = match kind {
+            FinanceListKind::FiscalYears => {
+                json!({ "type": ["string", "null"], "enum": ["draft", "open", "closed", null] })
+            }
+            FinanceListKind::Currencies | FinanceListKind::Accounts => {
+                json!({ "type": ["string", "null"], "enum": ["active", "inactive", null] })
+            }
         };
         Self {
             pool,
@@ -69,7 +86,7 @@ impl FinanceListCapability {
                 description,
                 json!({
                     "page": page_schema(), "per_page": per_page_schema(), "search": search_schema(),
-                    "status": { "type": ["string", "null"], "enum": ["active", "inactive", null] },
+                    "status": status_schema,
                     "account_type": { "type": ["string", "null"], "enum": ["asset", "liability", "equity", "income", "expense", null] },
                     "currency_mode": { "type": ["string", "null"], "enum": ["reporting", "single", "multi", null] }
                 }),
@@ -130,6 +147,21 @@ impl Capability for FinanceListCapability {
                     json!({ "accounts": rows, "pagination": PaginationMeta::new(page as u32, per_page as u32, total) }),
                 )
             }
+            FinanceListKind::FiscalYears => {
+                let (rows, total) = FiscalYearOps::list(
+                    &self.pool,
+                    context.principal().tenant_id(),
+                    page,
+                    per_page,
+                    trimmed(input.search.as_deref()),
+                    trimmed(input.status.as_deref()),
+                )
+                .await
+                .map_err(|_| dependency_failure("Fiscal years could not be loaded."))?;
+                Ok(
+                    json!({ "fiscal_years": rows, "pagination": PaginationMeta::new(page as u32, per_page as u32, total) }),
+                )
+            }
         }
     }
 }
@@ -144,12 +176,14 @@ pub(super) struct FinanceRecordInput {
 pub(super) enum FinanceReadKind {
     Currency,
     Account,
+    FiscalYear,
 }
 impl FinanceReadKind {
     const fn operation_key(self) -> &'static str {
         match self {
             Self::Currency => "finance.currencies.read",
             Self::Account => "finance.accounts.read",
+            Self::FiscalYear => "finance.fiscal_years.read",
         }
     }
 }
@@ -171,6 +205,11 @@ impl FinanceReadCapability {
                 "Read finance account",
                 "Returns one chart-of-account record without balances or journals.",
                 "finance.accounts",
+            ),
+            FinanceReadKind::FiscalYear => (
+                "Read fiscal year",
+                "Returns one fiscal year and its accounting-period lifecycle summary.",
+                "finance.fiscal_years",
             ),
         };
         Self {
@@ -200,6 +239,7 @@ impl Capability for FinanceReadCapability {
         let kind = match self.kind {
             FinanceReadKind::Currency => "finance_currency",
             FinanceReadKind::Account => "finance_account",
+            FinanceReadKind::FiscalYear => "finance_fiscal_year",
         };
         CapabilityScope::resources([resource(kind, input.record_id)])
             .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
@@ -220,6 +260,13 @@ impl Capability for FinanceReadCapability {
                     .await
                     .map(|record| record.map(|value| json!(value)))
             }
+            FinanceReadKind::FiscalYear => FiscalYearOps::get_by_id(
+                &self.pool,
+                context.principal().tenant_id(),
+                input.record_id,
+            )
+            .await
+            .map(|record| record.map(|value| json!(value))),
         }
         .map_err(|_| dependency_failure("The finance record could not be loaded."))?
         .ok_or_else(|| {
@@ -229,6 +276,64 @@ impl Capability for FinanceReadCapability {
             )
         })?;
         Ok(json!({ "record": record }))
+    }
+}
+
+pub(super) struct FinancePeriodsCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FinancePeriodsCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "finance.accounting_periods.list",
+                "List accounting periods",
+                "Returns the dated accounting periods and lifecycle state for one fiscal year.",
+                json!({ "record_id": { "type": "string", "format": "uuid" } }),
+                json!({ "periods": { "type": "array" } }),
+                DataSensitivity::General,
+                "finance.accounting_periods",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FinancePeriodsCapability {
+    type Input = FinanceRecordInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::resources([resource("finance_fiscal_year", input.record_id)])
+            .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        FiscalYearOps::get_by_id(&self.pool, context.principal().tenant_id(), input.record_id)
+            .await
+            .map_err(|_| dependency_failure("The fiscal year could not be loaded."))?
+            .ok_or_else(|| {
+                CapabilityExecutionError::new(
+                    CapabilityExecutionErrorCode::InvalidState,
+                    "The fiscal year was not found.",
+                )
+            })?;
+        let periods =
+            AccountingPeriodOps::list(&self.pool, context.principal().tenant_id(), input.record_id)
+                .await
+                .map_err(|_| dependency_failure("Accounting periods could not be loaded."))?;
+        Ok(json!({ "periods": periods }))
     }
 }
 

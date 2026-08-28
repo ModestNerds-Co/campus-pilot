@@ -1112,6 +1112,96 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/fiscal-years",
+            "finance.fiscal_years.list",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/fiscal-years/{id}",
+            "finance.fiscal_years.read",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/fiscal-years",
+            "finance.fiscal_years.create",
+            "finance",
+            "finance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/finance/fiscal-years/{id}",
+            "finance.fiscal_years.update",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/finance/fiscal-years/{id}",
+            "finance.fiscal_years.delete",
+            "finance",
+            "finance:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/fiscal-years/{id}/open",
+            "finance.fiscal_years.open",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/fiscal-years/{id}/close",
+            "finance.fiscal_years.close",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/finance/fiscal-years/{id}/periods",
+            "finance.accounting_periods.list",
+            "finance",
+            "finance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/periods/{id}/close",
+            "finance.accounting_periods.close",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/finance/periods/{id}/reopen",
+            "finance.accounting_periods.reopen",
+            "finance",
+            "finance:edit",
+            OperationEffect::Write,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -1723,6 +1813,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.currencies.read"
         | "finance.accounts.list"
         | "finance.accounts.read"
+        | "finance.fiscal_years.list"
+        | "finance.fiscal_years.read"
+        | "finance.accounting_periods.list"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -1807,6 +1900,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.accounts.create"
         | "finance.accounts.update"
         | "finance.accounts.delete"
+        | "finance.fiscal_years.create"
+        | "finance.fiscal_years.update"
+        | "finance.fiscal_years.delete"
+        | "finance.fiscal_years.open"
+        | "finance.fiscal_years.close"
+        | "finance.accounting_periods.close"
+        | "finance.accounting_periods.reopen"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -1921,7 +2021,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 167);
+        assert_eq!(operation_catalog().len(), 177);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -1973,7 +2073,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [69, 91, 7, 0]);
+        assert_eq!(counts, [72, 98, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

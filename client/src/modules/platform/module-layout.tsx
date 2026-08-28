@@ -103,6 +103,7 @@ const sisNavigation: LocalNavItem[] = [
 const financeNavigation: LocalNavItem[] = [
   { label: "Currencies", path: "/modules/finance/currencies", icon: Coins },
   { label: "Chart of accounts", path: "/modules/finance/chart-of-accounts", icon: Landmark },
+  { label: "Fiscal years and periods", path: "/modules/finance/accounting-periods", icon: CalendarRange },
 ];
 
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
@@ -266,6 +267,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/academics/assessments") return <Link className={navClass(active)} to="/modules/academics/assessments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/currencies") return <Link className={navClass(active)} to="/modules/finance/currencies"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/chart-of-accounts") return <Link className={navClass(active)} to="/modules/finance/chart-of-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/finance/accounting-periods") return <Link className={navClass(active)} to="/modules/finance/accounting-periods"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
