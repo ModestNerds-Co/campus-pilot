@@ -117,6 +117,7 @@ export function RequisitionDetail({ requisitionId }: { requisitionId: string }) 
   const permissions = useAuthStore((state) => state.user?.permissions);
   const userId = useAuthStore((state) => state.user?.id);
   const canEdit = hasPermission(permissions, "procurement:edit");
+  const canApprove = hasPermission(permissions, "procurement:approve");
   const canDelete = hasPermission(permissions, "procurement:delete");
   const [requisition, setRequisition] = useState<Requisition | null>(null);
   const [loading, setLoading] = useState(true);
@@ -162,7 +163,7 @@ export function RequisitionDetail({ requisitionId }: { requisitionId: string }) 
   if (error || !requisition) return <TableWrap><TableError description={error ?? "Requisition was not found"} onRetry={() => void load()} title="Requisition could not be opened" /></TableWrap>;
 
   const requester = requisition.created_by === userId || requisition.requester_account_id === userId;
-  const mayDecide = canEdit && requisition.status === "submitted" && !requester;
+  const mayDecide = canApprove && requisition.status === "submitted" && !requester;
   return <div className="space-y-6">
     <section className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)] sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

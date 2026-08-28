@@ -6,6 +6,10 @@ import { httpClient } from "@/lib/http-client";
 
 import type {
   ApiEnvelope,
+  GoodsReceipt,
+  GoodsReceiptInput,
+  GoodsReceiptUpdateInput,
+  GoodsReceiptsResponse,
   ProcurementReferenceData,
   Requisition,
   RequisitionInput,
@@ -16,6 +20,10 @@ import type {
   SupplierInput,
   SuppliersResponse,
   ListParams,
+  PurchaseOrder,
+  PurchaseOrderInput,
+  PurchaseOrderUpdateInput,
+  PurchaseOrdersResponse,
   SupplierStatus,
 } from "./types";
 
@@ -65,6 +73,30 @@ export const procurementService = {
     request<Requisition>(() => httpClient.post(`${BASE_URL}/requisitions/${id}/reject`, { expected_version: expectedVersion, note })),
   cancelRequisition: (id: string, expectedVersion: number, note: string | null) =>
     request<Requisition>(() => httpClient.post(`${BASE_URL}/requisitions/${id}/cancel`, { expected_version: expectedVersion, note })),
+
+  listPurchaseOrders: (params?: ListParams) =>
+    request<PurchaseOrdersResponse>(() => httpClient.get(`${BASE_URL}/purchase-orders`, { params })),
+  readPurchaseOrder: (id: string) =>
+    request<PurchaseOrder>(() => httpClient.get(`${BASE_URL}/purchase-orders/${id}`)),
+  createPurchaseOrder: (data: PurchaseOrderInput & { idempotency_key: string }) =>
+    request<PurchaseOrder>(() => httpClient.post(`${BASE_URL}/purchase-orders`, data)),
+  updatePurchaseOrder: (id: string, data: PurchaseOrderUpdateInput & { expected_version: number }) =>
+    request<PurchaseOrder>(() => httpClient.put(`${BASE_URL}/purchase-orders/${id}`, data)),
+  issuePurchaseOrder: (id: string, expectedVersion: number) =>
+    request<PurchaseOrder>(() => httpClient.post(`${BASE_URL}/purchase-orders/${id}/issue`, { expected_version: expectedVersion })),
+  cancelPurchaseOrder: (id: string, expectedVersion: number, note: string) =>
+    request<PurchaseOrder>(() => httpClient.post(`${BASE_URL}/purchase-orders/${id}/cancel`, { expected_version: expectedVersion, note })),
+
+  listGoodsReceipts: (params?: ListParams) =>
+    request<GoodsReceiptsResponse>(() => httpClient.get(`${BASE_URL}/goods-receipts`, { params })),
+  readGoodsReceipt: (id: string) =>
+    request<GoodsReceipt>(() => httpClient.get(`${BASE_URL}/goods-receipts/${id}`)),
+  createGoodsReceipt: (data: GoodsReceiptInput & { idempotency_key: string }) =>
+    request<GoodsReceipt>(() => httpClient.post(`${BASE_URL}/goods-receipts`, data)),
+  updateGoodsReceipt: (id: string, data: GoodsReceiptUpdateInput & { expected_version: number }) =>
+    request<GoodsReceipt>(() => httpClient.put(`${BASE_URL}/goods-receipts/${id}`, data)),
+  postGoodsReceipt: (id: string, expectedVersion: number) =>
+    request<GoodsReceipt>(() => httpClient.post(`${BASE_URL}/goods-receipts/${id}/post`, { expected_version: expectedVersion })),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

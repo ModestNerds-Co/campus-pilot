@@ -5,6 +5,8 @@
 
 export type SupplierStatus = "active" | "inactive";
 export type RequisitionStatus = "draft" | "submitted" | "approved" | "rejected" | "cancelled";
+export type PurchaseOrderStatus = "draft" | "issued" | "partially_received" | "received" | "cancelled";
+export type GoodsReceiptStatus = "draft" | "posted";
 
 export interface PaginationMeta {
   current_page: number;
@@ -158,4 +160,152 @@ export interface RequisitionsResponse {
 
 export interface RequisitionListParams extends ListParams {
   requester_employee_id?: string;
+}
+
+export interface PurchaseOrderLineInput {
+  requisition_line_id: string;
+  quantity_minor: number;
+  quantity_scale: number;
+  unit_amount_minor: number;
+}
+
+export interface PurchaseOrderInput {
+  requisition_id: string;
+  supplier_id: string;
+  delivery_date: string | null;
+  notes: string | null;
+  lines: PurchaseOrderLineInput[];
+}
+
+export interface PurchaseOrderUpdateInput {
+  delivery_date: string | null;
+  notes: string | null;
+  lines: PurchaseOrderLineInput[];
+}
+
+export interface PurchaseOrderSummary {
+  id: string;
+  purchase_order_number: string;
+  requisition_id: string;
+  requisition_number: string;
+  requisition_title: string;
+  requisition_purpose: string | null;
+  requisition_needed_by: string | null;
+  requester_employee_id: string;
+  requester_account_id: string | null;
+  requester_employee_number: string;
+  requester_name: string;
+  supplier_id: string;
+  supplier_number: string;
+  supplier_name: string;
+  currency_id: string;
+  currency_code: string;
+  currency_minor_units: number;
+  delivery_date: string | null;
+  notes: string | null;
+  status: PurchaseOrderStatus;
+  version: number;
+  total_minor: number;
+  line_count: number;
+  issued_by: string | null;
+  issued_at: string | null;
+  cancelled_by: string | null;
+  cancelled_at: string | null;
+  cancellation_note: string | null;
+  created_by: string;
+  prepared_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderLine {
+  id: string;
+  line_number: number;
+  requisition_line_id: string;
+  requisition_line_number: number;
+  description: string;
+  unit_label: string | null;
+  requisition_quantity_minor: number;
+  quantity_minor: number;
+  quantity_scale: number;
+  unit_amount_minor: number;
+  line_amount_minor: number;
+  received_quantity_minor: number;
+  remaining_quantity_minor: number;
+}
+
+export interface PurchaseOrder extends PurchaseOrderSummary {
+  lines: PurchaseOrderLine[];
+}
+
+export interface PurchaseOrdersResponse {
+  purchase_orders: PurchaseOrderSummary[];
+}
+
+export interface GoodsReceiptLineInput {
+  purchase_order_line_id: string;
+  quantity_minor: number;
+  quantity_scale: number;
+}
+
+export interface GoodsReceiptInput {
+  purchase_order_id: string;
+  received_on: string;
+  delivery_reference: string | null;
+  notes: string | null;
+  lines: GoodsReceiptLineInput[];
+}
+
+export interface GoodsReceiptUpdateInput {
+  received_on: string;
+  delivery_reference: string | null;
+  notes: string | null;
+  lines: GoodsReceiptLineInput[];
+}
+
+export interface GoodsReceiptSummary {
+  id: string;
+  goods_receipt_number: string;
+  purchase_order_id: string;
+  purchase_order_number: string;
+  requisition_id: string;
+  requisition_number: string;
+  supplier_id: string;
+  supplier_number: string;
+  supplier_name: string;
+  currency_id: string;
+  currency_code: string;
+  currency_minor_units: number;
+  received_on: string;
+  delivery_reference: string | null;
+  notes: string | null;
+  status: GoodsReceiptStatus;
+  version: number;
+  line_count: number;
+  created_by: string;
+  prepared_by: string;
+  posted_by: string | null;
+  posted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoodsReceiptLine {
+  id: string;
+  line_number: number;
+  purchase_order_line_id: string;
+  purchase_order_line_number: number;
+  requisition_line_id: string;
+  description: string;
+  unit_label: string | null;
+  quantity_minor: number;
+  quantity_scale: number;
+}
+
+export interface GoodsReceipt extends GoodsReceiptSummary {
+  lines: GoodsReceiptLine[];
+}
+
+export interface GoodsReceiptsResponse {
+  goods_receipts: GoodsReceiptSummary[];
 }

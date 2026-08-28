@@ -61,6 +61,7 @@ use hr::{
     HrPositionReadCapability, HrPositionsListCapability,
 };
 use procurement::{
+    ProcurementGoodsReceiptsListCapability, ProcurementPurchaseOrdersListCapability,
     ProcurementReadCapability, ProcurementReadKind, ProcurementReferenceDataCapability,
     ProcurementRequesterCandidatesCapability, ProcurementRequisitionsListCapability,
     ProcurementSuppliersListCapability,
@@ -335,9 +336,21 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| {
             panic!("invalid Procurement requisitions-list capability: {error}")
         });
+    registry
+        .register(ProcurementPurchaseOrdersListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Procurement purchase-orders-list capability: {error}")
+        });
+    registry
+        .register(ProcurementGoodsReceiptsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Procurement goods-receipts-list capability: {error}")
+        });
     for kind in [
         ProcurementReadKind::Supplier,
         ProcurementReadKind::Requisition,
+        ProcurementReadKind::PurchaseOrder,
+        ProcurementReadKind::GoodsReceipt,
     ] {
         registry
             .register(ProcurementReadCapability::new(pool.clone(), kind))
@@ -594,6 +607,10 @@ mod tests {
                 "hr_payroll.imports.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
+                "procurement.goods_receipts.list",
+                "procurement.goods_receipts.read",
+                "procurement.purchase_orders.list",
+                "procurement.purchase_orders.read",
                 "procurement.reference_data.read",
                 "procurement.requester_candidates.list",
                 "procurement.requisitions.list",
@@ -872,6 +889,22 @@ mod tests {
             ),
             (
                 "procurement.requisitions.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+            (
+                "procurement.purchase_orders.list",
+                json!({ "supplier_id": Uuid::new_v4() }),
+            ),
+            (
+                "procurement.purchase_orders.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+            (
+                "procurement.goods_receipts.list",
+                json!({ "purchase_order_id": Uuid::new_v4() }),
+            ),
+            (
+                "procurement.goods_receipts.read",
                 json!({ "record_id": Uuid::new_v4() }),
             ),
         ] {

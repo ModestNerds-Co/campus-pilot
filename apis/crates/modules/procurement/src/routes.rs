@@ -17,6 +17,15 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::goods_receipts::{
+    CreateGoodsReceiptRequest, GoodsReceiptListQuery, GoodsReceiptOps, GoodsReceiptPostRequest,
+    GoodsReceiptResponse, PaginatedGoodsReceiptsResponse, UpdateGoodsReceiptRequest,
+};
+use crate::purchase_orders::{
+    CreatePurchaseOrderRequest, PaginatedPurchaseOrdersResponse, PurchaseOrderListQuery,
+    PurchaseOrderOps, PurchaseOrderResponse, PurchaseOrderTransitionRequest,
+    UpdatePurchaseOrderRequest,
+};
 use crate::requisitions::{
     CreateRequisitionRequest, DecisionRequest, PaginatedRequisitionsResponse,
     ProcurementReferenceOps, RequesterCandidateQuery, RequisitionListQuery, RequisitionOps,
@@ -396,6 +405,281 @@ async fn cancel_requisition(
     )
 }
 
+#[get("/purchase-orders")]
+async fn list_purchase_orders(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<PurchaseOrderListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match PurchaseOrderOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        trimmed(query.status.as_deref()),
+        query.requisition_id,
+        query.supplier_id,
+    )
+    .await
+    {
+        Ok((purchase_orders, total)) => paginated(
+            PaginatedPurchaseOrdersResponse { purchase_orders },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/purchase-orders/{id}")]
+async fn read_purchase_order(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match PurchaseOrderOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(Some(value)) => ok(value),
+        Ok(None) => not_found("Purchase order"),
+        Err(_) => internal_error(),
+    }
+}
+
+#[post("/purchase-orders")]
+async fn create_purchase_order(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<CreatePurchaseOrderRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match PurchaseOrderOps::create(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(value) => created(value),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[put("/purchase-orders/{id}")]
+async fn update_purchase_order(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdatePurchaseOrderRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    updated_purchase_order(
+        PurchaseOrderOps::update(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body.0,
+        )
+        .await,
+    )
+}
+
+#[post("/purchase-orders/{id}/issue")]
+async fn issue_purchase_order(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<PurchaseOrderTransitionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    updated_purchase_order(
+        PurchaseOrderOps::issue(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            body.expected_version,
+        )
+        .await,
+    )
+}
+
+#[post("/purchase-orders/{id}/cancel")]
+async fn cancel_purchase_order(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<PurchaseOrderTransitionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    updated_purchase_order(
+        PurchaseOrderOps::cancel(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body.0,
+        )
+        .await,
+    )
+}
+
+#[get("/goods-receipts")]
+async fn list_goods_receipts(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<GoodsReceiptListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match GoodsReceiptOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        trimmed(query.search.as_deref()),
+        trimmed(query.status.as_deref()),
+        query.purchase_order_id,
+        query.supplier_id,
+    )
+    .await
+    {
+        Ok((goods_receipts, total)) => paginated(
+            PaginatedGoodsReceiptsResponse { goods_receipts },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/goods-receipts/{id}")]
+async fn read_goods_receipt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match GoodsReceiptOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(Some(value)) => ok(value),
+        Ok(None) => not_found("Goods receipt"),
+        Err(_) => internal_error(),
+    }
+}
+
+#[post("/goods-receipts")]
+async fn create_goods_receipt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<CreateGoodsReceiptRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match GoodsReceiptOps::create(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(value) => created(value),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[put("/goods-receipts/{id}")]
+async fn update_goods_receipt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateGoodsReceiptRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    updated_goods_receipt(
+        GoodsReceiptOps::update(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            &body.0,
+        )
+        .await,
+    )
+}
+
+#[post("/goods-receipts/{id}/post")]
+async fn post_goods_receipt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<GoodsReceiptPostRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    updated_goods_receipt(
+        GoodsReceiptOps::post(
+            pool.get_ref(),
+            tenant_id(tenant),
+            path.into_inner(),
+            actor.into_inner(),
+            request_context.into_inner(),
+            body.expected_version,
+        )
+        .await,
+    )
+}
+
+fn updated_purchase_order(result: anyhow::Result<Option<PurchaseOrderResponse>>) -> HttpResponse {
+    match result {
+        Ok(Some(value)) => ok(value),
+        Ok(None) => not_found("Purchase order"),
+        Err(error) => operation_error(error),
+    }
+}
+
+fn updated_goods_receipt(result: anyhow::Result<Option<GoodsReceiptResponse>>) -> HttpResponse {
+    match result {
+        Ok(Some(value)) => ok(value),
+        Ok(None) => not_found("Goods receipt"),
+        Err(error) => operation_error(error),
+    }
+}
+
 fn updated_requisition(result: anyhow::Result<Option<RequisitionResponse>>) -> HttpResponse {
     match result {
         Ok(Some(value)) => ok(value),
@@ -505,9 +789,14 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         "A ",
         "Draft ",
         "Every ",
+        "Goods ",
         "Idempotency ",
+        "Issued ",
         "Only ",
+        "Partially ",
+        "Posted ",
         "Preferred ",
+        "Purchase ",
         "Requisition ",
         "Requisitions ",
         "Submitted ",
@@ -545,6 +834,17 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(submit_requisition)
             .service(approve_requisition)
             .service(reject_requisition)
-            .service(cancel_requisition),
+            .service(cancel_requisition)
+            .service(list_purchase_orders)
+            .service(read_purchase_order)
+            .service(create_purchase_order)
+            .service(update_purchase_order)
+            .service(issue_purchase_order)
+            .service(cancel_purchase_order)
+            .service(list_goods_receipts)
+            .service(read_goods_receipt)
+            .service(create_goods_receipt)
+            .service(update_goods_receipt)
+            .service(post_goods_receipt),
     );
 }

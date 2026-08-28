@@ -322,6 +322,72 @@ mod route_wiring_tests {
                 "/api/1.0/procurement/requisitions/{id}/cancel",
                 "procurement.requisitions.cancel",
             ),
+            (
+                Method::GET,
+                "/api/1.0/procurement/purchase-orders".to_string(),
+                "/api/1.0/procurement/purchase-orders",
+                "procurement.purchase_orders.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/procurement/purchase-orders/{record_id}"),
+                "/api/1.0/procurement/purchase-orders/{id}",
+                "procurement.purchase_orders.read",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/procurement/purchase-orders".to_string(),
+                "/api/1.0/procurement/purchase-orders",
+                "procurement.purchase_orders.create",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/procurement/purchase-orders/{record_id}"),
+                "/api/1.0/procurement/purchase-orders/{id}",
+                "procurement.purchase_orders.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/procurement/purchase-orders/{record_id}/issue"),
+                "/api/1.0/procurement/purchase-orders/{id}/issue",
+                "procurement.purchase_orders.issue",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/procurement/purchase-orders/{record_id}/cancel"),
+                "/api/1.0/procurement/purchase-orders/{id}/cancel",
+                "procurement.purchase_orders.cancel",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/procurement/goods-receipts".to_string(),
+                "/api/1.0/procurement/goods-receipts",
+                "procurement.goods_receipts.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/procurement/goods-receipts/{record_id}"),
+                "/api/1.0/procurement/goods-receipts/{id}",
+                "procurement.goods_receipts.read",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/procurement/goods-receipts".to_string(),
+                "/api/1.0/procurement/goods-receipts",
+                "procurement.goods_receipts.create",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/procurement/goods-receipts/{record_id}"),
+                "/api/1.0/procurement/goods-receipts/{id}",
+                "procurement.goods_receipts.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/procurement/goods-receipts/{record_id}/post"),
+                "/api/1.0/procurement/goods-receipts/{id}/post",
+                "procurement.goods_receipts.post",
+            ),
         ];
 
         for (method, concrete_path, expected_pattern, expected_operation) in route_cases {

@@ -133,12 +133,12 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "procurement",
             "Procurement",
             "Finance and resources",
-            "Manage requisitions, approval decisions, and supplier records.",
+            "Manage requisitions, approval decisions, purchase orders, receiving, and supplier records.",
             "/modules/procurement",
             "procurement",
             false,
             "available",
-            &["view", "create", "edit", "delete"],
+            &["view", "create", "edit", "delete", "approve", "receive"],
         ),
         module(
             "fleet",
@@ -410,6 +410,36 @@ mod tests {
 
     use super::{all_permission_keys, module_catalog};
 
+    const PROCUREMENT_WORKFLOW_PERMISSION_MIGRATION: &str =
+        include_str!("../../../../../migrations/080_grant_procurement_workflow_permissions.sql");
+
+    #[test]
+    fn procurement_permissions_separate_approval_and_receiving_authority() {
+        let procurement = module_catalog()
+            .into_iter()
+            .find(|module| module.key == "procurement")
+            .unwrap_or_else(|| unreachable!());
+        let permissions = procurement
+            .permissions
+            .into_iter()
+            .map(|permission| permission.key)
+            .collect::<BTreeSet<_>>();
+
+        assert!(permissions.contains("procurement:approve"));
+        assert!(permissions.contains("procurement:receive"));
+        assert!(PROCUREMENT_WORKFLOW_PERMISSION_MIGRATION.contains("key = 'finance_officer'"));
+        assert_eq!(
+            PROCUREMENT_WORKFLOW_PERMISSION_MIGRATION
+                .matches("ARRAY['procurement:approve', 'procurement:receive']")
+                .count(),
+            2
+        );
+        assert!(
+            PROCUREMENT_WORKFLOW_PERMISSION_MIGRATION
+                .contains("zz_grant_new_tenant_procurement_workflow_permissions")
+        );
+    }
+
     #[test]
     fn operation_catalog_references_known_modules_and_permissions() {
         let modules: BTreeSet<_> = module_catalog()
@@ -502,7 +532,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 11);
             } else if module_key == "procurement" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 6);
+                assert_eq!(module.executable_capabilities(), 10);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

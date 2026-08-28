@@ -9,6 +9,8 @@
 //  HR remains authoritative for employee requesters and Finance remains
 //  authoritative for currencies and later accounting transitions.
 
+pub mod goods_receipts;
+pub mod purchase_orders;
 pub mod requisitions;
 pub mod routes;
 pub mod suppliers;

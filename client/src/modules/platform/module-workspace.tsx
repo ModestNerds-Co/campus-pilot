@@ -144,9 +144,11 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
         <ModuleIntroduction module={module} />
         <section aria-labelledby="procurement-workspaces">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
-          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="procurement-workspaces">Manage purchasing requests</h2>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="procurement-workspaces">Manage purchasing</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <ProcurementLink description="Prepare requests and record approval decisions before ordering." label="Requisitions" to="/modules/procurement/requisitions" />
+            <ProcurementLink description="Issue approved requests to suppliers and track remaining quantities." label="Purchase orders" to="/modules/procurement/purchase-orders" />
+            <ProcurementLink description="Record and post deliveries against issued purchase orders." label="Goods receipts" to="/modules/procurement/goods-receipts" />
             <ProcurementLink description="Maintain the suppliers available to purchasing requests." label="Suppliers" to="/modules/procurement/suppliers" />
           </div>
         </section>
@@ -256,7 +258,7 @@ const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fee
   </Link>
 );
 
-const ProcurementLink: React.FC<{ description: string; label: string; to: "/modules/procurement/requisitions" | "/modules/procurement/suppliers" }> = ({ description, label, to }) => (
+const ProcurementLink: React.FC<{ description: string; label: string; to: "/modules/procurement/requisitions" | "/modules/procurement/purchase-orders" | "/modules/procurement/goods-receipts" | "/modules/procurement/suppliers" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

@@ -1664,7 +1664,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         // Procurement: Finance-backed reference data, employee requesters,
-        // suppliers, and controlled requisitions.
+        // suppliers, controlled requisitions, purchase orders, and receiving.
         route(
             Method::GET,
             "/api/1.0/procurement/reference-data",
@@ -1787,7 +1787,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/procurement/requisitions/{id}/approve",
             "procurement.requisitions.approve",
             "procurement",
-            "procurement:edit",
+            "procurement:approve",
             OperationEffect::Write,
             true,
         ),
@@ -1796,7 +1796,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/procurement/requisitions/{id}/reject",
             "procurement.requisitions.reject",
             "procurement",
-            "procurement:edit",
+            "procurement:approve",
             OperationEffect::Write,
             true,
         ),
@@ -1806,6 +1806,105 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "procurement.requisitions.cancel",
             "procurement",
             "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/purchase-orders",
+            "procurement.purchase_orders.list",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/purchase-orders/{id}",
+            "procurement.purchase_orders.read",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/purchase-orders",
+            "procurement.purchase_orders.create",
+            "procurement",
+            "procurement:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/procurement/purchase-orders/{id}",
+            "procurement.purchase_orders.update",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/purchase-orders/{id}/issue",
+            "procurement.purchase_orders.issue",
+            "procurement",
+            "procurement:approve",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/purchase-orders/{id}/cancel",
+            "procurement.purchase_orders.cancel",
+            "procurement",
+            "procurement:approve",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/goods-receipts",
+            "procurement.goods_receipts.list",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/goods-receipts/{id}",
+            "procurement.goods_receipts.read",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/goods-receipts",
+            "procurement.goods_receipts.create",
+            "procurement",
+            "procurement:receive",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/procurement/goods-receipts/{id}",
+            "procurement.goods_receipts.update",
+            "procurement",
+            "procurement:receive",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/goods-receipts/{id}/post",
+            "procurement.goods_receipts.post",
+            "procurement",
+            "procurement:receive",
             OperationEffect::Write,
             true,
         ),
@@ -2460,6 +2559,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "procurement.suppliers.read"
         | "procurement.requisitions.list"
         | "procurement.requisitions.read"
+        | "procurement.purchase_orders.list"
+        | "procurement.purchase_orders.read"
+        | "procurement.goods_receipts.list"
+        | "procurement.goods_receipts.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2588,6 +2691,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "procurement.requisitions.approve"
         | "procurement.requisitions.reject"
         | "procurement.requisitions.cancel"
+        | "procurement.purchase_orders.create"
+        | "procurement.purchase_orders.update"
+        | "procurement.purchase_orders.issue"
+        | "procurement.purchase_orders.cancel"
+        | "procurement.goods_receipts.create"
+        | "procurement.goods_receipts.update"
+        | "procurement.goods_receipts.post"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2712,7 +2822,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 244);
+        assert_eq!(operation_catalog().len(), 255);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2764,7 +2874,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [99, 135, 10, 0]);
+        assert_eq!(counts, [103, 142, 10, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -2888,6 +2998,14 @@ mod tests {
             &procurement_viewer
         ));
         assert!(allowed("procurement.suppliers.read", &procurement_viewer));
+        assert!(allowed(
+            "procurement.purchase_orders.list",
+            &procurement_viewer
+        ));
+        assert!(allowed(
+            "procurement.goods_receipts.read",
+            &procurement_viewer
+        ));
         assert!(!allowed(
             "procurement.requisitions.create",
             &procurement_viewer
@@ -2944,6 +3062,33 @@ mod tests {
     }
 
     #[test]
+    fn procurement_purchase_and_receiving_operations_are_fully_governed() {
+        for (key, exposure) in [
+            ("procurement.purchase_orders.list", "exposed"),
+            ("procurement.purchase_orders.read", "exposed"),
+            ("procurement.purchase_orders.create", "approval_required"),
+            ("procurement.purchase_orders.update", "approval_required"),
+            ("procurement.purchase_orders.issue", "approval_required"),
+            ("procurement.purchase_orders.cancel", "approval_required"),
+            ("procurement.goods_receipts.list", "exposed"),
+            ("procurement.goods_receipts.read", "exposed"),
+            ("procurement.goods_receipts.create", "approval_required"),
+            ("procurement.goods_receipts.update", "approval_required"),
+            ("procurement.goods_receipts.post", "approval_required"),
+        ] {
+            let operation = operation(key);
+            assert_eq!(operation.module_key(), "procurement", "{key}");
+            assert!(operation.license_required(), "{key}");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                vec!["finance", "hr_payroll"],
+                "{key}"
+            );
+            assert_eq!(operation.agent_exposure().as_str(), exposure, "{key}");
+        }
+    }
+
+    #[test]
     fn procurement_workflow_permissions_override_http_verb_defaults() {
         for (key, permission) in [
             (
@@ -2955,8 +3100,15 @@ mod tests {
             ("procurement.requisitions.delete", "procurement:delete"),
             ("procurement.requisitions.submit", "procurement:edit"),
             ("procurement.requisitions.cancel", "procurement:edit"),
-            ("procurement.requisitions.approve", "procurement:edit"),
-            ("procurement.requisitions.reject", "procurement:edit"),
+            ("procurement.requisitions.approve", "procurement:approve"),
+            ("procurement.requisitions.reject", "procurement:approve"),
+            ("procurement.purchase_orders.create", "procurement:create"),
+            ("procurement.purchase_orders.update", "procurement:edit"),
+            ("procurement.purchase_orders.issue", "procurement:approve"),
+            ("procurement.purchase_orders.cancel", "procurement:approve"),
+            ("procurement.goods_receipts.create", "procurement:receive"),
+            ("procurement.goods_receipts.update", "procurement:receive"),
+            ("procurement.goods_receipts.post", "procurement:receive"),
         ] {
             assert_eq!(operation(key).permission(), permission, "{key}");
         }
@@ -2966,11 +3118,28 @@ mod tests {
         for key in [
             "procurement.requisitions.submit",
             "procurement.requisitions.cancel",
-            "procurement.requisitions.approve",
-            "procurement.requisitions.reject",
         ] {
             assert!(!allowed(key, &["procurement:create"]), "{key}");
             assert!(allowed(key, &["procurement:edit"]), "{key}");
+        }
+
+        for key in [
+            "procurement.requisitions.approve",
+            "procurement.requisitions.reject",
+            "procurement.purchase_orders.issue",
+            "procurement.purchase_orders.cancel",
+        ] {
+            assert!(!allowed(key, &["procurement:edit"]), "{key}");
+            assert!(allowed(key, &["procurement:approve"]), "{key}");
+        }
+
+        for key in [
+            "procurement.goods_receipts.create",
+            "procurement.goods_receipts.update",
+            "procurement.goods_receipts.post",
+        ] {
+            assert!(!allowed(key, &["procurement:edit"]), "{key}");
+            assert!(allowed(key, &["procurement:receive"]), "{key}");
         }
     }
 

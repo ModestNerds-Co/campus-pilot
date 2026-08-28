@@ -3453,6 +3453,545 @@
       ]
     },
     {
+      "name": "Procurement",
+      "description": "All 27 shipped Procurement routes. Procurement owns suppliers, requisitions, purchase orders, and goods receipts; requester candidates come from HR and currencies come from Finance. Purchase-order issue/cancel requires procurement:approve, receiving mutations require procurement:receive, and all other routes use their exact catalogued Procurement permission.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Reference Data",
+          "item": [
+            {
+              "name": "Read Procurement Reference Data",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/procurement/reference-data",
+                "description": "Returns active Finance-owned currencies available to Procurement."
+              }
+            },
+            {
+              "name": "List Requester Candidates",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/procurement/requester-candidates",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "procurement",
+                    "requester-candidates"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Optional HR employee-number or name search."
+                    }
+                  ]
+                },
+                "description": "Returns the minimum-field projection of active HR-owned employees eligible to request supplies."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Suppliers",
+          "item": [
+            {
+              "name": "List Suppliers",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/procurement/suppliers?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "procurement",
+                    "suppliers"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "disabled": true,
+                      "description": "active or inactive"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Supplier",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/procurement/suppliers/{{procurement_supplier_id}}"
+              }
+            },
+            {
+              "name": "Create Supplier",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"legal_name\": \"Campus Stationery Supplies (Pvt) Ltd\",\n  \"trading_name\": \"Campus Stationery\",\n  \"registration_number\": \"BW00001234\",\n  \"tax_number\": \"TAX-00001234\",\n  \"email\": \"orders@example.com\",\n  \"phone\": \"+267 390 0000\",\n  \"address\": \"Plot 100, Gaborone\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/suppliers"
+              }
+            },
+            {
+              "name": "Update Supplier",
+              "request": {
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"legal_name\": \"Campus Stationery Supplies (Pvt) Ltd\",\n  \"trading_name\": \"Campus Stationery\",\n  \"registration_number\": \"BW00001234\",\n  \"tax_number\": \"TAX-00001234\",\n  \"email\": \"orders@example.com\",\n  \"phone\": \"+267 390 0000\",\n  \"address\": \"Plot 100, Gaborone\",\n  \"status\": \"active\",\n  \"expected_version\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/suppliers/{{procurement_supplier_id}}"
+              }
+            },
+            {
+              "name": "Delete Supplier",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/procurement/suppliers/{{procurement_supplier_id}}?expected_version=1",
+                "description": "Soft-deletes the supplier using the required optimistic expected_version query parameter."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requisitions",
+          "item": [
+            {
+              "name": "List Requisitions",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/procurement/requisitions?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "procurement",
+                    "requisitions"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "draft",
+                      "disabled": true,
+                      "description": "draft, submitted, approved, rejected, or cancelled"
+                    },
+                    {
+                      "key": "requester_employee_id",
+                      "value": "{{procurement_requester_employee_id}}",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Requisition",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}"
+              }
+            },
+            {
+              "name": "Create Requisition",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"requester_employee_id\": \"{{procurement_requester_employee_id}}\",\n  \"currency_id\": \"{{procurement_currency_id}}\",\n  \"title\": \"Term stationery replenishment\",\n  \"purpose\": \"Replenish classroom supplies before the next term\",\n  \"needed_by\": \"2026-09-30\",\n  \"idempotency_key\": \"{{$guid}}\",\n  \"lines\": [\n    {\n      \"description\": \"A4 exercise books\",\n      \"quantity\": 100,\n      \"unit_label\": \"books\",\n      \"estimated_unit_amount_minor\": 2500,\n      \"preferred_supplier_id\": \"{{procurement_supplier_id}}\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/requisitions"
+              }
+            },
+            {
+              "name": "Update Requisition",
+              "request": {
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"requester_employee_id\": \"{{procurement_requester_employee_id}}\",\n  \"currency_id\": \"{{procurement_currency_id}}\",\n  \"title\": \"Term stationery replenishment\",\n  \"purpose\": \"Replenish classroom supplies before the next term\",\n  \"needed_by\": \"2026-09-30\",\n  \"expected_version\": 1,\n  \"lines\": [\n    {\n      \"description\": \"A4 exercise books\",\n      \"quantity\": 120,\n      \"unit_label\": \"books\",\n      \"estimated_unit_amount_minor\": 2500,\n      \"preferred_supplier_id\": \"{{procurement_supplier_id}}\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}"
+              }
+            },
+            {
+              "name": "Delete Requisition",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}?expected_version=1"
+              }
+            },
+            {
+              "name": "Submit Requisition",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}/submit"
+              }
+            },
+            {
+              "name": "Approve Requisition",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 2,\n  \"note\": \"Approved within the term supply budget\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}/approve",
+                "description": "Requires procurement:approve and a different actor from the requester."
+              }
+            },
+            {
+              "name": "Reject Requisition",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 2,\n  \"note\": \"Revise the quantities and resubmit\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}/reject",
+                "description": "Requires procurement:approve."
+              }
+            },
+            {
+              "name": "Cancel Requisition",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 1,\n  \"note\": \"The supplies are no longer required\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/requisitions/{{procurement_requisition_id}}/cancel"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Purchase Orders",
+          "item": [
+            {
+              "name": "List Purchase Orders",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/procurement/purchase-orders?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "procurement",
+                    "purchase-orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "draft",
+                      "disabled": true,
+                      "description": "draft, issued, partially_received, received, or cancelled"
+                    },
+                    {
+                      "key": "requisition_id",
+                      "value": "{{procurement_requisition_id}}",
+                      "disabled": true
+                    },
+                    {
+                      "key": "supplier_id",
+                      "value": "{{procurement_supplier_id}}",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Purchase Order",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/procurement/purchase-orders/{{procurement_purchase_order_id}}"
+              }
+            },
+            {
+              "name": "Create Purchase Order",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"requisition_id\": \"{{procurement_requisition_id}}\",\n  \"supplier_id\": \"{{procurement_supplier_id}}\",\n  \"delivery_date\": \"2026-09-25\",\n  \"notes\": \"Deliver to the main administration store\",\n  \"idempotency_key\": \"{{$guid}}\",\n  \"lines\": [\n    {\n      \"requisition_line_id\": \"{{procurement_requisition_line_id}}\",\n      \"quantity_minor\": 100,\n      \"quantity_scale\": 0,\n      \"unit_amount_minor\": 2400\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/purchase-orders",
+                "description": "Creates a draft from one approved requisition and an active supplier."
+              }
+            },
+            {
+              "name": "Update Purchase Order",
+              "request": {
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"delivery_date\": \"2026-09-25\",\n  \"notes\": \"Deliver to the main administration store\",\n  \"expected_version\": 1,\n  \"lines\": [\n    {\n      \"requisition_line_id\": \"{{procurement_requisition_line_id}}\",\n      \"quantity_minor\": 100,\n      \"quantity_scale\": 0,\n      \"unit_amount_minor\": 2400\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/purchase-orders/{{procurement_purchase_order_id}}",
+                "description": "Only a draft may be updated, and the requisition line references cannot change."
+              }
+            },
+            {
+              "name": "Issue Purchase Order",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 1,\n  \"note\": \"Approved for issue to the supplier\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/purchase-orders/{{procurement_purchase_order_id}}/issue",
+                "description": "Requires procurement:approve, freezes the order details, and must be performed by someone other than the creator."
+              }
+            },
+            {
+              "name": "Cancel Purchase Order",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 1,\n  \"note\": \"Supplier can no longer fulfil the order\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/purchase-orders/{{procurement_purchase_order_id}}/cancel",
+                "description": "Requires procurement:approve. An order with any receipt cannot be cancelled."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Goods Receipts",
+          "item": [
+            {
+              "name": "List Goods Receipts",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/procurement/goods-receipts?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "procurement",
+                    "goods-receipts"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "draft",
+                      "disabled": true,
+                      "description": "draft or posted"
+                    },
+                    {
+                      "key": "purchase_order_id",
+                      "value": "{{procurement_purchase_order_id}}",
+                      "disabled": true
+                    },
+                    {
+                      "key": "supplier_id",
+                      "value": "{{procurement_supplier_id}}",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Goods Receipt",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/procurement/goods-receipts/{{procurement_goods_receipt_id}}"
+              }
+            },
+            {
+              "name": "Create Goods Receipt",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"purchase_order_id\": \"{{procurement_purchase_order_id}}\",\n  \"received_on\": \"2026-09-20\",\n  \"delivery_reference\": \"DN-2026-001\",\n  \"notes\": \"Received into the main administration store\",\n  \"idempotency_key\": \"{{$guid}}\",\n  \"lines\": [\n    {\n      \"purchase_order_line_id\": \"{{procurement_purchase_order_line_id}}\",\n      \"quantity_minor\": 60,\n      \"quantity_scale\": 0\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/goods-receipts",
+                "description": "Requires procurement:receive and creates a correctable draft against an open issued order."
+              }
+            },
+            {
+              "name": "Update Goods Receipt",
+              "request": {
+                "method": "PUT",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"received_on\": \"2026-09-20\",\n  \"delivery_reference\": \"DN-2026-001\",\n  \"notes\": \"Received into the main administration store\",\n  \"expected_version\": 1,\n  \"lines\": [\n    {\n      \"purchase_order_line_id\": \"{{procurement_purchase_order_line_id}}\",\n      \"quantity_minor\": 60,\n      \"quantity_scale\": 0\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/goods-receipts/{{procurement_goods_receipt_id}}",
+                "description": "Requires procurement:receive. The purchase order cannot be changed after draft creation."
+              }
+            },
+            {
+              "name": "Post Goods Receipt",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"expected_version\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/procurement/goods-receipts/{{procurement_goods_receipt_id}}/post",
+                "description": "Requires procurement:receive and a different actor from the creator. Posting is immutable, enforces cumulative ordered quantities, and updates the purchase-order receiving state."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Timetabling",
       "description": "Consumes the active Academics term and approved HR availability. Timetabling owns recurring schedule rules, rooms, generated snapshots, and publication.",
       "auth": {
@@ -4215,6 +4754,46 @@
     {
       "key": "ai_provider_connection_version",
       "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "procurement_supplier_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_requester_employee_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_currency_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_requisition_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_requisition_line_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_purchase_order_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_purchase_order_line_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "procurement_goods_receipt_id",
+      "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }
   ]

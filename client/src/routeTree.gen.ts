@@ -48,6 +48,8 @@ import { Route as ModulesSisEnrolmentsRouteImport } from './routes/modules/sis/e
 import { Route as ModulesSisApplicationsRouteImport } from './routes/modules/sis/applications'
 import { Route as ModulesProcurementSuppliersRouteImport } from './routes/modules/procurement/suppliers'
 import { Route as ModulesProcurementRequisitionsRouteImport } from './routes/modules/procurement/requisitions'
+import { Route as ModulesProcurementPurchaseOrdersRouteImport } from './routes/modules/procurement/purchase-orders'
+import { Route as ModulesProcurementGoodsReceiptsRouteImport } from './routes/modules/procurement/goods-receipts'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
 import { Route as ModulesHrPayrollImportsRouteImport } from './routes/modules/hr-payroll/imports'
 import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
@@ -78,6 +80,7 @@ import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/driv
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
 import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
+import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -277,6 +280,18 @@ const ModulesProcurementRequisitionsRoute =
     path: '/procurement/requisitions',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesProcurementPurchaseOrdersRoute =
+  ModulesProcurementPurchaseOrdersRouteImport.update({
+    id: '/procurement/purchase-orders',
+    path: '/procurement/purchase-orders',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesProcurementGoodsReceiptsRoute =
+  ModulesProcurementGoodsReceiptsRouteImport.update({
+    id: '/procurement/goods-receipts',
+    path: '/procurement/goods-receipts',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesHrPayrollPositionsRoute =
   ModulesHrPayrollPositionsRouteImport.update({
     id: '/hr-payroll/positions',
@@ -445,6 +460,12 @@ const ModulesProcurementRequisitionsRequisitionIdRoute =
     path: '/procurement/requisitions/$requisitionId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute =
+  ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport.update({
+    id: '/procurement/purchase-orders_/$purchaseOrderId',
+    path: '/procurement/purchase-orders/$purchaseOrderId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -505,6 +526,8 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
+  '/modules/procurement/purchase-orders': typeof ModulesProcurementPurchaseOrdersRoute
   '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
   '/modules/procurement/suppliers': typeof ModulesProcurementSuppliersRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
@@ -515,6 +538,7 @@ export interface FileRoutesByFullPath {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 export interface FileRoutesByTo {
@@ -575,6 +599,8 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
+  '/modules/procurement/purchase-orders': typeof ModulesProcurementPurchaseOrdersRoute
   '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
   '/modules/procurement/suppliers': typeof ModulesProcurementSuppliersRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
@@ -585,6 +611,7 @@ export interface FileRoutesByTo {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 export interface FileRoutesById {
@@ -647,6 +674,8 @@ export interface FileRoutesById {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
+  '/modules/procurement/purchase-orders': typeof ModulesProcurementPurchaseOrdersRoute
   '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
   '/modules/procurement/suppliers': typeof ModulesProcurementSuppliersRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
@@ -657,6 +686,7 @@ export interface FileRoutesById {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
+  '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 export interface FileRouteTypes {
@@ -720,6 +750,8 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/procurement/goods-receipts'
+    | '/modules/procurement/purchase-orders'
     | '/modules/procurement/requisitions'
     | '/modules/procurement/suppliers'
     | '/modules/sis/applications'
@@ -730,6 +762,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -790,6 +823,8 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/procurement/goods-receipts'
+    | '/modules/procurement/purchase-orders'
     | '/modules/procurement/requisitions'
     | '/modules/procurement/suppliers'
     | '/modules/sis/applications'
@@ -800,6 +835,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
   id:
     | '__root__'
@@ -861,6 +897,8 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/procurement/goods-receipts'
+    | '/modules/procurement/purchase-orders'
     | '/modules/procurement/requisitions'
     | '/modules/procurement/suppliers'
     | '/modules/sis/applications'
@@ -871,6 +909,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet/'
+    | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
   fileRoutesById: FileRoutesById
 }
@@ -1162,6 +1201,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesProcurementRequisitionsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/procurement/purchase-orders': {
+      id: '/modules/procurement/purchase-orders'
+      path: '/procurement/purchase-orders'
+      fullPath: '/modules/procurement/purchase-orders'
+      preLoaderRoute: typeof ModulesProcurementPurchaseOrdersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/procurement/goods-receipts': {
+      id: '/modules/procurement/goods-receipts'
+      path: '/procurement/goods-receipts'
+      fullPath: '/modules/procurement/goods-receipts'
+      preLoaderRoute: typeof ModulesProcurementGoodsReceiptsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/hr-payroll/positions': {
       id: '/modules/hr-payroll/positions'
       path: '/hr-payroll/positions'
@@ -1372,6 +1425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesProcurementRequisitionsRequisitionIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/procurement/purchase-orders_/$purchaseOrderId': {
+      id: '/modules/procurement/purchase-orders_/$purchaseOrderId'
+      path: '/procurement/purchase-orders/$purchaseOrderId'
+      fullPath: '/modules/procurement/purchase-orders/$purchaseOrderId'
+      preLoaderRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
   }
 }
 
@@ -1455,6 +1515,8 @@ interface ModulesRouteChildren {
   ModulesHrPayrollEmploymentRoute: typeof ModulesHrPayrollEmploymentRoute
   ModulesHrPayrollImportsRoute: typeof ModulesHrPayrollImportsRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
+  ModulesProcurementGoodsReceiptsRoute: typeof ModulesProcurementGoodsReceiptsRoute
+  ModulesProcurementPurchaseOrdersRoute: typeof ModulesProcurementPurchaseOrdersRoute
   ModulesProcurementRequisitionsRoute: typeof ModulesProcurementRequisitionsRoute
   ModulesProcurementSuppliersRoute: typeof ModulesProcurementSuppliersRoute
   ModulesSisApplicationsRoute: typeof ModulesSisApplicationsRoute
@@ -1464,6 +1526,7 @@ interface ModulesRouteChildren {
   ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
   ModulesSisSettingsRoute: typeof ModulesSisSettingsRoute
+  ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 
@@ -1496,6 +1559,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHrPayrollEmploymentRoute: ModulesHrPayrollEmploymentRoute,
   ModulesHrPayrollImportsRoute: ModulesHrPayrollImportsRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
+  ModulesProcurementGoodsReceiptsRoute: ModulesProcurementGoodsReceiptsRoute,
+  ModulesProcurementPurchaseOrdersRoute: ModulesProcurementPurchaseOrdersRoute,
   ModulesProcurementRequisitionsRoute: ModulesProcurementRequisitionsRoute,
   ModulesProcurementSuppliersRoute: ModulesProcurementSuppliersRoute,
   ModulesSisApplicationsRoute: ModulesSisApplicationsRoute,
@@ -1505,6 +1570,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
   ModulesSisSettingsRoute: ModulesSisSettingsRoute,
+  ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
+    ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:
     ModulesProcurementRequisitionsRequisitionIdRoute,
 }

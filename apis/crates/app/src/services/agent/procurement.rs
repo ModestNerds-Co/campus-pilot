@@ -12,6 +12,8 @@ use cp_agent::{
 use cp_common::PaginationMeta;
 use cp_hr_payroll::models::EmployeeReference;
 use cp_procurement::{
+    goods_receipts::{GoodsReceiptOps, GoodsReceiptResponse, GoodsReceiptSummary},
+    purchase_orders::{PurchaseOrderOps, PurchaseOrderResponse, PurchaseOrderSummary},
     requisitions::{
         ProcurementReferenceOps, RequisitionOps, RequisitionResponse, RequisitionSummary,
     },
@@ -297,6 +299,174 @@ impl Capability for ProcurementRequisitionsListCapability {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub(super) struct ProcurementPurchaseOrdersListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    status: Option<String>,
+    requisition_id: Option<Uuid>,
+    supplier_id: Option<Uuid>,
+}
+
+pub(super) struct ProcurementPurchaseOrdersListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl ProcurementPurchaseOrdersListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "procurement.purchase_orders.list",
+                "List Procurement purchase orders",
+                "Returns bounded purchase-order snapshots and receiving state without internal actor or login-link identifiers.",
+                json!({
+                    "page": page_schema(),
+                    "per_page": per_page_schema(),
+                    "search": search_schema(),
+                    "status": { "type": ["string", "null"], "maxLength": 40 },
+                    "requisition_id": { "type": ["string", "null"], "format": "uuid" },
+                    "supplier_id": { "type": ["string", "null"], "format": "uuid" }
+                }),
+                json!({
+                    "purchase_orders": { "type": "array" },
+                    "pagination": { "type": "object" }
+                }),
+                DataSensitivity::Sensitive,
+                "procurement.purchase_orders",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for ProcurementPurchaseOrdersListCapability {
+    type Input = ProcurementPurchaseOrdersListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (purchase_orders, total) = PurchaseOrderOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            trimmed(input.status.as_deref()),
+            input.requisition_id,
+            input.supplier_id,
+        )
+        .await
+        .map_err(|_| dependency_failure("Procurement purchase orders could not be loaded."))?;
+        Ok(json!({
+            "purchase_orders": purchase_orders
+                .iter()
+                .map(purchase_order_summary_projection)
+                .collect::<Vec<_>>(),
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ProcurementGoodsReceiptsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    status: Option<String>,
+    purchase_order_id: Option<Uuid>,
+    supplier_id: Option<Uuid>,
+}
+
+pub(super) struct ProcurementGoodsReceiptsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl ProcurementGoodsReceiptsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "procurement.goods_receipts.list",
+                "List Procurement goods receipts",
+                "Returns bounded receipt snapshots and posting state without internal actor identifiers.",
+                json!({
+                    "page": page_schema(),
+                    "per_page": per_page_schema(),
+                    "search": search_schema(),
+                    "status": { "type": ["string", "null"], "maxLength": 40 },
+                    "purchase_order_id": { "type": ["string", "null"], "format": "uuid" },
+                    "supplier_id": { "type": ["string", "null"], "format": "uuid" }
+                }),
+                json!({
+                    "goods_receipts": { "type": "array" },
+                    "pagination": { "type": "object" }
+                }),
+                DataSensitivity::Sensitive,
+                "procurement.goods_receipts",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for ProcurementGoodsReceiptsListCapability {
+    type Input = ProcurementGoodsReceiptsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (goods_receipts, total) = GoodsReceiptOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            trimmed(input.status.as_deref()),
+            input.purchase_order_id,
+            input.supplier_id,
+        )
+        .await
+        .map_err(|_| dependency_failure("Procurement goods receipts could not be loaded."))?;
+        Ok(json!({
+            "goods_receipts": goods_receipts
+                .iter()
+                .map(goods_receipt_summary_projection)
+                .collect::<Vec<_>>(),
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct ProcurementRecordInput {
     record_id: Uuid,
 }
@@ -305,6 +475,8 @@ pub(super) struct ProcurementRecordInput {
 pub(super) enum ProcurementReadKind {
     Supplier,
     Requisition,
+    PurchaseOrder,
+    GoodsReceipt,
 }
 
 impl ProcurementReadKind {
@@ -312,6 +484,8 @@ impl ProcurementReadKind {
         match self {
             Self::Supplier => "procurement.suppliers.read",
             Self::Requisition => "procurement.requisitions.read",
+            Self::PurchaseOrder => "procurement.purchase_orders.read",
+            Self::GoodsReceipt => "procurement.goods_receipts.read",
         }
     }
 }
@@ -334,6 +508,16 @@ impl ProcurementReadCapability {
                 "Read Procurement requisition",
                 "Returns one requisition with its lines and controlled approval state without login-link identifiers.",
                 "procurement.requisitions",
+            ),
+            ProcurementReadKind::PurchaseOrder => (
+                "Read Procurement purchase order",
+                "Returns one purchase order with immutable source snapshots and lines without internal actor or login-link identifiers.",
+                "procurement.purchase_orders",
+            ),
+            ProcurementReadKind::GoodsReceipt => (
+                "Read Procurement goods receipt",
+                "Returns one goods receipt with immutable source snapshots and lines without internal actor identifiers.",
+                "procurement.goods_receipts",
             ),
         };
         Self {
@@ -365,6 +549,8 @@ impl Capability for ProcurementReadCapability {
         let resource_kind = match self.kind {
             ProcurementReadKind::Supplier => "procurement_supplier",
             ProcurementReadKind::Requisition => "procurement_requisition",
+            ProcurementReadKind::PurchaseOrder => "procurement_purchase_order",
+            ProcurementReadKind::GoodsReceipt => "procurement_goods_receipt",
         };
         resource_scope(resource_kind, input.record_id)
     }
@@ -391,6 +577,22 @@ impl Capability for ProcurementReadCapability {
                         dependency_failure("The Procurement requisition could not be loaded.")
                     })?
                     .map(|requisition| requisition_projection(&requisition))
+            }
+            ProcurementReadKind::PurchaseOrder => {
+                PurchaseOrderOps::get(&self.pool, tenant_id, input.record_id)
+                    .await
+                    .map_err(|_| {
+                        dependency_failure("The Procurement purchase order could not be loaded.")
+                    })?
+                    .map(|purchase_order| purchase_order_projection(&purchase_order))
+            }
+            ProcurementReadKind::GoodsReceipt => {
+                GoodsReceiptOps::get(&self.pool, tenant_id, input.record_id)
+                    .await
+                    .map_err(|_| {
+                        dependency_failure("The Procurement goods receipt could not be loaded.")
+                    })?
+                    .map(|goods_receipt| goods_receipt_projection(&goods_receipt))
             }
         }
         .ok_or_else(|| {
@@ -465,6 +667,78 @@ fn requisition_projection(requisition: &RequisitionResponse) -> Value {
     })
 }
 
+fn purchase_order_summary_projection(purchase_order: &PurchaseOrderSummary) -> Value {
+    json!({
+        "id": purchase_order.id,
+        "purchase_order_number": purchase_order.purchase_order_number,
+        "requisition_id": purchase_order.requisition_id,
+        "requisition_number": purchase_order.requisition_number,
+        "requisition_title": purchase_order.requisition_title,
+        "requisition_purpose": purchase_order.requisition_purpose,
+        "requisition_needed_by": purchase_order.requisition_needed_by,
+        "requester_employee_id": purchase_order.requester_employee_id,
+        "requester_employee_number": purchase_order.requester_employee_number,
+        "requester_name": purchase_order.requester_name,
+        "supplier_id": purchase_order.supplier_id,
+        "supplier_number": purchase_order.supplier_number,
+        "supplier_name": purchase_order.supplier_name,
+        "currency_id": purchase_order.currency_id,
+        "currency_code": purchase_order.currency_code,
+        "currency_minor_units": purchase_order.currency_minor_units,
+        "delivery_date": purchase_order.delivery_date,
+        "notes": purchase_order.notes,
+        "status": purchase_order.status,
+        "version": purchase_order.version,
+        "total_minor": purchase_order.total_minor,
+        "line_count": purchase_order.line_count,
+        "issued_at": purchase_order.issued_at,
+        "cancelled_at": purchase_order.cancelled_at,
+        "cancellation_note": purchase_order.cancellation_note,
+        "created_at": purchase_order.created_at,
+        "updated_at": purchase_order.updated_at
+    })
+}
+
+fn purchase_order_projection(purchase_order: &PurchaseOrderResponse) -> Value {
+    json!({
+        "summary": purchase_order_summary_projection(&purchase_order.summary),
+        "lines": purchase_order.lines
+    })
+}
+
+fn goods_receipt_summary_projection(goods_receipt: &GoodsReceiptSummary) -> Value {
+    json!({
+        "id": goods_receipt.id,
+        "goods_receipt_number": goods_receipt.goods_receipt_number,
+        "purchase_order_id": goods_receipt.purchase_order_id,
+        "purchase_order_number": goods_receipt.purchase_order_number,
+        "requisition_id": goods_receipt.requisition_id,
+        "requisition_number": goods_receipt.requisition_number,
+        "supplier_id": goods_receipt.supplier_id,
+        "supplier_number": goods_receipt.supplier_number,
+        "supplier_name": goods_receipt.supplier_name,
+        "currency_id": goods_receipt.currency_id,
+        "currency_code": goods_receipt.currency_code,
+        "currency_minor_units": goods_receipt.currency_minor_units,
+        "received_on": goods_receipt.received_on,
+        "delivery_reference": goods_receipt.delivery_reference,
+        "notes": goods_receipt.notes,
+        "status": goods_receipt.status,
+        "version": goods_receipt.version,
+        "line_count": goods_receipt.line_count,
+        "posted_at": goods_receipt.posted_at,
+        "created_at": goods_receipt.created_at,
+        "updated_at": goods_receipt.updated_at
+    })
+}
+
+fn goods_receipt_projection(goods_receipt: &GoodsReceiptResponse) -> Value {
+    json!({
+        "summary": goods_receipt_summary_projection(&goods_receipt.summary),
+        "lines": goods_receipt.lines
+    })
+}
+
 fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {
     (
         page.unwrap_or(1).max(1),
@@ -502,12 +776,15 @@ fn search_schema() -> Value {
 mod tests {
     use chrono::Utc;
     use cp_hr_payroll::models::EmployeeReference;
-    use cp_procurement::{requisitions::RequisitionSummary, suppliers::SupplierResponse};
+    use cp_procurement::{
+        goods_receipts::GoodsReceiptSummary, purchase_orders::PurchaseOrderSummary,
+        requisitions::RequisitionSummary, suppliers::SupplierResponse,
+    };
     use uuid::Uuid;
 
     use super::{
-        bounded_page, requester_projection, requisition_summary_projection, supplier_projection,
-        trimmed,
+        bounded_page, goods_receipt_summary_projection, purchase_order_summary_projection,
+        requester_projection, requisition_summary_projection, supplier_projection, trimmed,
     };
 
     #[test]
@@ -598,5 +875,83 @@ mod tests {
         }
         assert_eq!(requisition_json["currency_code"], "USD");
         assert_eq!(requisition_json["total_minor"], 10_000);
+
+        let purchase_order = PurchaseOrderSummary {
+            id: Uuid::new_v4(),
+            purchase_order_number: "PO-000001".to_string(),
+            requisition_id: requisition.id,
+            requisition_number: requisition.requisition_number,
+            requisition_title: requisition.title,
+            requisition_purpose: None,
+            requisition_needed_by: None,
+            requester_employee_id: employee.id,
+            requester_account_id: Some(account_id),
+            requester_employee_number: "EMP-0001".to_string(),
+            requester_name: "Sam Requester".to_string(),
+            supplier_id: supplier.id,
+            supplier_number: supplier.supplier_number,
+            supplier_name: supplier.legal_name,
+            currency_id: Uuid::new_v4(),
+            currency_code: "USD".to_string(),
+            currency_minor_units: 2,
+            delivery_date: None,
+            notes: None,
+            status: "issued".to_string(),
+            version: 2,
+            total_minor: 10_000,
+            line_count: 1,
+            created_by: actor_id,
+            prepared_by: actor_id,
+            issued_by: Some(Uuid::new_v4()),
+            issued_at: Some(now),
+            cancelled_by: None,
+            cancelled_at: None,
+            cancellation_note: None,
+            created_at: now,
+            updated_at: now,
+        };
+        let purchase_order_json = purchase_order_summary_projection(&purchase_order);
+        for omitted in [
+            "requester_account_id",
+            "created_by",
+            "prepared_by",
+            "issued_by",
+            "cancelled_by",
+        ] {
+            assert!(purchase_order_json.get(omitted).is_none(), "{omitted}");
+        }
+        assert_eq!(purchase_order_json["purchase_order_number"], "PO-000001");
+
+        let goods_receipt = GoodsReceiptSummary {
+            id: Uuid::new_v4(),
+            goods_receipt_number: "GRN-000001".to_string(),
+            purchase_order_id: purchase_order.id,
+            purchase_order_number: purchase_order.purchase_order_number,
+            requisition_id: purchase_order.requisition_id,
+            requisition_number: purchase_order.requisition_number,
+            supplier_id: purchase_order.supplier_id,
+            supplier_number: purchase_order.supplier_number,
+            supplier_name: purchase_order.supplier_name,
+            currency_id: purchase_order.currency_id,
+            currency_code: purchase_order.currency_code,
+            currency_minor_units: purchase_order.currency_minor_units,
+            received_on: now.date_naive(),
+            delivery_reference: None,
+            notes: None,
+            status: "posted".to_string(),
+            version: 2,
+            line_count: 1,
+            created_by: actor_id,
+            prepared_by: actor_id,
+            posted_by: Some(Uuid::new_v4()),
+            posted_at: Some(now),
+            created_at: now,
+            updated_at: now,
+        };
+        let goods_receipt_json = goods_receipt_summary_projection(&goods_receipt);
+        for omitted in ["created_by", "prepared_by", "posted_by"] {
+            assert!(goods_receipt_json.get(omitted).is_none(), "{omitted}");
+        }
+        assert_eq!(goods_receipt_json["goods_receipt_number"], "GRN-000001");
     }
 }
