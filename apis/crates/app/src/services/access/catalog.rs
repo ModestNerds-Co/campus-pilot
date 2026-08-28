@@ -310,6 +310,16 @@ pub fn administration_permissions() -> Vec<PermissionDefinition> {
             "Manage AI providers",
             "Connect, test, rotate, refresh, and disconnect AI providers.",
         ),
+        (
+            "ai_routing:view",
+            "View AI routing",
+            "Read Agent provider and model routing rules.",
+        ),
+        (
+            "ai_routing:edit",
+            "Manage AI routing",
+            "Create, change, and archive Agent provider and model routing rules.",
+        ),
     ]
     .into_iter()
     .map(|(key, label, description)| PermissionDefinition {
@@ -415,6 +425,8 @@ mod tests {
 
     const PROCUREMENT_WORKFLOW_PERMISSION_MIGRATION: &str =
         include_str!("../../../../../migrations/080_grant_procurement_workflow_permissions.sql");
+    const AI_ROUTING_MIGRATION: &str =
+        include_str!("../../../../../migrations/083_create_ai_task_routing.sql");
 
     #[test]
     fn procurement_permissions_separate_approval_and_receiving_authority() {
@@ -472,6 +484,20 @@ mod tests {
             .map(str::to_string)
             .collect()
         );
+    }
+
+    #[test]
+    fn agent_routing_permissions_are_code_owned_administration_permissions() {
+        let permissions = all_permission_keys().into_iter().collect::<BTreeSet<_>>();
+
+        assert!(permissions.contains("ai_routing:view"));
+        assert!(permissions.contains("ai_routing:edit"));
+        assert!(AI_ROUTING_MIGRATION.contains("key = 'school_administrator'"));
+        assert!(
+            AI_ROUTING_MIGRATION.contains("ARRAY['ai_routing:view', 'ai_routing:edit']::TEXT[]")
+        );
+        assert!(AI_ROUTING_MIGRATION.contains("zz_grant_new_tenant_ai_routing_permissions"));
+        assert!(!AI_ROUTING_MIGRATION.contains("UPDATE roles\nSET permissions"));
     }
 
     #[test]
@@ -546,7 +572,7 @@ mod tests {
             );
             if module_key == "administration" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 12);
+                assert_eq!(module.executable_capabilities(), 16);
             } else if module_key == "academics" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 19);

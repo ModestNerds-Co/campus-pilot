@@ -4,6 +4,7 @@ members = [
     "crates/common",
     "crates/agent",
     "crates/platform/audit",
+    "crates/platform/agent-runtime",
     "crates/platform/ai-providers",
     "crates/platform/imports",
     "crates/app",

@@ -243,6 +243,70 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // Administration: ordered Agent provider/model routing.
+        route(
+            Method::GET,
+            "/api/1.0/ai/routes",
+            "administration.ai_routing.routes.list",
+            "administration",
+            "ai_routing:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/ai/routes/options",
+            "administration.ai_routing.routes.options",
+            "administration",
+            "ai_routing:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/ai/routes/resolve",
+            "administration.ai_routing.routes.resolve",
+            "administration",
+            "ai_routing:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/ai/routes",
+            "administration.ai_routing.routes.create",
+            "administration",
+            "ai_routing:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/ai/routes/{route_set_id}",
+            "administration.ai_routing.routes.read",
+            "administration",
+            "ai_routing:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/ai/routes/{route_set_id}",
+            "administration.ai_routing.routes.update",
+            "administration",
+            "ai_routing:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/ai/routes/{route_set_id}",
+            "administration.ai_routing.routes.archive",
+            "administration",
+            "ai_routing:edit",
+            OperationEffect::Write,
+            true,
+        ),
         // Administration: roles.
         route(
             Method::GET,
@@ -2612,7 +2676,9 @@ fn route(
     );
     let operation = if key.starts_with("assets_inventory.goods_receipt_allocations.") {
         operation.requiring_modules(["procurement".to_string()])
-    } else if key.starts_with("administration.ai_providers.") {
+    } else if key.starts_with("administration.ai_providers.")
+        || key.starts_with("administration.ai_routing.")
+    {
         operation.requiring_modules(["agent".to_string()])
     } else if key.starts_with("sis.") && !key.starts_with("sis.learner_numbering.") {
         operation.requiring_modules(["academics".to_string()])
@@ -2675,6 +2741,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.ai_providers.connections.list"
         | "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list"
+        | "administration.ai_routing.routes.list"
+        | "administration.ai_routing.routes.options"
+        | "administration.ai_routing.routes.read"
+        | "administration.ai_routing.routes.resolve"
         | "administration.roles.list"
         | "administration.roles.read"
         | "administration.users.list"
@@ -2783,6 +2853,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.ai_providers.connections.update"
         | "administration.ai_providers.connections.test"
         | "administration.ai_providers.models.refresh"
+        | "administration.ai_routing.routes.create"
+        | "administration.ai_routing.routes.update"
+        | "administration.ai_routing.routes.archive"
         | "administration.users.create"
         | "administration.users.update"
         | "administration.users.activate"
@@ -3036,7 +3109,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 275);
+        assert_eq!(operation_catalog().len(), 282);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -3088,7 +3161,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [111, 154, 10, 0]);
+        assert_eq!(counts, [115, 157, 10, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -3908,6 +3981,72 @@ mod tests {
             assert!(!decision.allowed);
             assert_eq!(decision.reason.as_str(), reason);
         }
+    }
+
+    #[test]
+    fn ai_routing_administration_requires_agent_and_exact_permissions() {
+        let list = operation("administration.ai_routing.routes.list");
+        assert_eq!(list.permission(), "ai_routing:view");
+        assert_eq!(list.required_modules().collect::<Vec<_>>(), vec!["agent"]);
+        assert!(list.license_required());
+        assert_eq!(list.agent_exposure().as_str(), "exposed");
+        let options = operation("administration.ai_routing.routes.options");
+        assert_eq!(options.permission(), "ai_routing:view");
+        assert_eq!(
+            options.required_modules().collect::<Vec<_>>(),
+            vec!["agent"]
+        );
+        assert!(options.license_required());
+        assert_eq!(options.agent_exposure().as_str(), "exposed");
+        assert_eq!(
+            operation("administration.ai_routing.routes.resolve")
+                .agent_exposure()
+                .as_str(),
+            "exposed"
+        );
+
+        for key in [
+            "administration.ai_routing.routes.create",
+            "administration.ai_routing.routes.update",
+            "administration.ai_routing.routes.archive",
+        ] {
+            assert_eq!(
+                operation(key).agent_exposure().as_str(),
+                "approval_required",
+                "{key} must not be directly executable"
+            );
+        }
+
+        assert!(allowed(
+            "administration.ai_routing.routes.read",
+            &["ai_routing:view"]
+        ));
+        assert!(!allowed(
+            "administration.ai_routing.routes.update",
+            &["ai_routing:view"]
+        ));
+        assert!(allowed(
+            "administration.ai_routing.routes.update",
+            &["ai_routing:edit"]
+        ));
+
+        let without_agent = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [(
+                "administration".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            vec![],
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let decision = evaluate_operation(
+            list,
+            &without_agent,
+            &["ai_routing:view".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(!decision.allowed);
+        assert_eq!(decision.reason.as_str(), "dependency_missing");
     }
 
     #[test]

@@ -17,6 +17,7 @@ import {
   Settings2,
   ShieldCheck,
   UsersRound,
+  Waypoints,
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -68,6 +69,7 @@ const navigationGroups: NavGroup[] = [
     label: "Agent management",
     items: [
       { label: "AI providers", href: "/admin/agent/providers", permission: "ai_providers:view", module: "agent", icon: Bot },
+      { label: "Routing", href: "/admin/agent/routing", permission: "ai_routing:view", module: "agent", icon: Waypoints },
     ],
   },
 ];

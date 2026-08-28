@@ -1,0 +1,16 @@
+[package]
+name = "cp-agent-runtime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cp-audit = { path = "../audit" }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+thiserror = "2"
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }

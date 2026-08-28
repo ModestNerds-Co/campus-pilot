@@ -7,6 +7,7 @@ edition = "2024"
 cp-common = { path = "../common" }
 cp-audit = { path = "../platform/audit" }
 cp-ai-providers = { path = "../platform/ai-providers" }
+cp-agent-runtime = { path = "../platform/agent-runtime" }
 cp-agent = { path = "../agent" }
 cp-fleet = { path = "../modules/fleet" }
 cp-vehicle-log = { path = "../modules/vehicle-log" }

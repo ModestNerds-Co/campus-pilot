@@ -83,6 +83,7 @@ import { Route as ModulesAcademicsAssessmentsRouteImport } from './routes/module
 import { Route as ModulesAcademicsAcademicYearsRouteImport } from './routes/modules/academics/academic-years'
 import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
+import { Route as AdminAgentRoutingRouteImport } from './routes/admin/agent/routing'
 import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
@@ -485,6 +486,11 @@ const AdminFleetDailyLogRoute = AdminFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAgentRoutingRoute = AdminAgentRoutingRouteImport.update({
+  id: '/agent/routing',
+  path: '/agent/routing',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAgentProvidersRoute = AdminAgentProvidersRouteImport.update({
   id: '/agent/providers',
   path: '/agent/providers',
@@ -540,6 +546,7 @@ export interface FileRoutesByFullPath {
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/agent/providers': typeof AdminAgentProvidersRoute
+  '/admin/agent/routing': typeof AdminAgentRoutingRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -619,6 +626,7 @@ export interface FileRoutesByTo {
   '/setup/school': typeof SetupSchoolRoute
   '/admin': typeof AdminIndexRoute
   '/admin/agent/providers': typeof AdminAgentProvidersRoute
+  '/admin/agent/routing': typeof AdminAgentRoutingRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -700,6 +708,7 @@ export interface FileRoutesById {
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/agent/providers': typeof AdminAgentProvidersRoute
+  '/admin/agent/routing': typeof AdminAgentRoutingRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -782,6 +791,7 @@ export interface FileRouteTypes {
     | '/setup/school'
     | '/admin/'
     | '/admin/agent/providers'
+    | '/admin/agent/routing'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -861,6 +871,7 @@ export interface FileRouteTypes {
     | '/setup/school'
     | '/admin'
     | '/admin/agent/providers'
+    | '/admin/agent/routing'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -941,6 +952,7 @@ export interface FileRouteTypes {
     | '/setup/school'
     | '/admin/'
     | '/admin/agent/providers'
+    | '/admin/agent/routing'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -1524,6 +1536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetDailyLogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/agent/routing': {
+      id: '/admin/agent/routing'
+      path: '/agent/routing'
+      fullPath: '/admin/agent/routing'
+      preLoaderRoute: typeof AdminAgentRoutingRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/agent/providers': {
       id: '/admin/agent/providers'
       path: '/agent/providers'
@@ -1575,6 +1594,7 @@ interface AdminRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminAgentProvidersRoute: typeof AdminAgentProvidersRoute
+  AdminAgentRoutingRoute: typeof AdminAgentRoutingRoute
   AdminFleetDailyLogRoute: typeof AdminFleetDailyLogRoute
   AdminFleetDriversRoute: typeof AdminFleetDriversRoute
   AdminFleetIndexRoute: typeof AdminFleetIndexRoute
@@ -1600,6 +1620,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminAgentProvidersRoute: AdminAgentProvidersRoute,
+  AdminAgentRoutingRoute: AdminAgentRoutingRoute,
   AdminFleetDailyLogRoute: AdminFleetDailyLogRoute,
   AdminFleetDriversRoute: AdminFleetDriversRoute,
   AdminFleetIndexRoute: AdminFleetIndexRoute,

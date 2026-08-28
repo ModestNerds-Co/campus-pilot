@@ -1412,6 +1412,7 @@ dependencies = [
  "chrono",
  "cp-academics",
  "cp-agent",
+ "cp-agent-runtime",
  "cp-ai-providers",
  "cp-assets-inventory",
  "cp-audit",
@@ -1650,6 +1651,20 @@ dependencies = [
  "async-trait",
  "cp-audit",
  "cp-common",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.16",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "cp-agent-runtime"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "cp-audit",
  "serde",
  "serde_json",
  "sqlx",

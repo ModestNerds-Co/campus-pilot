@@ -8,7 +8,7 @@
 
 use crate::middleware::AuthMiddleware;
 use crate::models::api_response::ApiResponse;
-use crate::services::{access, ai_providers, auth, kernel, roles, storage, users};
+use crate::services::{access, ai_providers, ai_routing, auth, kernel, roles, storage, users};
 use actix_web::http::StatusCode;
 use actix_web::web::{ServiceConfig, scope};
 use actix_web::{HttpResponse, Responder, get};
@@ -41,7 +41,8 @@ pub fn init(cfg: &mut ServiceConfig) {
                 scope("/ai")
                     .wrap(RequirePermission::new("ai_providers"))
                     .wrap(AuthMiddleware)
-                    .configure(ai_providers::routes::routes),
+                    .configure(ai_providers::routes::routes)
+                    .configure(ai_routing::routes::routes),
             )
             .service(scope("/kernel").configure(kernel::routes::init))
             .service(scope("/storage").configure(storage::routes::init))
@@ -218,6 +219,48 @@ mod route_wiring_tests {
                 format!("/api/1.0/ai/connections/{record_id}"),
                 "/api/1.0/ai/connections/{connection_id}",
                 "administration.ai_providers.connections.disconnect",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/ai/routes".to_string(),
+                "/api/1.0/ai/routes",
+                "administration.ai_routing.routes.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/ai/routes/options".to_string(),
+                "/api/1.0/ai/routes/options",
+                "administration.ai_routing.routes.options",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/ai/routes/resolve".to_string(),
+                "/api/1.0/ai/routes/resolve",
+                "administration.ai_routing.routes.resolve",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/ai/routes".to_string(),
+                "/api/1.0/ai/routes",
+                "administration.ai_routing.routes.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/ai/routes/{record_id}"),
+                "/api/1.0/ai/routes/{route_set_id}",
+                "administration.ai_routing.routes.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/ai/routes/{record_id}"),
+                "/api/1.0/ai/routes/{route_set_id}",
+                "administration.ai_routing.routes.update",
+            ),
+            (
+                Method::DELETE,
+                format!("/api/1.0/ai/routes/{record_id}"),
+                "/api/1.0/ai/routes/{route_set_id}",
+                "administration.ai_routing.routes.archive",
             ),
             (
                 Method::GET,

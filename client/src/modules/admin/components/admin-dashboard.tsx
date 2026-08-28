@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Bot, Grid2X2, KeyRound, Settings2, ShieldCheck, UsersRound } from "lucide-react";
+import { ArrowRight, Bot, Grid2X2, KeyRound, Settings2, ShieldCheck, UsersRound, Waypoints } from "lucide-react";
 
 import { useAuthStore } from "@/stores/auth-store";
 import { usePageChrome } from "../layouts/page-chrome";
@@ -11,6 +11,7 @@ const administrationAreas = [
   { title: "Licensing", description: "Review installation licensing and module access.", href: "/admin/licensing" as const, icon: KeyRound, action: "Review licensing", permission: "licensing:view" },
   { title: "School settings", description: "Manage campus identity, academic defaults, notifications, and integrations.", href: "/admin/settings" as const, icon: Settings2, action: "Open settings", permission: "school_settings:view" },
   { title: "AI providers", description: "Connect and test the model providers available to Agent.", href: "/admin/agent/providers" as const, icon: Bot, action: "Manage providers", permission: "ai_providers:view", module: "agent" },
+  { title: "Routing", description: "Set provider and model fallback order for Agent work.", href: "/admin/agent/routing" as const, icon: Waypoints, action: "Manage routes", permission: "ai_routing:view", module: "agent" },
 ];
 
 export const AdminDashboard: React.FC = () => {

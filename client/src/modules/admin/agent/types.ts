@@ -80,3 +80,128 @@ export interface RotateProviderCredentialInput {
   expected_version: number;
 }
 
+export type AiRouteScopeKind =
+  | "tenant_default"
+  | "task_class"
+  | "module_operation"
+  | "capability";
+
+export type AiTaskClass =
+  | "campus_conversation_search"
+  | "module_read_reporting"
+  | "document_extraction"
+  | "drafting_proposal"
+  | "approved_operational_action";
+
+export type AiOperationClass = "read" | "propose" | "mutate" | "external_side_effect";
+export type AiRouteTargetReadiness =
+  | "ready"
+  | "connection_unavailable"
+  | "stale_model"
+  | "tools_unsupported";
+
+export type AiTaskRouteScope =
+  | { scope_kind: "tenant_default" }
+  | { scope_kind: "task_class"; task_class: AiTaskClass }
+  | { scope_kind: "module_operation"; module_key: string; operation_class: AiOperationClass }
+  | { scope_kind: "capability"; capability_key: string; capability_version: number };
+
+export interface AiTaskRouteTarget {
+  id: string;
+  priority: number;
+  connection_id: string;
+  provider: string;
+  account_label: string;
+  provider_model_id: string;
+  model_display_name: string;
+  context_window_tokens: number | null;
+  supports_tools: boolean | null;
+  readiness: AiRouteTargetReadiness;
+}
+
+export interface AiTaskRoute {
+  id: string;
+  scope: AiTaskRouteScope;
+  requires_tools: boolean;
+  targets: AiTaskRouteTarget[];
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AiTaskRouteTargetInput {
+  connection_id: string;
+  provider_model_id: string;
+}
+
+export interface CreateAiTaskRouteInput {
+  scope_kind: AiRouteScopeKind;
+  task_class?: AiTaskClass;
+  module_key?: string;
+  operation_class?: AiOperationClass;
+  capability_key?: string;
+  capability_version?: number;
+  requires_tools: boolean;
+  targets: AiTaskRouteTargetInput[];
+  audit_reason: string;
+}
+
+export interface UpdateAiTaskRouteInput {
+  expected_version: number;
+  requires_tools: boolean;
+  targets: AiTaskRouteTargetInput[];
+  audit_reason: string;
+}
+
+export interface ResolveAiTaskRouteInput {
+  task_class: AiTaskClass;
+  module_key?: string;
+  operation_class?: AiOperationClass;
+  capability_key?: string;
+  capability_version?: number;
+  requires_tools: boolean;
+}
+
+export interface ResolvedAiTaskRoute {
+  route_set_id: string;
+  matched_scope: AiTaskRouteScope;
+  precedence: "capability" | "module_operation" | "task_class" | "tenant_default";
+  route_version: number;
+  requires_tools: boolean;
+  targets: AiTaskRouteTarget[];
+}
+
+export interface ArchivedAiTaskRoute {
+  archived_id: string;
+  version: number;
+}
+
+export interface AiRoutingTargetOption {
+  connection_id: string;
+  provider: string;
+  provider_label: string;
+  account_label: string;
+  provider_model_id: string;
+  model_display_name: string;
+  context_window_tokens: number | null;
+  supports_tools: boolean | null;
+}
+
+export interface AiRoutingCapabilityOption {
+  capability_key: string;
+  label: string;
+  module_key: string;
+  operation_class: AiOperationClass;
+  capability_version: number;
+}
+
+export interface AiRoutingModuleOption {
+  module_key: string;
+  label: string;
+}
+
+export interface AiRoutingOptions {
+  targets: AiRoutingTargetOption[];
+  capabilities: AiRoutingCapabilityOption[];
+  modules: AiRoutingModuleOption[];
+}

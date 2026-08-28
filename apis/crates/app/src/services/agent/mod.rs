@@ -5,6 +5,7 @@ mod academics;
 mod administration;
 mod administration_access;
 mod ai_providers;
+mod ai_routing;
 mod assets_inventory;
 mod fees;
 mod finance;
@@ -19,6 +20,9 @@ use sqlx::PgPool;
 
 use crate::config::LicenseConfig;
 
+use crate::services::ai_routing::selectors::{
+    routing_capability_option, routing_capability_options, sort_capability_options,
+};
 use academic_assessments::{
     AssessmentComponentReadCapability, AssessmentComponentsListCapability,
     AssessmentCycleReadCapability, AssessmentCyclesListCapability,
@@ -38,6 +42,10 @@ use administration_access::{
 use ai_providers::{
     AiProviderCatalogCapability, AiProviderConnectionReadCapability,
     AiProviderConnectionsListCapability, AiProviderModelsListCapability,
+};
+use ai_routing::{
+    AiRouteReadCapability, AiRouteResolveCapability, AiRoutesListCapability,
+    AiRoutingOptionsCapability,
 };
 use assets_inventory::{
     AssetsInventoryListCapability, AssetsInventoryListKind, AssetsInventoryReadCapability,
@@ -423,8 +431,40 @@ pub fn build_capability_registry(
         .register(TimetableRunReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling run-read capability: {error}"));
     registry
-        .register(LatestTimetableRunCapability::new(pool))
+        .register(LatestTimetableRunCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling latest-run capability: {error}"));
+    registry
+        .register(AiRoutesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid AI routes-list capability: {error}"));
+    registry
+        .register(AiRouteReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid AI route-read capability: {error}"));
+    let mut routing_capabilities = routing_capability_options(&registry);
+    for (key, label) in [
+        (
+            "administration.ai_routing.routes.options",
+            "List Agent routing options",
+        ),
+        (
+            "administration.ai_routing.routes.resolve",
+            "Resolve an Agent route",
+        ),
+    ] {
+        routing_capabilities.push(
+            routing_capability_option(key, 1, label)
+                .unwrap_or_else(|| panic!("invalid routing capability operation: {key}")),
+        );
+    }
+    sort_capability_options(&mut routing_capabilities);
+    registry
+        .register(AiRoutingOptionsCapability::new(
+            pool.clone(),
+            routing_capabilities.clone(),
+        ))
+        .unwrap_or_else(|error| panic!("invalid AI routing-options capability: {error}"));
+    registry
+        .register(AiRouteResolveCapability::new(pool, routing_capabilities))
+        .unwrap_or_else(|error| panic!("invalid AI route-resolution capability: {error}"));
     registry
 }
 
@@ -510,6 +550,7 @@ mod tests {
                 "assets_inventory:view".to_string(),
                 "assets_inventory:receive".to_string(),
                 "ai_providers:view".to_string(),
+                "ai_routing:view".to_string(),
             ],
             enabled_modules: vec![
                 "agent".to_string(),
@@ -599,6 +640,10 @@ mod tests {
                 "administration.ai_providers.connections.list",
                 "administration.ai_providers.connections.read",
                 "administration.ai_providers.models.list",
+                "administration.ai_routing.routes.list",
+                "administration.ai_routing.routes.options",
+                "administration.ai_routing.routes.read",
+                "administration.ai_routing.routes.resolve",
                 "administration.catalog.read",
                 "administration.licensing.read",
                 "administration.modules.list",
@@ -896,6 +941,74 @@ mod tests {
                 principal,
                 CapabilityCall::parse(
                     "administration.ai_providers.connections.list",
+                    1,
+                    json!({ "tenant_id": Uuid::new_v4() }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid.code(), BrokerErrorCode::InvalidInput);
+    }
+
+    #[tokio::test]
+    async fn production_ai_routing_reads_are_typed_and_fail_safely() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        pool.close().await;
+        let broker = CapabilityBroker::new(
+            build_capability_registry(pool, license_config()),
+            Arc::new(TestAuthorityLoader(authority())),
+            Arc::new(TenantWideScope),
+            Arc::new(TestAudit),
+        );
+        let principal =
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4());
+        let request_context = RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4());
+        for (key, input) in [
+            ("administration.ai_routing.routes.list", json!({})),
+            ("administration.ai_routing.routes.options", json!({})),
+            (
+                "administration.ai_routing.routes.read",
+                json!({ "route_set_id": Uuid::new_v4() }),
+            ),
+            (
+                "administration.ai_routing.routes.resolve",
+                json!({
+                    "task_class": "module_read_reporting",
+                    "module_key": "finance",
+                    "operation_class": "read",
+                    "capability_key": "finance.journals.list",
+                    "capability_version": 1,
+                    "requires_tools": true
+                }),
+            ),
+        ] {
+            let error = broker
+                .invoke(
+                    principal,
+                    CapabilityCall::parse(key, 1, input, request_context)
+                        .unwrap_or_else(|_| unreachable!()),
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| unreachable!());
+            assert_eq!(error.code(), BrokerErrorCode::ExecutionFailed, "{key}");
+            assert_eq!(
+                error.safe_message(),
+                "The capability could not be completed.",
+                "unsafe failure message for {key}"
+            );
+        }
+
+        let invalid = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "administration.ai_routing.routes.list",
                     1,
                     json!({ "tenant_id": Uuid::new_v4() }),
                     request_context,

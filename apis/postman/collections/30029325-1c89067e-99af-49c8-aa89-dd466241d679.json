@@ -5168,6 +5168,157 @@
       ]
     },
     {
+      "name": "AI Routing",
+      "item": [
+        {
+          "name": "List AI Routes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/routes",
+            "description": "Lists tenant-scoped Agent provider/model routes with reduced readiness state."
+          }
+        },
+        {
+          "name": "List AI Routing Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/routes/options",
+            "description": "Lists safe ready provider/model targets, registered executable capability labels, and module labels for route configuration."
+          }
+        },
+        {
+          "name": "Create AI Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scope_kind\": \"tenant_default\",\n  \"requires_tools\": true,\n  \"targets\": [\n    {\n      \"connection_id\": \"{{ai_provider_connection_id}}\",\n      \"provider_model_id\": \"{{ai_provider_model_id}}\"\n    }\n  ],\n  \"audit_reason\": \"Configure campus default Agent route\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/routes",
+            "description": "Creates an ordered route using a ready provider connection and the current immutable model snapshot."
+          }
+        },
+        {
+          "name": "Get AI Route",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/routes/{{ai_route_set_id}}"
+          }
+        },
+        {
+          "name": "Update AI Route",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": {{ai_route_set_version}},\n  \"requires_tools\": true,\n  \"targets\": [\n    {\n      \"connection_id\": \"{{ai_provider_connection_id}}\",\n      \"provider_model_id\": \"{{ai_provider_model_id}}\"\n    }\n  ],\n  \"audit_reason\": \"Update campus default Agent route\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/routes/{{ai_route_set_id}}",
+            "description": "Replaces the full ordered route chain under optimistic concurrency."
+          }
+        },
+        {
+          "name": "Resolve AI Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task_class\": \"module_read_reporting\",\n  \"module_key\": \"finance\",\n  \"operation_class\": \"read\",\n  \"capability_key\": \"finance.journals.list\",\n  \"capability_version\": 1,\n  \"requires_tools\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/routes/resolve",
+            "description": "Resolves exact precedence and fails closed if the most specific matching route is unusable."
+          }
+        },
+        {
+          "name": "Archive AI Route",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/routes/{{ai_route_set_id}}?expectedVersion={{ai_route_set_version}}&auditReason=Retire%20Agent%20route",
+            "description": "Archives the route and its immutable target chain under optimistic concurrency."
+          }
+        }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -5212,6 +5363,21 @@
     },
     {
       "key": "ai_provider_connection_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "ai_provider_model_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "ai_route_set_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "ai_route_set_version",
       "value": "1",
       "type": "default"
     },
