@@ -19,6 +19,16 @@ use crate::dtos::{
     PaginatedStoresResponse, StoreListQuery, UpdateItemRequest, UpdateStoreRequest,
 };
 use crate::ops::{ItemOps, StoreOps};
+use crate::stock_dtos::{
+    AdjustStockRequest, AllocateGoodsReceiptRequest, GoodsReceiptAllocationListQuery,
+    IssueStockRequest, ManualReceiptRequest, PaginatedGoodsReceiptAllocationsResponse,
+    PaginatedStockBalancesResponse, PaginatedStockMovementsResponse, ReverseStockMovementRequest,
+    StockBalanceListQuery, StockMovementListQuery, TransferStockRequest,
+};
+use crate::stock_ops::{
+    GoodsReceiptAllocationOps, StockBalanceOps, StockMovementOps,
+    bounded_goods_receipt_allocation_page,
+};
 
 #[get("/items")]
 async fn list_items(
@@ -252,6 +262,257 @@ async fn delete_store(
     }
 }
 
+#[get("/stock-balances")]
+async fn list_stock_balances(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<StockBalanceListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match StockBalanceOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        query.search.as_deref(),
+        query.item_id,
+        query.store_id,
+    )
+    .await
+    {
+        Ok((balances, total)) => paginated(
+            PaginatedStockBalancesResponse { balances },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/stock-movements")]
+async fn list_stock_movements(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<StockMovementListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match StockMovementOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        query.search.as_deref(),
+        query.kind.as_deref(),
+        query.item_id,
+        query.store_id,
+    )
+    .await
+    {
+        Ok((movements, total)) => paginated(
+            PaginatedStockMovementsResponse { movements },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/stock-movements/{id}")]
+async fn read_stock_movement(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match StockMovementOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(Some(movement)) => ok(movement),
+        Ok(None) => not_found("Stock movement"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/manual-receipts")]
+async fn create_manual_receipt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<ManualReceiptRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockMovementOps::create_manual_receipt(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(movement) => created(movement),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/issues")]
+async fn issue_stock(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<IssueStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockMovementOps::issue(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(movement) => created(movement),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/transfers")]
+async fn transfer_stock(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<TransferStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockMovementOps::transfer(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(movement) => created(movement),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/adjustments")]
+async fn adjust_stock(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<AdjustStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockMovementOps::adjust(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(movement) => created(movement),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/stock-movements/{id}/reverse")]
+async fn reverse_stock_movement(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ReverseStockMovementRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockMovementOps::reverse(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(Some(movement)) => created(movement),
+        Ok(None) => not_found("Stock movement"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/goods-receipt-allocations")]
+async fn list_goods_receipt_allocations(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<GoodsReceiptAllocationListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    let (page, per_page) = bounded_goods_receipt_allocation_page(page, per_page);
+    match GoodsReceiptAllocationOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        query.search.as_deref(),
+        query.goods_receipt_id,
+    )
+    .await
+    {
+        Ok((goods_receipts, total)) => paginated(
+            PaginatedGoodsReceiptAllocationsResponse { goods_receipts },
+            page,
+            per_page,
+            total,
+        ),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/goods-receipt-allocations")]
+async fn allocate_goods_receipt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<AllocateGoodsReceiptRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match GoodsReceiptAllocationOps::allocate(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(movement) => created(movement),
+        Err(error) => operation_error(error),
+    }
+}
+
 fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
@@ -325,8 +586,14 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         .unwrap_or_else(|| error.to_string());
     if database.is_some_and(|database| database.code().as_deref() == Some("23505"))
         || message.contains("changed since it was loaded")
+        || message.contains("changed since the adjustment was counted")
         || message.contains("already exists")
         || message.contains("already belongs")
+        || message.contains("already been reversed")
+        || message.contains("cannot be remapped")
+        || message.contains("exceeds the remaining")
+        || message.contains("movement history")
+        || message.contains("on-hand stock")
     {
         return HttpResponse::Conflict().json(ApiResponse::from_status(
             StatusCode::CONFLICT,
@@ -339,8 +606,13 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
         || message.starts_with("Catalogue ")
         || message.starts_with("Idempotency ")
         || message.starts_with("Item ")
+        || message.starts_with("Items ")
         || message.starts_with("Only ")
         || message.starts_with("Store ")
+        || message.starts_with("Stores ")
+        || message.starts_with("Stock ")
+        || message.starts_with("Goods ")
+        || message.starts_with("Reversal ")
     {
         return HttpResponse::BadRequest().json(ApiResponse::from_status(
             StatusCode::BAD_REQUEST,
@@ -364,7 +636,17 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(read_store)
             .service(create_store)
             .service(update_store)
-            .service(delete_store),
+            .service(delete_store)
+            .service(list_stock_balances)
+            .service(list_stock_movements)
+            .service(read_stock_movement)
+            .service(create_manual_receipt)
+            .service(issue_stock)
+            .service(transfer_stock)
+            .service(adjust_stock)
+            .service(reverse_stock_movement)
+            .service(list_goods_receipt_allocations)
+            .service(allocate_goods_receipt),
     );
 }
 

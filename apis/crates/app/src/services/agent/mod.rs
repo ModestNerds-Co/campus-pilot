@@ -41,7 +41,8 @@ use ai_providers::{
 };
 use assets_inventory::{
     AssetsInventoryListCapability, AssetsInventoryListKind, AssetsInventoryReadCapability,
-    AssetsInventoryReadKind,
+    AssetsInventoryReadKind, GoodsReceiptAllocationsListCapability, StockBalancesListCapability,
+    StockMovementReadCapability, StockMovementsListCapability,
 };
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
@@ -145,6 +146,20 @@ pub fn build_capability_registry(
             .register(AssetsInventoryReadCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
+    registry
+        .register(StockBalancesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Assets stock-balances capability: {error}"));
+    registry
+        .register(StockMovementsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Assets stock-movements list capability: {error}"));
+    registry
+        .register(StockMovementReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Assets stock-movement read capability: {error}"));
+    registry
+        .register(GoodsReceiptAllocationsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Assets goods-receipt allocations capability: {error}")
+        });
     for kind in [
         AcademicsListKind::AcademicYears,
         AcademicsListKind::Terms,
@@ -493,6 +508,7 @@ mod tests {
                 "procurement:view".to_string(),
                 "procurement:create".to_string(),
                 "assets_inventory:view".to_string(),
+                "assets_inventory:receive".to_string(),
                 "ai_providers:view".to_string(),
             ],
             enabled_modules: vec![
@@ -591,8 +607,12 @@ mod tests {
                 "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read",
+                "assets_inventory.goods_receipt_allocations.list",
                 "assets_inventory.items.list",
                 "assets_inventory.items.read",
+                "assets_inventory.stock_balances.list",
+                "assets_inventory.stock_movements.list",
+                "assets_inventory.stock_movements.read",
                 "assets_inventory.stores.list",
                 "assets_inventory.stores.read",
                 "fees.billing_accounts.list",
@@ -1022,6 +1042,22 @@ mod tests {
                 "assets_inventory.stores.read",
                 json!({ "record_id": Uuid::new_v4() }),
             ),
+            (
+                "assets_inventory.stock_balances.list",
+                json!({ "item_id": Uuid::new_v4() }),
+            ),
+            (
+                "assets_inventory.stock_movements.list",
+                json!({ "kind": "transfer", "store_id": Uuid::new_v4() }),
+            ),
+            (
+                "assets_inventory.stock_movements.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+            (
+                "assets_inventory.goods_receipt_allocations.list",
+                json!({ "goods_receipt_id": Uuid::new_v4() }),
+            ),
         ] {
             let error = broker
                 .invoke(
@@ -1071,5 +1107,21 @@ mod tests {
             .err()
             .unwrap_or_else(|| unreachable!());
         assert_eq!(invalid_status.code(), BrokerErrorCode::InvalidInput);
+
+        let invalid_kind = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "assets_inventory.stock_movements.list",
+                    1,
+                    json!({ "kind": "invented" }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid_kind.code(), BrokerErrorCode::InvalidInput);
     }
 }

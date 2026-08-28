@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { createIdempotencyKeyLifecycle } from "./create-idempotency-key.ts";
 
-for (const recordType of ["item", "store"]) {
+for (const recordType of ["item", "store", "movement", "receipt allocation", "reversal"]) {
   test(`${recordType} create retries reuse the same idempotency key`, () => {
     let sequence = 0;
     const lifecycle = createIdempotencyKeyLifecycle(() => `${recordType}-${++sequence}`);

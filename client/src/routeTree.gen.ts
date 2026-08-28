@@ -69,6 +69,9 @@ import { Route as ModulesFeesImportsRouteImport } from './routes/modules/fees/im
 import { Route as ModulesFeesFeeStructuresRouteImport } from './routes/modules/fees/fee-structures'
 import { Route as ModulesFeesBillingAccountsRouteImport } from './routes/modules/fees/billing-accounts'
 import { Route as ModulesAssetsInventoryStoresRouteImport } from './routes/modules/assets-inventory/stores'
+import { Route as ModulesAssetsInventoryStockRouteImport } from './routes/modules/assets-inventory/stock'
+import { Route as ModulesAssetsInventoryProcurementReceiptsRouteImport } from './routes/modules/assets-inventory/procurement-receipts'
+import { Route as ModulesAssetsInventoryMovementsRouteImport } from './routes/modules/assets-inventory/movements'
 import { Route as ModulesAssetsInventoryItemsRouteImport } from './routes/modules/assets-inventory/items'
 import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
@@ -83,6 +86,7 @@ import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/dai
 import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
+import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -401,6 +405,24 @@ const ModulesAssetsInventoryStoresRoute =
     path: '/assets-inventory/stores',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAssetsInventoryStockRoute =
+  ModulesAssetsInventoryStockRouteImport.update({
+    id: '/assets-inventory/stock',
+    path: '/assets-inventory/stock',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAssetsInventoryProcurementReceiptsRoute =
+  ModulesAssetsInventoryProcurementReceiptsRouteImport.update({
+    id: '/assets-inventory/procurement-receipts',
+    path: '/assets-inventory/procurement-receipts',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAssetsInventoryMovementsRoute =
+  ModulesAssetsInventoryMovementsRouteImport.update({
+    id: '/assets-inventory/movements',
+    path: '/assets-inventory/movements',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryItemsRoute =
   ModulesAssetsInventoryItemsRouteImport.update({
     id: '/assets-inventory/items',
@@ -480,6 +502,12 @@ const ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute =
     path: '/procurement/purchase-orders/$purchaseOrderId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAssetsInventoryMovementsMovementIdRoute =
+  ModulesAssetsInventoryMovementsMovementIdRouteImport.update({
+    id: '/assets-inventory/movements_/$movementId',
+    path: '/assets-inventory/movements/$movementId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -523,6 +551,9 @@ export interface FileRoutesByFullPath {
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
+  '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
+  '/modules/assets-inventory/procurement-receipts': typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
@@ -554,6 +585,7 @@ export interface FileRoutesByFullPath {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
@@ -598,6 +630,9 @@ export interface FileRoutesByTo {
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
+  '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
+  '/modules/assets-inventory/procurement-receipts': typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
@@ -629,6 +664,7 @@ export interface FileRoutesByTo {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
@@ -675,6 +711,9 @@ export interface FileRoutesById {
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
+  '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
+  '/modules/assets-inventory/procurement-receipts': typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
@@ -706,6 +745,7 @@ export interface FileRoutesById {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
+  '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
@@ -753,6 +793,9 @@ export interface FileRouteTypes {
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
     | '/modules/assets-inventory/items'
+    | '/modules/assets-inventory/movements'
+    | '/modules/assets-inventory/procurement-receipts'
+    | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
@@ -784,6 +827,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/assets-inventory/movements/$movementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
   fileRoutesByTo: FileRoutesByTo
@@ -828,6 +872,9 @@ export interface FileRouteTypes {
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
     | '/modules/assets-inventory/items'
+    | '/modules/assets-inventory/movements'
+    | '/modules/assets-inventory/procurement-receipts'
+    | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
@@ -859,6 +906,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/assets-inventory/movements/$movementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
   id:
@@ -904,6 +952,9 @@ export interface FileRouteTypes {
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
     | '/modules/assets-inventory/items'
+    | '/modules/assets-inventory/movements'
+    | '/modules/assets-inventory/procurement-receipts'
+    | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
@@ -935,6 +986,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet/'
+    | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
   fileRoutesById: FileRoutesById
@@ -1374,6 +1426,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAssetsInventoryStoresRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/assets-inventory/stock': {
+      id: '/modules/assets-inventory/stock'
+      path: '/assets-inventory/stock'
+      fullPath: '/modules/assets-inventory/stock'
+      preLoaderRoute: typeof ModulesAssetsInventoryStockRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/assets-inventory/procurement-receipts': {
+      id: '/modules/assets-inventory/procurement-receipts'
+      path: '/assets-inventory/procurement-receipts'
+      fullPath: '/modules/assets-inventory/procurement-receipts'
+      preLoaderRoute: typeof ModulesAssetsInventoryProcurementReceiptsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/assets-inventory/movements': {
+      id: '/modules/assets-inventory/movements'
+      path: '/assets-inventory/movements'
+      fullPath: '/modules/assets-inventory/movements'
+      preLoaderRoute: typeof ModulesAssetsInventoryMovementsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/items': {
       id: '/modules/assets-inventory/items'
       path: '/assets-inventory/items'
@@ -1472,6 +1545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/assets-inventory/movements_/$movementId': {
+      id: '/modules/assets-inventory/movements_/$movementId'
+      path: '/assets-inventory/movements/$movementId'
+      fullPath: '/modules/assets-inventory/movements/$movementId'
+      preLoaderRoute: typeof ModulesAssetsInventoryMovementsMovementIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
   }
 }
 
@@ -1538,6 +1618,9 @@ interface ModulesRouteChildren {
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
   ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
   ModulesAssetsInventoryItemsRoute: typeof ModulesAssetsInventoryItemsRoute
+  ModulesAssetsInventoryMovementsRoute: typeof ModulesAssetsInventoryMovementsRoute
+  ModulesAssetsInventoryProcurementReceiptsRoute: typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  ModulesAssetsInventoryStockRoute: typeof ModulesAssetsInventoryStockRoute
   ModulesAssetsInventoryStoresRoute: typeof ModulesAssetsInventoryStoresRoute
   ModulesFeesBillingAccountsRoute: typeof ModulesFeesBillingAccountsRoute
   ModulesFeesFeeStructuresRoute: typeof ModulesFeesFeeStructuresRoute
@@ -1568,6 +1651,7 @@ interface ModulesRouteChildren {
   ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
   ModulesSisSettingsRoute: typeof ModulesSisSettingsRoute
+  ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
@@ -1584,6 +1668,10 @@ const ModulesRouteChildren: ModulesRouteChildren = {
     ModulesAcademicsTeachingAssignmentsRoute,
   ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
   ModulesAssetsInventoryItemsRoute: ModulesAssetsInventoryItemsRoute,
+  ModulesAssetsInventoryMovementsRoute: ModulesAssetsInventoryMovementsRoute,
+  ModulesAssetsInventoryProcurementReceiptsRoute:
+    ModulesAssetsInventoryProcurementReceiptsRoute,
+  ModulesAssetsInventoryStockRoute: ModulesAssetsInventoryStockRoute,
   ModulesAssetsInventoryStoresRoute: ModulesAssetsInventoryStoresRoute,
   ModulesFeesBillingAccountsRoute: ModulesFeesBillingAccountsRoute,
   ModulesFeesFeeStructuresRoute: ModulesFeesFeeStructuresRoute,
@@ -1614,6 +1702,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
   ModulesSisSettingsRoute: ModulesSisSettingsRoute,
+  ModulesAssetsInventoryMovementsMovementIdRoute:
+    ModulesAssetsInventoryMovementsMovementIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:

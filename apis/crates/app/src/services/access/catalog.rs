@@ -177,12 +177,15 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "assets_inventory",
             "Assets and inventory",
             "Finance and resources",
-            "Maintain item definitions and inventory stores.",
+            "Maintain item and store catalogues, stock balances, and immutable movements.",
             "/modules/assets-inventory",
             "assets_inventory",
             false,
             "available",
-            &["view", "create", "edit", "delete"],
+            &[
+                "view", "create", "edit", "delete", "receive", "issue", "transfer", "adjust",
+                "reverse",
+            ],
         ),
         module(
             "document_registry",
@@ -441,6 +444,37 @@ mod tests {
     }
 
     #[test]
+    fn assets_inventory_permissions_separate_stock_authority() {
+        let assets_inventory = module_catalog()
+            .into_iter()
+            .find(|module| module.key == "assets_inventory")
+            .unwrap_or_else(|| unreachable!());
+        let permissions = assets_inventory
+            .permissions
+            .into_iter()
+            .map(|permission| permission.key)
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(
+            permissions,
+            [
+                "assets_inventory:adjust",
+                "assets_inventory:create",
+                "assets_inventory:delete",
+                "assets_inventory:edit",
+                "assets_inventory:issue",
+                "assets_inventory:receive",
+                "assets_inventory:reverse",
+                "assets_inventory:transfer",
+                "assets_inventory:view",
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+        );
+    }
+
+    #[test]
     fn operation_catalog_references_known_modules_and_permissions() {
         let modules: BTreeSet<_> = module_catalog()
             .into_iter()
@@ -536,7 +570,10 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 10);
             } else if module_key == "assets_inventory" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 4);
+                assert_eq!(module.routed_operations(), 20);
+                assert_eq!(module.exposed_operations(), 8);
+                assert_eq!(module.approval_required_operations(), 12);
+                assert_eq!(module.executable_capabilities(), 8);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

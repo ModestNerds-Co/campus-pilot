@@ -1687,6 +1687,7 @@ dependencies = [
  "chrono",
  "cp-audit",
  "cp-common",
+ "cp-procurement",
  "serde",
  "serde_json",
  "sha2",

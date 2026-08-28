@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ChevronLeft,
   ChevronRight,
+  ArrowLeftRight,
   BookOpen,
   Boxes,
   BriefcaseBusiness,
@@ -53,6 +54,7 @@ type LocalNavItem = {
   path: string;
   icon: React.ComponentType<{ className?: string }>;
   permission?: string;
+  requiredModule?: string;
 };
 
 const moduleLabels: Record<string, string> = {
@@ -132,6 +134,9 @@ const procurementNavigation: LocalNavItem[] = [
 ];
 
 const assetsInventoryNavigation: LocalNavItem[] = [
+  { label: "Stock", path: "/modules/assets-inventory/stock", icon: Boxes, permission: "assets_inventory:view" },
+  { label: "Movements", path: "/modules/assets-inventory/movements", icon: ArrowLeftRight, permission: "assets_inventory:view" },
+  { label: "Procurement receipts", path: "/modules/assets-inventory/procurement-receipts", icon: PackageCheck, permission: "assets_inventory:receive", requiredModule: "procurement" },
   { label: "Items", path: "/modules/assets-inventory/items", icon: Boxes },
   { label: "Stores", path: "/modules/assets-inventory/stores", icon: Warehouse },
 ];
@@ -159,7 +164,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
   const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
-    .filter((item) => !item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission));
+    .filter((item) => (!item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission)) && (!item.requiredModule || user?.modules.includes(item.requiredModule)));
 
   useEffect(() => {
     let active = true;
@@ -309,6 +314,9 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/procurement/purchase-orders") return <Link className={navClass(active)} to="/modules/procurement/purchase-orders"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/procurement/goods-receipts") return <Link className={navClass(active)} to="/modules/procurement/goods-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/procurement/suppliers") return <Link className={navClass(active)} to="/modules/procurement/suppliers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/assets-inventory/stock") return <Link className={navClass(active)} to="/modules/assets-inventory/stock"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/assets-inventory/movements") return <Link className={navClass(active)} to="/modules/assets-inventory/movements"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/assets-inventory/procurement-receipts") return <Link className={navClass(active)} to="/modules/assets-inventory/procurement-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/assets-inventory/items") return <Link className={navClass(active)} to="/modules/assets-inventory/items"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/assets-inventory/stores") return <Link className={navClass(active)} to="/modules/assets-inventory/stores"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

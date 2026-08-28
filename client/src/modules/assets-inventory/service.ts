@@ -10,6 +10,12 @@ import type {
   UpdateInventoryStoreInput,
   UpdateInventoryItemInput,
 } from "./types";
+import type {
+  GoodsReceiptAllocationInput, GoodsReceiptAllocationListParams,
+  GoodsReceiptAllocationSourcesResponse, ManualReceiptInput, ReverseStockMovementInput,
+  StockAdjustmentInput, StockBalanceListParams, StockBalancesResponse, StockIssueInput,
+  StockMovement, StockMovementListParams, StockMovementsResponse, StockTransferInput,
+} from "./stock-types";
 
 const BASE_URL = "/api/1.0/assets-inventory";
 
@@ -32,6 +38,17 @@ export const assetsInventoryService = {
   createStore: (data: CreateInventoryStoreInput & { idempotency_key: string }) => request<InventoryStore>(() => httpClient.post(`${BASE_URL}/stores`, data)),
   updateStore: (id: string, data: UpdateInventoryStoreInput & { expected_version: number }) => request<InventoryStore>(() => httpClient.put(`${BASE_URL}/stores/${id}`, data)),
   deleteStore: (id: string, expectedVersion: number) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/stores/${id}`, { params: { expected_version: expectedVersion } })),
+
+  listStockBalances: (params?: StockBalanceListParams) => request<StockBalancesResponse>(() => httpClient.get(`${BASE_URL}/stock-balances`, { params })),
+  listStockMovements: (params?: StockMovementListParams) => request<StockMovementsResponse>(() => httpClient.get(`${BASE_URL}/stock-movements`, { params })),
+  readStockMovement: (id: string) => request<StockMovement>(() => httpClient.get(`${BASE_URL}/stock-movements/${id}`)),
+  createManualReceipt: (data: ManualReceiptInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/manual-receipts`, data)),
+  createIssue: (data: StockIssueInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/issues`, data)),
+  createTransfer: (data: StockTransferInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/transfers`, data)),
+  createAdjustment: (data: StockAdjustmentInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/adjustments`, data)),
+  reverseStockMovement: (id: string, data: ReverseStockMovementInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/stock-movements/${id}/reverse`, data)),
+  listGoodsReceiptAllocations: (params?: GoodsReceiptAllocationListParams) => request<GoodsReceiptAllocationSourcesResponse>(() => httpClient.get(`${BASE_URL}/goods-receipt-allocations`, { params })),
+  createGoodsReceiptAllocation: (data: GoodsReceiptAllocationInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/goods-receipt-allocations`, data)),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

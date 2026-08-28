@@ -453,6 +453,66 @@ mod route_wiring_tests {
                 "/api/1.0/assets-inventory/stores/{id}",
                 "assets_inventory.stores.delete",
             ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-balances".to_string(),
+                "/api/1.0/assets-inventory/stock-balances",
+                "assets_inventory.stock_balances.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-movements".to_string(),
+                "/api/1.0/assets-inventory/stock-movements",
+                "assets_inventory.stock_movements.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/assets-inventory/stock-movements/{record_id}"),
+                "/api/1.0/assets-inventory/stock-movements/{id}",
+                "assets_inventory.stock_movements.read",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/manual-receipts".to_string(),
+                "/api/1.0/assets-inventory/manual-receipts",
+                "assets_inventory.manual_receipts.create",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/issues".to_string(),
+                "/api/1.0/assets-inventory/issues",
+                "assets_inventory.issues.create",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/transfers".to_string(),
+                "/api/1.0/assets-inventory/transfers",
+                "assets_inventory.transfers.create",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/adjustments".to_string(),
+                "/api/1.0/assets-inventory/adjustments",
+                "assets_inventory.adjustments.create",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-movements/{record_id}/reverse"),
+                "/api/1.0/assets-inventory/stock-movements/{id}/reverse",
+                "assets_inventory.stock_movements.reverse",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/goods-receipt-allocations".to_string(),
+                "/api/1.0/assets-inventory/goods-receipt-allocations",
+                "assets_inventory.goods_receipt_allocations.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/goods-receipt-allocations".to_string(),
+                "/api/1.0/assets-inventory/goods-receipt-allocations",
+                "assets_inventory.goods_receipt_allocations.create",
+            ),
         ];
 
         for (method, concrete_path, expected_pattern, expected_operation) in route_cases {

@@ -13,4 +13,5 @@ pub mod goods_receipts;
 pub mod purchase_orders;
 pub mod requisitions;
 pub mod routes;
+pub mod stock_allocation;
 pub mod suppliers;

@@ -3993,7 +3993,7 @@
     },
     {
       "name": "Assets & Inventory",
-      "description": "The 10 shipped Assets and inventory item/store master-data routes. These operations require only the Assets and inventory entitlement. Server-generated item/store references and item quantity scales are immutable; stock ledger, movement, valuation, custodianship, and Procurement receipt allocation are not part of this foundation.",
+      "description": "The 20 shipped Assets and inventory routes for item/store master data, immutable stock movements, projected balances, and explicit goods-receipt allocation. Only allocation source listing and allocation creation depend on Procurement; reversal and every other Assets operation remain Assets-only, with no Finance or HR dependency. All quantities are exact scaled integers. Stock commands use the required JSON `idempotency_key` field, not an `Idempotency-Key` HTTP header; keep the variable unchanged only when retrying the same command.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -4185,6 +4185,265 @@
                 "method": "DELETE",
                 "url": "{{base_url}}/assets-inventory/stores/{{assets_inventory_store_id}}?expected_version=1",
                 "description": "Uses the required optimistic expected_version query parameter. Only an inactive store can be removed."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock Balances",
+          "item": [
+            {
+              "name": "List Stock Balances",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/assets-inventory/stock-balances?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "assets-inventory",
+                    "stock-balances"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Optional item/store reference or name search."
+                    },
+                    {
+                      "key": "item_id",
+                      "value": "{{assets_inventory_item_id}}",
+                      "disabled": true
+                    },
+                    {
+                      "key": "store_id",
+                      "value": "{{assets_inventory_store_id}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns the transactional on-hand projection. The immutable movement ledger remains the source of truth."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock Movements",
+          "item": [
+            {
+              "name": "List Stock Movements",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/assets-inventory/stock-movements?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "assets-inventory",
+                    "stock-movements"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Optional movement reference search."
+                    },
+                    {
+                      "key": "kind",
+                      "value": "manual_receipt",
+                      "disabled": true,
+                      "description": "manual_receipt, issue, transfer, adjustment, goods_receipt_allocation, or reversal"
+                    },
+                    {
+                      "key": "item_id",
+                      "value": "{{assets_inventory_item_id}}",
+                      "disabled": true
+                    },
+                    {
+                      "key": "store_id",
+                      "value": "{{assets_inventory_store_id}}",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Read Stock Movement",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/assets-inventory/stock-movements/{{assets_inventory_movement_id}}",
+                "description": "Reads one immutable movement and its exact scaled-integer lines."
+              }
+            },
+            {
+              "name": "Reverse Stock Movement",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"effective_on\": \"2026-09-21\",\n  \"reason\": \"Correct the original stock posting\",\n  \"idempotency_key\": \"{{assets_inventory_idempotency_key}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/stock-movements/{{assets_inventory_movement_id}}/reverse",
+                "description": "Appends an Assets-owned compensating movement; it never edits or deletes the source movement. Reuse the idempotency value only when retrying the same command."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record Stock",
+          "item": [
+            {
+              "name": "Create Manual Receipt",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"effective_on\": \"2026-09-20\",\n  \"reference\": \"OPENING-STOCK-001\",\n  \"reason\": \"Approved opening stock count\",\n  \"idempotency_key\": \"{{assets_inventory_idempotency_key}}\",\n  \"lines\": [\n    {\n      \"item_id\": \"{{assets_inventory_item_id}}\",\n      \"store_id\": \"{{assets_inventory_store_id}}\",\n      \"quantity_minor\": 60\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/manual-receipts",
+                "description": "Appends a positive manual-receipt movement. Quantity is a positive scaled integer using the item's immutable quantity scale."
+              }
+            },
+            {
+              "name": "Create Stock Issue",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"effective_on\": \"2026-09-20\",\n  \"reference\": \"ISSUE-001\",\n  \"reason\": \"Approved classroom stationery issue\",\n  \"idempotency_key\": \"{{assets_inventory_idempotency_key}}\",\n  \"lines\": [\n    {\n      \"item_id\": \"{{assets_inventory_item_id}}\",\n      \"store_id\": \"{{assets_inventory_store_id}}\",\n      \"quantity_minor\": 5\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/issues",
+                "description": "Appends a stock issue and rejects an insufficient resulting balance."
+              }
+            },
+            {
+              "name": "Create Stock Transfer",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"effective_on\": \"2026-09-20\",\n  \"reference\": \"TRANSFER-001\",\n  \"reason\": \"Move approved stock to the science store\",\n  \"idempotency_key\": \"{{assets_inventory_idempotency_key}}\",\n  \"lines\": [\n    {\n      \"item_id\": \"{{assets_inventory_item_id}}\",\n      \"from_store_id\": \"{{assets_inventory_store_id}}\",\n      \"to_store_id\": \"{{assets_inventory_destination_store_id}}\",\n      \"quantity_minor\": 10\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/transfers",
+                "description": "Appends paired source and destination ledger lines; source and destination stores must differ."
+              }
+            },
+            {
+              "name": "Create Stock Adjustment",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"effective_on\": \"2026-09-20\",\n  \"reference\": \"COUNT-001\",\n  \"reason\": \"Approved physical count correction\",\n  \"idempotency_key\": \"{{assets_inventory_idempotency_key}}\",\n  \"lines\": [\n    {\n      \"item_id\": \"{{assets_inventory_item_id}}\",\n      \"store_id\": \"{{assets_inventory_store_id}}\",\n      \"expected_on_hand_minor\": 60,\n      \"counted_on_hand_minor\": 58\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/adjustments",
+                "description": "Compares the expected projection with the current balance and appends only the exact count difference."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Goods Receipt Allocation",
+          "item": [
+            {
+              "name": "List Goods Receipt Allocation Sources",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/assets-inventory/goods-receipt-allocations?page=1&per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "assets-inventory",
+                    "goods-receipt-allocations"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Optional posted goods-receipt reference search."
+                    },
+                    {
+                      "key": "goods_receipt_id",
+                      "value": "{{procurement_goods_receipt_id}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Returns a reduced projection of immutable posted Procurement receipts and remaining allocatable quantities. Requires both Assets and Procurement entitlements."
+              }
+            },
+            {
+              "name": "Create Goods Receipt Allocation",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"goods_receipt_id\": \"{{procurement_goods_receipt_id}}\",\n  \"effective_on\": \"2026-09-20\",\n  \"reason\": \"Allocate posted stationery receipt to the main store\",\n  \"idempotency_key\": \"{{assets_inventory_idempotency_key}}\",\n  \"lines\": [\n    {\n      \"goods_receipt_line_id\": \"{{procurement_goods_receipt_line_id}}\",\n      \"item_id\": \"{{assets_inventory_item_id}}\",\n      \"store_id\": \"{{assets_inventory_store_id}}\",\n      \"quantity_minor\": 60\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/assets-inventory/goods-receipt-allocations",
+                "description": "Explicitly maps posted Procurement receipt lines into the Assets ledger. Posting a goods receipt never allocates stock automatically. Requires both Assets and Procurement entitlements."
               }
             }
           ]
@@ -4997,6 +5256,11 @@
       "type": "default"
     },
     {
+      "key": "procurement_goods_receipt_line_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
       "key": "assets_inventory_item_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
@@ -5004,6 +5268,21 @@
     {
       "key": "assets_inventory_store_id",
       "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "assets_inventory_destination_store_id",
+      "value": "00000000-0000-0000-0000-000000000001",
+      "type": "default"
+    },
+    {
+      "key": "assets_inventory_movement_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "assets_inventory_idempotency_key",
+      "value": "00000000-0000-4000-8000-000000000000",
       "type": "default"
     }
   ]

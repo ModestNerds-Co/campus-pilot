@@ -1908,7 +1908,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
-        // Assets and inventory: item master and store directory.
+        // Assets and inventory: item/store catalogues and immutable stock ledger.
         route(
             Method::GET,
             "/api/1.0/assets-inventory/items",
@@ -1997,6 +1997,96 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "assets_inventory",
             "assets_inventory:delete",
             OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-balances",
+            "assets_inventory.stock_balances.list",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-movements",
+            "assets_inventory.stock_movements.list",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-movements/{id}",
+            "assets_inventory.stock_movements.read",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/manual-receipts",
+            "assets_inventory.manual_receipts.create",
+            "assets_inventory",
+            "assets_inventory:receive",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/issues",
+            "assets_inventory.issues.create",
+            "assets_inventory",
+            "assets_inventory:issue",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/transfers",
+            "assets_inventory.transfers.create",
+            "assets_inventory",
+            "assets_inventory:transfer",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/adjustments",
+            "assets_inventory.adjustments.create",
+            "assets_inventory",
+            "assets_inventory:adjust",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-movements/{id}/reverse",
+            "assets_inventory.stock_movements.reverse",
+            "assets_inventory",
+            "assets_inventory:reverse",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/goods-receipt-allocations",
+            "assets_inventory.goods_receipt_allocations.list",
+            "assets_inventory",
+            "assets_inventory:receive",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/goods-receipt-allocations",
+            "assets_inventory.goods_receipt_allocations.create",
+            "assets_inventory",
+            "assets_inventory:receive",
+            OperationEffect::Write,
             true,
         ),
         // HR and payroll: canonical workforce directory.
@@ -2520,7 +2610,9 @@ fn route(
         agent_exposure_for(key),
         license_required,
     );
-    let operation = if key.starts_with("administration.ai_providers.") {
+    let operation = if key.starts_with("assets_inventory.goods_receipt_allocations.") {
+        operation.requiring_modules(["procurement".to_string()])
+    } else if key.starts_with("administration.ai_providers.") {
         operation.requiring_modules(["agent".to_string()])
     } else if key.starts_with("sis.") && !key.starts_with("sis.learner_numbering.") {
         operation.requiring_modules(["academics".to_string()])
@@ -2658,6 +2750,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "assets_inventory.items.read"
         | "assets_inventory.stores.list"
         | "assets_inventory.stores.read"
+        | "assets_inventory.stock_balances.list"
+        | "assets_inventory.stock_movements.list"
+        | "assets_inventory.stock_movements.read"
+        | "assets_inventory.goods_receipt_allocations.list"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2799,6 +2895,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "assets_inventory.stores.create"
         | "assets_inventory.stores.update"
         | "assets_inventory.stores.delete"
+        | "assets_inventory.manual_receipts.create"
+        | "assets_inventory.issues.create"
+        | "assets_inventory.transfers.create"
+        | "assets_inventory.adjustments.create"
+        | "assets_inventory.stock_movements.reverse"
+        | "assets_inventory.goods_receipt_allocations.create"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2862,7 +2964,7 @@ mod tests {
 
     use crate::{
         AgentExposure, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
-        ProductOperation, RuntimeAccessChecks, evaluate_operation,
+        OperationEffect, ProductOperation, RuntimeAccessChecks, evaluate_operation,
     };
 
     use super::{
@@ -2876,6 +2978,13 @@ mod tests {
             .iter()
             .find(|entry| entry.operation().key() == key)
             .map(super::RoutedOperation::operation)
+            .unwrap_or_else(|| unreachable!())
+    }
+
+    fn routed_operation(key: &str) -> &'static super::RoutedOperation {
+        operation_catalog()
+            .iter()
+            .find(|entry| entry.operation().key() == key)
             .unwrap_or_else(|| unreachable!())
     }
 
@@ -2927,7 +3036,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 265);
+        assert_eq!(operation_catalog().len(), 275);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2979,7 +3088,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [107, 148, 10, 0]);
+        assert_eq!(counts, [111, 154, 10, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -3342,6 +3451,357 @@ mod tests {
                 RuntimeAccessChecks::default(),
             );
             assert!(decision.allowed, "{key}: {}", decision.reason.as_str());
+        }
+    }
+
+    #[test]
+    fn assets_inventory_stock_operations_have_exact_access_contracts() {
+        for (method, path, key, permission, effect, exposure, dependency) in [
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-balances",
+                "assets_inventory.stock_balances.list",
+                "assets_inventory:view",
+                OperationEffect::Read,
+                "exposed",
+                None,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-movements",
+                "assets_inventory.stock_movements.list",
+                "assets_inventory:view",
+                OperationEffect::Read,
+                "exposed",
+                None,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-movements/{id}",
+                "assets_inventory.stock_movements.read",
+                "assets_inventory:view",
+                OperationEffect::Read,
+                "exposed",
+                None,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/manual-receipts",
+                "assets_inventory.manual_receipts.create",
+                "assets_inventory:receive",
+                OperationEffect::Write,
+                "approval_required",
+                None,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/issues",
+                "assets_inventory.issues.create",
+                "assets_inventory:issue",
+                OperationEffect::Write,
+                "approval_required",
+                None,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/transfers",
+                "assets_inventory.transfers.create",
+                "assets_inventory:transfer",
+                OperationEffect::Write,
+                "approval_required",
+                None,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/adjustments",
+                "assets_inventory.adjustments.create",
+                "assets_inventory:adjust",
+                OperationEffect::Write,
+                "approval_required",
+                None,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-movements/{id}/reverse",
+                "assets_inventory.stock_movements.reverse",
+                "assets_inventory:reverse",
+                OperationEffect::Write,
+                "approval_required",
+                None,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/goods-receipt-allocations",
+                "assets_inventory.goods_receipt_allocations.list",
+                "assets_inventory:receive",
+                OperationEffect::Read,
+                "exposed",
+                Some("procurement"),
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/goods-receipt-allocations",
+                "assets_inventory.goods_receipt_allocations.create",
+                "assets_inventory:receive",
+                OperationEffect::Write,
+                "approval_required",
+                Some("procurement"),
+            ),
+        ] {
+            let route = routed_operation(key);
+            let operation = route.operation();
+            assert_eq!(route.method(), &method, "{key}");
+            assert_eq!(route.route_pattern(), path, "{key}");
+            assert_eq!(operation.module_key(), "assets_inventory", "{key}");
+            assert_eq!(operation.permission(), permission, "{key}");
+            assert_eq!(operation.effect(), effect, "{key}");
+            assert!(operation.license_required(), "{key}");
+            assert_eq!(operation.agent_exposure().as_str(), exposure, "{key}");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                dependency.into_iter().collect::<Vec<_>>(),
+                "{key}"
+            );
+        }
+    }
+
+    #[test]
+    fn assets_inventory_manual_stock_operations_remain_standalone() {
+        let operations = [
+            (
+                "assets_inventory.stock_balances.list",
+                "assets_inventory:view",
+            ),
+            (
+                "assets_inventory.stock_movements.list",
+                "assets_inventory:view",
+            ),
+            (
+                "assets_inventory.stock_movements.read",
+                "assets_inventory:view",
+            ),
+            (
+                "assets_inventory.manual_receipts.create",
+                "assets_inventory:receive",
+            ),
+            ("assets_inventory.issues.create", "assets_inventory:issue"),
+            (
+                "assets_inventory.transfers.create",
+                "assets_inventory:transfer",
+            ),
+            (
+                "assets_inventory.adjustments.create",
+                "assets_inventory:adjust",
+            ),
+            (
+                "assets_inventory.stock_movements.reverse",
+                "assets_inventory:reverse",
+            ),
+        ];
+        let active = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [(
+                "assets_inventory".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        for (key, permission) in operations {
+            let operation = operation(key);
+            assert_eq!(operation.required_modules().count(), 0, "{key}");
+            let decision = evaluate_operation(
+                operation,
+                &active,
+                &[permission.to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(decision.allowed, "{key}: {}", decision.reason.as_str());
+        }
+
+        let restricted = EntitlementSnapshot::new(
+            LeaseLifecycle::Restricted,
+            [(
+                "assets_inventory".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        for (key, permission) in operations {
+            let decision = evaluate_operation(
+                operation(key),
+                &restricted,
+                &[permission.to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert_eq!(
+                decision.allowed,
+                operation(key).effect() == OperationEffect::Read,
+                "{key}: {}",
+                decision.reason.as_str()
+            );
+        }
+
+        for lifecycle in [LeaseLifecycle::Revoked, LeaseLifecycle::Invalid] {
+            let snapshot = EntitlementSnapshot::new(
+                lifecycle,
+                [(
+                    "assets_inventory".to_string(),
+                    ModuleEntitlementState::Enabled,
+                )],
+                Vec::<String>::new(),
+            )
+            .unwrap_or_else(|_| unreachable!());
+            for (key, permission) in operations {
+                let decision = evaluate_operation(
+                    operation(key),
+                    &snapshot,
+                    &[permission.to_string()],
+                    RuntimeAccessChecks::default(),
+                );
+                assert!(!decision.allowed, "{lifecycle:?} allowed {key}");
+            }
+        }
+    }
+
+    #[test]
+    fn assets_inventory_goods_receipt_allocation_requires_exact_dependency() {
+        let allocation_operations = [
+            "assets_inventory.goods_receipt_allocations.list",
+            "assets_inventory.goods_receipt_allocations.create",
+        ];
+        let enabled = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [
+                (
+                    "assets_inventory".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
+                ("procurement".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        for key in allocation_operations {
+            let operation = operation(key);
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                vec!["procurement"],
+                "{key}"
+            );
+            let decision = evaluate_operation(
+                operation,
+                &enabled,
+                &["assets_inventory:receive".to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(decision.allowed, "{key}: {}", decision.reason.as_str());
+        }
+
+        for procurement_state in [
+            None,
+            Some(ModuleEntitlementState::LocallyDisabled),
+            Some(ModuleEntitlementState::Expired),
+            Some(ModuleEntitlementState::Revoked),
+        ] {
+            let mut modules = vec![(
+                "assets_inventory".to_string(),
+                ModuleEntitlementState::Enabled,
+            )];
+            if let Some(state) = procurement_state {
+                modules.push(("procurement".to_string(), state));
+            }
+            let snapshot = EntitlementSnapshot::new(LeaseLifecycle::Active, modules, Vec::new())
+                .unwrap_or_else(|_| unreachable!());
+            for key in allocation_operations {
+                let decision = evaluate_operation(
+                    operation(key),
+                    &snapshot,
+                    &["assets_inventory:receive".to_string()],
+                    RuntimeAccessChecks::default(),
+                );
+                assert!(!decision.allowed, "{procurement_state:?} allowed {key}");
+                assert_eq!(decision.reason.as_str(), "dependency_missing", "{key}");
+            }
+        }
+
+        let procurement_only = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [("procurement".to_string(), ModuleEntitlementState::Enabled)],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        for key in allocation_operations {
+            let decision = evaluate_operation(
+                operation(key),
+                &procurement_only,
+                &["assets_inventory:receive".to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(
+                !decision.allowed,
+                "missing Assets entitlement allowed {key}"
+            );
+            assert_eq!(decision.reason.as_str(), "module_not_entitled", "{key}");
+        }
+
+        let restricted = EntitlementSnapshot::new(
+            LeaseLifecycle::Restricted,
+            [
+                (
+                    "assets_inventory".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
+                ("procurement".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            evaluate_operation(
+                operation("assets_inventory.goods_receipt_allocations.list"),
+                &restricted,
+                &["assets_inventory:receive".to_string()],
+                RuntimeAccessChecks::default(),
+            )
+            .allowed
+        );
+        assert!(
+            !evaluate_operation(
+                operation("assets_inventory.goods_receipt_allocations.create"),
+                &restricted,
+                &["assets_inventory:receive".to_string()],
+                RuntimeAccessChecks::default(),
+            )
+            .allowed
+        );
+
+        for lifecycle in [LeaseLifecycle::Revoked, LeaseLifecycle::Invalid] {
+            let snapshot = EntitlementSnapshot::new(
+                lifecycle,
+                [
+                    (
+                        "assets_inventory".to_string(),
+                        ModuleEntitlementState::Enabled,
+                    ),
+                    ("procurement".to_string(), ModuleEntitlementState::Enabled),
+                ],
+                Vec::<String>::new(),
+            )
+            .unwrap_or_else(|_| unreachable!());
+            for key in allocation_operations {
+                assert!(
+                    !evaluate_operation(
+                        operation(key),
+                        &snapshot,
+                        &["assets_inventory:receive".to_string()],
+                        RuntimeAccessChecks::default(),
+                    )
+                    .allowed,
+                    "{lifecycle:?} allowed {key}"
+                );
+            }
         }
     }
 
