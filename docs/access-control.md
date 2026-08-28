@@ -187,5 +187,5 @@ Online installations refresh periodically. Offline installations may import a si
 - Every server-owned product operation is classified for Agent as executable, approval-required, human-only, or prohibited. No operation may be left unclassified.
 - Provider administration, routing, capability policy, limits, campus-wide usage, and run audit are Administration concerns with distinct permissions.
 - Dynamic custom roles may receive Agent permissions and capability policy; seeded role names are not used as authorization shortcuts.
-- New-campus School Administrator seeds receive Agent-administration permissions. Existing non-owner roles do not silently gain Agent access during migration.
+- New-campus School Administrator seeds receive the current AI-provider and routing Administration permissions. Migration 084 backfills only `ai_providers:view/edit` and `ai_routing:view/edit` for existing, non-deleted built-in School Administrator roles. It does not grant Agent-use permissions, module entitlements, leases, or assignments; all other existing non-owner roles remain unchanged.
 - The canonical capability, provider, metering, and approval model is `docs/agent-platform.md`.

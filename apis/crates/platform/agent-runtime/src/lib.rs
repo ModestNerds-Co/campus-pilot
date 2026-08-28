@@ -7,6 +7,9 @@
 mod ops;
 mod types;
 
+#[cfg(test)]
+mod backfill_tests;
+
 pub use ops::AiRoutingOps;
 pub use types::{
     AiRouteScope, AiRouteSet, AiRouteTarget, AiRoutingError, ArchiveRouteCommand, ArchivedAiRoute,

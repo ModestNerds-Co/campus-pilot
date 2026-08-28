@@ -95,7 +95,7 @@ Administration permissions:
 - `agent_limits:view` / `agent_limits:edit`;
 - `agent_audit:view`.
 
-Campus Owner retains wildcard behaviour. New-campus School Administrator seeds should include the Administration permissions above. Existing non-owner roles must not silently gain Agent access during migration; an administrator deliberately assigns it to seeded or custom roles.
+Campus Owner retains wildcard behaviour. Built-in School Administrator roles receive AI-provider and routing Administration permissions only; migration 084 backfills the four `ai_providers:*` and `ai_routing:*` permissions for existing system roles and leaves future-tenant provisioning intact. That backfill grants no `agent:view`, `agent:run`, `agent:history`, `agent:share`, or `agent:approve` permission and never creates an Agent module entitlement. Other existing non-owner roles must not silently gain Agent access; an administrator deliberately assigns it to seeded or custom roles.
 
 ## 5. Capability broker
 
@@ -314,8 +314,8 @@ CI must prove:
 ## 15. Delivery sequence
 
 1. **Operation inventory and broker foundation** — classify every current server operation, add exact operation permissions and CI coverage, introduce actor-aware audit events, and build the broker with no provider execution.
-2. **Provider administration and routing** — encrypted connections and model catalogues are complete; migration 083 adds server-validated tenant, task, module/operation, and capability routing. Provider attempts and normalized usage ship with the execution worker rather than being fabricated by administration-only connection tests.
-3. **Durable read-only Agent module** — licensed `/modules/agent`, durable sessions and history, worker-backed runs, immutable provider-attempt and usage records, transactional licensing reservations, and genuine authorized read capabilities.
+2. **Provider administration and routing** — encrypted connections and model catalogues are complete; migration 083 adds server-validated tenant, task, module/operation, and capability routing. Migration 084 is the narrow forward backfill for existing built-in School Administrator AI-provider/routing Administration permissions; it grants no Agent-use permission or entitlement. Provider attempts and normalized usage ship with the execution worker rather than being fabricated by administration-only connection tests.
+3. **Durable read-only Agent module** — migration 085 owns durable Sessions, owner membership, append-only messages, runs, queue leases, redacted events, provider-attempt and capability-call trails, and request idempotency. The licensed `/modules/agent`, history, worker-backed execution, canonical usage ledger, transactional licensing reservations, and genuine authorized reads release only when the worker can complete queued work; do not expose a queue that only accumulates runs.
 4. **Global widget and contextual drawer** — one shared-shell widget, recent-session handoff, server-rehydrated module/record context, explicit context chips, full accessibility behaviour, and a clear path to the full Agent workspace.
 5. **Governance and reporting** — capability/policy inventory, person/module/capability usage, transactional limits, run/audit inspection, and filtered export.
 6. **Proposals, approvals, and executable coverage** — immutable proposals, stale checks, designated/dual approvals, then safe write capability expansion module by module.
