@@ -1,6 +1,67 @@
 export type BillingAccountStatus = "active" | "on_hold" | "closed";
 export type FeeStructureStatus = "draft" | "active" | "retired";
 export type InvoiceStatus = "draft" | "issued";
+export type FeesImportStatus = "uploaded" | "preview_ready" | "committed";
+export type FeesImportDateFormat = "yyyy_mm_dd" | "dd_mm_yyyy" | "mm_dd_yyyy";
+
+export interface FeesImportRecord {
+  id: string;
+  entity_key: "billing_accounts";
+  file_name: string;
+  content_type: string;
+  source_format: "csv" | "xlsx";
+  source_size_bytes: number;
+  source_row_count: number;
+  source_headers: string[];
+  status: FeesImportStatus;
+  created_at: string;
+  latest_preview_id: string | null;
+  mapping_version: number | null;
+  ready_rows: number | null;
+  invalid_rows: number | null;
+  duplicate_rows: number | null;
+  created_rows: number | null;
+  skipped_rows: number | null;
+  failed_rows: number | null;
+  committed_at: string | null;
+}
+
+export interface FeesImportMapping {
+  columns: Record<string, string>;
+  date_format: FeesImportDateFormat | null;
+}
+
+export interface FeesImportPreviewRow {
+  id: string;
+  row_number: number;
+  canonical_data: Record<string, unknown>;
+  outcome: "ready" | "invalid" | "duplicate";
+  issues: string[];
+  duplicate_record_id: string | null;
+}
+
+export interface FeesImportPreview {
+  id: string;
+  import_id: string;
+  mapping_version: number;
+  mapping: FeesImportMapping;
+  ready_rows: number;
+  invalid_rows: number;
+  duplicate_rows: number;
+  created_at: string;
+  rows: FeesImportPreviewRow[];
+  total_rows: number;
+}
+
+export interface FeesImportCommit {
+  id: string;
+  import_id: string;
+  preview_id: string;
+  created_rows: number;
+  skipped_rows: number;
+  failed_rows: number;
+  committed_at: string;
+}
 
 export interface PaginationMeta {
   current_page: number;
@@ -190,3 +251,4 @@ export interface BillingAccountsResponse { billing_accounts: BillingAccount[] }
 export interface FeeStructuresResponse { fee_structures: FeeStructure[] }
 export interface LearnerCandidatesResponse { learners: LearnerCandidate[] }
 export interface InvoicesResponse { invoices: InvoiceSummary[] }
+export interface FeesImportsResponse { imports: FeesImportRecord[] }

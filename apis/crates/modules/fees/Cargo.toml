@@ -9,9 +9,12 @@ cp-audit = { path = "../../platform/audit" }
 cp-academics = { path = "../academics" }
 cp-finance = { path = "../finance" }
 cp-sis = { path = "../sis" }
+cp-imports = { path = "../../platform/imports" }
+actix-multipart = "0.7"
 actix-web = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
+futures-util = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }

@@ -5,7 +5,9 @@ import { httpClient } from "@/lib/http-client";
 import type {
   ApiEnvelope, BillingAccount, BillingAccountsResponse, BillingAccountStatus,
   FeeStructure, FeeStructureInput, FeeStructuresResponse, FeesReferenceData,
-  Invoice, InvoiceInput, InvoicesResponse, LearnerCandidatesResponse, ListParams,
+  FeesImportCommit, FeesImportMapping, FeesImportPreview, FeesImportRecord,
+  FeesImportsResponse, Invoice, InvoiceInput, InvoicesResponse,
+  LearnerCandidatesResponse, ListParams,
 } from "./types";
 
 const BASE_URL = "/api/1.0/fees";
@@ -20,6 +22,21 @@ async function request<T>(work: () => Promise<{ data: ApiEnvelope<T> }>): Promis
 }
 
 export const feesService = {
+  listImports: (params?: { page?: number; per_page?: number }) =>
+    request<FeesImportsResponse>(() => httpClient.get(`${BASE_URL}/imports`, { params })),
+  uploadImport: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<FeesImportRecord>(() => httpClient.post(`${BASE_URL}/imports`, form));
+  },
+  getImport: (id: string) =>
+    request<FeesImportRecord>(() => httpClient.get(`${BASE_URL}/imports/${id}`)),
+  createImportPreview: (id: string, mapping: FeesImportMapping) =>
+    request<FeesImportPreview>(() => httpClient.put(`${BASE_URL}/imports/${id}/mapping`, mapping)),
+  getImportPreview: (id: string, params?: { page?: number; per_page?: number }) =>
+    request<FeesImportPreview>(() => httpClient.get(`${BASE_URL}/imports/${id}/preview`, { params })),
+  commitImport: (id: string, previewId: string) =>
+    request<FeesImportCommit>(() => httpClient.post(`${BASE_URL}/imports/${id}/commit`, { preview_id: previewId })),
   referenceData: () => request<FeesReferenceData>(() => httpClient.get(`${BASE_URL}/reference-data`)),
   learnerCandidates: (search?: string) => request<LearnerCandidatesResponse>(() => httpClient.get(`${BASE_URL}/learner-candidates`, { params: { search } })),
   listBillingAccounts: (params?: ListParams) => request<BillingAccountsResponse>(() => httpClient.get(`${BASE_URL}/billing-accounts`, { params })),

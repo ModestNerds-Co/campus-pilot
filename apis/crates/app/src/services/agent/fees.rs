@@ -7,6 +7,7 @@ use cp_agent::{
 };
 use cp_common::PaginationMeta;
 use cp_fees::foundation::{BillingAccountOps, FeeStructureOps, FeesReferenceOps};
+use cp_fees::imports::FeesImportOps;
 use cp_fees::invoices::InvoiceOps;
 use cp_sis::ops::LearnerOps;
 use serde::Deserialize;
@@ -376,6 +377,190 @@ pub(super) struct FeesReferenceDataCapability {
     descriptor: CapabilityDescriptor,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FeesImportsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+pub(super) struct FeesImportsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FeesImportsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "fees.imports.list",
+                "List billing-account imports",
+                "Returns billing-account import metadata and validation or commit totals without source bytes.",
+                json!({
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+                }),
+                json!({ "imports": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "fees.imports",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FeesImportsListCapability {
+    type Input = FeesImportsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (imports, total) =
+            FeesImportOps::list(&self.pool, context.principal().tenant_id(), page, per_page)
+                .await
+                .map_err(|_| dependency_failure("Billing-account imports could not be loaded."))?;
+        Ok(json!({
+            "imports": imports,
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FeesImportReadInput {
+    import_id: Uuid,
+}
+
+pub(super) struct FeesImportReadCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FeesImportReadCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "fees.imports.read",
+                "Read billing-account import",
+                "Returns one billing-account import and its latest totals without source bytes.",
+                json!({ "import_id": { "type": "string", "format": "uuid" } }),
+                json!({ "import": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "fees.imports",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FeesImportReadCapability {
+    type Input = FeesImportReadInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("data_import", input.import_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let record =
+            FeesImportOps::get(&self.pool, context.principal().tenant_id(), input.import_id)
+                .await
+                .map_err(|_| dependency_failure("The billing-account import could not be loaded."))?
+                .ok_or_else(|| not_found("The billing-account import was not found."))?;
+        Ok(json!({ "import": record }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FeesImportPreviewInput {
+    import_id: Uuid,
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+pub(super) struct FeesImportPreviewCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl FeesImportPreviewCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "fees.imports.preview.read",
+                "Read billing-account import preview",
+                "Returns bounded validated billing-account rows and issues. The retained source file and unmapped columns are never returned.",
+                json!({
+                    "import_id": { "type": "string", "format": "uuid" },
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+                }),
+                json!({ "preview": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "fees.import_previews",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for FeesImportPreviewCapability {
+    type Input = FeesImportPreviewInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("data_import", input.import_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let preview = FeesImportOps::preview(
+            &self.pool,
+            context.principal().tenant_id(),
+            input.import_id,
+            page,
+            per_page,
+        )
+        .await
+        .map_err(|_| dependency_failure("The billing-account import preview could not be loaded."))?
+        .ok_or_else(|| not_found("The billing-account import preview was not found."))?;
+        Ok(json!({ "preview": preview }))
+    }
+}
+
 impl FeesReferenceDataCapability {
     pub(super) fn new(pool: PgPool) -> Self {
         Self {
@@ -465,6 +650,15 @@ fn resource(kind: &str, id: Uuid) -> CapabilityResource {
         .unwrap_or_else(|error| panic!("invalid built-in capability resource: {error}"))
 }
 
+fn resource_scope(kind: &str, id: Uuid) -> CapabilityScope {
+    CapabilityScope::resources([resource(kind, id)])
+        .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
+}
+
 fn dependency_failure(message: &'static str) -> CapabilityExecutionError {
     CapabilityExecutionError::new(CapabilityExecutionErrorCode::DependencyUnavailable, message)
+}
+
+fn not_found(message: &'static str) -> CapabilityExecutionError {
+    CapabilityExecutionError::new(CapabilityExecutionErrorCode::InvalidState, message)
 }

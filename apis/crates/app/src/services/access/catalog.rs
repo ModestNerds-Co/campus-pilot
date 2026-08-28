@@ -488,7 +488,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 12);
             } else if module_key == "fees" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 8);
+                assert_eq!(module.executable_capabilities(), 11);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

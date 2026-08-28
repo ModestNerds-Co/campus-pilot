@@ -4,6 +4,7 @@
 //! operation evaluator enforces exact permissions, licensing, and module
 //! dependencies before these handlers run.
 
+use actix_multipart::Multipart;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use cp_audit::{AuditActor, RequestContext};
@@ -11,7 +12,9 @@ use cp_common::{
     AccessContext, ApiResponse, PaginationMeta, RequirePermission, TenantId,
     flatten_validation_errors,
 };
+use cp_imports::{MAX_SOURCE_BYTES, parse_source};
 use cp_sis::ops::LearnerOps;
+use futures_util::StreamExt;
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -23,10 +26,200 @@ use crate::foundation::{
     LearnerCandidatesResponse, PaginatedBillingAccountsResponse, PaginatedFeeStructuresResponse,
     UpdateBillingAccountRequest, UpdateFeeStructureRequest, VersionRequest,
 };
+use crate::imports::{
+    CommitImportRequest, FeesImportListResponse, FeesImportMapping, FeesImportOps, ImportListQuery,
+    NewFeesImport, PreviewRowsQuery,
+};
 use crate::invoices::{
     CreateInvoiceRequest, InvoiceDeleteOutcome, InvoiceListQuery, InvoiceOps, IssueInvoiceRequest,
     PaginatedInvoicesResponse,
 };
+
+#[get("/imports")]
+async fn list_imports(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<ImportListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match FeesImportOps::list(pool.get_ref(), tenant_id(tenant), page, per_page).await {
+        Ok((imports, total)) => {
+            paginated(FeesImportListResponse { imports }, page, per_page, total)
+        }
+        Err(_) => import_internal_error("Billing imports could not be loaded."),
+    }
+}
+
+#[post("/imports")]
+async fn upload_import(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    mut payload: Multipart,
+) -> HttpResponse {
+    let mut file_name = None;
+    let mut content_type = None;
+    let mut source_bytes = None;
+    while let Some(item) = payload.next().await {
+        let mut field = match item {
+            Ok(field) => field,
+            Err(_) => return bad_request("The import upload is malformed."),
+        };
+        let disposition = field.content_disposition();
+        if disposition
+            .and_then(|value| value.get_name())
+            .unwrap_or_default()
+            != "file"
+        {
+            return bad_request("The import upload contains an unknown field.");
+        }
+        if source_bytes.is_some() {
+            return bad_request("Upload one import file at a time.");
+        }
+        file_name = disposition
+            .and_then(|value| value.get_filename())
+            .map(ToOwned::to_owned);
+        content_type = field.content_type().map(ToString::to_string);
+        source_bytes = match read_bounded_field(&mut field, MAX_SOURCE_BYTES).await {
+            Ok(bytes) => Some(bytes),
+            Err(message) => return bad_request(message),
+        };
+    }
+    let Some(file_name) = file_name else {
+        return bad_request("Choose a CSV or XLSX file.");
+    };
+    let Some(source_bytes) = source_bytes else {
+        return bad_request("Choose a CSV or XLSX file.");
+    };
+    let parse_name = file_name.clone();
+    let parse_bytes = source_bytes.clone();
+    let parsed = match web::block(move || parse_source(&parse_name, &parse_bytes)).await {
+        Ok(Ok(parsed)) => parsed,
+        Ok(Err(error)) => return bad_request(&error.to_string()),
+        Err(_) => return import_internal_error("The import file could not be read."),
+    };
+    match FeesImportOps::create(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        NewFeesImport {
+            file_name,
+            content_type: content_type.unwrap_or_else(|| "application/octet-stream".to_string()),
+            source_bytes,
+            parsed,
+        },
+    )
+    .await
+    {
+        Ok(value) => HttpResponse::Created().json(ApiResponse::from_status(
+            StatusCode::CREATED,
+            Some(value),
+            None,
+        )),
+        Err(error) => import_operation_error(error),
+    }
+}
+
+#[get("/imports/{id}")]
+async fn read_import(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match FeesImportOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(Some(value)) => ok(value),
+        Ok(None) => not_found("Billing import"),
+        Err(_) => import_internal_error("Billing import could not be loaded."),
+    }
+}
+
+#[put("/imports/{id}/mapping")]
+async fn preview_import_mapping(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    mapping: web::Json<FeesImportMapping>,
+) -> HttpResponse {
+    let tenant_id = tenant_id(tenant);
+    let import_id = path.into_inner();
+    let source = match FeesImportOps::retained_source(pool.get_ref(), tenant_id, import_id).await {
+        Ok(Some(source)) => source,
+        Ok(None) => return not_found("Billing import"),
+        Err(_) => return import_internal_error("The retained import source could not be loaded."),
+    };
+    let parse_name = source.file_name;
+    let parse_bytes = source.source_bytes;
+    let table = match web::block(move || parse_source(&parse_name, &parse_bytes)).await {
+        Ok(Ok(parsed)) => parsed.table,
+        Ok(Err(error)) => return bad_request(&error.to_string()),
+        Err(_) => return import_internal_error("The retained import source could not be read."),
+    };
+    match FeesImportOps::create_preview(
+        pool.get_ref(),
+        tenant_id,
+        actor.into_inner(),
+        request_context.into_inner(),
+        import_id,
+        mapping.into_inner(),
+        &table,
+    )
+    .await
+    {
+        Ok(value) => ok(value),
+        Err(error) => import_operation_error(error),
+    }
+}
+
+#[get("/imports/{id}/preview")]
+async fn read_import_preview(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+    query: web::Query<PreviewRowsQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match FeesImportOps::preview(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        page,
+        per_page,
+    )
+    .await
+    {
+        Ok(Some(value)) => ok(value),
+        Ok(None) => not_found("Billing import preview"),
+        Err(_) => import_internal_error("Billing import preview could not be loaded."),
+    }
+}
+
+#[post("/imports/{id}/commit")]
+async fn commit_import(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CommitImportRequest>,
+) -> HttpResponse {
+    match FeesImportOps::commit(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        path.into_inner(),
+        body.preview_id,
+    )
+    .await
+    {
+        Ok(value) => ok(value),
+        Err(error) => import_operation_error(error),
+    }
+}
 
 #[get("/reference-data")]
 async fn read_reference_data(
@@ -581,6 +774,55 @@ fn not_found(label: &str) -> HttpResponse {
     ))
 }
 
+fn bad_request(message: &str) -> HttpResponse {
+    HttpResponse::BadRequest().json(ApiResponse::from_status(
+        StatusCode::BAD_REQUEST,
+        None::<()>,
+        Some(vec![message.to_string()]),
+    ))
+}
+
+fn import_internal_error(message: &str) -> HttpResponse {
+    HttpResponse::InternalServerError().json(ApiResponse::from_status(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        None::<()>,
+        Some(vec![message.to_string()]),
+    ))
+}
+
+fn import_operation_error(error: anyhow::Error) -> HttpResponse {
+    if let Some(database) = error.root_cause().downcast_ref::<sqlx::Error>() {
+        if let sqlx::Error::Database(database) = database
+            && database.code().as_deref() == Some("23505")
+        {
+            return HttpResponse::Conflict().json(ApiResponse::from_status(
+                StatusCode::CONFLICT,
+                None::<()>,
+                Some(vec![
+                    "That billing row conflicts with an existing record.".to_string(),
+                ]),
+            ));
+        }
+        return import_internal_error("The billing import could not be saved.");
+    }
+    bad_request(&error.to_string())
+}
+
+async fn read_bounded_field(
+    field: &mut actix_multipart::Field,
+    maximum_bytes: usize,
+) -> Result<Vec<u8>, &'static str> {
+    let mut bytes = Vec::new();
+    while let Some(chunk) = field.next().await {
+        let chunk = chunk.map_err(|_| "The import upload could not be read.")?;
+        if bytes.len().saturating_add(chunk.len()) > maximum_bytes {
+            return Err("The import file exceeds the 5 MB limit.");
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
+}
+
 fn internal_error() -> HttpResponse {
     HttpResponse::InternalServerError().json(ApiResponse::from_status(
         StatusCode::INTERNAL_SERVER_ERROR,
@@ -638,6 +880,12 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .wrap(RequirePermission::new("fees"))
             .service(read_reference_data)
             .service(list_learner_candidates)
+            .service(list_imports)
+            .service(upload_import)
+            .service(read_import)
+            .service(preview_import_mapping)
+            .service(read_import_preview)
+            .service(commit_import)
             .service(list_billing_accounts)
             .service(read_billing_account)
             .service(create_billing_account)

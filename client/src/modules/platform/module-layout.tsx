@@ -46,6 +46,7 @@ type LocalNavItem = {
   label: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
+  permission?: string;
 };
 
 const moduleLabels: Record<string, string> = {
@@ -113,6 +114,7 @@ const feesNavigation: LocalNavItem[] = [
   { label: "Invoices", path: "/modules/fees/invoices", icon: FileCheck2 },
   { label: "Billing accounts", path: "/modules/fees/billing-accounts", icon: UsersRound },
   { label: "Fee structures", path: "/modules/fees/fee-structures", icon: ReceiptText },
+  { label: "Data imports", path: "/modules/fees/imports", icon: FileUp, permission: "fees:create" },
 ];
 
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
@@ -137,7 +139,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : [];
+  const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : [])
+    .filter((item) => !item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission));
 
   useEffect(() => {
     let active = true;
@@ -282,6 +285,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/fees/billing-accounts") return <Link className={navClass(active)} to="/modules/fees/billing-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fees/fee-structures") return <Link className={navClass(active)} to="/modules/fees/fee-structures"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fees/invoices") return <Link className={navClass(active)} to="/modules/fees/invoices"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/fees/imports") return <Link className={navClass(active)} to="/modules/fees/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

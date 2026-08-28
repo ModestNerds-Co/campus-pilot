@@ -1358,6 +1358,60 @@ fn build_catalog() -> Vec<RoutedOperation> {
         ),
         route(
             Method::GET,
+            "/api/1.0/fees/imports",
+            "fees.imports.list",
+            "fees",
+            "fees:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/imports",
+            "fees.imports.upload",
+            "fees",
+            "fees:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/imports/{id}",
+            "fees.imports.read",
+            "fees",
+            "fees:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/fees/imports/{id}/mapping",
+            "fees.imports.preview",
+            "fees",
+            "fees:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/fees/imports/{id}/preview",
+            "fees.imports.preview.read",
+            "fees",
+            "fees:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/fees/imports/{id}/commit",
+            "fees.imports.commit",
+            "fees",
+            "fees:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/fees/billing-accounts",
             "fees.billing_accounts.list",
             "fees",
@@ -2127,6 +2181,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.posting_requests.read"
         | "fees.reference_data.read"
         | "fees.learner_candidates.list"
+        | "fees.imports.list"
+        | "fees.imports.read"
+        | "fees.imports.preview.read"
         | "fees.billing_accounts.list"
         | "fees.billing_accounts.read"
         | "fees.fee_structures.list"
@@ -2234,6 +2291,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "finance.journals.reverse"
         | "finance.posting_requests.convert"
         | "finance.posting_requests.reject"
+        | "fees.imports.upload"
+        | "fees.imports.preview"
+        | "fees.imports.commit"
         | "fees.billing_accounts.create"
         | "fees.billing_accounts.update"
         | "fees.fee_structures.create"
@@ -2359,7 +2419,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 210);
+        assert_eq!(operation_catalog().len(), 216);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2411,7 +2471,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [85, 118, 7, 0]);
+        assert_eq!(counts, [88, 121, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

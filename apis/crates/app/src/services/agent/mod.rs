@@ -33,6 +33,7 @@ use administration_access::{
     AdministrationUserReadCapability, AdministrationUsersListCapability,
 };
 use fees::{
+    FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
     FeesLearnerCandidatesCapability, FeesListCapability, FeesListKind, FeesReadCapability,
     FeesReadKind, FeesReferenceDataCapability,
 };
@@ -198,6 +199,15 @@ pub fn build_capability_registry(
     registry
         .register(FeesLearnerCandidatesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fees learner-candidates capability: {error}"));
+    registry
+        .register(FeesImportsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fees imports-list capability: {error}"));
+    registry
+        .register(FeesImportReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fees import-read capability: {error}"));
+    registry
+        .register(FeesImportPreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Fees import-preview capability: {error}"));
     for kind in [
         FeesListKind::BillingAccounts,
         FeesListKind::FeeStructures,
@@ -485,6 +495,9 @@ mod tests {
                 "fees.billing_accounts.read",
                 "fees.fee_structures.list",
                 "fees.fee_structures.read",
+                "fees.imports.list",
+                "fees.imports.preview.read",
+                "fees.imports.read",
                 "fees.invoices.list",
                 "fees.invoices.read",
                 "fees.learner_candidates.list",

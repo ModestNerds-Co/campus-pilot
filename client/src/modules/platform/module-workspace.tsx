@@ -9,6 +9,7 @@ import { accessService } from "./access-service";
 import { defaultModuleVisual, moduleVisuals, stageLabel } from "./module-registry";
 import type { ModuleDefinition } from "./types";
 import { TimetableWorkspace } from "@/modules/timetabling";
+import { useAuthStore } from "@/stores/auth-store";
 
 export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({ moduleKey }) => {
   const normalizedKey = moduleKey.replace(/-/g, "_");
@@ -36,6 +37,7 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({ moduleKey }) 
 };
 
 const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) => {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
   const Icon = visual.icon;
   usePageChrome("Overview");
@@ -129,6 +131,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
             <FeesLink description="Create learner invoices and track their Finance request state." label="Invoices" to="/modules/fees/invoices" />
             <FeesLink description="Open and maintain the Fees record linked to each learner." label="Billing accounts" to="/modules/fees/billing-accounts" />
             <FeesLink description="Define amounts, academic scope, currency, and Finance posting accounts." label="Fee structures" to="/modules/fees/fee-structures" />
+            {permissions.includes("*") || permissions.includes("fees:create") ? <FeesLink description="Import existing learner billing accounts from CSV or XLSX files." label="Data imports" to="/modules/fees/imports" /> : null}
           </div>
         </section>
       </div>
@@ -229,7 +232,7 @@ const FinanceLink: React.FC<{ description: string; label: string; to: "/modules/
   </Link>
 );
 
-const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fees/invoices" | "/modules/fees/billing-accounts" | "/modules/fees/fee-structures" }> = ({ description, label, to }) => (
+const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fees/invoices" | "/modules/fees/billing-accounts" | "/modules/fees/fee-structures" | "/modules/fees/imports" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
