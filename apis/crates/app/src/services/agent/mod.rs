@@ -8,6 +8,7 @@ mod fees;
 mod finance;
 mod fleet;
 mod hr;
+mod procurement;
 mod sis;
 mod timetabling;
 
@@ -53,6 +54,11 @@ use hr::{
     HrEmploymentEngagementReadCapability, HrEmploymentEngagementsListCapability,
     HrImportPreviewCapability, HrImportReadCapability, HrImportsListCapability,
     HrPositionReadCapability, HrPositionsListCapability,
+};
+use procurement::{
+    ProcurementReadCapability, ProcurementReadKind, ProcurementReferenceDataCapability,
+    ProcurementRequesterCandidatesCapability, ProcurementRequisitionsListCapability,
+    ProcurementSuppliersListCapability,
 };
 use sis::{
     AccountCandidatesCapability, SisImportPreviewCapability, SisImportReadCapability,
@@ -293,6 +299,30 @@ pub fn build_capability_registry(
         .register(HrEmployeeAvailabilityReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR availability-read capability: {error}"));
     registry
+        .register(ProcurementReferenceDataCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Procurement reference-data capability: {error}"));
+    registry
+        .register(ProcurementRequesterCandidatesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Procurement requester-candidates capability: {error}")
+        });
+    registry
+        .register(ProcurementSuppliersListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Procurement suppliers-list capability: {error}"));
+    registry
+        .register(ProcurementRequisitionsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Procurement requisitions-list capability: {error}")
+        });
+    for kind in [
+        ProcurementReadKind::Supplier,
+        ProcurementReadKind::Requisition,
+    ] {
+        registry
+            .register(ProcurementReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
         .register(FleetDriverCandidatesListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fleet driver-candidates capability: {error}"));
     registry
@@ -405,6 +435,8 @@ mod tests {
                 "timetabling:view".to_string(),
                 "finance:view".to_string(),
                 "fees:view".to_string(),
+                "procurement:view".to_string(),
+                "procurement:create".to_string(),
             ],
             enabled_modules: vec![
                 "agent".to_string(),
@@ -416,6 +448,7 @@ mod tests {
                 "timetabling".to_string(),
                 "finance".to_string(),
                 "fees".to_string(),
+                "procurement".to_string(),
             ],
             entitlements: EntitlementSnapshot::new(
                 LeaseLifecycle::Active,
@@ -432,6 +465,7 @@ mod tests {
                     ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                     ("finance".to_string(), ModuleEntitlementState::Enabled),
                     ("fees".to_string(), ModuleEntitlementState::Enabled),
+                    ("procurement".to_string(), ModuleEntitlementState::Enabled),
                 ],
                 Vec::<String>::new(),
             )
@@ -534,6 +568,12 @@ mod tests {
                 "hr_payroll.imports.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
+                "procurement.reference_data.read",
+                "procurement.requester_candidates.list",
+                "procurement.requisitions.list",
+                "procurement.requisitions.read",
+                "procurement.suppliers.list",
+                "procurement.suppliers.read",
                 "sis.account_candidates.list",
                 "sis.applications.list",
                 "sis.applications.read",
@@ -710,5 +750,94 @@ mod tests {
                 .unwrap_or_else(|| unreachable!());
             assert_eq!(error.code(), BrokerErrorCode::ExecutionFailed, "{key}");
         }
+    }
+
+    #[tokio::test]
+    async fn production_procurement_capabilities_are_typed_and_fail_safely() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        pool.close().await;
+        let broker = CapabilityBroker::new(
+            build_capability_registry(pool, license_config()),
+            Arc::new(TestAuthorityLoader(authority())),
+            Arc::new(TenantWideScope),
+            Arc::new(TestAudit),
+        );
+        let principal =
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4());
+        let request_context = RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4());
+        for (key, input) in [
+            ("procurement.reference_data.read", json!({})),
+            (
+                "procurement.requester_candidates.list",
+                json!({ "search": "sam" }),
+            ),
+            ("procurement.suppliers.list", json!({ "page": 1 })),
+            (
+                "procurement.suppliers.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+            (
+                "procurement.requisitions.list",
+                json!({ "status": "submitted" }),
+            ),
+            (
+                "procurement.requisitions.read",
+                json!({ "record_id": Uuid::new_v4() }),
+            ),
+        ] {
+            let error = broker
+                .invoke(
+                    principal,
+                    CapabilityCall::parse(key, 1, input, request_context)
+                        .unwrap_or_else(|_| unreachable!()),
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| unreachable!());
+            assert_eq!(
+                error.code(),
+                BrokerErrorCode::ExecutionFailed,
+                "unexpected broker result for {key}"
+            );
+            assert_eq!(
+                error.safe_message(),
+                "The capability could not be completed.",
+                "unsafe failure message for {key}"
+            );
+        }
+
+        let invalid = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "procurement.reference_data.read",
+                    1,
+                    json!({ "tenant_id": Uuid::new_v4() }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid.code(), BrokerErrorCode::InvalidInput);
+
+        let irrelevant_filter = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "procurement.suppliers.list",
+                    1,
+                    json!({ "requester_employee_id": Uuid::new_v4() }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(irrelevant_filter.code(), BrokerErrorCode::InvalidInput);
     }
 }

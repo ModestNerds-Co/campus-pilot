@@ -1554,6 +1554,152 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // Procurement: Finance-backed reference data, employee requesters,
+        // suppliers, and controlled requisitions.
+        route(
+            Method::GET,
+            "/api/1.0/procurement/reference-data",
+            "procurement.reference_data.read",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/requester-candidates",
+            "procurement.requester_candidates.list",
+            "procurement",
+            "procurement:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/suppliers",
+            "procurement.suppliers.list",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/suppliers/{id}",
+            "procurement.suppliers.read",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/suppliers",
+            "procurement.suppliers.create",
+            "procurement",
+            "procurement:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/procurement/suppliers/{id}",
+            "procurement.suppliers.update",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/procurement/suppliers/{id}",
+            "procurement.suppliers.delete",
+            "procurement",
+            "procurement:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/requisitions",
+            "procurement.requisitions.list",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/procurement/requisitions/{id}",
+            "procurement.requisitions.read",
+            "procurement",
+            "procurement:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/requisitions",
+            "procurement.requisitions.create",
+            "procurement",
+            "procurement:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/procurement/requisitions/{id}",
+            "procurement.requisitions.update",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/procurement/requisitions/{id}",
+            "procurement.requisitions.delete",
+            "procurement",
+            "procurement:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/requisitions/{id}/submit",
+            "procurement.requisitions.submit",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/requisitions/{id}/approve",
+            "procurement.requisitions.approve",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/requisitions/{id}/reject",
+            "procurement.requisitions.reject",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/procurement/requisitions/{id}/cancel",
+            "procurement.requisitions.cancel",
+            "procurement",
+            "procurement:edit",
+            OperationEffect::Write,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -2090,6 +2236,8 @@ fn route(
             "academics".to_string(),
             "finance".to_string(),
         ])
+    } else if key.starts_with("procurement.") {
+        operation.requiring_modules(["hr_payroll".to_string(), "finance".to_string()])
     } else {
         operation
     };
@@ -2190,6 +2338,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "fees.fee_structures.read"
         | "fees.invoices.list"
         | "fees.invoices.read"
+        | "procurement.reference_data.read"
+        | "procurement.requester_candidates.list"
+        | "procurement.suppliers.list"
+        | "procurement.suppliers.read"
+        | "procurement.requisitions.list"
+        | "procurement.requisitions.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2304,6 +2458,16 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "fees.invoices.create"
         | "fees.invoices.issue"
         | "fees.invoices.delete"
+        | "procurement.suppliers.create"
+        | "procurement.suppliers.update"
+        | "procurement.suppliers.delete"
+        | "procurement.requisitions.create"
+        | "procurement.requisitions.update"
+        | "procurement.requisitions.delete"
+        | "procurement.requisitions.submit"
+        | "procurement.requisitions.approve"
+        | "procurement.requisitions.reject"
+        | "procurement.requisitions.cancel"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -2392,6 +2556,7 @@ mod tests {
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
+                ("procurement".to_string(), ModuleEntitlementState::Enabled),
             ],
             vec![],
         )
@@ -2419,7 +2584,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 216);
+        assert_eq!(operation_catalog().len(), 232);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2471,7 +2636,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [88, 121, 7, 0]);
+        assert_eq!(counts, [94, 131, 7, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -2588,6 +2753,80 @@ mod tests {
         ));
         assert!(allowed("hr_payroll.availability.read", &hr_viewer));
         assert!(!allowed("hr_payroll.employees.link_account", &hr_viewer));
+
+        let procurement_viewer = ["procurement:view"];
+        assert!(allowed(
+            "procurement.requisitions.list",
+            &procurement_viewer
+        ));
+        assert!(allowed("procurement.suppliers.read", &procurement_viewer));
+        assert!(!allowed(
+            "procurement.requisitions.create",
+            &procurement_viewer
+        ));
+    }
+
+    #[test]
+    fn procurement_requires_hr_and_finance_entitlements() {
+        let operation = operation("procurement.requisitions.list");
+        assert_eq!(
+            operation.required_modules().collect::<Vec<_>>(),
+            vec!["finance", "hr_payroll"]
+        );
+
+        for modules in [
+            vec![("procurement".to_string(), ModuleEntitlementState::Enabled)],
+            vec![
+                ("procurement".to_string(), ModuleEntitlementState::Enabled),
+                ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            vec![
+                ("procurement".to_string(), ModuleEntitlementState::Enabled),
+                ("finance".to_string(), ModuleEntitlementState::Enabled),
+            ],
+        ] {
+            let snapshot = EntitlementSnapshot::new(LeaseLifecycle::Active, modules, vec![])
+                .unwrap_or_else(|_| unreachable!());
+            let decision = evaluate_operation(
+                operation,
+                &snapshot,
+                &["procurement:view".to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(!decision.allowed);
+            assert_eq!(decision.reason.as_str(), "dependency_missing");
+        }
+    }
+
+    #[test]
+    fn procurement_workflow_permissions_override_http_verb_defaults() {
+        for (key, permission) in [
+            (
+                "procurement.requester_candidates.list",
+                "procurement:create",
+            ),
+            ("procurement.requisitions.create", "procurement:create"),
+            ("procurement.requisitions.update", "procurement:edit"),
+            ("procurement.requisitions.delete", "procurement:delete"),
+            ("procurement.requisitions.submit", "procurement:edit"),
+            ("procurement.requisitions.cancel", "procurement:edit"),
+            ("procurement.requisitions.approve", "procurement:edit"),
+            ("procurement.requisitions.reject", "procurement:edit"),
+        ] {
+            assert_eq!(operation(key).permission(), permission, "{key}");
+        }
+
+        // These transitions are POST routes, but exact operation permission is
+        // authoritative; the generic POST -> create fallback must not grant them.
+        for key in [
+            "procurement.requisitions.submit",
+            "procurement.requisitions.cancel",
+            "procurement.requisitions.approve",
+            "procurement.requisitions.reject",
+        ] {
+            assert!(!allowed(key, &["procurement:create"]), "{key}");
+            assert!(allowed(key, &["procurement:edit"]), "{key}");
+        }
     }
 
     #[test]
