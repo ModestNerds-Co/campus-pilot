@@ -152,6 +152,97 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             false,
         ),
+        // Administration: app-managed AI provider connections.
+        route(
+            Method::GET,
+            "/api/1.0/ai/providers",
+            "administration.ai_providers.catalog.list",
+            "administration",
+            "ai_providers:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/ai/connections",
+            "administration.ai_providers.connections.list",
+            "administration",
+            "ai_providers:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/ai/connections",
+            "administration.ai_providers.connections.create",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/ai/connections/{connection_id}",
+            "administration.ai_providers.connections.read",
+            "administration",
+            "ai_providers:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/ai/connections/{connection_id}",
+            "administration.ai_providers.connections.update",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/ai/connections/{connection_id}/credentials/rotate",
+            "administration.ai_providers.credentials.rotate",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/ai/connections/{connection_id}/test",
+            "administration.ai_providers.connections.test",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/ai/connections/{connection_id}/models",
+            "administration.ai_providers.models.list",
+            "administration",
+            "ai_providers:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/ai/connections/{connection_id}/models/refresh",
+            "administration.ai_providers.models.refresh",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/ai/connections/{connection_id}",
+            "administration.ai_providers.connections.disconnect",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::Destructive,
+            true,
+        ),
         // Administration: roles.
         route(
             Method::GET,
@@ -309,6 +400,24 @@ fn build_catalog() -> Vec<RoutedOperation> {
             false,
         ),
         // SIS: canonical people, admissions, and enrolment records.
+        route(
+            Method::GET,
+            "/api/1.0/sis/learner-numbering",
+            "sis.learner_numbering.read",
+            "sis",
+            "sis:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/sis/learner-numbering",
+            "sis.learner_numbering.update",
+            "sis",
+            "sis:edit",
+            OperationEffect::Write,
+            true,
+        ),
         route(
             Method::GET,
             "/api/1.0/sis/account-candidates",
@@ -2221,7 +2330,9 @@ fn route(
         agent_exposure_for(key),
         license_required,
     );
-    let operation = if key.starts_with("sis.") {
+    let operation = if key.starts_with("administration.ai_providers.") {
+        operation.requiring_modules(["agent".to_string()])
+    } else if key.starts_with("sis.") && !key.starts_with("sis.learner_numbering.") {
         operation.requiring_modules(["academics".to_string()])
     } else if key.starts_with("academics.teacher")
         || key.starts_with("academics.teaching_assignments")
@@ -2278,10 +2389,15 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.modules.list"
         | "administration.licensing.read"
         | "administration.school_settings.read"
+        | "administration.ai_providers.catalog.list"
+        | "administration.ai_providers.connections.list"
+        | "administration.ai_providers.connections.read"
+        | "administration.ai_providers.models.list"
         | "administration.roles.list"
         | "administration.roles.read"
         | "administration.users.list"
         | "administration.users.read"
+        | "sis.learner_numbering.read"
         | "sis.account_candidates.list"
         | "sis.imports.list"
         | "sis.imports.read"
@@ -2370,12 +2486,16 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "timetabling.runs.read_latest" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
+        | "administration.ai_providers.connections.update"
+        | "administration.ai_providers.connections.test"
+        | "administration.ai_providers.models.refresh"
         | "administration.users.create"
         | "administration.users.update"
         | "administration.users.activate"
         | "administration.users.deactivate"
         | "administration.licensing.refresh"
         | "administration.licensing.disable_module"
+        | "sis.learner_numbering.update"
         | "sis.learners.create"
         | "sis.imports.upload"
         | "sis.imports.preview"
@@ -2499,6 +2619,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "timetabling.configuration.update"
         | "timetabling.runs.generate"
         | "timetabling.runs.publish" => AgentExposure::ApprovalRequired,
+        "administration.ai_providers.connections.create"
+        | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
+            reason: "Provider credential entry and rotation remain direct human workflows.",
+        },
+        "administration.ai_providers.connections.disconnect" => AgentExposure::HumanOnly {
+            reason: "Destructive provider disconnect and credential purge remain a direct human workflow.",
+        },
         "administration.roles.create"
         | "administration.roles.update"
         | "administration.roles.delete" => AgentExposure::HumanOnly {
@@ -2557,6 +2684,7 @@ mod tests {
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
+                ("agent".to_string(), ModuleEntitlementState::Enabled),
             ],
             vec![],
         )
@@ -2584,7 +2712,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 232);
+        assert_eq!(operation_catalog().len(), 244);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -2636,7 +2764,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [94, 131, 7, 0]);
+        assert_eq!(counts, [99, 135, 10, 0]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -2767,6 +2895,23 @@ mod tests {
     }
 
     #[test]
+    fn learner_numbering_is_sis_only_and_uses_exact_permissions() {
+        let read = operation("sis.learner_numbering.read");
+        let update = operation("sis.learner_numbering.update");
+        assert_eq!(read.required_modules().count(), 0);
+        assert_eq!(update.required_modules().count(), 0);
+        assert!(read.license_required());
+        assert!(update.license_required());
+        assert!(allowed("sis.learner_numbering.read", &["sis:view"]));
+        assert!(!allowed("sis.learner_numbering.update", &["sis:view"]));
+        assert!(allowed("sis.learner_numbering.update", &["sis:edit"]));
+        assert!(matches!(
+            update.agent_exposure(),
+            AgentExposure::ApprovalRequired
+        ));
+    }
+
+    #[test]
     fn procurement_requires_hr_and_finance_entitlements() {
         let operation = operation("procurement.requisitions.list");
         assert_eq!(
@@ -2826,6 +2971,111 @@ mod tests {
         ] {
             assert!(!allowed(key, &["procurement:create"]), "{key}");
             assert!(allowed(key, &["procurement:edit"]), "{key}");
+        }
+    }
+
+    #[test]
+    fn ai_provider_administration_requires_agent_and_exact_permissions() {
+        let catalog = operation("administration.ai_providers.catalog.list");
+        assert_eq!(catalog.permission(), "ai_providers:view");
+        assert_eq!(
+            catalog.required_modules().collect::<Vec<_>>(),
+            vec!["agent"]
+        );
+        assert!(catalog.license_required());
+        assert!(allowed(
+            "administration.ai_providers.connections.list",
+            &["ai_providers:view"]
+        ));
+        assert!(!allowed(
+            "administration.ai_providers.connections.update",
+            &["ai_providers:view"]
+        ));
+        assert!(allowed(
+            "administration.ai_providers.connections.update",
+            &["ai_providers:edit"]
+        ));
+
+        assert_eq!(
+            operation("administration.ai_providers.connections.create")
+                .agent_exposure()
+                .as_str(),
+            "human_only"
+        );
+        assert_eq!(
+            operation("administration.ai_providers.connections.disconnect")
+                .agent_exposure()
+                .as_str(),
+            "human_only"
+        );
+        assert_eq!(
+            operation("administration.ai_providers.connections.test")
+                .agent_exposure()
+                .as_str(),
+            "approval_required"
+        );
+
+        let without_agent = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [(
+                "administration".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            vec![],
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let decision = evaluate_operation(
+            catalog,
+            &without_agent,
+            &["ai_providers:view".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(!decision.allowed);
+        assert_eq!(decision.reason.as_str(), "dependency_missing");
+
+        let enabled_modules = || {
+            [
+                (
+                    "administration".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
+                ("agent".to_string(), ModuleEntitlementState::Enabled),
+            ]
+        };
+        let restricted =
+            EntitlementSnapshot::new(LeaseLifecycle::Restricted, enabled_modules(), vec![])
+                .unwrap_or_else(|_| unreachable!());
+        let restricted_read = evaluate_operation(
+            catalog,
+            &restricted,
+            &["ai_providers:view".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(restricted_read.allowed);
+
+        let restricted_write = evaluate_operation(
+            operation("administration.ai_providers.connections.update"),
+            &restricted,
+            &["ai_providers:edit".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(!restricted_write.allowed);
+        assert_eq!(restricted_write.reason.as_str(), "lease_expired");
+
+        for (lifecycle, reason) in [
+            (LeaseLifecycle::Revoked, "license_revoked"),
+            (LeaseLifecycle::Invalid, "license_invalid"),
+        ] {
+            let snapshot = EntitlementSnapshot::new(lifecycle, enabled_modules(), vec![])
+                .unwrap_or_else(|_| unreachable!());
+            let decision = evaluate_operation(
+                catalog,
+                &snapshot,
+                &["ai_providers:view".to_string()],
+                RuntimeAccessChecks::default(),
+            );
+            assert!(!decision.allowed);
+            assert_eq!(decision.reason.as_str(), reason);
         }
     }
 

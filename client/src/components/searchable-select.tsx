@@ -3,18 +3,20 @@ import { Check, ChevronDown, Search, X } from "lucide-react";
 
 import { cn } from "../lib/utils";
 
-interface Option {
-  id: number;
+type SearchableSelectValue = string | number;
+
+interface Option<T extends SearchableSelectValue> {
+  id: T;
   value: string;
   label: string;
   description?: string;
 }
 
-interface SearchableSelectProps {
+interface SearchableSelectProps<T extends SearchableSelectValue> {
   id?: string;
-  options: Option[];
-  value?: number | null;
-  onChange: (value: number | null) => void;
+  options: Option<T>[];
+  value?: T | null;
+  onChange: (value: T | null) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -22,7 +24,7 @@ interface SearchableSelectProps {
   allowClear?: boolean;
 }
 
-export function SearchableSelect({
+export function SearchableSelect<T extends SearchableSelectValue = number>({
   id,
   options,
   value,
@@ -32,7 +34,7 @@ export function SearchableSelect({
   className,
   loading = false,
   allowClear = true,
-}: SearchableSelectProps) {
+}: SearchableSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -53,7 +55,7 @@ export function SearchableSelect({
     );
   }, [options, searchQuery]);
 
-  const visibleValues = useMemo<Array<number | null>>(
+  const visibleValues = useMemo<Array<T | null>>(
     () => [...(allowClear ? [null] : []), ...filteredOptions.map((option) => option.id)],
     [allowClear, filteredOptions],
   );
@@ -88,7 +90,7 @@ export function SearchableSelect({
     if (restoreFocus) window.requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
-  const handleSelect = (optionValue: number | null) => {
+  const handleSelect = (optionValue: T | null) => {
     onChange(optionValue);
     closeDropdown(true);
   };

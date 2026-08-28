@@ -9,6 +9,7 @@
 use aws_credential_types::Credentials;
 use aws_sdk_s3::{Client as S3Client, config::Region};
 use cp_agent::CapabilityRegistry;
+use cp_ai_providers::AiProviderOps;
 use sqlx::PgPool;
 
 use crate::config::Config;
@@ -25,6 +26,7 @@ pub struct AppState {
     pub kernel_db: Arc<KernelDbOps>,
     pub storage_ops: Arc<StorageOps>,
     pub agent_capabilities: Arc<CapabilityRegistry>,
+    pub ai_provider_ops: Arc<AiProviderOps>,
     pub config: Arc<Config>,
 }
 
@@ -36,6 +38,11 @@ impl AppState {
         let agent_capabilities = Arc::new(build_capability_registry(
             pool.clone(),
             config.license.clone(),
+        ));
+        let ai_provider_ops = Arc::new(AiProviderOps::new(
+            pool.clone(),
+            config.ai_providers.credential_keyring.clone(),
+            config.ai_providers.http_client.clone(),
         ));
 
         // Initialize MinIO/S3 clients - one for internal ops, one for presigned URLs with public host
@@ -82,6 +89,7 @@ impl AppState {
             kernel_db,
             storage_ops,
             agent_capabilities,
+            ai_provider_ops,
             config: config_arc,
         }
     }

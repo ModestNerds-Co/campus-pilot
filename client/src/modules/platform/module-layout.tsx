@@ -20,8 +20,10 @@ import {
   Landmark,
   LogOut,
   Menu,
+  PackageSearch,
   ReceiptText,
   School,
+  Settings2,
   Truck,
   UserRoundCheck,
   UsersRound,
@@ -100,6 +102,7 @@ const sisNavigation: LocalNavItem[] = [
   { label: "Applications", path: "/modules/sis/applications", icon: ClipboardList },
   { label: "Enrolments", path: "/modules/sis/enrolments", icon: School },
   { label: "Data imports", path: "/modules/sis/imports", icon: FileUp },
+  { label: "Settings", path: "/modules/sis/settings", icon: Settings2 },
 ];
 
 const financeNavigation: LocalNavItem[] = [
@@ -115,6 +118,11 @@ const feesNavigation: LocalNavItem[] = [
   { label: "Billing accounts", path: "/modules/fees/billing-accounts", icon: UsersRound },
   { label: "Fee structures", path: "/modules/fees/fee-structures", icon: ReceiptText },
   { label: "Data imports", path: "/modules/fees/imports", icon: FileUp, permission: "fees:create" },
+];
+
+const procurementNavigation: LocalNavItem[] = [
+  { label: "Requisitions", path: "/modules/procurement/requisitions", icon: ClipboardList },
+  { label: "Suppliers", path: "/modules/procurement/suppliers", icon: PackageSearch },
 ];
 
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
@@ -139,7 +147,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : [])
+  const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : [])
     .filter((item) => !item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission));
 
   useEffect(() => {
@@ -196,7 +204,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
             <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="module-workspace-nav">Workspace</h2>
             <div className="space-y-1">
               <LocalOverviewLink active={isModuleOverview(location.pathname)} moduleKey={moduleKey} />
-              {localNavigation.map((item) => <LocalLink active={location.pathname === item.path} item={item} key={item.path} />)}
+              {localNavigation.map((item) => <LocalLink active={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)} item={item} key={item.path} />)}
             </div>
           </section>
         </nav>
@@ -286,11 +294,14 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/fees/fee-structures") return <Link className={navClass(active)} to="/modules/fees/fee-structures"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fees/invoices") return <Link className={navClass(active)} to="/modules/fees/invoices"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fees/imports") return <Link className={navClass(active)} to="/modules/fees/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/procurement/requisitions") return <Link className={navClass(active)} to="/modules/procurement/requisitions"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/procurement/suppliers") return <Link className={navClass(active)} to="/modules/procurement/suppliers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/applications") return <Link className={navClass(active)} to="/modules/sis/applications"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/sis/imports") return <Link className={navClass(active)} to="/modules/sis/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/sis/settings") return <Link className={navClass(active)} to="/modules/sis/settings"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   return <Link className={navClass(active)} to="/modules/sis/enrolments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
 };
 

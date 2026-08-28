@@ -262,7 +262,9 @@ impl CoverageAccumulator {
         capability_operations: &BTreeSet<String>,
     ) {
         self.routed_operations += 1;
-        if operation.license_required() == self.source.core {
+        let has_licensed_dependency = operation.required_modules().next().is_some();
+        let should_require_license = !self.source.core || has_licensed_dependency;
+        if operation.license_required() != should_require_license {
             self.licensing_aligned = false;
         }
         match operation.agent_exposure() {
@@ -433,6 +435,54 @@ mod tests {
         assert_eq!(fleet.executable_capabilities(), 1);
         assert!(fleet.missing_executable_capabilities().is_empty());
         assert!(fleet.release_ready());
+    }
+
+    #[test]
+    fn core_owned_operations_with_licensed_dependencies_require_lease_checks() {
+        let licensed_provider_operation = operation(
+            "administration.ai_providers.connections.list",
+            "administration",
+            AgentExposure::Exposed,
+            true,
+        )
+        .requiring_modules(["agent".to_string()]);
+        let coverage = ModuleCoverageRegistry::build_with_executable_operations(
+            [
+                ModuleCoverageSource::parse("administration", "available", true, "/admin")
+                    .unwrap_or_else(|_| unreachable!()),
+            ],
+            [licensed_provider_operation],
+            BTreeSet::from(["administration.ai_providers.connections.list".to_string()]),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let administration = coverage
+            .entry("administration")
+            .unwrap_or_else(|| unreachable!());
+        assert!(administration.licensing_aligned());
+        assert!(administration.release_ready());
+
+        let unlicensed_provider_operation = operation(
+            "administration.ai_providers.connections.list",
+            "administration",
+            AgentExposure::Exposed,
+            false,
+        )
+        .requiring_modules(["agent".to_string()]);
+        let misaligned = ModuleCoverageRegistry::build_with_executable_operations(
+            [
+                ModuleCoverageSource::parse("administration", "available", true, "/admin")
+                    .unwrap_or_else(|_| unreachable!()),
+            ],
+            [unlicensed_provider_operation],
+            BTreeSet::from(["administration.ai_providers.connections.list".to_string()]),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(
+            !misaligned
+                .entry("administration")
+                .unwrap_or_else(|| unreachable!())
+                .licensing_aligned()
+        );
     }
 
     #[test]

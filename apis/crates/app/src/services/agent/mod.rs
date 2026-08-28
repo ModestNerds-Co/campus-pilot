@@ -4,6 +4,7 @@ mod academic_assessments;
 mod academics;
 mod administration;
 mod administration_access;
+mod ai_providers;
 mod fees;
 mod finance;
 mod fleet;
@@ -33,6 +34,10 @@ use administration_access::{
     AdministrationRoleReadCapability, AdministrationRolesListCapability,
     AdministrationUserReadCapability, AdministrationUsersListCapability,
 };
+use ai_providers::{
+    AiProviderCatalogCapability, AiProviderConnectionReadCapability,
+    AiProviderConnectionsListCapability, AiProviderModelsListCapability,
+};
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
     FeesLearnerCandidatesCapability, FeesListCapability, FeesListKind, FeesReadCapability,
@@ -61,8 +66,9 @@ use procurement::{
     ProcurementSuppliersListCapability,
 };
 use sis::{
-    AccountCandidatesCapability, SisImportPreviewCapability, SisImportReadCapability,
-    SisImportsListCapability, SisListCapability, SisListKind, SisReadCapability, SisReadKind,
+    AccountCandidatesCapability, LearnerNumberingPolicyCapability, SisImportPreviewCapability,
+    SisImportReadCapability, SisImportsListCapability, SisListCapability, SisListKind,
+    SisReadCapability, SisReadKind,
 };
 use timetabling::{
     LatestTimetableRunCapability, TimetableConfigurationCapability, TimetableRunReadCapability,
@@ -105,6 +111,18 @@ pub fn build_capability_registry(
             license_config,
         ))
         .unwrap_or_else(|error| panic!("invalid Administration licensing capability: {error}"));
+    registry
+        .register(AiProviderCatalogCapability::new())
+        .unwrap_or_else(|error| panic!("invalid AI provider-catalog capability: {error}"));
+    registry
+        .register(AiProviderConnectionsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid AI provider-connections capability: {error}"));
+    registry
+        .register(AiProviderConnectionReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid AI provider-connection capability: {error}"));
+    registry
+        .register(AiProviderModelsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid AI provider-models capability: {error}"));
     for kind in [
         AcademicsListKind::AcademicYears,
         AcademicsListKind::Terms,
@@ -255,6 +273,9 @@ pub fn build_capability_registry(
     registry
         .register(SisImportPreviewCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid SIS import-preview capability: {error}"));
+    registry
+        .register(LearnerNumberingPolicyCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid SIS learner-numbering capability: {error}"));
     registry
         .register(HrImportsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid HR imports-list capability: {error}"));
@@ -437,6 +458,7 @@ mod tests {
                 "fees:view".to_string(),
                 "procurement:view".to_string(),
                 "procurement:create".to_string(),
+                "ai_providers:view".to_string(),
             ],
             enabled_modules: vec![
                 "agent".to_string(),
@@ -517,6 +539,10 @@ mod tests {
                 "academics.teaching_assignments.read",
                 "academics.terms.list",
                 "academics.terms.read",
+                "administration.ai_providers.catalog.list",
+                "administration.ai_providers.connections.list",
+                "administration.ai_providers.connections.read",
+                "administration.ai_providers.models.list",
                 "administration.catalog.read",
                 "administration.licensing.read",
                 "administration.modules.list",
@@ -586,6 +612,7 @@ mod tests {
                 "sis.imports.list",
                 "sis.imports.preview.read",
                 "sis.imports.read",
+                "sis.learner_numbering.read",
                 "sis.learners.list",
                 "sis.learners.read",
                 "timetabling.configuration.read",
@@ -750,6 +777,67 @@ mod tests {
                 .unwrap_or_else(|| unreachable!());
             assert_eq!(error.code(), BrokerErrorCode::ExecutionFailed, "{key}");
         }
+    }
+
+    #[tokio::test]
+    async fn production_ai_provider_reads_are_reduced_typed_and_fail_safely() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        pool.close().await;
+        let broker = CapabilityBroker::new(
+            build_capability_registry(pool, license_config()),
+            Arc::new(TestAuthorityLoader(authority())),
+            Arc::new(TenantWideScope),
+            Arc::new(TestAudit),
+        );
+        let principal =
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4());
+        let request_context = RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4());
+        let connection_id = Uuid::new_v4();
+        for (key, input) in [
+            ("administration.ai_providers.connections.list", json!({})),
+            (
+                "administration.ai_providers.connections.read",
+                json!({ "connection_id": connection_id }),
+            ),
+            (
+                "administration.ai_providers.models.list",
+                json!({ "connection_id": connection_id }),
+            ),
+        ] {
+            let error = broker
+                .invoke(
+                    principal,
+                    CapabilityCall::parse(key, 1, input, request_context)
+                        .unwrap_or_else(|_| unreachable!()),
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| unreachable!());
+            assert_eq!(error.code(), BrokerErrorCode::ExecutionFailed, "{key}");
+            assert_eq!(
+                error.safe_message(),
+                "The capability could not be completed.",
+                "unsafe failure message for {key}"
+            );
+        }
+
+        let invalid = broker
+            .invoke(
+                principal,
+                CapabilityCall::parse(
+                    "administration.ai_providers.connections.list",
+                    1,
+                    json!({ "tenant_id": Uuid::new_v4() }),
+                    request_context,
+                )
+                .unwrap_or_else(|_| unreachable!()),
+            )
+            .await
+            .err()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(invalid.code(), BrokerErrorCode::InvalidInput);
     }
 
     #[tokio::test]

@@ -138,6 +138,22 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
     );
   }
 
+  if (module.key === "procurement") {
+    return (
+      <div className="space-y-8">
+        <ModuleIntroduction module={module} />
+        <section aria-labelledby="procurement-workspaces">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="procurement-workspaces">Manage purchasing requests</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ProcurementLink description="Prepare requests and record approval decisions before ordering." label="Requisitions" to="/modules/procurement/requisitions" />
+            <ProcurementLink description="Maintain the suppliers available to purchasing requests." label="Suppliers" to="/modules/procurement/suppliers" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (module.key === "sis") {
     return (
       <div className="space-y-8">
@@ -152,6 +168,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
             <SisLink description="Track applications against an academic year and target grade." label="Applications" to="/modules/sis/applications" />
             <SisLink description="Place learners in an Academics class for an academic year." label="Enrolments" to="/modules/sis/enrolments" />
             <SisLink description="Map and validate existing learner or guardian records before importing them." label="Data imports" to="/modules/sis/imports" />
+            <SisLink description="Set the prefix, padding, and next sequence for new learner numbers." label="Settings" to="/modules/sis/settings" />
           </div>
         </section>
       </div>
@@ -239,7 +256,14 @@ const FeesLink: React.FC<{ description: string; label: string; to: "/modules/fee
   </Link>
 );
 
-const SisLink: React.FC<{ description: string; label: string; to: "/modules/sis/learners" | "/modules/sis/guardians" | "/modules/sis/guardian-relationships" | "/modules/sis/applications" | "/modules/sis/enrolments" | "/modules/sis/imports" }> = ({ description, label, to }) => (
+const ProcurementLink: React.FC<{ description: string; label: string; to: "/modules/procurement/requisitions" | "/modules/procurement/suppliers" }> = ({ description, label, to }) => (
+  <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
+    <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+    <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>
+  </Link>
+);
+
+const SisLink: React.FC<{ description: string; label: string; to: "/modules/sis/learners" | "/modules/sis/guardians" | "/modules/sis/guardian-relationships" | "/modules/sis/applications" | "/modules/sis/enrolments" | "/modules/sis/imports" | "/modules/sis/settings" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

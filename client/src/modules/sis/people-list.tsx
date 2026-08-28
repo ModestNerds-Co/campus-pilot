@@ -91,7 +91,6 @@ export function SisPeopleList({ kind }: { kind: PeopleKind }) {
 }
 
 function PersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKind; onClose: () => void; onSaved: () => void; open: boolean; record: Person | null }) {
-  const [learnerNumber, setLearnerNumber] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [firstNames, setFirstNames] = useState("");
   const [surname, setSurname] = useState("");
@@ -103,7 +102,6 @@ function PersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKi
 
   useEffect(() => {
     if (!open) return;
-    setLearnerNumber(record && isLearner(record) ? record.learner_number : "");
     setDisplayName(record?.display_name ?? "");
     setFirstNames(record?.first_names ?? "");
     setSurname(record?.surname ?? "");
@@ -119,7 +117,7 @@ function PersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKi
     setSaving(true);
     const common = { display_name: displayName.trim(), first_names: firstNames.trim() || null, surname: surname.trim() || null, email: email.trim() || null, phone: phone.trim() || null };
     const response = kind === "learner"
-      ? record ? await sisService.updateLearner(record.id, { ...common, learner_number: learnerNumber.trim(), date_of_birth: dateOfBirth, status: status as LearnerStatus }) : await sisService.createLearner({ ...common, learner_number: learnerNumber.trim(), date_of_birth: dateOfBirth, status: status as LearnerStatus })
+      ? record ? await sisService.updateLearner(record.id, { ...common, date_of_birth: dateOfBirth, status: status as LearnerStatus }) : await sisService.createLearner({ ...common, date_of_birth: dateOfBirth, status: status as LearnerStatus })
       : record ? await sisService.updateGuardian(record.id, { ...common, status: status as DirectoryStatus }) : await sisService.createGuardian({ ...common, status: status as DirectoryStatus });
     setSaving(false);
     if (!response.success) return toast.error(responseMessage(response, `${capitalise(singular(kind))} could not be saved`));
@@ -128,8 +126,8 @@ function PersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKi
   };
 
   return <DialogShell onClose={onClose} open={open}><DialogHeader onClose={onClose} title={`${record ? "Edit" : "Add"} ${singular(kind)}`} /><form onSubmit={submit}><DialogBody className="space-y-5">
-    {kind === "learner" ? <div><Label>Learner number</Label><Input className="mt-1.5" data-autofocus="true" maxLength={80} onChange={(event) => setLearnerNumber(event.target.value)} required value={learnerNumber} /></div> : null}
-    <div><Label>Display name</Label><Input className="mt-1.5" data-autofocus={kind === "guardian" ? "true" : undefined} maxLength={200} onChange={(event) => setDisplayName(event.target.value)} required value={displayName} /></div>
+    {record && isLearner(record) ? <dl><dt className="text-sm font-medium leading-none text-[var(--text-strong)]">Learner number</dt><dd className="mt-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2.5 font-tabular text-sm text-[var(--text-strong)]">{record.learner_number}</dd></dl> : null}
+    <div><Label>Display name</Label><Input className="mt-1.5" data-autofocus="true" maxLength={200} onChange={(event) => setDisplayName(event.target.value)} required value={displayName} /></div>
     <div className="grid gap-4 sm:grid-cols-2"><div><Label>First names</Label><Input className="mt-1.5" maxLength={120} onChange={(event) => setFirstNames(event.target.value)} value={firstNames} /></div><div><Label>Surname</Label><Input className="mt-1.5" maxLength={120} onChange={(event) => setSurname(event.target.value)} value={surname} /></div></div>
     {kind === "learner" ? <div><Label>Date of birth</Label><Input className="mt-1.5" max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDateOfBirth(event.target.value)} required type="date" value={dateOfBirth} /></div> : null}
     <div className="grid gap-4 sm:grid-cols-2"><div><Label>Email</Label><Input className="mt-1.5" onChange={(event) => setEmail(event.target.value)} type="email" value={email} /></div><div><Label>Phone</Label><Input className="mt-1.5" maxLength={50} onChange={(event) => setPhone(event.target.value)} value={phone} /></div></div>

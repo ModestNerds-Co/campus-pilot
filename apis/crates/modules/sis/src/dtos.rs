@@ -180,9 +180,8 @@ pub struct EnrolmentListQuery {
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct CreateLearnerRequest {
-    #[validate(length(min = 1, max = 80))]
-    pub learner_number: String,
     #[validate(length(min = 1, max = 200))]
     pub display_name: String,
     #[validate(length(max = 120))]
@@ -198,9 +197,8 @@ pub struct CreateLearnerRequest {
 }
 
 #[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct UpdateLearnerRequest {
-    #[validate(length(min = 1, max = 80))]
-    pub learner_number: String,
     #[validate(length(min = 1, max = 200))]
     pub display_name: String,
     #[validate(length(max = 120))]
@@ -213,6 +211,21 @@ pub struct UpdateLearnerRequest {
     #[validate(length(max = 50))]
     pub phone: Option<String>,
     pub status: LearnerStatus,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct UpdateLearnerNumberingPolicyRequest {
+    #[validate(length(min = 1, max = 32))]
+    pub number_prefix: String,
+    #[validate(range(min = 1, max = 8))]
+    pub number_padding: i16,
+    #[validate(range(min = 1, max = 100_000_000))]
+    pub next_sequence: i64,
+    #[validate(range(min = 0))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 1000))]
+    pub reason: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -456,8 +469,26 @@ mod tests {
     use validator::Validate;
 
     use super::{
-        ApplicationStatus, CreateEnrolmentRequest, CreateGuardianRequest, EnrolmentStatus,
+        ApplicationStatus, CreateEnrolmentRequest, CreateGuardianRequest, CreateLearnerRequest,
+        EnrolmentStatus, UpdateLearnerRequest,
     };
+
+    #[test]
+    fn ordinary_learner_contracts_reject_caller_supplied_numbers() {
+        let create = serde_json::from_value::<CreateLearnerRequest>(serde_json::json!({
+            "learner_number": "LEGACY-17",
+            "display_name": "Example Learner",
+            "date_of_birth": "2012-01-01"
+        }));
+        let update = serde_json::from_value::<UpdateLearnerRequest>(serde_json::json!({
+            "learner_number": "RENUMBERED-17",
+            "display_name": "Example Learner",
+            "date_of_birth": "2012-01-01",
+            "status": "active"
+        }));
+        assert!(create.is_err());
+        assert!(update.is_err());
+    }
 
     #[test]
     fn guardian_requires_at_least_one_contact_method() {

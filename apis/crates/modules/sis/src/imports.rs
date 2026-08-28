@@ -17,6 +17,8 @@ use sqlx::{Acquire, FromRow, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 use validator::ValidateEmail;
 
+use crate::numbering::align_imported_learner_number;
+
 /// SIS record families supported by the first import adapter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -1338,6 +1340,10 @@ async fn commit_ready_row(
         SisImportTarget::Learners => {
             let value: ImportedLearner = serde_json::from_value(row.canonical_data.clone())
                 .context("Stored learner preview is invalid")?;
+            // Keep the source identity unchanged. Managed-looking numbers
+            // reserve their sequence before insertion, which also preserves
+            // lock ordering against ordinary learner creation.
+            align_imported_learner_number(transaction, tenant_id, &value.learner_number).await?;
             sqlx::query_scalar::<_, Uuid>(
                 r#"
                 INSERT INTO learners (

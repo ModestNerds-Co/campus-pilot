@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
+  Bot,
   ChevronRight,
   Grid2X2,
   KeyRound,
@@ -35,6 +36,7 @@ type NavItem = {
   label: string;
   href: string;
   permission: string;
+  module?: string;
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -60,6 +62,12 @@ const navigationGroups: NavGroup[] = [
     items: [
       { label: "Licensing", href: "/admin/licensing", permission: "licensing:view", icon: KeyRound },
       { label: "School settings", href: "/admin/settings", permission: "school_settings:view", icon: Settings2 },
+    ],
+  },
+  {
+    label: "Agent management",
+    items: [
+      { label: "AI providers", href: "/admin/agent/providers", permission: "ai_providers:view", module: "agent", icon: Bot },
     ],
   },
 ];
@@ -114,7 +122,9 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
   const visibleNavigationGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => hasPermission(user?.permissions, item.permission)),
+      items: group.items.filter(
+        (item) => hasPermission(user?.permissions, item.permission) && (!item.module || user?.modules?.includes(item.module)),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 

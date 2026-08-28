@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 cp-common = { path = "../common" }
 cp-audit = { path = "../platform/audit" }
+cp-ai-providers = { path = "../platform/ai-providers" }
 cp-agent = { path = "../agent" }
 cp-fleet = { path = "../modules/fleet" }
 cp-vehicle-log = { path = "../modules/vehicle-log" }

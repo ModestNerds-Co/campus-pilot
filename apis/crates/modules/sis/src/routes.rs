@@ -1,8 +1,9 @@
 //! Authenticated SIS HTTP routes.
 //!
 //! The application mounts identity middleware outside this crate. This scope
-//! applies SIS permissions while the operation evaluator enforces licensing
-//! and the Academics dependency for every request.
+//! applies SIS permissions while the operation evaluator enforces licensing.
+//! Academic-placement operations also require Academics; learner numbering is
+//! deliberately SIS-only.
 
 use actix_multipart::Multipart;
 use actix_web::http::StatusCode;
@@ -27,17 +28,57 @@ use crate::{
         PaginatedEnrolmentsResponse, PaginatedGuardianRelationshipsResponse,
         PaginatedGuardiansResponse, PaginatedLearnersResponse, RelationshipListQuery,
         UpdateApplicationRequest, UpdateEnrolmentRequest, UpdateGuardianRelationshipRequest,
-        UpdateGuardianRequest, UpdateLearnerRequest,
+        UpdateGuardianRequest, UpdateLearnerNumberingPolicyRequest, UpdateLearnerRequest,
     },
     imports::{
         CommitImportRequest, ImportListQuery, NewSisImport, PreviewRowsQuery,
         SisImportListResponse, SisImportMapping, SisImportOps, SisImportTarget,
     },
+    numbering::{LearnerNumberingPolicyOps, LearnerNumberingUpdateOutcome},
     ops::{
         AccountCandidateOps, ApplicationOps, DeleteOutcome, EnrolmentOps, GuardianOps,
         GuardianRelationshipOps, LearnerOps,
     },
 };
+
+#[get("/learner-numbering")]
+async fn read_learner_numbering_policy(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+) -> HttpResponse {
+    updated_value_or_error(LearnerNumberingPolicyOps::get(pool.get_ref(), tenant_id(tenant)).await)
+}
+
+#[put("/learner-numbering")]
+async fn update_learner_numbering_policy(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<UpdateLearnerNumberingPolicyRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&*body) {
+        return response;
+    }
+    match LearnerNumberingPolicyOps::update(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        body.into_inner(),
+    )
+    .await
+    {
+        Ok(LearnerNumberingUpdateOutcome::Updated(policy)) => ok(policy),
+        Ok(LearnerNumberingUpdateOutcome::VersionConflict) => {
+            conflict("Learner numbering changed since it was loaded. Refresh and try again.")
+        }
+        Ok(LearnerNumberingUpdateOutcome::NextSequenceBehind { minimum }) => conflict(&format!(
+            "Next sequence cannot be below the current boundary of {minimum}."
+        )),
+        Err(error) => operation_error(error),
+    }
+}
 
 #[get("/imports")]
 async fn list_imports(
@@ -776,6 +817,14 @@ fn bad_request(message: &str) -> HttpResponse {
     ))
 }
 
+fn conflict(message: &str) -> HttpResponse {
+    HttpResponse::Conflict().json(ApiResponse::from_status(
+        StatusCode::CONFLICT,
+        None::<()>,
+        Some(vec![message.to_string()]),
+    ))
+}
+
 fn created_or_error<T: Serialize>(result: anyhow::Result<T>) -> HttpResponse {
     match result {
         Ok(value) => HttpResponse::Created().json(ApiResponse::from_status(
@@ -863,6 +912,8 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("")
             .wrap(RequirePermission::new("sis"))
+            .service(read_learner_numbering_policy)
+            .service(update_learner_numbering_policy)
             .service(list_account_candidates)
             .service(list_imports)
             .service(upload_import)

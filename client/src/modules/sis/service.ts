@@ -7,6 +7,7 @@ import type {
   Enrolment, EnrolmentInput, EnrolmentsResponse, Guardian, GuardianInput,
   GuardianRelationship, GuardianRelationshipInput, GuardianRelationshipsResponse,
   GuardiansResponse, Learner, LearnerInput, LearnersResponse, ListParams,
+  LearnerNumberingPolicy, LearnerNumberingPolicyInput,
   SisImportCommit, SisImportMapping, SisImportPreview, SisImportRecord,
   SisImportsResponse, SisImportTarget,
 } from "./types";
@@ -23,6 +24,9 @@ async function request<T>(work: () => Promise<{ data: ApiEnvelope<T> }>): Promis
 }
 
 export const sisService = {
+  getLearnerNumberingPolicy: () => request<LearnerNumberingPolicy>(() => httpClient.get(`${BASE_URL}/learner-numbering`)),
+  updateLearnerNumberingPolicy: (data: LearnerNumberingPolicyInput) => request<LearnerNumberingPolicy>(() => httpClient.put(`${BASE_URL}/learner-numbering`, data)),
+
   listImports: (params?: { page?: number; per_page?: number; target?: SisImportTarget }) => request<SisImportsResponse>(() => httpClient.get(`${BASE_URL}/imports`, { params })),
   uploadImport: (target: SisImportTarget, file: File) => {
     const form = new FormData();

@@ -146,7 +146,6 @@ export interface SisImportCommit {
 }
 
 export interface LearnerInput {
-  learner_number: string;
   display_name: string;
   first_names?: string | null;
   surname?: string | null;
@@ -154,6 +153,23 @@ export interface LearnerInput {
   email?: string | null;
   phone?: string | null;
   status?: LearnerStatus;
+}
+
+export interface LearnerNumberingPolicy {
+  number_prefix: string;
+  number_padding: number;
+  next_sequence: number;
+  next_number_preview: string | null;
+  exhausted: boolean;
+  version: number;
+}
+
+export interface LearnerNumberingPolicyInput {
+  number_prefix: string;
+  number_padding: number;
+  next_sequence: number;
+  expected_version: number;
+  reason: string;
 }
 
 export interface GuardianInput {

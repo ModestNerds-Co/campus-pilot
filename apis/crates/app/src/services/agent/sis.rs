@@ -12,6 +12,7 @@ use cp_common::PaginationMeta;
 use cp_sis::{
     dtos::{AccountProfileKind, GuardianResponse, LearnerResponse},
     imports::{SisImportOps, SisImportTarget},
+    numbering::LearnerNumberingPolicyOps,
     ops::{
         AccountCandidateOps, ApplicationOps, EnrolmentOps, GuardianOps, GuardianRelationshipOps,
         LearnerOps,
@@ -410,6 +411,57 @@ impl Capability for SisReadCapability {
         }
         .ok_or_else(|| not_found("The SIS record was not found."))?;
         Ok(json!({ "record": record }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearnerNumberingPolicyInput {}
+
+pub(super) struct LearnerNumberingPolicyCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearnerNumberingPolicyCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "sis.learner_numbering.read",
+                "Read learner numbering policy",
+                "Returns the current learner number prefix, padding, next sequence, preview, and version.",
+                json!({}),
+                json!({ "policy": { "type": "object" } }),
+                DataSensitivity::General,
+                "sis.learner_numbering",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearnerNumberingPolicyCapability {
+    type Input = LearnerNumberingPolicyInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        _input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let policy = LearnerNumberingPolicyOps::get(&self.pool, context.principal().tenant_id())
+            .await
+            .map_err(|_| dependency_failure("The learner numbering policy could not be loaded."))?;
+        Ok(json!({ "policy": policy }))
     }
 }
 

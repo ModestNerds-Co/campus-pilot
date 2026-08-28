@@ -8,6 +8,7 @@
 
 use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use cp_ai_providers::{CredentialKeyring, ProviderHttpClient};
 use jsonwebtoken::DecodingKey;
 use std::{collections::BTreeMap, env};
 use urlencoding::encode;
@@ -19,6 +20,7 @@ pub struct Config {
     pub storage: StorageConfig,
     pub jwt: JwtConfig,
     pub license: LicenseConfig,
+    pub ai_providers: AiProviderConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +45,12 @@ pub struct LicenseConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct AiProviderConfig {
+    pub credential_keyring: Option<CredentialKeyring>,
+    pub http_client: ProviderHttpClient,
+}
+
+#[derive(Debug, Clone)]
 pub struct DatabaseConfig {
     pub url: String,
 }
@@ -64,6 +72,7 @@ impl Config {
         let storage = StorageConfig::from_env()?;
         let jwt = JwtConfig::from_env()?;
         let license = LicenseConfig::from_env()?;
+        let ai_providers = AiProviderConfig::from_env()?;
 
         Ok(Config {
             app,
@@ -71,7 +80,49 @@ impl Config {
             storage,
             jwt,
             license,
+            ai_providers,
         })
+    }
+}
+
+impl AiProviderConfig {
+    fn from_env() -> Result<Self> {
+        let configured_keys = env::var("AI_PROVIDER_CREDENTIAL_KEYS_JSON")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        let active_key_id = env::var("AI_PROVIDER_CREDENTIAL_ACTIVE_KEY_ID")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        let credential_keyring =
+            ai_provider_credential_keyring(configured_keys.as_deref(), active_key_id.as_deref())?;
+        let http_client = ProviderHttpClient::new()
+            .context("build the bounded AI provider administration HTTP client")?;
+        Ok(Self {
+            credential_keyring,
+            http_client,
+        })
+    }
+}
+
+fn ai_provider_credential_keyring(
+    configured_keys: Option<&str>,
+    active_key_id: Option<&str>,
+) -> Result<Option<CredentialKeyring>> {
+    match (configured_keys, active_key_id) {
+        (None, None) => Ok(None),
+        (Some(configured_keys), Some(active_key_id)) => {
+            let keys = serde_json::from_str::<BTreeMap<String, String>>(configured_keys)
+                .context("AI_PROVIDER_CREDENTIAL_KEYS_JSON must be a JSON object")?;
+            CredentialKeyring::from_base64(keys, active_key_id)
+                .context("AI provider credential keyring is invalid")
+                .map(Some)
+        }
+        (Some(_), None) => {
+            bail!("AI_PROVIDER_CREDENTIAL_ACTIVE_KEY_ID must be set with the credential keyring")
+        }
+        (None, Some(_)) => {
+            bail!("AI_PROVIDER_CREDENTIAL_KEYS_JSON must be set with the active key identifier")
+        }
     }
 }
 
@@ -275,5 +326,39 @@ mod license_tests {
         assert!(trusted_public_keys(None, None, Some(&active)).is_err());
         assert!(trusted_public_keys(Some("[]"), None, None).is_err());
         assert!(trusted_public_keys(None, Some("production-1"), Some("not-base64")).is_err());
+    }
+}
+
+#[cfg(test)]
+mod ai_provider_tests {
+    use std::collections::BTreeMap;
+
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    use super::ai_provider_credential_keyring;
+
+    #[test]
+    fn provider_keyring_is_optional_but_cannot_be_partially_configured() {
+        assert!(
+            ai_provider_credential_keyring(None, None)
+                .unwrap_or_else(|_| unreachable!())
+                .is_none()
+        );
+        assert!(ai_provider_credential_keyring(Some("{}"), None).is_err());
+        assert!(ai_provider_credential_keyring(None, Some("production-1")).is_err());
+    }
+
+    #[test]
+    fn provider_keyring_requires_a_32_byte_active_key() {
+        let key = STANDARD.encode([7_u8; 32]);
+        let configured = serde_json::to_string(&BTreeMap::from([("production-1", key)]))
+            .unwrap_or_else(|_| unreachable!());
+        assert!(
+            ai_provider_credential_keyring(Some(&configured), Some("production-1"))
+                .unwrap_or_else(|_| unreachable!())
+                .is_some()
+        );
+        assert!(ai_provider_credential_keyring(Some(&configured), Some("missing")).is_err());
+        assert!(ai_provider_credential_keyring(Some("[]"), Some("production-1")).is_err());
     }
 }

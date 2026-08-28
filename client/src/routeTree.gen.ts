@@ -39,12 +39,15 @@ import { Route as AdminFeesRouteImport } from './routes/admin/fees'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments'
 import { Route as AdminClassesRouteImport } from './routes/admin/classes'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
+import { Route as ModulesSisSettingsRouteImport } from './routes/modules/sis/settings'
 import { Route as ModulesSisLearnersRouteImport } from './routes/modules/sis/learners'
 import { Route as ModulesSisImportsRouteImport } from './routes/modules/sis/imports'
 import { Route as ModulesSisGuardiansRouteImport } from './routes/modules/sis/guardians'
 import { Route as ModulesSisGuardianRelationshipsRouteImport } from './routes/modules/sis/guardian-relationships'
 import { Route as ModulesSisEnrolmentsRouteImport } from './routes/modules/sis/enrolments'
 import { Route as ModulesSisApplicationsRouteImport } from './routes/modules/sis/applications'
+import { Route as ModulesProcurementSuppliersRouteImport } from './routes/modules/procurement/suppliers'
+import { Route as ModulesProcurementRequisitionsRouteImport } from './routes/modules/procurement/requisitions'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
 import { Route as ModulesHrPayrollImportsRouteImport } from './routes/modules/hr-payroll/imports'
 import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
@@ -73,6 +76,8 @@ import { Route as ModulesAcademicsAssessmentsRouteImport } from './routes/module
 import { Route as ModulesAcademicsAcademicYearsRouteImport } from './routes/modules/academics/academic-years'
 import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
+import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
+import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -224,6 +229,11 @@ const AdminFleetIndexRoute = AdminFleetIndexRouteImport.update({
   path: '/fleet/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesSisSettingsRoute = ModulesSisSettingsRouteImport.update({
+  id: '/sis/settings',
+  path: '/sis/settings',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesSisLearnersRoute = ModulesSisLearnersRouteImport.update({
   id: '/sis/learners',
   path: '/sis/learners',
@@ -255,6 +265,18 @@ const ModulesSisApplicationsRoute = ModulesSisApplicationsRouteImport.update({
   path: '/sis/applications',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesProcurementSuppliersRoute =
+  ModulesProcurementSuppliersRouteImport.update({
+    id: '/procurement/suppliers',
+    path: '/procurement/suppliers',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesProcurementRequisitionsRoute =
+  ModulesProcurementRequisitionsRouteImport.update({
+    id: '/procurement/requisitions',
+    path: '/procurement/requisitions',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesHrPayrollPositionsRoute =
   ModulesHrPayrollPositionsRouteImport.update({
     id: '/hr-payroll/positions',
@@ -412,6 +434,17 @@ const AdminFleetDailyLogRoute = AdminFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAgentProvidersRoute = AdminAgentProvidersRouteImport.update({
+  id: '/agent/providers',
+  path: '/agent/providers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const ModulesProcurementRequisitionsRequisitionIdRoute =
+  ModulesProcurementRequisitionsRequisitionIdRouteImport.update({
+    id: '/procurement/requisitions_/$requisitionId',
+    path: '/procurement/requisitions/$requisitionId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -443,6 +476,7 @@ export interface FileRoutesByFullPath {
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/agent/providers': typeof AdminAgentProvidersRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -471,13 +505,17 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
+  '/modules/procurement/suppliers': typeof ModulesProcurementSuppliersRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
   '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
   '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
+  '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -508,6 +546,7 @@ export interface FileRoutesByTo {
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/agent/providers': typeof AdminAgentProvidersRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -536,13 +575,17 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
+  '/modules/procurement/suppliers': typeof ModulesProcurementSuppliersRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
   '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
   '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
+  '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -575,6 +618,7 @@ export interface FileRoutesById {
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/agent/providers': typeof AdminAgentProvidersRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -603,13 +647,17 @@ export interface FileRoutesById {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
+  '/modules/procurement/suppliers': typeof ModulesProcurementSuppliersRoute
   '/modules/sis/applications': typeof ModulesSisApplicationsRoute
   '/modules/sis/enrolments': typeof ModulesSisEnrolmentsRoute
   '/modules/sis/guardian-relationships': typeof ModulesSisGuardianRelationshipsRoute
   '/modules/sis/guardians': typeof ModulesSisGuardiansRoute
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
+  '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
+  '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -643,6 +691,7 @@ export interface FileRouteTypes {
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
+    | '/admin/agent/providers'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -671,13 +720,17 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/procurement/requisitions'
+    | '/modules/procurement/suppliers'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
     | '/modules/sis/guardian-relationships'
     | '/modules/sis/guardians'
     | '/modules/sis/imports'
     | '/modules/sis/learners'
+    | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/procurement/requisitions/$requisitionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -708,6 +761,7 @@ export interface FileRouteTypes {
     | '/setup/admin'
     | '/setup/school'
     | '/admin'
+    | '/admin/agent/providers'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -736,13 +790,17 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/procurement/requisitions'
+    | '/modules/procurement/suppliers'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
     | '/modules/sis/guardian-relationships'
     | '/modules/sis/guardians'
     | '/modules/sis/imports'
     | '/modules/sis/learners'
+    | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/procurement/requisitions/$requisitionId'
   id:
     | '__root__'
     | '/'
@@ -774,6 +832,7 @@ export interface FileRouteTypes {
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
+    | '/admin/agent/providers'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -802,13 +861,17 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/procurement/requisitions'
+    | '/modules/procurement/suppliers'
     | '/modules/sis/applications'
     | '/modules/sis/enrolments'
     | '/modules/sis/guardian-relationships'
     | '/modules/sis/guardians'
     | '/modules/sis/imports'
     | '/modules/sis/learners'
+    | '/modules/sis/settings'
     | '/admin/fleet/'
+    | '/modules/procurement/requisitions_/$requisitionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1036,6 +1099,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/sis/settings': {
+      id: '/modules/sis/settings'
+      path: '/sis/settings'
+      fullPath: '/modules/sis/settings'
+      preLoaderRoute: typeof ModulesSisSettingsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/sis/learners': {
       id: '/modules/sis/learners'
       path: '/sis/learners'
@@ -1076,6 +1146,20 @@ declare module '@tanstack/react-router' {
       path: '/sis/applications'
       fullPath: '/modules/sis/applications'
       preLoaderRoute: typeof ModulesSisApplicationsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/procurement/suppliers': {
+      id: '/modules/procurement/suppliers'
+      path: '/procurement/suppliers'
+      fullPath: '/modules/procurement/suppliers'
+      preLoaderRoute: typeof ModulesProcurementSuppliersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/procurement/requisitions': {
+      id: '/modules/procurement/requisitions'
+      path: '/procurement/requisitions'
+      fullPath: '/modules/procurement/requisitions'
+      preLoaderRoute: typeof ModulesProcurementRequisitionsRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/hr-payroll/positions': {
@@ -1274,6 +1358,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetDailyLogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/agent/providers': {
+      id: '/admin/agent/providers'
+      path: '/agent/providers'
+      fullPath: '/admin/agent/providers'
+      preLoaderRoute: typeof AdminAgentProvidersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/modules/procurement/requisitions_/$requisitionId': {
+      id: '/modules/procurement/requisitions_/$requisitionId'
+      path: '/procurement/requisitions/$requisitionId'
+      fullPath: '/modules/procurement/requisitions/$requisitionId'
+      preLoaderRoute: typeof ModulesProcurementRequisitionsRequisitionIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
   }
 }
 
@@ -1296,6 +1394,7 @@ interface AdminRouteChildren {
   AdminSubjectsRoute: typeof AdminSubjectsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminAgentProvidersRoute: typeof AdminAgentProvidersRoute
   AdminFleetDailyLogRoute: typeof AdminFleetDailyLogRoute
   AdminFleetDriversRoute: typeof AdminFleetDriversRoute
   AdminFleetIndexRoute: typeof AdminFleetIndexRoute
@@ -1320,6 +1419,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSubjectsRoute: AdminSubjectsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminAgentProvidersRoute: AdminAgentProvidersRoute,
   AdminFleetDailyLogRoute: AdminFleetDailyLogRoute,
   AdminFleetDriversRoute: AdminFleetDriversRoute,
   AdminFleetIndexRoute: AdminFleetIndexRoute,
@@ -1355,12 +1455,16 @@ interface ModulesRouteChildren {
   ModulesHrPayrollEmploymentRoute: typeof ModulesHrPayrollEmploymentRoute
   ModulesHrPayrollImportsRoute: typeof ModulesHrPayrollImportsRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
+  ModulesProcurementRequisitionsRoute: typeof ModulesProcurementRequisitionsRoute
+  ModulesProcurementSuppliersRoute: typeof ModulesProcurementSuppliersRoute
   ModulesSisApplicationsRoute: typeof ModulesSisApplicationsRoute
   ModulesSisEnrolmentsRoute: typeof ModulesSisEnrolmentsRoute
   ModulesSisGuardianRelationshipsRoute: typeof ModulesSisGuardianRelationshipsRoute
   ModulesSisGuardiansRoute: typeof ModulesSisGuardiansRoute
   ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
+  ModulesSisSettingsRoute: typeof ModulesSisSettingsRoute
+  ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
 }
 
 const ModulesRouteChildren: ModulesRouteChildren = {
@@ -1392,12 +1496,17 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHrPayrollEmploymentRoute: ModulesHrPayrollEmploymentRoute,
   ModulesHrPayrollImportsRoute: ModulesHrPayrollImportsRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
+  ModulesProcurementRequisitionsRoute: ModulesProcurementRequisitionsRoute,
+  ModulesProcurementSuppliersRoute: ModulesProcurementSuppliersRoute,
   ModulesSisApplicationsRoute: ModulesSisApplicationsRoute,
   ModulesSisEnrolmentsRoute: ModulesSisEnrolmentsRoute,
   ModulesSisGuardianRelationshipsRoute: ModulesSisGuardianRelationshipsRoute,
   ModulesSisGuardiansRoute: ModulesSisGuardiansRoute,
   ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
+  ModulesSisSettingsRoute: ModulesSisSettingsRoute,
+  ModulesProcurementRequisitionsRequisitionIdRoute:
+    ModulesProcurementRequisitionsRequisitionIdRoute,
 }
 
 const ModulesRouteWithChildren =

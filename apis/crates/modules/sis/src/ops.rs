@@ -21,6 +21,7 @@ use crate::{
         GuardianRelationshipWithDetails, GuardianWithAccount, LearnerBillingReference,
         LearnerWithAccount,
     },
+    numbering::allocate_learner_number,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -226,8 +227,12 @@ impl LearnerOps {
         request: &CreateLearnerRequest,
     ) -> Result<LearnerWithAccount> {
         validate_birth_date(request.date_of_birth)?;
-        let learner_number = required("Learner number", &request.learner_number)?;
         let display_name = required("Learner name", &request.display_name)?;
+        let mut transaction = pool
+            .begin()
+            .await
+            .context("Failed to start learner creation")?;
+        let learner_number = allocate_learner_number(&mut transaction, tenant_id).await?;
         let id = sqlx::query_scalar::<_, Uuid>(
             r#"
             INSERT INTO learners (
@@ -239,7 +244,7 @@ impl LearnerOps {
             "#,
         )
         .bind(tenant_id)
-        .bind(learner_number)
+        .bind(&learner_number)
         .bind(display_name)
         .bind(optional_text(request.first_names.as_deref()))
         .bind(optional_text(request.surname.as_deref()))
@@ -247,9 +252,13 @@ impl LearnerOps {
         .bind(normalized_email(request.email.as_deref()))
         .bind(optional_text(request.phone.as_deref()))
         .bind(request.status.map(|value| value.as_str()))
-        .fetch_one(pool)
+        .fetch_one(&mut *transaction)
         .await
         .context("Failed to create learner")?;
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit learner creation")?;
         Self::get_by_id(pool, tenant_id, id)
             .await?
             .context("Created learner could not be reloaded")
@@ -262,18 +271,16 @@ impl LearnerOps {
         request: &UpdateLearnerRequest,
     ) -> Result<Option<LearnerWithAccount>> {
         validate_birth_date(request.date_of_birth)?;
-        let learner_number = required("Learner number", &request.learner_number)?;
         let display_name = required("Learner name", &request.display_name)?;
         let updated = sqlx::query(
             r#"
             UPDATE learners
-            SET learner_number = $1, display_name = $2, first_names = $3, surname = $4,
-                date_of_birth = $5, email = $6, phone = $7, status = $8,
+            SET display_name = $1, first_names = $2, surname = $3,
+                date_of_birth = $4, email = $5, phone = $6, status = $7,
                 updated_at = NOW()
-            WHERE tenant_id = $9 AND id = $10 AND deleted_at IS NULL
+            WHERE tenant_id = $8 AND id = $9 AND deleted_at IS NULL
             "#,
         )
-        .bind(learner_number)
         .bind(display_name)
         .bind(optional_text(request.first_names.as_deref()))
         .bind(optional_text(request.surname.as_deref()))

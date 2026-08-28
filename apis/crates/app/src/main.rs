@@ -94,6 +94,13 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     app_state.db_ops.run_migrations().await?;
     info!("Database migrations completed successfully 🍻");
 
+    campus_pilot::startup::validate_ai_provider_credential_keyring(
+        &app_state.db,
+        config.ai_providers.credential_keyring.as_ref(),
+    )
+    .await?;
+    info!("AI provider credential keyring covers active stored credentials");
+
     // Setup storage bucket
     info!("Setting up storage bucket... 🗄️");
     app_state.storage_ops.ensure_bucket_setup().await?;

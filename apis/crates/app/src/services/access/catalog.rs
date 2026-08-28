@@ -133,7 +133,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "procurement",
             "Procurement",
             "Finance and resources",
-            "Control requests, approvals, suppliers, orders, and receiving.",
+            "Manage requisitions, approval decisions, and supplier records.",
             "/modules/procurement",
             "procurement",
             false,
@@ -296,6 +296,16 @@ pub fn administration_permissions() -> Vec<PermissionDefinition> {
             "school_settings:edit",
             "Edit school settings",
             "Change campus configuration.",
+        ),
+        (
+            "ai_providers:view",
+            "View AI providers",
+            "Read provider connections, status, and cached model catalogues.",
+        ),
+        (
+            "ai_providers:edit",
+            "Manage AI providers",
+            "Connect, test, rotate, refresh, and disconnect AI providers.",
         ),
     ]
     .into_iter()
@@ -471,7 +481,7 @@ mod tests {
             );
             if module_key == "administration" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 8);
+                assert_eq!(module.executable_capabilities(), 12);
             } else if module_key == "academics" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 19);
@@ -483,7 +493,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 13);
             } else if module_key == "sis" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 14);
+                assert_eq!(module.executable_capabilities(), 15);
             } else if module_key == "finance" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 12);

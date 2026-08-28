@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Grid2X2, KeyRound, Settings2, ShieldCheck, UsersRound } from "lucide-react";
+import { ArrowRight, Bot, Grid2X2, KeyRound, Settings2, ShieldCheck, UsersRound } from "lucide-react";
 
 import { useAuthStore } from "@/stores/auth-store";
 import { usePageChrome } from "../layouts/page-chrome";
@@ -10,12 +10,15 @@ const administrationAreas = [
   { title: "Roles and access", description: "Manage role permissions and create custom roles.", href: "/admin/roles" as const, icon: ShieldCheck, action: "Manage roles", permission: "roles:view" },
   { title: "Licensing", description: "Review installation licensing and module access.", href: "/admin/licensing" as const, icon: KeyRound, action: "Review licensing", permission: "licensing:view" },
   { title: "School settings", description: "Manage campus identity, academic defaults, notifications, and integrations.", href: "/admin/settings" as const, icon: Settings2, action: "Open settings", permission: "school_settings:view" },
+  { title: "AI providers", description: "Connect and test the model providers available to Agent.", href: "/admin/agent/providers" as const, icon: Bot, action: "Manage providers", permission: "ai_providers:view", module: "agent" },
 ];
 
 export const AdminDashboard: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const visibleAreas = administrationAreas.filter(
-    (area) => user?.permissions?.includes("*") || user?.permissions?.includes(area.permission),
+    (area) =>
+      (user?.permissions?.includes("*") || user?.permissions?.includes(area.permission)) &&
+      (!("module" in area) || !area.module || user?.modules?.includes(area.module)),
   );
   usePageChrome("Overview");
 

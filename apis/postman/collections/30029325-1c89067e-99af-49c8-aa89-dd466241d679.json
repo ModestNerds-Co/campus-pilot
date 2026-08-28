@@ -3542,6 +3542,33 @@
       },
       "item": [
         {
+          "name": "Get Learner Numbering Policy",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/sis/learner-numbering",
+            "description": "Returns the tenant's effective learner number prefix, padding, next sequence, rendered preview, exhaustion status, and optimistic version. Requires sis:view and an SIS entitlement; Academics is not required."
+          }
+        },
+        {
+          "name": "Update Learner Numbering Policy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number_prefix\": \"LRN-\",\n  \"number_padding\": 6,\n  \"next_sequence\": 1,\n  \"expected_version\": 0,\n  \"reason\": \"Configure learner numbering before admissions open\"\n}"
+            },
+            "url": "{{base_url}}/sis/learner-numbering",
+            "description": "Changes the learner number policy with optimistic versioning and a required audit reason. The next sequence can only move forward and cannot enter an existing managed namespace. Requires sis:edit and an SIS entitlement; Agent execution requires approval."
+          }
+        },
+        {
           "name": "List Eligible Login Accounts",
           "request": {
             "method": "GET",
@@ -3647,13 +3674,14 @@
             "url": "{{base_url}}/sis/learners",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"learner_number\": \"STU-001\",\n  \"display_name\": \"Example Learner\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Learner\",\n  \"date_of_birth\": \"2012-01-01\",\n  \"email\": null,\n  \"phone\": null,\n  \"status\": \"prospective\"\n}",
+              "raw": "{\n  \"display_name\": \"Example Learner\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Learner\",\n  \"date_of_birth\": \"2012-01-01\",\n  \"email\": null,\n  \"phone\": null,\n  \"status\": \"prospective\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "The API transactionally assigns the next tenant-scoped learner number. Use the staged learner import to preserve an existing platform's legacy learner number."
           }
         },
         {
@@ -3663,13 +3691,14 @@
             "url": "{{base_url}}/sis/learners/:id",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"learner_number\": \"STU-001\",\n  \"display_name\": \"Example Learner\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Learner\",\n  \"date_of_birth\": \"2012-01-01\",\n  \"email\": null,\n  \"phone\": null,\n  \"status\": \"active\"\n}",
+              "raw": "{\n  \"display_name\": \"Example Learner\",\n  \"first_names\": \"Example\",\n  \"surname\": \"Learner\",\n  \"date_of_birth\": \"2012-01-01\",\n  \"email\": null,\n  \"phone\": null,\n  \"status\": \"active\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "Learner numbers are immutable after creation and are not accepted by this endpoint."
           }
         },
         {
@@ -3919,6 +3948,228 @@
       ]
     },
     {
+      "name": "AI Providers",
+      "item": [
+        {
+          "name": "List Provider Catalogue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/providers",
+            "description": "Lists code-owned provider and authentication metadata. No wrapping key is required for this read."
+          }
+        },
+        {
+          "name": "List Provider Connections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/connections",
+            "description": "Lists tenant-scoped provider connection status without credential material."
+          }
+        },
+        {
+          "name": "Create Provider Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"openai\",\n  \"auth_method\": \"api_key\",\n  \"account_label\": \"School account\",\n  \"api_key\": \"replace-with-provider-api-key\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/connections",
+            "description": "Creates an app-managed connection. The API key is write-only and requires the server credential keyring."
+          }
+        },
+        {
+          "name": "Get Provider Connection",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}"
+          }
+        },
+        {
+          "name": "Update Provider Connection",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_label\": \"Primary school account\",\n  \"expected_version\": {{ai_provider_connection_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}"
+          }
+        },
+        {
+          "name": "Rotate Provider Credential",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"api_key\": \"replace-with-rotated-provider-api-key\",\n  \"expected_version\": {{ai_provider_connection_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}/credentials/rotate",
+            "description": "Replaces the write-only credential using optimistic concurrency."
+          }
+        },
+        {
+          "name": "Test Provider Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": {{ai_provider_connection_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}/test",
+            "description": "Tests the stored credential server-side and returns only a normalized outcome."
+          }
+        },
+        {
+          "name": "List Cached Provider Models",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}/models"
+          }
+        },
+        {
+          "name": "Refresh Provider Models",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": {{ai_provider_connection_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}/models/refresh",
+            "description": "Fetches and persists a new immutable model-catalogue snapshot."
+          }
+        },
+        {
+          "name": "Disconnect Provider Connection",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}?expectedVersion={{ai_provider_connection_version}}",
+            "description": "Purges the credential and disconnects the record. Referenced routing connections are refused."
+          }
+        }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -3954,6 +4205,16 @@
     {
       "key": "user_id",
       "value": "",
+      "type": "default"
+    },
+    {
+      "key": "ai_provider_connection_id",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "ai_provider_connection_version",
+      "value": "1",
       "type": "default"
     }
   ]
