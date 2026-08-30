@@ -40,6 +40,7 @@ export const sisService = {
   commitImport: (id: string, previewId: string) => request<SisImportCommit>(() => httpClient.post(`${BASE_URL}/imports/${id}/commit`, { preview_id: previewId })),
 
   listLearners: (params?: ListParams) => request<LearnersResponse>(() => httpClient.get(`${BASE_URL}/learners`, { params })),
+  getLearner: (id: string) => request<Learner>(() => httpClient.get(`${BASE_URL}/learners/${id}`)),
   createLearner: (data: LearnerInput) => request<Learner>(() => httpClient.post(`${BASE_URL}/learners`, data)),
   updateLearner: (id: string, data: LearnerInput) => request<Learner>(() => httpClient.put(`${BASE_URL}/learners/${id}`, data)),
   linkLearnerAccount: (id: string, accountId: string | null) => request<Learner>(() => httpClient.put(`${BASE_URL}/learners/${id}/account`, { account_id: accountId })),
@@ -59,6 +60,7 @@ export const sisService = {
   deleteGuardianRelationship: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/guardian-relationships/${id}`)),
 
   listApplications: (params?: ListParams) => request<ApplicationsResponse>(() => httpClient.get(`${BASE_URL}/applications`, { params })),
+  getApplication: (id: string) => request<Application>(() => httpClient.get(`${BASE_URL}/applications/${id}`)),
   createApplication: (data: ApplicationInput) => request<Application>(() => httpClient.post(`${BASE_URL}/applications`, data)),
   updateApplication: (id: string, data: ApplicationInput) => request<Application>(() => httpClient.put(`${BASE_URL}/applications/${id}`, data)),
   deleteApplication: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/applications/${id}`)),

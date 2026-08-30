@@ -867,6 +867,7 @@ impl ApplicationOps {
         let status = request
             .status
             .unwrap_or(crate::dtos::ApplicationStatus::Draft);
+        validate_new_application_status(status)?;
         validate_application_state(status, request.submitted_on)?;
         let application_number = required("Application number", &request.application_number)?;
         let id = sqlx::query_scalar::<_, Uuid>(
@@ -927,6 +928,7 @@ impl ApplicationOps {
                     .is_none_or(|target| target == request.target_grade_level_id),
         )
         .await?;
+        validate_application_transition(&existing.status, request.status)?;
         validate_application_state(request.status, request.submitted_on)?;
         let application_number = required("Application number", &request.application_number)?;
         let updated = sqlx::query(
@@ -1448,6 +1450,38 @@ fn validate_application_state(
     Ok(())
 }
 
+fn validate_new_application_status(status: crate::dtos::ApplicationStatus) -> Result<()> {
+    if !matches!(
+        status,
+        crate::dtos::ApplicationStatus::Draft | crate::dtos::ApplicationStatus::Submitted
+    ) {
+        bail!("A new application must be saved as a draft or submitted");
+    }
+    Ok(())
+}
+
+fn validate_application_transition(
+    current: &str,
+    next: crate::dtos::ApplicationStatus,
+) -> Result<()> {
+    let next = next.as_str();
+    let allowed = current == next
+        || matches!(
+            (current, next),
+            ("draft", "submitted")
+                | ("submitted", "under_review" | "rejected" | "withdrawn")
+                | (
+                    "under_review",
+                    "offered" | "accepted" | "rejected" | "withdrawn"
+                )
+                | ("offered", "accepted" | "rejected" | "withdrawn")
+        );
+    if !allowed {
+        bail!("Application cannot move from {current} to {next}");
+    }
+    Ok(())
+}
+
 fn validate_birth_date(date_of_birth: chrono::NaiveDate) -> Result<()> {
     if date_of_birth > Utc::now().date_naive() {
         bail!("Date of birth cannot be in the future");
@@ -1499,4 +1533,41 @@ fn optional_text(value: Option<&str>) -> Option<&str> {
 
 fn normalized_email(value: Option<&str>) -> Option<String> {
     optional_text(value).map(str::to_lowercase)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::dtos::ApplicationStatus;
+
+    use super::{validate_application_transition, validate_new_application_status};
+
+    #[test]
+    fn new_applications_start_as_draft_or_submitted() {
+        assert!(validate_new_application_status(ApplicationStatus::Draft).is_ok());
+        assert!(validate_new_application_status(ApplicationStatus::Submitted).is_ok());
+        assert!(validate_new_application_status(ApplicationStatus::Accepted).is_err());
+    }
+
+    #[test]
+    fn application_transitions_move_forward_through_admissions() {
+        assert!(validate_application_transition("draft", ApplicationStatus::Submitted).is_ok());
+        assert!(
+            validate_application_transition("submitted", ApplicationStatus::UnderReview).is_ok()
+        );
+        assert!(
+            validate_application_transition("under_review", ApplicationStatus::Offered).is_ok()
+        );
+        assert!(validate_application_transition("offered", ApplicationStatus::Accepted).is_ok());
+    }
+
+    #[test]
+    fn final_application_states_cannot_be_reopened_by_update() {
+        assert!(
+            validate_application_transition("accepted", ApplicationStatus::UnderReview).is_err()
+        );
+        assert!(validate_application_transition("rejected", ApplicationStatus::Submitted).is_err());
+        assert!(
+            validate_application_transition("withdrawn", ApplicationStatus::Submitted).is_err()
+        );
+    }
 }

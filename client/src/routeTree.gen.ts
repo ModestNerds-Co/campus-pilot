@@ -85,6 +85,8 @@ import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/driv
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
 import { Route as AdminAgentRoutingRouteImport } from './routes/admin/agent/routing'
 import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
+import { Route as ModulesSisLearnersLearnerIdRouteImport } from './routes/modules/sis/learners_.$learnerId'
+import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './routes/modules/sis/applications_.$applicationId'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
@@ -496,6 +498,18 @@ const AdminAgentProvidersRoute = AdminAgentProvidersRouteImport.update({
   path: '/agent/providers',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesSisLearnersLearnerIdRoute =
+  ModulesSisLearnersLearnerIdRouteImport.update({
+    id: '/sis/learners_/$learnerId',
+    path: '/sis/learners/$learnerId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesSisApplicationsApplicationIdRoute =
+  ModulesSisApplicationsApplicationIdRouteImport.update({
+    id: '/sis/applications_/$applicationId',
+    path: '/sis/applications/$applicationId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesProcurementRequisitionsRequisitionIdRoute =
   ModulesProcurementRequisitionsRequisitionIdRouteImport.update({
     id: '/procurement/requisitions_/$requisitionId',
@@ -595,6 +609,8 @@ export interface FileRoutesByFullPath {
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
+  '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
+  '/modules/sis/learners/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -675,6 +691,8 @@ export interface FileRoutesByTo {
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
+  '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
+  '/modules/sis/learners/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -757,6 +775,8 @@ export interface FileRoutesById {
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
+  '/modules/sis/applications_/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
+  '/modules/sis/learners_/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -840,6 +860,8 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
+    | '/modules/sis/applications/$applicationId'
+    | '/modules/sis/learners/$learnerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -920,6 +942,8 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
+    | '/modules/sis/applications/$applicationId'
+    | '/modules/sis/learners/$learnerId'
   id:
     | '__root__'
     | '/'
@@ -1001,6 +1025,8 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
+    | '/modules/sis/applications_/$applicationId'
+    | '/modules/sis/learners_/$learnerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1550,6 +1576,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAgentProvidersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/sis/learners_/$learnerId': {
+      id: '/modules/sis/learners_/$learnerId'
+      path: '/sis/learners/$learnerId'
+      fullPath: '/modules/sis/learners/$learnerId'
+      preLoaderRoute: typeof ModulesSisLearnersLearnerIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/sis/applications_/$applicationId': {
+      id: '/modules/sis/applications_/$applicationId'
+      path: '/sis/applications/$applicationId'
+      fullPath: '/modules/sis/applications/$applicationId'
+      preLoaderRoute: typeof ModulesSisApplicationsApplicationIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/procurement/requisitions_/$requisitionId': {
       id: '/modules/procurement/requisitions_/$requisitionId'
       path: '/procurement/requisitions/$requisitionId'
@@ -1675,6 +1715,8 @@ interface ModulesRouteChildren {
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
+  ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
+  ModulesSisLearnersLearnerIdRoute: typeof ModulesSisLearnersLearnerIdRoute
 }
 
 const ModulesRouteChildren: ModulesRouteChildren = {
@@ -1729,6 +1771,9 @@ const ModulesRouteChildren: ModulesRouteChildren = {
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:
     ModulesProcurementRequisitionsRequisitionIdRoute,
+  ModulesSisApplicationsApplicationIdRoute:
+    ModulesSisApplicationsApplicationIdRoute,
+  ModulesSisLearnersLearnerIdRoute: ModulesSisLearnersLearnerIdRoute,
 }
 
 const ModulesRouteWithChildren =

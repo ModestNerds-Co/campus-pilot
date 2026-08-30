@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Edit, KeyRound, Loader2, MoreVertical, Plus, Search, Trash2, UserRound, UsersRound } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -12,6 +13,7 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { responseMessage, sisService } from "./service";
 import type { AccountCandidate, DirectoryStatus, Guardian, GuardianInput, Learner, LearnerInput, LearnerStatus } from "./types";
@@ -21,6 +23,10 @@ type Person = Learner | Guardian;
 
 export function SisPeopleList({ kind }: { kind: PeopleKind }) {
   const plural = kind === "learner" ? "Learners" : "Guardians";
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("sis:create");
+  const canEdit = permissions.includes("*") || permissions.includes("sis:edit");
+  const canDelete = permissions.includes("*") || permissions.includes("sis:delete");
   const [records, setRecords] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +70,7 @@ export function SisPeopleList({ kind }: { kind: PeopleKind }) {
     void load();
   };
 
-  usePageChrome(plural, <Button onClick={() => setFormRecord(null)}><Plus className="size-4" />Add {singular(kind)}</Button>);
+  usePageChrome(plural, canCreate ? <Button onClick={() => setFormRecord(null)}><Plus className="size-4" />Add {singular(kind)}</Button> : null);
   const filtered = submittedSearch || status !== "all";
   const EmptyIcon = kind === "learner" ? UserRound : UsersRound;
 
@@ -82,15 +88,39 @@ export function SisPeopleList({ kind }: { kind: PeopleKind }) {
       {!loading && records.length > 0 ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}
     </TableControlsBar>
     <TableWrap>{loading ? <TableLoading columns={6} label={`Loading ${plural.toLowerCase()}…`} /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={filtered ? "Change the current filters." : `Add the first ${singular(kind)}.`} icon={<EmptyIcon />} title={filtered ? `No ${plural.toLowerCase()} match these filters` : `No ${plural.toLowerCase()} yet`} /> : <TableScroll><Table><THead><tr><TH>{kind === "learner" ? "Learner" : "Guardian"}</TH>{kind === "learner" ? <TH>Date of birth</TH> : null}<TH>Contact</TH><TH>Login account</TH><TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>
-      {records.map((record) => <TR key={record.id}><TD><div className="font-medium text-[var(--text-strong)]">{record.display_name}</div><div className="font-tabular text-xs text-[var(--text-muted)]">{isLearner(record) ? record.learner_number : record.email || record.phone}</div></TD>{isLearner(record) ? <TD className="text-[var(--text-muted)]">{formatDate(record.date_of_birth)}</TD> : null}<TD className="text-[var(--text-muted)]">{record.email || record.phone || "—"}</TD><TD>{record.account_email ? <span className="text-[var(--text-strong)]">{record.account_email}</span> : <span className="text-[var(--text-muted)]">Not linked</span>}</TD><TD><Badge tone={record.status === "active" ? "success" : record.status === "prospective" ? "warning" : "neutral"}>{displayStatus(record.status)}</Badge></TD><TD className="text-right"><div className="relative inline-flex"><button aria-label={`${capitalise(singular(kind))} actions`} className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setFormRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setAccountRecord(record); setMenuId(null); }} type="button"><KeyRound className="size-4" />{record.account_id ? "Change login" : "Link login"}</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button></div> : null}</div></TD></TR>)}
+      {records.map((record) => (
+        <TR key={record.id}>
+          <TD>
+            {isLearner(record) ? (
+              <Link className="font-medium text-[var(--text-strong)] hover:text-[var(--brand-strong)] hover:underline" params={{ learnerId: record.id }} to="/modules/sis/learners/$learnerId">
+                {record.display_name}
+              </Link>
+            ) : <div className="font-medium text-[var(--text-strong)]">{record.display_name}</div>}
+            <div className="font-tabular text-xs text-[var(--text-muted)]">{isLearner(record) ? record.learner_number : record.email || record.phone}</div>
+          </TD>
+          {isLearner(record) ? <TD className="text-[var(--text-muted)]">{formatDate(record.date_of_birth)}</TD> : null}
+          <TD className="text-[var(--text-muted)]">{record.email || record.phone || "—"}</TD>
+          <TD>{record.account_email ? <span className="text-[var(--text-strong)]">{record.account_email}</span> : <span className="text-[var(--text-muted)]">Not linked</span>}</TD>
+          <TD><Badge tone={record.status === "active" ? "success" : record.status === "prospective" ? "warning" : "neutral"}>{displayStatus(record.status)}</Badge></TD>
+          <TD className="text-right">
+            {canEdit || canDelete ? <div className="relative inline-flex">
+              <button aria-label={`${capitalise(singular(kind))} actions`} className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>
+              {menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
+                {canEdit ? <><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setFormRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setAccountRecord(record); setMenuId(null); }} type="button"><KeyRound className="size-4" />{record.account_id ? "Change login" : "Link login"}</button></> : null}
+                {canDelete ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button> : null}
+              </div> : null}
+            </div> : <span className="text-[var(--text-subtle)]">—</span>}
+          </TD>
+        </TR>
+      ))}
     </TBody></Table></TableScroll>}</TableWrap>
-    <PersonDrawer kind={kind} onClose={() => setFormRecord(undefined)} onSaved={() => { setFormRecord(undefined); void load(); }} open={formRecord !== undefined} record={formRecord ?? null} />
-    <AccountDrawer kind={kind} onClose={() => setAccountRecord(null)} onSaved={() => { setAccountRecord(null); void load(); }} open={accountRecord !== null} record={accountRecord} />
+    <SisPersonDrawer kind={kind} onClose={() => setFormRecord(undefined)} onSaved={() => { setFormRecord(undefined); void load(); }} open={formRecord !== undefined} record={formRecord ?? null} />
+    <SisAccountDrawer kind={kind} onClose={() => setAccountRecord(null)} onSaved={() => { setAccountRecord(null); void load(); }} open={accountRecord !== null} record={accountRecord} />
     <ConfirmDrawer confirmLabel={`Remove ${singular(kind)}`} description={kind === "learner" ? `Remove ${deleteRecord?.display_name || "this learner"}? Relationships, applications, and enrolments must be removed first.` : `Remove ${deleteRecord?.display_name || "this guardian"}? Learner relationships must be removed first.`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={deleteRecord !== null} title={`Remove ${singular(kind)}?`} />
   </div>;
 }
 
-function PersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKind; onClose: () => void; onSaved: () => void; open: boolean; record: Person | null }) {
+export function SisPersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKind; onClose: () => void; onSaved: () => void; open: boolean; record: Person | null }) {
   const [displayName, setDisplayName] = useState("");
   const [firstNames, setFirstNames] = useState("");
   const [surname, setSurname] = useState("");
@@ -135,7 +165,7 @@ function PersonDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKi
   </DialogBody><DialogFooter><Button disabled={saving} onClick={onClose} type="button" variant="ghost">Cancel</Button><Button disabled={saving} type="submit">{saving ? <><Loader2 className="size-4 animate-spin" />Saving…</> : "Save"}</Button></DialogFooter></form></DialogShell>;
 }
 
-function AccountDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKind; onClose: () => void; onSaved: () => void; open: boolean; record: Person | null }) {
+export function SisAccountDrawer({ kind, onClose, onSaved, open, record }: { kind: PeopleKind; onClose: () => void; onSaved: () => void; open: boolean; record: Person | null }) {
   const [accounts, setAccounts] = useState<AccountCandidate[]>([]);
   const [accountId, setAccountId] = useState("");
   const [search, setSearch] = useState("");

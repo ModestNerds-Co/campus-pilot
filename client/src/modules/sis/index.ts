@@ -1,8 +1,10 @@
 export * from "./types";
 export { sisService } from "./service";
-export { SisPeopleList } from "./people-list";
+export { SisAccountDrawer, SisPeopleList, SisPersonDrawer } from "./people-list";
+export { LearnerRecord } from "./learner-record";
 export { GuardianRelationshipsList } from "./guardian-relationships-list";
 export { ApplicationsList } from "./applications-list";
-export { EnrolmentsList } from "./enrolments-list";
+export { ApplicationRecord } from "./application-record";
+export { EnrolmentDrawer, EnrolmentsList } from "./enrolments-list";
 export { SisImportsWorkspace } from "./imports-workspace";
 export { LearnerNumberingPolicyPage } from "./numbering-policy-page";
