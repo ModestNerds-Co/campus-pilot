@@ -75,6 +75,7 @@ export const academicsService = {
   deleteTeacher: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/teachers/${id}`)),
 
   listClasses: (params?: ListParams) => request<ClassesResponse>(() => httpClient.get(`${BASE_URL}/classes`, { params })),
+  getClass: (id: string) => request<ClassGroup>(() => httpClient.get(`${BASE_URL}/classes/${id}`)),
   createClass: (data: ClassGroupInput) => request<ClassGroup>(() => httpClient.post(`${BASE_URL}/classes`, data)),
   updateClass: (id: string, data: ClassGroupInput) => request<ClassGroup>(() => httpClient.put(`${BASE_URL}/classes/${id}`, data)),
   deleteClass: (id: string) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/classes/${id}`)),

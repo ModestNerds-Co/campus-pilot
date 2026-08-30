@@ -1,6 +1,7 @@
 // Academics-owned academic years, subjects, and classes.
 
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { BookOpen, CalendarRange, Edit, GraduationCap, Loader2, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -14,6 +15,7 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { academicsService, responseMessage } from "./service";
 import type { AcademicGradeLevel, AcademicYear, AcademicYearStatus, ClassGroup, DirectoryStatus, Subject } from "./types";
@@ -29,6 +31,10 @@ const labels = {
 
 export function AcademicDirectoryList({ kind }: { kind: DirectoryKind }) {
   const label = labels[kind];
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("academics:create");
+  const canEdit = permissions.includes("*") || permissions.includes("academics:edit");
+  const canDelete = permissions.includes("*") || permissions.includes("academics:delete");
   const [records, setRecords] = useState<DirectoryRecord[]>([]);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [gradeLevels, setGradeLevels] = useState<AcademicGradeLevel[]>([]);
@@ -106,7 +112,7 @@ export function AcademicDirectoryList({ kind }: { kind: DirectoryKind }) {
     } else toast.error(responseMessage(response, `${capitalise(label.singular)} could not be removed`));
   };
 
-  usePageChrome(label.plural, <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add {label.singular}</Button>);
+  usePageChrome(label.plural, canCreate ? <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add {label.singular}</Button> : null);
   const filtered = submittedSearch || status !== "all" || (kind === "class" && (yearFilter !== "all" || gradeFilter !== "all"));
   const EmptyIcon = kind === "academic-year" ? CalendarRange : kind === "subject" ? BookOpen : GraduationCap;
 
@@ -131,7 +137,7 @@ export function AcademicDirectoryList({ kind }: { kind: DirectoryKind }) {
         {loading ? <TableLoading columns={5} label={`Loading ${label.plural.toLowerCase()}…`} /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? (
           <TableEmpty description={filtered ? "Change the current filters." : `Add the first ${label.singular}.`} icon={<EmptyIcon />} title={filtered ? `No ${label.plural.toLowerCase()} match these filters` : `No ${label.plural.toLowerCase()} yet`} />
         ) : <TableScroll><Table><THead><tr>{headersFor(kind).map((header) => <TH key={header}>{header}</TH>)}<TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>
-          {records.map((record) => <TR key={record.id}>{cellsFor(kind, record)}<TD><Badge tone={record.status === "active" ? "success" : record.status === "planned" ? "warning" : "neutral"}>{record.status}</Badge></TD><TD className="text-right"><div className="relative inline-flex"><button aria-label={`${capitalise(label.singular)} actions`} className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button></div> : null}</div></TD></TR>)}
+          {records.map((record) => <TR key={record.id}>{cellsFor(kind, record)}<TD><Badge tone={record.status === "active" ? "success" : record.status === "planned" ? "warning" : "neutral"}>{record.status}</Badge></TD><TD className="text-right">{canEdit || canDelete ? <div className="relative inline-flex"><button aria-label={`${capitalise(label.singular)} actions`} className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">{canEdit ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button> : null}{canDelete ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button> : null}</div> : null}</div> : <span className="text-[var(--text-subtle)]">—</span>}</TD></TR>)}
         </TBody></Table></TableScroll>}
       </TableWrap>
       <DirectoryDrawer gradeLevels={gradeLevels} kind={kind} onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={drawerRecord !== undefined} record={drawerRecord ?? null} years={years} />
@@ -201,7 +207,7 @@ function cellsFor(kind: DirectoryKind, record: DirectoryRecord) {
   if (kind === "academic-year" && "starts_on" in record) return <><TD><span className="font-medium text-[var(--text-strong)]">{record.name}</span></TD><TD className="text-[var(--text-muted)]">{formatDate(record.starts_on)} – {formatDate(record.ends_on)}</TD></>;
   if (kind === "subject" && "code" in record && !("academic_year_id" in record)) return <><TD><span className="font-medium text-[var(--text-strong)]">{record.name}</span></TD><TD className="font-tabular text-[var(--text-muted)]">{record.code}</TD></>;
   const classGroup = record as ClassGroup;
-  return <><TD><span className="font-medium text-[var(--text-strong)]">{classGroup.name}</span></TD><TD className="font-tabular text-[var(--text-muted)]">{classGroup.code}</TD><TD className="text-[var(--text-muted)]">{classGroup.academic_year_name}</TD><TD className="text-[var(--text-muted)]">{classGroup.grade_level || "—"}</TD></>;
+  return <><TD><Link className="font-medium text-[var(--text-strong)] hover:text-[var(--brand-strong)] hover:underline" params={{ classId: classGroup.id }} to="/modules/academics/classes/$classId">{classGroup.name}</Link></TD><TD className="font-tabular text-[var(--text-muted)]">{classGroup.code}</TD><TD className="text-[var(--text-muted)]">{classGroup.academic_year_name}</TD><TD className="text-[var(--text-muted)]">{classGroup.grade_level || "—"}</TD></>;
 }
 
 function descriptionFor(kind: DirectoryKind) {

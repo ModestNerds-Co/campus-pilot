@@ -90,6 +90,7 @@ import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './route
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
+import { Route as ModulesAcademicsClassesClassIdRouteImport } from './routes/modules/academics/classes_.$classId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -528,6 +529,12 @@ const ModulesAssetsInventoryMovementsMovementIdRoute =
     path: '/assets-inventory/movements/$movementId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAcademicsClassesClassIdRoute =
+  ModulesAcademicsClassesClassIdRouteImport.update({
+    id: '/academics/classes_/$classId',
+    path: '/academics/classes/$classId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -606,6 +613,7 @@ export interface FileRoutesByFullPath {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/academics/classes/$classId': typeof ModulesAcademicsClassesClassIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -688,6 +696,7 @@ export interface FileRoutesByTo {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/academics/classes/$classId': typeof ModulesAcademicsClassesClassIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -772,6 +781,7 @@ export interface FileRoutesById {
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
+  '/modules/academics/classes_/$classId': typeof ModulesAcademicsClassesClassIdRoute
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -857,6 +867,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/academics/classes/$classId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -939,6 +950,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet'
+    | '/modules/academics/classes/$classId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1022,6 +1034,7 @@ export interface FileRouteTypes {
     | '/modules/sis/learners'
     | '/modules/sis/settings'
     | '/admin/fleet/'
+    | '/modules/academics/classes_/$classId'
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
@@ -1611,6 +1624,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAssetsInventoryMovementsMovementIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/academics/classes_/$classId': {
+      id: '/modules/academics/classes_/$classId'
+      path: '/academics/classes/$classId'
+      fullPath: '/modules/academics/classes/$classId'
+      preLoaderRoute: typeof ModulesAcademicsClassesClassIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
   }
 }
 
@@ -1712,6 +1732,7 @@ interface ModulesRouteChildren {
   ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
   ModulesSisSettingsRoute: typeof ModulesSisSettingsRoute
+  ModulesAcademicsClassesClassIdRoute: typeof ModulesAcademicsClassesClassIdRoute
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1765,6 +1786,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
   ModulesSisSettingsRoute: ModulesSisSettingsRoute,
+  ModulesAcademicsClassesClassIdRoute: ModulesAcademicsClassesClassIdRoute,
   ModulesAssetsInventoryMovementsMovementIdRoute:
     ModulesAssetsInventoryMovementsMovementIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
