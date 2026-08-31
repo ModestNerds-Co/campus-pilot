@@ -364,7 +364,8 @@ async fn connect_license_inner(
     })
 }
 
-pub(crate) async fn refresh_license_inner(
+/// Refreshes one tenant installation for the API route and the binary-owned scheduler.
+pub async fn refresh_license_inner(
     state: &AppState,
     tenant_id: uuid::Uuid,
 ) -> Result<ActivateLicenseResponse> {
@@ -623,12 +624,10 @@ mod lifecycle_tests {
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
     use serde::Deserialize;
     use serde_json::json;
+    use sqlx::postgres::PgPoolOptions;
     use uuid::Uuid;
 
-    use crate::{
-        services::access::license::SignedLeaseClaims, state::AppState,
-        tests::helpers::create_test_app_state,
-    };
+    use crate::{config::Config, services::access::license::SignedLeaseClaims, state::AppState};
 
     use super::{
         AccessOps, connect_license_inner, import_license_inner, refresh_license_inner,
@@ -757,8 +756,23 @@ mod lifecycle_tests {
     }
 
     #[actix_web::test]
+    #[ignore = "requires a fresh disposable LICENSE_LIFECYCLE_TEST_DATABASE_URL"]
     async fn activation_refresh_offline_replay_revocation_and_recovery_are_coherent() {
-        let base_state = create_test_app_state().await;
+        dotenv::dotenv().ok();
+        let database_url = std::env::var("LICENSE_LIFECYCLE_TEST_DATABASE_URL")
+            .expect("LICENSE_LIFECYCLE_TEST_DATABASE_URL must target a fresh disposable database");
+        let config = Config::from_env().expect("test configuration must load");
+        let pool = PgPoolOptions::new()
+            .max_connections(10)
+            .connect(&database_url)
+            .await
+            .expect("disposable license lifecycle database must connect");
+        let base_state = Arc::new(AppState::init(pool, config));
+        base_state
+            .db_ops
+            .run_migrations()
+            .await
+            .expect("disposable license lifecycle database must migrate");
         let tenant_id = Uuid::new_v4();
         sqlx::query("INSERT INTO tenants (id, slug, name) VALUES ($1, $2, 'Lifecycle test')")
             .bind(tenant_id)
@@ -893,5 +907,12 @@ mod lifecycle_tests {
         assert!(recovered.last_refresh_success_at.is_some());
 
         server_handle.stop(true).await;
+        sqlx::query(
+            "UPDATE license_installations SET deleted_at = NOW() WHERE tenant_id = $1 AND deleted_at IS NULL",
+        )
+            .bind(tenant_id)
+            .execute(&state.db)
+            .await
+            .unwrap_or_else(|_| unreachable!());
     }
 }

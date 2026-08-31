@@ -14,6 +14,7 @@ use crate::{
         IdempotencyMode,
     },
     handler::{Capability, CapabilityAdapter, ErasedCapability},
+    provider_tools::provider_tool_name,
 };
 
 type RegistryIdentity = (CapabilityKey, CapabilityVersion);
@@ -21,6 +22,7 @@ type RegistryIdentity = (CapabilityKey, CapabilityVersion);
 pub struct CapabilityRegistry {
     operations: BTreeMap<String, ProductOperation>,
     handlers: BTreeMap<RegistryIdentity, Arc<dyn ErasedCapability>>,
+    provider_tool_names: BTreeMap<String, RegistryIdentity>,
 }
 
 impl CapabilityRegistry {
@@ -45,6 +47,7 @@ impl CapabilityRegistry {
         Ok(Self {
             operations: index,
             handlers: BTreeMap::new(),
+            provider_tool_names: BTreeMap::new(),
         })
     }
 
@@ -83,8 +86,21 @@ impl CapabilityRegistry {
                 version: identity.1.get(),
             });
         }
+        let tool_name = provider_tool_name(descriptor.key(), descriptor.version());
+        if let Some(existing) = self.provider_tool_names.get(&tool_name) {
+            return Err(RegistryError::ProviderToolNameCollision {
+                provider_name: tool_name,
+                first_key: existing.0.to_string(),
+                first_version: existing.1.get(),
+                second_key: identity.0.to_string(),
+                second_version: identity.1.get(),
+            });
+        }
+        let provider_identity = identity.clone();
         self.handlers
             .insert(identity, Arc::new(CapabilityAdapter::new(capability)));
+        self.provider_tool_names
+            .insert(tool_name, provider_identity);
         Ok(())
     }
 
@@ -129,13 +145,23 @@ pub enum RegistryError {
     DirectCapabilityMustBeReadOnly,
     #[error("duplicate capability {key} version {version}")]
     DuplicateCapability { key: String, version: u16 },
+    #[error(
+        "provider tool name collision for {provider_name}: {first_key} v{first_version} and {second_key} v{second_version}"
+    )]
+    ProviderToolNameCollision {
+        provider_name: String,
+        first_key: String,
+        first_version: u16,
+        second_key: String,
+        second_version: u16,
+    },
 }
 
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
     use cp_audit::RequestContext;
-    use cp_common::{AgentExposure, OperationEffect, ProductOperation};
+    use cp_common::{AgentExposure, OperationEffect, ProductOperation, ProviderDataClass};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use uuid::Uuid;
@@ -144,8 +170,8 @@ mod tests {
         descriptor::{
             ApprovalMode, CapabilityDescriptor, CapabilityEffect, CapabilityIdentity,
             CapabilityKey, CapabilityPolicy, CapabilityRedaction, CapabilitySchemas,
-            CapabilityVersion, DataSensitivity, IdempotencyMode, ObjectSchema, ProviderDataClass,
-            RedactionProjection, Reversibility, StaleDataStrategy,
+            CapabilityVersion, DataSensitivity, IdempotencyMode, ObjectSchema, RedactionProjection,
+            Reversibility, StaleDataStrategy,
         },
         handler::{Capability, ErasedCapabilityError, ParsedCapabilityInput},
         types::{
@@ -245,7 +271,7 @@ mod tests {
     }
 
     fn read_policy() -> CapabilityPolicy {
-        CapabilityPolicy::read_only(DataSensitivity::General)
+        CapabilityPolicy::read_only(DataSensitivity::General, ProviderDataClass::CampusApproved)
     }
 
     #[tokio::test]

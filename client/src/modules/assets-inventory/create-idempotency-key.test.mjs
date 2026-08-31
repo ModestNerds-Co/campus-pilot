@@ -19,3 +19,17 @@ for (const recordType of ["item", "store", "movement", "receipt allocation", "re
     assert.equal(sequence, 2);
   });
 }
+
+test("fingerprinted retries keep their key until the payload changes", () => {
+  let sequence = 0;
+  const lifecycle = createIdempotencyKeyLifecycle(() => `request-${++sequence}`);
+  const submitted = JSON.stringify({ version: 2, quantity: 12 });
+
+  const firstAttempt = lifecycle.currentForFingerprint(submitted);
+  assert.equal(lifecycle.currentForFingerprint(submitted), firstAttempt);
+  assert.equal(sequence, 1);
+
+  const changedPayload = JSON.stringify({ version: 2, quantity: 10 });
+  assert.notEqual(lifecycle.currentForFingerprint(changedPayload), firstAttempt);
+  assert.equal(sequence, 2);
+});

@@ -6,12 +6,16 @@ use std::collections::BTreeSet;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use cp_common::{EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState};
+use cp_common::{
+    AgentExposure, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState, OperationEffect,
+    ProductOperation, RuntimeAccessChecks, evaluate_operation,
+};
 use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::{
+    catalog::{is_core_module, module_dependencies},
     license::{
         ProtectedCredential, SignedLeaseClaims, VerifiedSignedLease,
         app_version_bounds_are_supported, app_version_is_supported,
@@ -479,12 +483,7 @@ impl AccessOps {
         .with_exhausted_hard_limits(exhausted_hard_limits);
         let enabled_modules = module_rows
             .iter()
-            .filter(|module| {
-                module.status == "enabled"
-                    && module
-                        .license_expires_at
-                        .is_none_or(|expires_at| expires_at > evaluated_at)
-            })
+            .filter(|module| module_is_available(&module.module_key, &entitlements))
             .map(|module| module.module_key.clone())
             .collect();
 
@@ -594,6 +593,31 @@ impl AccessOps {
     }
 }
 
+fn module_is_available(module_key: &str, entitlements: &EntitlementSnapshot) -> bool {
+    let gate = ProductOperation::route(
+        format!("{module_key}.module.open"),
+        module_key,
+        "*",
+        OperationEffect::Read,
+        AgentExposure::Prohibited {
+            reason: "Module launcher gates are not Agent capabilities.",
+        },
+        !is_core_module(module_key),
+    )
+    .requiring_modules(
+        module_dependencies(module_key)
+            .iter()
+            .map(|dependency| (*dependency).to_string()),
+    );
+    evaluate_operation(
+        &gate,
+        entitlements,
+        &["*".to_string()],
+        RuntimeAccessChecks::default(),
+    )
+    .allowed
+}
+
 fn entitlement_snapshot(
     modules: &[TenantModule],
     lease: Option<&LicenseLease>,
@@ -684,7 +708,7 @@ mod entitlement_tests {
 
     use super::{
         AccessOps, EntitlementProjectionEvidence, LicenseLease, TenantModule, entitlement_snapshot,
-        projection_evidence,
+        module_is_available, projection_evidence,
     };
     use crate::services::access::license::{LeaseLimit, SignedLeaseClaims, VerifiedSignedLease};
 
@@ -695,6 +719,54 @@ mod entitlement_tests {
             source: "license".to_string(),
             license_expires_at: expires_at,
         }
+    }
+
+    #[test]
+    fn launcher_module_availability_uses_lease_and_dependency_evidence() {
+        let fleet_only = cp_common::EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [("fleet".to_string(), ModuleEntitlementState::Enabled)],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(!module_is_available("fleet", &fleet_only));
+
+        let fleet_with_hr = cp_common::EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [
+                ("fleet".to_string(), ModuleEntitlementState::Enabled),
+                ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(module_is_available("fleet", &fleet_with_hr));
+        assert!(!module_is_available(
+            "fleet",
+            &fleet_with_hr.clone().with_app_version_supported(false)
+        ));
+
+        let revoked_core = cp_common::EntitlementSnapshot::new(
+            LeaseLifecycle::Revoked,
+            [(
+                "administration".to_string(),
+                ModuleEntitlementState::Enabled,
+            )],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(module_is_available("administration", &revoked_core));
+
+        let revoked_fleet = cp_common::EntitlementSnapshot::new(
+            LeaseLifecycle::Revoked,
+            [
+                ("fleet".to_string(), ModuleEntitlementState::Enabled),
+                ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        assert!(!module_is_available("fleet", &revoked_fleet));
     }
 
     fn lease(

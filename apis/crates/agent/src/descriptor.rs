@@ -5,6 +5,7 @@
 
 use std::{collections::BTreeSet, fmt, num::NonZeroU16};
 
+use cp_common::ProviderDataClass;
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
@@ -150,14 +151,6 @@ pub enum StaleDataStrategy {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ProviderDataClass {
-    CampusApproved,
-    SensitiveDataApproved,
-    LocalOnly,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
 pub enum RedactionProjection {
     AllowlistedFields,
     SummaryOnly,
@@ -228,7 +221,10 @@ impl CapabilityPolicy {
     }
 
     #[must_use]
-    pub const fn read_only(data_sensitivity: DataSensitivity) -> Self {
+    pub const fn read_only(
+        data_sensitivity: DataSensitivity,
+        provider_data_class: ProviderDataClass,
+    ) -> Self {
         Self {
             effect: CapabilityEffect::Read,
             reversibility: Reversibility::NotApplicable,
@@ -236,7 +232,7 @@ impl CapabilityPolicy {
             approval_mode: ApprovalMode::None,
             idempotency: IdempotencyMode::ReadOnly,
             stale_data: StaleDataStrategy::NotApplicable,
-            provider_data_class: ProviderDataClass::CampusApproved,
+            provider_data_class,
         }
     }
 
@@ -345,6 +341,12 @@ impl CapabilityDescriptor {
         if usage_tags.iter().any(|tag| !is_stable_key(tag)) {
             return Err(DescriptorError::InvalidUsageTag);
         }
+        if !provider_class_covers_sensitivity(
+            policy.data_sensitivity(),
+            policy.provider_data_class(),
+        ) {
+            return Err(DescriptorError::ProviderDataClassTooWeak);
+        }
         Ok(Self {
             identity,
             schemas,
@@ -424,6 +426,24 @@ pub enum DescriptorError {
     EmptyDescription,
     #[error("capability usage tags must be stable lowercase keys")]
     InvalidUsageTag,
+    #[error("capability provider data class is too weak for its sensitivity")]
+    ProviderDataClassTooWeak,
+}
+
+const fn provider_class_covers_sensitivity(
+    sensitivity: DataSensitivity,
+    provider_class: ProviderDataClass,
+) -> bool {
+    match sensitivity {
+        DataSensitivity::General => true,
+        DataSensitivity::Personal | DataSensitivity::Sensitive => matches!(
+            provider_class,
+            ProviderDataClass::SensitiveDataApproved | ProviderDataClass::LocalOnly
+        ),
+        DataSensitivity::HighlySensitive => {
+            matches!(provider_class, ProviderDataClass::LocalOnly)
+        }
+    }
 }
 
 fn is_stable_key(value: &str) -> bool {
@@ -443,13 +463,14 @@ fn is_stable_key(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use cp_common::ProviderDataClass;
     use serde_json::{Value, json};
 
     use super::{
         ApprovalMode, CapabilityDescriptor, CapabilityEffect, CapabilityIdentity, CapabilityKey,
         CapabilityPolicy, CapabilityRedaction, CapabilitySchemas, CapabilityVersion,
-        DataSensitivity, DescriptorError, IdempotencyMode, ObjectSchema, ProviderDataClass,
-        RedactionProjection, Reversibility, StaleDataStrategy,
+        DataSensitivity, DescriptorError, IdempotencyMode, ObjectSchema, RedactionProjection,
+        Reversibility, StaleDataStrategy,
     };
 
     fn object_schema() -> ObjectSchema {
@@ -562,7 +583,10 @@ mod tests {
         let invalid = CapabilityDescriptor::new(
             identity(),
             CapabilitySchemas::new(object_schema(), object_schema()),
-            CapabilityPolicy::read_only(DataSensitivity::General),
+            CapabilityPolicy::read_only(
+                DataSensitivity::General,
+                ProviderDataClass::CampusApproved,
+            ),
             CapabilityRedaction::new(
                 RedactionProjection::AllowlistedFields,
                 RedactionProjection::AllowlistedFields,
@@ -690,5 +714,53 @@ mod tests {
         ] {
             assert!(serde_json::to_value(value).is_ok());
         }
+    }
+
+    #[test]
+    fn descriptor_rejects_provider_classes_weaker_than_data_sensitivity() {
+        for (sensitivity, provider_class) in [
+            (DataSensitivity::Personal, ProviderDataClass::CampusApproved),
+            (
+                DataSensitivity::Sensitive,
+                ProviderDataClass::CampusApproved,
+            ),
+            (
+                DataSensitivity::HighlySensitive,
+                ProviderDataClass::SensitiveDataApproved,
+            ),
+        ] {
+            let descriptor = CapabilityDescriptor::new(
+                identity(),
+                CapabilitySchemas::new(object_schema(), object_schema()),
+                CapabilityPolicy::read_only(sensitivity, provider_class),
+                CapabilityRedaction::new(
+                    RedactionProjection::AllowlistedFields,
+                    RedactionProjection::AllowlistedFields,
+                    RedactionProjection::SummaryOnly,
+                    RedactionProjection::SummaryOnly,
+                    RedactionProjection::Omitted,
+                ),
+                ["fleet.read".to_string()],
+            );
+            assert_eq!(descriptor, Err(DescriptorError::ProviderDataClassTooWeak));
+        }
+
+        let highly_sensitive = CapabilityDescriptor::new(
+            identity(),
+            CapabilitySchemas::new(object_schema(), object_schema()),
+            CapabilityPolicy::read_only(
+                DataSensitivity::HighlySensitive,
+                ProviderDataClass::LocalOnly,
+            ),
+            CapabilityRedaction::new(
+                RedactionProjection::AllowlistedFields,
+                RedactionProjection::AllowlistedFields,
+                RedactionProjection::SummaryOnly,
+                RedactionProjection::SummaryOnly,
+                RedactionProjection::Omitted,
+            ),
+            ["fleet.read".to_string()],
+        );
+        assert!(highly_sensitive.is_ok());
     }
 }

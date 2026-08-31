@@ -27,7 +27,7 @@ use crate::{
     },
 };
 
-const CREDENTIAL_DOMAIN: &str = "campus-pilot/ai-provider-credential";
+pub(crate) const CREDENTIAL_DOMAIN: &str = "campus-pilot/ai-provider-credential";
 
 const CONNECTION_PROJECTION: &str = r#"
     SELECT
@@ -59,18 +59,31 @@ const CONNECTION_PROJECTION: &str = r#"
               AND m.deleted_at IS NULL
         ) AS model_count,
         c.model_catalog_refreshed_at,
+        approval.id AS provider_data_approval_id,
+        approval.approval_version AS provider_data_approval_version,
+        approval.approval_class AS provider_data_approval_class,
+        'external_managed'::TEXT AS execution_environment_class,
         c.created_at,
         c.updated_at
     FROM ai_provider_connections c
     JOIN users u ON u.id = c.configured_by AND u.tenant_id = c.tenant_id
+    JOIN LATERAL (
+        SELECT current_approval.id, current_approval.approval_version,
+               current_approval.approval_class
+        FROM ai_provider_data_approval_versions current_approval
+        WHERE current_approval.tenant_id = c.tenant_id
+          AND current_approval.connection_id = c.id
+        ORDER BY current_approval.approval_version DESC
+        LIMIT 1
+    ) approval ON TRUE
 "#;
 
 /// Shared service used by HTTP routes and secret-free Agent read handlers.
 #[derive(Debug, Clone)]
 pub struct AiProviderOps {
-    pool: PgPool,
-    keyring: Option<CredentialKeyring>,
-    provider_client: Option<ProviderHttpClient>,
+    pub(crate) pool: PgPool,
+    pub(crate) keyring: Option<CredentialKeyring>,
+    pub(crate) provider_client: Option<ProviderHttpClient>,
 }
 
 impl AiProviderOps {
@@ -172,6 +185,23 @@ impl AiProviderOps {
             return Err(map_write_error(error));
         }
 
+        sqlx::query(
+            r#"
+            INSERT INTO ai_provider_data_approval_versions (
+                id, tenant_id, connection_id, approval_version, approval_class,
+                change_source, changed_by, change_reason
+            )
+            VALUES ($1, $2, $3, 1, 'unapproved', 'system_default', NULL, $4)
+            "#,
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(connection_id)
+        .bind("Initial unapproved provider data eligibility.")
+        .execute(&mut *transaction)
+        .await
+        .map_err(map_write_error)?;
+
         append_audit(
             &mut transaction,
             tenant_id,
@@ -195,6 +225,95 @@ impl AiProviderOps {
         .await?;
         transaction.commit().await?;
         self.read_connection(tenant_id, connection_id).await
+    }
+
+    /// Appends one human-owned data approval version with optimistic concurrency.
+    pub async fn set_data_approval(
+        &self,
+        tenant_id: Uuid,
+        connection_id: Uuid,
+        actor: AuditActor,
+        request_context: RequestContext,
+        command: crate::types::SetProviderDataApprovalCommand,
+    ) -> Result<crate::types::ProviderDataApproval, ServiceError> {
+        let changed_by = person_actor_id(actor)?;
+        let mut transaction = self.pool.begin().await?;
+        let current = sqlx::query_as::<_, CurrentDataApprovalRow>(
+            r#"
+            SELECT approval_version
+            FROM ai_provider_data_approval_versions
+            WHERE tenant_id = $1 AND connection_id = $2
+            ORDER BY approval_version DESC
+            LIMIT 1
+            FOR UPDATE
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(connection_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(ServiceError::NotFound)?;
+        if current.approval_version != command.expected_approval_version {
+            return Err(ServiceError::conflict(
+                "stale_provider_data_approval",
+                "Provider data approval changed; reload before saving",
+            ));
+        }
+        let next_version = current
+            .approval_version
+            .checked_add(1)
+            .filter(|version| *version <= 9_007_199_254_740_991)
+            .ok_or_else(|| {
+                ServiceError::conflict(
+                    "provider_data_approval_version_exhausted",
+                    "Provider data approval cannot advance further",
+                )
+            })?;
+        let approval_id = Uuid::new_v4();
+        let inserted = sqlx::query(
+            r#"
+            INSERT INTO ai_provider_data_approval_versions (
+                id, tenant_id, connection_id, approval_version, approval_class,
+                change_source, changed_by, change_reason
+            )
+            VALUES ($1, $2, $3, $4, $5, 'administrator', $6, $7)
+            "#,
+        )
+        .bind(approval_id)
+        .bind(tenant_id)
+        .bind(connection_id)
+        .bind(next_version)
+        .bind(command.approval_class.as_str())
+        .bind(changed_by)
+        .bind(&command.change_reason)
+        .execute(&mut *transaction)
+        .await;
+        if let Err(error) = inserted {
+            return Err(map_write_error(error));
+        }
+        append_audit(
+            &mut transaction,
+            tenant_id,
+            actor,
+            request_context,
+            "administration.ai_providers.connections.data_approval.update",
+            connection_id,
+            AuditOutcome::Succeeded,
+            metadata([
+                (
+                    "approval_class",
+                    Value::String(command.approval_class.as_str().to_owned()),
+                ),
+                (
+                    "previous_approval_version",
+                    Value::from(current.approval_version),
+                ),
+                ("approval_version", Value::from(next_version)),
+            ]),
+        )
+        .await?;
+        transaction.commit().await?;
+        fetch_data_approval(&self.pool, tenant_id, connection_id, approval_id).await
     }
 
     /// Renames a connection using optimistic concurrency.
@@ -394,7 +513,7 @@ impl AiProviderOps {
             sqlx::query_as::<_, ProviderModel>(
                 r#"
                 SELECT provider_model_id, display_name, context_window_tokens,
-                       supports_tools, source
+                       max_output_tokens, supports_tools, source
                 FROM ai_provider_models
                 WHERE tenant_id = $1 AND connection_id = $2
                   AND credential_version = $3 AND catalog_version = $4
@@ -514,7 +633,7 @@ impl AiProviderOps {
 
         if !models.is_empty() {
             let mut builder = QueryBuilder::<Postgres>::new(
-                "INSERT INTO ai_provider_models (tenant_id, connection_id, credential_version, catalog_version, provider_model_id, display_name, context_window_tokens, supports_tools, source, refreshed_at) ",
+                "INSERT INTO ai_provider_models (tenant_id, connection_id, credential_version, catalog_version, provider_model_id, display_name, context_window_tokens, max_output_tokens, supports_tools, source, refreshed_at) ",
             );
             builder.push_values(&models, |mut row, model| {
                 row.push_bind(tenant_id)
@@ -524,6 +643,7 @@ impl AiProviderOps {
                     .push_bind(&model.id)
                     .push_bind(&model.display_name)
                     .push_bind(model.context_window_tokens)
+                    .push_bind(model.max_output_tokens)
                     .push_bind(model.supports_tools)
                     .push_bind(&model.source)
                     .push_bind(refreshed_at);
@@ -804,6 +924,11 @@ struct CredentialRow {
     version: i64,
 }
 
+#[derive(Debug, FromRow)]
+struct CurrentDataApprovalRow {
+    approval_version: i64,
+}
+
 #[derive(Debug)]
 struct OpenCredential {
     provider: ProviderKey,
@@ -836,6 +961,36 @@ async fn fetch_connection(
         .ok_or(ServiceError::NotFound)
 }
 
+async fn fetch_data_approval(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    connection_id: Uuid,
+    approval_id: Uuid,
+) -> Result<crate::types::ProviderDataApproval, ServiceError> {
+    sqlx::query_as::<_, crate::types::ProviderDataApproval>(
+        r#"
+        SELECT approval.id, approval.connection_id, approval.approval_version,
+               approval.approval_class,
+               'external_managed'::TEXT AS execution_environment_class,
+               approval.change_source, changed_by.full_name AS changed_by_name,
+               approval.change_reason, approval.created_at
+        FROM ai_provider_data_approval_versions approval
+        LEFT JOIN users changed_by
+          ON changed_by.id = approval.changed_by
+         AND changed_by.tenant_id = approval.tenant_id
+        WHERE approval.id = $1
+          AND approval.tenant_id = $2
+          AND approval.connection_id = $3
+        "#,
+    )
+    .bind(approval_id)
+    .bind(tenant_id)
+    .bind(connection_id)
+    .fetch_optional(pool)
+    .await?
+    .ok_or(ServiceError::NotFound)
+}
+
 async fn load_credential_row(
     pool: &PgPool,
     tenant_id: Uuid,
@@ -857,7 +1012,7 @@ async fn load_credential_row(
     .ok_or(ServiceError::NotFound)
 }
 
-fn credential_context(
+pub(crate) fn credential_context(
     tenant_id: Uuid,
     connection_id: Uuid,
     provider: ProviderKey,
@@ -1020,14 +1175,27 @@ async fn connection_has_route_reference(
 
 #[cfg(test)]
 mod tests {
-    use cp_audit::AuditActor;
-    use serde_json::Value;
+    use std::{collections::BTreeMap, time::Duration};
+
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use cp_audit::{AuditActor, RequestContext};
+    use httpmock::{Method::GET, MockServer};
+    use serde_json::{Value, json};
+    use sqlx::{PgPool, postgres::PgPoolOptions};
     use uuid::Uuid;
 
-    use crate::types::{ApiKey, ProviderKey};
+    use crate::{
+        CredentialKeyring,
+        client::{ProviderEndpoints, ProviderHttpClient},
+        types::{
+            ApiKey, CreateConnectionCommand, ProviderKey, RotateCredentialCommand,
+            SetProviderDataApprovalCommand, UpdateConnectionCommand,
+        },
+    };
 
     use super::{
-        CONNECTION_PROJECTION, completed_attempt_metadata, credential_fingerprint,
+        AiProviderOps, CONNECTION_PROJECTION, completed_attempt_metadata,
+        connection_has_route_reference, credential_fingerprint, map_write_error,
         next_catalog_version, person_actor_id,
     };
 
@@ -1111,5 +1279,713 @@ mod tests {
         );
         assert_eq!(evidence.get("model_count"), Some(&Value::from(17_u64)));
         assert_eq!(evidence.len(), 5);
+    }
+
+    fn keyring() -> CredentialKeyring {
+        CredentialKeyring::from_base64(
+            BTreeMap::from([("active".to_owned(), STANDARD.encode([17_u8; 32]))]),
+            "active",
+        )
+        .unwrap()
+    }
+
+    async fn insert_tenant_and_user(pool: &PgPool) -> (Uuid, Uuid) {
+        let tenant_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let suffix = tenant_id.simple();
+        sqlx::query("INSERT INTO tenants (id, slug, name) VALUES ($1, $2, $3)")
+            .bind(tenant_id)
+            .bind(format!("provider-service-{suffix}"))
+            .bind("Provider service contract")
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO users (id, tenant_id, email, password_hash, full_name) VALUES ($1, $2, $3, 'not-a-login', 'Provider Service Contract')",
+        )
+        .bind(user_id)
+        .bind(tenant_id)
+        .bind(format!("provider-service-{suffix}@example.invalid"))
+        .execute(pool)
+        .await
+        .unwrap();
+        (tenant_id, user_id)
+    }
+
+    fn create_command(provider: &str, label: &str, key: &str) -> CreateConnectionCommand {
+        CreateConnectionCommand::parse(provider, "api_key", label, key).unwrap()
+    }
+
+    fn context() -> RequestContext {
+        RequestContext::generate(None)
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a disposable migrated AI_PROVIDER_EXECUTION_TEST_DATABASE_URL"]
+    async fn postgres_administration_lifecycle_is_tenant_scoped_audited_and_fail_closed() {
+        let database_url = std::env::var("AI_PROVIDER_EXECUTION_TEST_DATABASE_URL")
+            .expect("AI_PROVIDER_EXECUTION_TEST_DATABASE_URL must target a disposable database");
+        let pool = PgPoolOptions::new()
+            .max_connections(8)
+            .connect(&database_url)
+            .await
+            .unwrap();
+        let (tenant_id, user_id) = insert_tenant_and_user(&pool).await;
+        let (other_tenant_id, _) = insert_tenant_and_user(&pool).await;
+        let actor = AuditActor::person(user_id);
+
+        let server = MockServer::start_async().await;
+        let openai_models = server
+            .mock_async(|when, then| {
+                when.method(GET).path("/openai/models");
+                then.status(200).json_body(json!({
+                    "data":[
+                        {"id":"gpt-5"},
+                        {"id":"gpt-5"},
+                        {"id":"text-embedding-3-small"}
+                    ]
+                }));
+            })
+            .await;
+        let ops = AiProviderOps::new(
+            pool.clone(),
+            Some(keyring()),
+            ProviderHttpClient::with_endpoints(ProviderEndpoints::all(&server.base_url())),
+        );
+        let reads = AiProviderOps::for_reads(pool.clone());
+
+        assert!(reads.list_connections(tenant_id).await.unwrap().is_empty());
+        assert!(
+            reads
+                .list_connections(other_tenant_id)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            reads
+                .read_connection(tenant_id, Uuid::new_v4())
+                .await
+                .unwrap_err()
+                .code(),
+            "connection_not_found"
+        );
+        assert_eq!(
+            reads
+                .create_connection(
+                    tenant_id,
+                    actor,
+                    context(),
+                    create_command("openai", "Unavailable", "missing-key-material-123"),
+                )
+                .await
+                .unwrap_err()
+                .code(),
+            "credential_storage_unavailable"
+        );
+        assert_eq!(
+            ops.create_connection(
+                tenant_id,
+                AuditActor::agent(user_id),
+                context(),
+                create_command("openai", "Agent", "agent-key-material-123"),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "human_workflow_required"
+        );
+
+        let primary_key = "primary-provider-key-material-123";
+        let primary = ops
+            .create_connection(
+                tenant_id,
+                actor,
+                context(),
+                create_command("openai", "Primary", primary_key),
+            )
+            .await
+            .unwrap();
+        assert_eq!(primary.status, "untested");
+        assert_eq!(primary.version, 1);
+        assert_eq!(primary.provider_data_approval_version, 1);
+        assert_eq!(primary.provider_data_approval_class, "unapproved");
+        assert_eq!(primary.execution_environment_class, "external_managed");
+        assert_eq!(
+            ops.set_data_approval(
+                tenant_id,
+                primary.id,
+                AuditActor::system(),
+                context(),
+                SetProviderDataApprovalCommand::parse(
+                    "sensitive_data_approved",
+                    1,
+                    "Approve sensitive records for the contract.",
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "human_workflow_required"
+        );
+        assert_eq!(
+            ops.set_data_approval(
+                tenant_id,
+                primary.id,
+                actor,
+                context(),
+                SetProviderDataApprovalCommand::parse(
+                    "sensitive_data_approved",
+                    2,
+                    "Reject stale administrator approval.",
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "stale_provider_data_approval"
+        );
+        let approval = ops
+            .set_data_approval(
+                tenant_id,
+                primary.id,
+                actor,
+                context(),
+                SetProviderDataApprovalCommand::parse(
+                    "sensitive_data_approved",
+                    1,
+                    "Approve sensitive records for the contract.",
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(approval.connection_id, primary.id);
+        assert_eq!(approval.approval_version, 2);
+        assert_eq!(approval.approval_class, "sensitive_data_approved");
+        assert_eq!(approval.execution_environment_class, "external_managed");
+        assert_eq!(
+            reads
+                .read_connection(tenant_id, primary.id)
+                .await
+                .unwrap()
+                .provider_data_approval_version,
+            2
+        );
+        assert_eq!(reads.list_connections(tenant_id).await.unwrap().len(), 1);
+        assert_eq!(
+            reads
+                .read_connection(other_tenant_id, primary.id)
+                .await
+                .unwrap_err()
+                .code(),
+            "connection_not_found"
+        );
+
+        for (label, key) in [
+            ("Primary", "different-provider-key-material-123"),
+            ("Fingerprint collision", primary_key),
+        ] {
+            assert_eq!(
+                ops.create_connection(
+                    tenant_id,
+                    actor,
+                    context(),
+                    create_command("openai", label, key),
+                )
+                .await
+                .unwrap_err()
+                .code(),
+                "connection_exists"
+            );
+        }
+
+        let second = ops
+            .create_connection(
+                tenant_id,
+                actor,
+                context(),
+                create_command("openai", "Secondary", "secondary-provider-key-material-123"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            ops.update_connection(
+                tenant_id,
+                second.id,
+                actor,
+                context(),
+                UpdateConnectionCommand::parse("Primary", second.version).unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "connection_exists"
+        );
+        assert_eq!(
+            ops.update_connection(
+                tenant_id,
+                second.id,
+                actor,
+                context(),
+                UpdateConnectionCommand::parse("Secondary renamed", 2).unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "stale_connection"
+        );
+        assert_eq!(
+            ops.update_connection(
+                tenant_id,
+                Uuid::new_v4(),
+                actor,
+                context(),
+                UpdateConnectionCommand::parse("Missing", 1).unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "connection_not_found"
+        );
+
+        let primary = ops
+            .update_connection(
+                tenant_id,
+                primary.id,
+                actor,
+                context(),
+                UpdateConnectionCommand::parse("Primary renamed", primary.version).unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(primary.version, 2);
+        assert_eq!(primary.account_label, "Primary renamed");
+
+        assert_eq!(
+            ops.rotate_credential(
+                tenant_id,
+                second.id,
+                AuditActor::system(),
+                context(),
+                RotateCredentialCommand::parse("rotation-key-material-123", 1).unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "human_workflow_required"
+        );
+        assert_eq!(
+            ops.rotate_credential(
+                tenant_id,
+                second.id,
+                actor,
+                context(),
+                RotateCredentialCommand::parse("rotation-key-material-123", 2).unwrap(),
+            )
+            .await
+            .unwrap_err()
+            .code(),
+            "stale_connection"
+        );
+        assert_eq!(
+            reads
+                .rotate_credential(
+                    tenant_id,
+                    second.id,
+                    actor,
+                    context(),
+                    RotateCredentialCommand::parse("rotation-key-material-123", 1).unwrap(),
+                )
+                .await
+                .unwrap_err()
+                .code(),
+            "credential_storage_unavailable"
+        );
+        let second = ops
+            .rotate_credential(
+                tenant_id,
+                second.id,
+                actor,
+                context(),
+                RotateCredentialCommand::parse("rotation-key-material-123", 1).unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second.version, 2);
+        assert_eq!(second.credential_version, 2);
+
+        let no_client = AiProviderOps {
+            pool: pool.clone(),
+            keyring: Some(keyring()),
+            provider_client: None,
+        };
+        assert_eq!(
+            no_client
+                .test_connection(tenant_id, second.id, 2, actor, context())
+                .await
+                .unwrap_err()
+                .code(),
+            "credential_storage_unavailable"
+        );
+        assert_eq!(
+            no_client
+                .refresh_models(tenant_id, second.id, 2, actor, context())
+                .await
+                .unwrap_err()
+                .code(),
+            "credential_storage_unavailable"
+        );
+
+        sqlx::query(
+            "UPDATE ai_provider_connections SET credential_key_id = 'missing' WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(tenant_id)
+        .bind(second.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            ops.test_connection(tenant_id, second.id, 2, actor, context())
+                .await
+                .unwrap_err()
+                .code(),
+            "credential_unavailable"
+        );
+        sqlx::query(
+            "UPDATE ai_provider_connections SET credential_key_id = 'active' WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(tenant_id)
+        .bind(second.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let tested = ops
+            .test_connection(tenant_id, primary.id, primary.version, actor, context())
+            .await
+            .unwrap();
+        assert_eq!(tested.outcome.status, "succeeded");
+        assert_eq!(tested.connection.status, "ready");
+        assert_eq!(tested.connection.version, 3);
+        let empty_snapshot = reads.list_models(tenant_id, primary.id).await.unwrap();
+        assert!(empty_snapshot.models.is_empty());
+        assert!(empty_snapshot.refreshed_at.is_none());
+
+        let snapshot = ops
+            .refresh_models(tenant_id, primary.id, 3, actor, context())
+            .await
+            .unwrap();
+        assert_eq!(snapshot.models.len(), 1);
+        assert_eq!(snapshot.models[0].id, "gpt-5");
+        assert!(snapshot.refreshed_at.is_some());
+        let primary = reads.read_connection(tenant_id, primary.id).await.unwrap();
+        assert_eq!(primary.version, 4);
+        assert_eq!(primary.model_count, 1);
+
+        let primary = ops
+            .rotate_credential(
+                tenant_id,
+                primary.id,
+                actor,
+                context(),
+                RotateCredentialCommand::parse("rotated-primary-key-material-123", 4).unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(primary.version, 5);
+        assert_eq!(primary.credential_version, 2);
+        assert!(
+            reads
+                .list_models(tenant_id, primary.id)
+                .await
+                .unwrap()
+                .models
+                .is_empty()
+        );
+        let tested = ops
+            .test_connection(tenant_id, primary.id, 5, actor, context())
+            .await
+            .unwrap();
+        assert_eq!(tested.connection.version, 6);
+
+        let failure_server = MockServer::start_async().await;
+        let unavailable = failure_server
+            .mock_async(|when, then| {
+                when.method(GET).path("/openai/models");
+                then.status(503)
+                    .body("raw upstream details must not persist");
+            })
+            .await;
+        let failing_ops = AiProviderOps::new(
+            pool.clone(),
+            Some(keyring()),
+            ProviderHttpClient::with_endpoints(ProviderEndpoints::all(&failure_server.base_url())),
+        );
+        let failed_test = failing_ops
+            .test_connection(tenant_id, primary.id, 6, actor, context())
+            .await
+            .unwrap();
+        assert_eq!(failed_test.outcome.status, "failed");
+        assert_eq!(
+            failed_test.outcome.failure_category.as_deref(),
+            Some("unavailable")
+        );
+        assert_eq!(failed_test.connection.status, "error");
+        assert_eq!(failed_test.connection.version, 7);
+        let refresh_error = failing_ops
+            .refresh_models(tenant_id, primary.id, 7, actor, context())
+            .await
+            .unwrap_err();
+        assert_eq!(refresh_error.code(), "unavailable");
+        let primary = reads.read_connection(tenant_id, primary.id).await.unwrap();
+        assert_eq!(primary.version, 8);
+        assert_eq!(
+            primary.last_failure_category.as_deref(),
+            Some("unavailable")
+        );
+        let snapshot = ops
+            .refresh_models(tenant_id, primary.id, 8, actor, context())
+            .await
+            .unwrap();
+        assert_eq!(snapshot.credential_version, 2);
+        let primary = reads.read_connection(tenant_id, primary.id).await.unwrap();
+        assert_eq!(primary.version, 9);
+        assert_eq!(primary.model_count, 1);
+        openai_models.assert_hits_async(4).await;
+        unavailable.assert_hits_async(2).await;
+
+        let model_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM ai_provider_models WHERE tenant_id = $1 AND connection_id = $2 AND credential_version = 2 AND catalog_version = 2",
+        )
+        .bind(tenant_id)
+        .bind(primary.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let route_set_id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO ai_route_sets (id, tenant_id, scope_kind, configured_by, change_reason) VALUES ($1, $2, 'tenant_default', $3, 'Provider service contract')",
+        )
+        .bind(route_set_id)
+        .bind(tenant_id)
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let route_id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO ai_task_routes (id, tenant_id, route_set_id, priority, connection_id, model_id, provider_data_approval_id, requires_tools, created_by) VALUES ($1, $2, $3, 1, $4, $5, $6, FALSE, $7)",
+        )
+        .bind(route_id)
+        .bind(tenant_id)
+        .bind(route_set_id)
+        .bind(primary.id)
+        .bind(model_id)
+        .bind(approval.id)
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            ops.disconnect(tenant_id, primary.id, 9, actor, context())
+                .await
+                .unwrap_err()
+                .code(),
+            "connection_in_use"
+        );
+        sqlx::query(
+            "UPDATE ai_task_routes SET deleted_at = NOW(), updated_at = NOW() + INTERVAL '1 second' WHERE id = $1",
+        )
+        .bind(route_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let disconnected = ops
+            .disconnect(tenant_id, primary.id, 9, actor, context())
+            .await
+            .unwrap();
+        assert_eq!(disconnected.disconnected_id, primary.id);
+        assert_eq!(
+            reads
+                .read_connection(tenant_id, primary.id)
+                .await
+                .unwrap_err()
+                .code(),
+            "connection_not_found"
+        );
+        assert_eq!(
+            ops.disconnect(tenant_id, second.id, 3, actor, context())
+                .await
+                .unwrap_err()
+                .code(),
+            "stale_connection"
+        );
+        assert_eq!(
+            ops.disconnect(tenant_id, Uuid::new_v4(), 1, actor, context())
+                .await
+                .unwrap_err()
+                .code(),
+            "connection_not_found"
+        );
+
+        let delayed_server = MockServer::start_async().await;
+        delayed_server
+            .mock_async(|when, then| {
+                when.method(GET).path("/openrouter/key");
+                then.delay(Duration::from_millis(150)).status(200);
+            })
+            .await;
+        delayed_server
+            .mock_async(|when, then| {
+                when.method(GET).path("/anthropic/models");
+                then.delay(Duration::from_millis(150))
+                    .status(200)
+                    .json_body(
+                        json!({"data":[{"id":"claude-sonnet-4","display_name":"Claude Sonnet 4"}]}),
+                    );
+            })
+            .await;
+        delayed_server
+            .mock_async(|when, then| {
+                when.method(GET).path("/openrouter/models");
+                then.delay(Duration::from_millis(150)).status(200).json_body(
+                    json!({"data":[{"id":"openai/gpt-5","name":"GPT-5","supported_parameters":[]}]}),
+                );
+            })
+            .await;
+        let delayed_ops = AiProviderOps::new(
+            pool.clone(),
+            Some(keyring()),
+            ProviderHttpClient::with_endpoints(ProviderEndpoints::all(&delayed_server.base_url())),
+        );
+
+        let stale_test = ops
+            .create_connection(
+                tenant_id,
+                actor,
+                context(),
+                create_command(
+                    "openrouter",
+                    "Stale test",
+                    "stale-test-provider-key-material-123",
+                ),
+            )
+            .await
+            .unwrap();
+        let task_ops = delayed_ops.clone();
+        let test_task = tokio::spawn(async move {
+            task_ops
+                .test_connection(tenant_id, stale_test.id, 1, actor, context())
+                .await
+        });
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        sqlx::query("UPDATE ai_provider_connections SET version = version + 1 WHERE id = $1")
+            .bind(stale_test.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            test_task.await.unwrap().unwrap_err().code(),
+            "stale_connection"
+        );
+
+        let stale_refresh = ops
+            .create_connection(
+                tenant_id,
+                actor,
+                context(),
+                create_command(
+                    "anthropic",
+                    "Stale refresh",
+                    "stale-refresh-provider-key-material-123",
+                ),
+            )
+            .await
+            .unwrap();
+        let task_ops = delayed_ops.clone();
+        let refresh_task = tokio::spawn(async move {
+            task_ops
+                .refresh_models(tenant_id, stale_refresh.id, 1, actor, context())
+                .await
+        });
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        sqlx::query("UPDATE ai_provider_connections SET version = version + 1 WHERE id = $1")
+            .bind(stale_refresh.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            refresh_task.await.unwrap().unwrap_err().code(),
+            "stale_connection"
+        );
+
+        let deleted_refresh = ops
+            .create_connection(
+                tenant_id,
+                actor,
+                context(),
+                create_command(
+                    "openrouter",
+                    "Deleted refresh",
+                    "deleted-refresh-provider-key-material-123",
+                ),
+            )
+            .await
+            .unwrap();
+        let task_ops = delayed_ops.clone();
+        let deleted_task = tokio::spawn(async move {
+            task_ops
+                .refresh_models(tenant_id, deleted_refresh.id, 1, actor, context())
+                .await
+        });
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        sqlx::query(
+            "UPDATE ai_provider_connections SET status = 'disconnected', credential_ciphertext = NULL, credential_nonce = NULL, credential_key_id = NULL, credential_fingerprint = NULL, credential_version = credential_version + 1, version = version + 1, deleted_at = NOW(), updated_at = NOW() WHERE id = $1",
+        )
+        .bind(deleted_refresh.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            deleted_task.await.unwrap().unwrap_err().code(),
+            "connection_not_found"
+        );
+
+        let audit_payloads = sqlx::query_scalar::<_, String>(
+            "SELECT redacted_metadata::TEXT FROM actor_audit_events WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert!(audit_payloads.len() >= 15);
+        assert!(audit_payloads.iter().all(|payload| {
+            !payload.contains(primary_key)
+                && !payload.contains("raw upstream details")
+                && !payload.contains("rotated-primary-key")
+        }));
+
+        assert_eq!(
+            next_catalog_version(i64::MAX).unwrap_err().code(),
+            "stale_connection"
+        );
+        assert_eq!(
+            map_write_error(sqlx::Error::Protocol("contract".to_owned())).code(),
+            "provider_storage_error"
+        );
+        let mut transaction = pool.begin().await.unwrap();
+        sqlx::query("DROP TABLE ai_task_routes CASCADE")
+            .execute(&mut *transaction)
+            .await
+            .unwrap();
+        assert!(
+            !connection_has_route_reference(&mut transaction, tenant_id, second.id)
+                .await
+                .unwrap()
+        );
+        transaction.rollback().await.unwrap();
     }
 }

@@ -16,6 +16,7 @@ import {
   RotateCw,
   SearchCheck,
   ServerCog,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -24,7 +25,7 @@ import { SearchableSelect } from "@/components/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, Textarea } from "@/components/ui/input";
 import { TableError, TableLoading, TableWrap } from "@/components/ui/data-table";
 import { formatDate } from "@/lib/utils";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
@@ -34,6 +35,7 @@ import { aiProviderErrorMessage, aiProviderService } from "./ai-provider-service
 import type {
   AiProviderConnection,
   AiProviderConnectionStatus,
+  AiProviderDataApprovalClass,
   AiProviderKey,
   ProviderCatalogEntry,
   ProviderModelSnapshot,
@@ -42,7 +44,7 @@ import type {
 
 type ProviderDrawer =
   | { kind: "connect" }
-  | { kind: "update" | "rotate" | "test" | "models" | "disconnect"; connection: AiProviderConnection }
+  | { kind: "update" | "rotate" | "test" | "models" | "approval" | "disconnect"; connection: AiProviderConnection }
   | null;
 
 export function AiProvidersPage() {
@@ -204,6 +206,7 @@ export function AiProvidersPage() {
           setConnections((current) => current.filter((connection) => connection.id !== connectionId));
           setDrawer(null);
         }}
+        onApprovalSaved={() => void load(true)}
         onModelsRefreshed={() => void load(true)}
         onUpdated={replaceConnection}
         providers={providers}
@@ -246,6 +249,14 @@ function ConnectionRow({
       <div className="min-w-0">
         <Badge dot tone={statusTone(connection.status)}>{statusLabel(connection.status)}</Badge>
         <p className="mt-2 text-xs text-[var(--text-muted)]">{testCopy}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Badge tone={approvalTone(connection.provider_data_approval_class)}>
+            {approvalLabel(connection.provider_data_approval_class)}
+          </Badge>
+          <span className="text-xs text-[var(--text-subtle)]">
+            Decision {connection.provider_data_approval_version}
+          </span>
+        </div>
         {connection.status === "error" && connection.last_failure_category ? (
           <p className="mt-1 text-xs text-[var(--tone-danger-strong)]">{friendlyFailure(connection.last_failure_category)}</p>
         ) : null}
@@ -264,6 +275,9 @@ function ConnectionRow({
         </Button>
         {canEdit ? (
           <>
+            <Button onClick={() => onOpen("approval")} size="sm" variant="secondary">
+              <ShieldCheck className="size-3.5" />Data approval
+            </Button>
             <Button disabled={provider?.supports_connection_test === false} onClick={() => onOpen("test")} size="sm" variant={connection.status === "ready" ? "ghost" : "secondary"}>
               <CheckCircle2 className="size-3.5" />Test
             </Button>
@@ -288,6 +302,7 @@ function ProviderWorkflowDrawer({
   drawer,
   onClose,
   onDisconnected,
+  onApprovalSaved,
   onModelsRefreshed,
   onUpdated,
   providers,
@@ -296,6 +311,7 @@ function ProviderWorkflowDrawer({
   drawer: ProviderDrawer;
   onClose: () => void;
   onDisconnected: (connectionId: string) => void;
+  onApprovalSaved: () => void;
   onModelsRefreshed: () => void;
   onUpdated: (connection: AiProviderConnection) => void;
   providers: ProviderCatalogEntry[];
@@ -306,7 +322,14 @@ function ProviderWorkflowDrawer({
   const [accountLabel, setAccountLabel] = useState(connection?.account_label ?? "");
   const [apiKey, setApiKey] = useState("");
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [approvalClass, setApprovalClass] = useState<Exclude<AiProviderDataApprovalClass, "unapproved"> | null>(null);
+  const [approvalReason, setApprovalReason] = useState("");
+  const [approvalConnection, setApprovalConnection] = useState<AiProviderConnection | null>(connection);
+  const [approvalLoading, setApprovalLoading] = useState(drawer?.kind === "approval");
+  const [approvalLoadError, setApprovalLoadError] = useState<string | null>(null);
+  const [approvalReload, setApprovalReload] = useState(0);
   const [testOutcome, setTestOutcome] = useState<ProviderTestOutcome["outcome"] | null>(null);
   const [models, setModels] = useState<ProviderModelSnapshot | null>(null);
   const [modelsLoading, setModelsLoading] = useState(drawer?.kind === "models");
@@ -333,10 +356,35 @@ function ProviderWorkflowDrawer({
     return () => { active = false; };
   }, [drawer?.kind, connection?.id, modelsReload]);
 
+  useEffect(() => {
+    if (drawer?.kind !== "approval" || !connection) return;
+    let active = true;
+    setApprovalLoading(true);
+    setApprovalLoadError(null);
+    void aiProviderService.getConnection(connection.id)
+      .then((response) => {
+        if (!active) return;
+        if (response.success && response.data) {
+          setApprovalConnection(response.data);
+        } else {
+          setApprovalLoadError(aiProviderErrorMessage(response, "The current data approval could not be loaded."));
+        }
+      })
+      .catch(() => {
+        if (active) setApprovalLoadError("Campus Pilot could not load the current data approval. Try again.");
+      })
+      .finally(() => {
+        if (active) setApprovalLoading(false);
+      });
+    return () => { active = false; };
+  }, [drawer?.kind, connection?.id, approvalReload]);
+
   if (!drawer) return null;
   const close = busy ? () => undefined : onClose;
 
   const run = async (work: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setFormError(null);
     try {
@@ -344,6 +392,7 @@ function ProviderWorkflowDrawer({
     } catch {
       setFormError("Campus Pilot could not reach the provider service. Try again.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -441,6 +490,44 @@ function ProviderWorkflowDrawer({
       setModelsError(null);
       toast.success("Models refreshed");
       onModelsRefreshed();
+    });
+  };
+
+  const setDataApproval = (event: React.FormEvent) => {
+    event.preventDefault();
+    const current = approvalConnection;
+    const reason = approvalReason.trim();
+    if (!current || !approvalClass) {
+      setFormError("Choose the data class this connection may receive.");
+      return;
+    }
+    if (reason.length < 3 || reason.length > 500) {
+      setFormError("Enter a reason between 3 and 500 characters.");
+      return;
+    }
+    void run(async () => {
+      const response = await aiProviderService.setDataApproval(current.id, {
+        approval_class: approvalClass,
+        expected_approval_version: current.provider_data_approval_version,
+        change_reason: reason,
+      });
+      if (!response.success || !response.data) {
+        setFormError(aiProviderErrorMessage(response, "The data approval could not be saved."));
+        return;
+      }
+      const updatedConnection: AiProviderConnection = {
+        ...current,
+        provider_data_approval_id: response.data.id,
+        provider_data_approval_version: response.data.approval_version,
+        provider_data_approval_class: response.data.approval_class,
+        execution_environment_class: response.data.execution_environment_class,
+      };
+      onUpdated(updatedConnection);
+      onApprovalSaved();
+      setApprovalClass(null);
+      setApprovalReason("");
+      toast.success("Provider data approval saved");
+      onClose();
     });
   };
 
@@ -544,6 +631,130 @@ function ProviderWorkflowDrawer({
             <Button disabled={busy} onClick={onClose} type="button" variant="secondary">Cancel</Button>
             <Button disabled={busy || !apiKey.trim()} type="submit">
               {busy ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}{busy ? "Replacing…" : "Replace key"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogShell>
+    );
+  }
+
+  if (drawer.kind === "approval") {
+    const currentApproval = approvalConnection;
+    const trimmedReasonLength = approvalReason.trim().length;
+    return (
+      <DialogShell onClose={close} open>
+        <DialogHeader onClose={busy ? undefined : onClose} title="Provider data approval" />
+        <form onSubmit={setDataApproval}>
+          <DialogBody className="space-y-6">
+            <ConnectionIdentity connection={connection} />
+            {approvalLoading ? (
+              <div className="flex min-h-44 items-center justify-center gap-3 text-sm text-[var(--text-muted)]" role="status">
+                <Loader2 className="size-4 animate-spin" />Loading current approval…
+              </div>
+            ) : approvalLoadError ? (
+              <TableError
+                description={approvalLoadError}
+                onRetry={() => setApprovalReload((current) => current + 1)}
+                title="Data approval could not be loaded"
+              />
+            ) : currentApproval ? (
+              <>
+                <section aria-labelledby="current-provider-approval">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]" id="current-provider-approval">
+                    Current decision
+                  </p>
+                  <div className="mt-3 border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={approvalTone(currentApproval.provider_data_approval_class)}>
+                        {approvalLabel(currentApproval.provider_data_approval_class)}
+                      </Badge>
+                      <span className="text-xs text-[var(--text-muted)]">
+                        Decision {currentApproval.provider_data_approval_version}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[var(--text-body)]">
+                      {approvalDescription(currentApproval.provider_data_approval_class)}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">
+                      {environmentLabel(currentApproval.execution_environment_class)}
+                    </p>
+                  </div>
+                </section>
+
+                <DrawerIntro
+                  icon={<ShieldCheck className="size-5" />}
+                  text="Saving records a new decision. Routes using the previous decision must be updated before they can run again."
+                />
+
+                <fieldset disabled={busy}>
+                  <legend className="text-sm font-medium leading-none text-[var(--text-strong)]">Allow this connection to receive</legend>
+                  <div className="mt-3 space-y-3">
+                    <ApprovalChoice
+                      checked={approvalClass === "campus_approved"}
+                      description="General and personal campus data. Sensitive and highly sensitive data remain blocked."
+                      id="provider-approval-campus"
+                      label="Campus data"
+                      onChange={() => setApprovalClass("campus_approved")}
+                      value="campus_approved"
+                    />
+                    <ApprovalChoice
+                      checked={approvalClass === "sensitive_data_approved"}
+                      description="General, personal, and sensitive campus data. Highly sensitive data still requires an installation-local provider."
+                      id="provider-approval-sensitive"
+                      label="Sensitive campus data"
+                      onChange={() => setApprovalClass("sensitive_data_approved")}
+                      value="sensitive_data_approved"
+                    />
+                  </div>
+                </fieldset>
+
+                <Field label="Reason for approval" labelFor="provider-approval-reason">
+                  <Textarea
+                    aria-describedby="provider-approval-reason-hint"
+                    id="provider-approval-reason"
+                    maxLength={500}
+                    onChange={(event) => setApprovalReason(event.target.value)}
+                    placeholder="Why may this provider receive the selected data class?"
+                    required
+                    rows={5}
+                    value={approvalReason}
+                  />
+                  <p className="mt-2 flex justify-between gap-4 text-xs leading-5 text-[var(--text-muted)]" id="provider-approval-reason-hint">
+                    <span>This reason is retained with the decision.</span>
+                    <span>{approvalReason.length}/500</span>
+                  </p>
+                </Field>
+                <FormError message={formError} />
+                {formError ? (
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      setFormError(null);
+                      setApprovalReload((current) => current + 1);
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                  >
+                    <RefreshCw className="size-3.5" />Reload current decision
+                  </Button>
+                ) : null}
+              </>
+            ) : (
+              <div className="border border-dashed border-[var(--border)] p-6 text-center">
+                <p className="text-sm font-semibold text-[var(--text-strong)]">Connection unavailable</p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">Close this drawer and reload the provider list.</p>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button disabled={busy} onClick={close} type="button" variant="secondary">Cancel</Button>
+            <Button
+              disabled={busy || approvalLoading || Boolean(approvalLoadError) || !currentApproval || !approvalClass || trimmedReasonLength < 3}
+              type="submit"
+            >
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+              {busy ? "Saving…" : "Save approval"}
             </Button>
           </DialogFooter>
         </form>
@@ -676,6 +887,43 @@ function ConnectionIdentity({ connection }: { connection: AiProviderConnection }
   return <div className="flex items-start gap-3 border-b border-[var(--border)] pb-5"><span className="flex size-10 shrink-0 items-center justify-center rounded-[9px] bg-[var(--brand-soft)] text-[var(--brand-strong)]"><Bot className="size-[18px]" /></span><div className="min-w-0"><p className="truncate font-semibold text-[var(--text-strong)]">{connection.account_label}</p><p className="mt-0.5 text-sm text-[var(--text-muted)]">{connection.provider_label}</p></div><Badge className="ml-auto" dot tone={statusTone(connection.status)}>{statusLabel(connection.status)}</Badge></div>;
 }
 
+function ApprovalChoice({
+  checked,
+  description,
+  id,
+  label,
+  onChange,
+  value,
+}: {
+  checked: boolean;
+  description: string;
+  id: string;
+  label: string;
+  onChange: () => void;
+  value: Exclude<AiProviderDataApprovalClass, "unapproved">;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 border p-4 transition-colors ${checked ? "border-[var(--brand-strong)] bg-[var(--brand-soft)]" : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)]"}`}
+      htmlFor={id}
+    >
+      <input
+        checked={checked}
+        className="mt-1 size-4 accent-[var(--brand-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+        id={id}
+        name="provider-data-approval"
+        onChange={onChange}
+        type="radio"
+        value={value}
+      />
+      <span>
+        <span className="block text-sm font-semibold text-[var(--text-strong)]">{label}</span>
+        <span className="mt-1 block text-xs leading-5 text-[var(--text-muted)]">{description}</span>
+      </span>
+    </label>
+  );
+}
+
 function FormError({ message }: { message: string | null }) {
   return message ? <div className="flex items-start gap-3 border border-[var(--tone-danger-bd)] bg-[var(--tone-danger-bg)] p-4 text-sm leading-5 text-[var(--tone-danger-strong)]" role="alert"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{message}</span></div> : <div aria-live="polite" className="sr-only" />;
 }
@@ -694,6 +942,34 @@ function statusTone(status: AiProviderConnectionStatus): "success" | "danger" | 
   if (status === "ready") return "success";
   if (status === "error") return "danger";
   return "neutral";
+}
+
+function approvalLabel(approvalClass: AiProviderDataApprovalClass) {
+  if (approvalClass === "sensitive_data_approved") return "Sensitive data approved";
+  if (approvalClass === "campus_approved") return "Campus data approved";
+  return "Data not approved";
+}
+
+function approvalDescription(approvalClass: AiProviderDataApprovalClass) {
+  if (approvalClass === "sensitive_data_approved") {
+    return "This connection may receive general, personal, and sensitive campus data. Highly sensitive data remains blocked for provider-managed connections.";
+  }
+  if (approvalClass === "campus_approved") {
+    return "This connection may receive general and personal campus data. Sensitive and highly sensitive data remain blocked.";
+  }
+  return "This connection cannot receive campus data for Agent runs.";
+}
+
+function approvalTone(approvalClass: AiProviderDataApprovalClass): "info" | "warn" | "danger" {
+  if (approvalClass === "sensitive_data_approved") return "warn";
+  if (approvalClass === "campus_approved") return "info";
+  return "danger";
+}
+
+function environmentLabel(environment: AiProviderConnection["execution_environment_class"]) {
+  return environment === "installation_local"
+    ? "Runs inside this Campus Pilot installation."
+    : "Runs in the provider-managed environment.";
 }
 
 function friendlyFailure(value: string) {

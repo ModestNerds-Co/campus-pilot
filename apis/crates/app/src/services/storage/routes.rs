@@ -37,7 +37,7 @@ pub async fn generate_upload_url(
     }
 
     // Generate unique file key
-    let file_extension = request.filename.split('.').last().unwrap_or("bin");
+    let file_extension = request.filename.split('.').next_back().unwrap_or("bin");
     let file_key = format!("uploads/{}.{}", nanoid!(16), file_extension);
 
     // Generate presigned URL (15 minutes expiry)

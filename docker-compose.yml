@@ -96,6 +96,8 @@ services:
       LICENSE_INSTALLATION_NAME: ${LICENSE_INSTALLATION_NAME:-Campus Pilot server}
       AI_PROVIDER_CREDENTIAL_KEYS_JSON: ${AI_PROVIDER_CREDENTIAL_KEYS_JSON:-}
       AI_PROVIDER_CREDENTIAL_ACTIVE_KEY_ID: ${AI_PROVIDER_CREDENTIAL_ACTIVE_KEY_ID:-}
+      AGENT_ARTIFACT_KEYS_JSON: ${AGENT_ARTIFACT_KEYS_JSON:-}
+      AGENT_ARTIFACT_ACTIVE_KEY_ID: ${AGENT_ARTIFACT_ACTIVE_KEY_ID:-}
       DB_USER: ${DB_USER:-campus_pilot}
       DB_PASS: ${DB_PASS:-campus_pilot}
       DB_HOST: postgres
@@ -115,6 +117,49 @@ services:
       timeout: 3s
       retries: 10
       start_period: 30s
+    networks:
+      - campus
+
+  agent-worker:
+    build:
+      context: ./apis
+      dockerfile: Dockerfile
+    container_name: campus-pilot-agent-worker
+    command: ["./agent-worker"]
+    restart: unless-stopped
+    depends_on:
+      apis:
+        condition: service_healthy
+    environment:
+      APP_PORT: ${APP_PORT:-8000}
+      RUST_LOG: ${RUST_LOG:-info}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-a-32-char-random-string}
+      LICENSE_PUBLIC_KEY_BASE64: ${LICENSE_PUBLIC_KEY_BASE64:-}
+      LICENSE_PUBLIC_KEY_ID: ${LICENSE_PUBLIC_KEY_ID:-production-1}
+      LICENSE_TRUSTED_PUBLIC_KEYS_JSON: ${LICENSE_TRUSTED_PUBLIC_KEYS_JSON:-}
+      LICENSE_ISSUER: ${LICENSE_ISSUER:-campus-pilot-control-plane}
+      LICENSE_AUDIENCE: ${LICENSE_AUDIENCE:-campus-pilot}
+      LICENSE_CONTROL_PLANE_URL: ${LICENSE_CONTROL_PLANE_URL:-}
+      LICENSE_CREDENTIAL_KEY_BASE64: ${LICENSE_CREDENTIAL_KEY_BASE64:-}
+      LICENSE_INSTALLATION_NAME: ${LICENSE_INSTALLATION_NAME:-Campus Pilot server}
+      AI_PROVIDER_CREDENTIAL_KEYS_JSON: ${AI_PROVIDER_CREDENTIAL_KEYS_JSON:-}
+      AI_PROVIDER_CREDENTIAL_ACTIVE_KEY_ID: ${AI_PROVIDER_CREDENTIAL_ACTIVE_KEY_ID:-}
+      AGENT_ARTIFACT_KEYS_JSON: ${AGENT_ARTIFACT_KEYS_JSON:-}
+      AGENT_ARTIFACT_ACTIVE_KEY_ID: ${AGENT_ARTIFACT_ACTIVE_KEY_ID:-}
+      AGENT_WORKER_KEY: ${AGENT_WORKER_KEY:-agent-worker}
+      AGENT_WORKER_BATCH_SIZE: ${AGENT_WORKER_BATCH_SIZE:-4}
+      DB_USER: ${DB_USER:-campus_pilot}
+      DB_PASS: ${DB_PASS:-campus_pilot}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-campus_pilot}
+      STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-https://campus-storage.antonlabs.cc}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-campus-pilot}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
     networks:
       - campus
 

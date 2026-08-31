@@ -255,6 +255,9 @@ struct AgentConnectionProjection<'a> {
     last_failure_category: Option<&'a str>,
     model_count: i64,
     model_catalog_refreshed_at: Option<DateTime<Utc>>,
+    provider_data_approval_version: i64,
+    provider_data_approval_class: &'a str,
+    execution_environment_class: &'a str,
 }
 
 impl<'a> From<&'a AiProviderConnection> for AgentConnectionProjection<'a> {
@@ -273,6 +276,9 @@ impl<'a> From<&'a AiProviderConnection> for AgentConnectionProjection<'a> {
             last_failure_category: connection.last_failure_category.as_deref(),
             model_count: connection.model_count,
             model_catalog_refreshed_at: connection.model_catalog_refreshed_at,
+            provider_data_approval_version: connection.provider_data_approval_version,
+            provider_data_approval_class: &connection.provider_data_approval_class,
+            execution_environment_class: &connection.execution_environment_class,
         }
     }
 }
@@ -306,6 +312,10 @@ mod tests {
             last_used_at: Some(timestamp),
             model_count: 3,
             model_catalog_refreshed_at: Some(timestamp),
+            provider_data_approval_id: Uuid::new_v4(),
+            provider_data_approval_version: 2,
+            provider_data_approval_class: "sensitive_data_approved".to_owned(),
+            execution_environment_class: "external_managed".to_owned(),
             created_at: timestamp,
             updated_at: timestamp,
         };
@@ -316,6 +326,10 @@ mod tests {
 
         assert_eq!(object.get("status"), Some(&json!("ready")));
         assert_eq!(object.get("model_count"), Some(&json!(3)));
+        assert_eq!(
+            object.get("provider_data_approval_class"),
+            Some(&json!("sensitive_data_approved"))
+        );
         for forbidden in [
             "credential_fingerprint",
             "configured_by_name",

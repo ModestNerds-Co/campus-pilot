@@ -8,6 +8,7 @@
 use std::{fmt, str::FromStr};
 
 use chrono::{DateTime, Utc};
+use cp_common::{ProviderApprovalClass, ProviderExecutionEnvironmentClass};
 use secrecy::{ExposeSecret, SecretString};
 use serde::Serialize;
 use sqlx::FromRow;
@@ -199,6 +200,41 @@ pub struct RotateCredentialCommand {
     pub(crate) expected_version: i64,
 }
 
+/// Optimistically versioned administrator decision for provider data handling.
+#[derive(Debug, Clone)]
+pub struct SetProviderDataApprovalCommand {
+    pub(crate) approval_class: ProviderApprovalClass,
+    pub(crate) expected_approval_version: i64,
+    pub(crate) change_reason: String,
+}
+
+impl SetProviderDataApprovalCommand {
+    pub fn parse(
+        approval_class: &str,
+        expected_approval_version: i64,
+        change_reason: impl Into<String>,
+    ) -> Result<Self, ServiceError> {
+        let approval_class = ProviderApprovalClass::from_str(approval_class).map_err(|_| {
+            ServiceError::invalid(
+                "invalid_provider_data_approval_class",
+                "Choose unapproved, campus approved, or sensitive-data approved",
+            )
+        })?;
+        let change_reason = change_reason.into().trim().to_owned();
+        if !(3..=500).contains(&change_reason.chars().count()) {
+            return Err(ServiceError::invalid(
+                "invalid_provider_data_approval_reason",
+                "Change reason must contain between 3 and 500 characters",
+            ));
+        }
+        Ok(Self {
+            approval_class,
+            expected_approval_version: positive_version(expected_approval_version)?,
+            change_reason,
+        })
+    }
+}
+
 impl RotateCredentialCommand {
     pub fn parse(api_key: impl Into<String>, expected_version: i64) -> Result<Self, ServiceError> {
         Ok(Self {
@@ -228,6 +264,7 @@ pub struct ProviderCatalogEntry {
     pub credential_hint: &'static str,
     pub supports_connection_test: bool,
     pub supports_model_refresh: bool,
+    pub execution_environment_class: ProviderExecutionEnvironmentClass,
 }
 
 const API_KEY_AUTH: &[&str] = &["api_key"];
@@ -239,6 +276,7 @@ const PROVIDER_CATALOG: &[ProviderCatalogEntry] = &[
         credential_hint: "OpenAI API key",
         supports_connection_test: true,
         supports_model_refresh: true,
+        execution_environment_class: ProviderExecutionEnvironmentClass::ExternalManaged,
     },
     ProviderCatalogEntry {
         key: "anthropic",
@@ -247,6 +285,7 @@ const PROVIDER_CATALOG: &[ProviderCatalogEntry] = &[
         credential_hint: "Anthropic API key",
         supports_connection_test: true,
         supports_model_refresh: true,
+        execution_environment_class: ProviderExecutionEnvironmentClass::ExternalManaged,
     },
     ProviderCatalogEntry {
         key: "openrouter",
@@ -255,6 +294,7 @@ const PROVIDER_CATALOG: &[ProviderCatalogEntry] = &[
         credential_hint: "OpenRouter API key",
         supports_connection_test: true,
         supports_model_refresh: true,
+        execution_environment_class: ProviderExecutionEnvironmentClass::ExternalManaged,
     },
 ];
 
@@ -282,8 +322,26 @@ pub struct AiProviderConnection {
     pub last_used_at: Option<DateTime<Utc>>,
     pub model_count: i64,
     pub model_catalog_refreshed_at: Option<DateTime<Utc>>,
+    pub provider_data_approval_id: Uuid,
+    pub provider_data_approval_version: i64,
+    pub provider_data_approval_class: String,
+    pub execution_environment_class: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Audited administrator projection of one immutable provider approval version.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, FromRow)]
+pub struct ProviderDataApproval {
+    pub id: Uuid,
+    pub connection_id: Uuid,
+    pub approval_version: i64,
+    pub approval_class: String,
+    pub execution_environment_class: String,
+    pub change_source: String,
+    pub changed_by_name: Option<String>,
+    pub change_reason: String,
+    pub created_at: DateTime<Utc>,
 }
 
 /// Persisted connection lifecycle states.
@@ -360,6 +418,7 @@ pub struct ProviderModel {
     pub id: String,
     pub display_name: String,
     pub context_window_tokens: Option<i64>,
+    pub max_output_tokens: Option<i64>,
     pub supports_tools: Option<bool>,
     pub source: String,
 }
@@ -458,9 +517,11 @@ impl From<sqlx::Error> for ServiceError {
 mod tests {
     use std::str::FromStr;
 
+    use cp_common::{ProviderApprovalClass, ProviderExecutionEnvironmentClass};
+
     use super::{
         ApiKey, AuthMethod, CreateConnectionCommand, ProviderKey, RotateCredentialCommand,
-        ServiceError, UpdateConnectionCommand, provider_catalog,
+        ServiceError, SetProviderDataApprovalCommand, UpdateConnectionCommand, provider_catalog,
     };
 
     #[test]
@@ -494,6 +555,21 @@ mod tests {
         assert!(UpdateConnectionCommand::parse("Valid", 0).is_err());
         assert!(RotateCredentialCommand::parse("short", 1).is_err());
         assert!(ApiKey::parse("secret key with spaces").is_err());
+
+        let approval = SetProviderDataApprovalCommand::parse(
+            "sensitive_data_approved",
+            2,
+            "Approve student records for this provider.",
+        )
+        .unwrap();
+        assert_eq!(
+            approval.approval_class,
+            ProviderApprovalClass::SensitiveDataApproved
+        );
+        assert_eq!(approval.expected_approval_version, 2);
+        assert!(SetProviderDataApprovalCommand::parse("local_only", 2, "Not a toggle").is_err());
+        assert!(SetProviderDataApprovalCommand::parse("campus_approved", 0, "Approve").is_err());
+        assert!(SetProviderDataApprovalCommand::parse("campus_approved", 1, "no").is_err());
     }
 
     #[test]
@@ -504,6 +580,9 @@ mod tests {
                 .iter()
                 .all(|entry| entry.auth_methods == ["api_key"])
         );
+        assert!(provider_catalog().iter().all(|entry| {
+            entry.execution_environment_class == ProviderExecutionEnvironmentClass::ExternalManaged
+        }));
     }
 
     #[test]

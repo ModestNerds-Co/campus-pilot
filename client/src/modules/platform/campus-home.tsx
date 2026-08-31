@@ -19,6 +19,7 @@ import { useNavigationDrawer } from "@/hooks/use-navigation-drawer";
 import { ThemeToggle } from "@/lib/theme";
 import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
+import { AgentWidget } from "@/modules/agent";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { accessService } from "./access-service";
@@ -242,6 +243,7 @@ export const CampusHome: React.FC = () => {
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] p-3">
+          <AgentWidget context={{ label: "All modules", moduleKey: "home", route: "/home" }} />
           <ThemeToggle className="w-full" variant="sidebar" />
           <div className="mt-3 flex items-center gap-3 px-2">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold">{initials(userName)}</span>

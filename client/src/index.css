@@ -21,6 +21,12 @@
     min-width: 320px;
     background: var(--canvas);
   }
+  @media (max-width: 359px) {
+    html {
+      scrollbar-gutter: auto;
+      min-width: 0;
+    }
+  }
   body {
     min-height: 100dvh;
     background: var(--canvas);

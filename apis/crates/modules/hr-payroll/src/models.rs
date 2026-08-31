@@ -72,6 +72,30 @@ pub struct EmployeeReference {
     pub employment_status: String,
 }
 
+/// Minimum HR-owned identity used by department stock requests.
+///
+/// The linked account is retained for server-side actor separation and must be
+/// removed from person- or model-visible candidate projections.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct StockRequestEmployeeReference {
+    pub id: Uuid,
+    #[serde(skip_serializing)]
+    pub account_id: Option<Uuid>,
+    pub employee_number: String,
+    pub display_name: String,
+    pub department_id: Uuid,
+    pub department_code: String,
+    pub department_name: String,
+}
+
+/// Minimum HR-owned department identity used by stock request workflows.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct StockRequestDepartmentReference {
+    pub id: Uuid,
+    pub code: String,
+    pub name: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EmploymentEngagementWithDetails {
     pub id: Uuid,

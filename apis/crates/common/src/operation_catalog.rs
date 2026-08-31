@@ -199,6 +199,15 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         route(
+            Method::PUT,
+            "/api/1.0/ai/connections/{connection_id}/data-approval",
+            "administration.ai_providers.connections.data_approval.update",
+            "administration",
+            "ai_providers:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
             Method::POST,
             "/api/1.0/ai/connections/{connection_id}/credentials/rotate",
             "administration.ai_providers.credentials.rotate",
@@ -305,6 +314,179 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "administration",
             "ai_routing:edit",
             OperationEffect::Write,
+            true,
+        ),
+        // Administration: Agent governance, usage, and redacted run evidence.
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/readiness",
+            "administration.agent_governance.readiness",
+            "administration",
+            "agent_policy:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/capabilities",
+            "administration.agent_governance.capabilities.list",
+            "administration",
+            "agent_policy:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/usage/options",
+            "administration.agent_usage.options",
+            "administration",
+            "agent_usage:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/usage",
+            "administration.agent_usage.report",
+            "administration",
+            "agent_usage:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/usage/export",
+            "administration.agent_usage.export",
+            "administration",
+            "agent_usage:export",
+            OperationEffect::Export,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/runs",
+            "administration.agent_audit.runs.list",
+            "administration",
+            "agent_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent-governance/runs/{run_id}",
+            "administration.agent_audit.runs.read",
+            "administration",
+            "agent_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        // Agent: owner-scoped Sessions, runs, history, and personal usage.
+        route(
+            Method::GET,
+            "/api/1.0/agent/sessions",
+            "agent.sessions.list",
+            "agent",
+            "agent:history",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/agent/sessions",
+            "agent.sessions.create",
+            "agent",
+            "agent:run",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent/sessions/{session_id}",
+            "agent.sessions.read",
+            "agent",
+            "agent:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PATCH,
+            "/api/1.0/agent/sessions/{session_id}",
+            "agent.sessions.update",
+            "agent",
+            "agent:history",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/agent/sessions/{session_id}/archive",
+            "agent.sessions.archive",
+            "agent",
+            "agent:history",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent/sessions/{session_id}/messages",
+            "agent.messages.list",
+            "agent",
+            "agent:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/agent/sessions/{session_id}/messages",
+            "agent.messages.submit",
+            "agent",
+            "agent:run",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent/sessions/{session_id}/runs",
+            "agent.runs.list",
+            "agent",
+            "agent:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent/runs/{run_id}",
+            "agent.runs.read",
+            "agent",
+            "agent:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/agent/runs/{run_id}/cancel",
+            "agent.runs.cancel",
+            "agent",
+            "agent:run",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent/runs/{run_id}/events",
+            "agent.runs.events.list",
+            "agent",
+            "agent:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/agent/usage/personal",
+            "agent.usage.personal.read",
+            "agent",
+            "agent:view",
+            OperationEffect::Read,
             true,
         ),
         // Administration: roles.
@@ -2153,6 +2335,132 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-request-requesters",
+            "assets_inventory.requester_candidates.list",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-request-departments",
+            "assets_inventory.department_candidates.list",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-requests",
+            "assets_inventory.stock_requests.list",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-requests/{id}",
+            "assets_inventory.stock_requests.read",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/assets-inventory/stock-requests/{id}/fulfilment-preview",
+            "assets_inventory.stock_requests.fulfilment_preview.read",
+            "assets_inventory",
+            "assets_inventory:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests",
+            "assets_inventory.stock_requests.create",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/assets-inventory/stock-requests/{id}",
+            "assets_inventory.stock_requests.update",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/assets-inventory/stock-requests/{id}",
+            "assets_inventory.stock_requests.delete",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests/{id}/submit",
+            "assets_inventory.stock_requests.submit",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests/{id}/cancel",
+            "assets_inventory.stock_requests.cancel",
+            "assets_inventory",
+            "assets_inventory:request",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests/{id}/approve",
+            "assets_inventory.stock_requests.approve",
+            "assets_inventory",
+            "assets_inventory:approve",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests/{id}/reject",
+            "assets_inventory.stock_requests.reject",
+            "assets_inventory",
+            "assets_inventory:approve",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests/{id}/close",
+            "assets_inventory.stock_requests.close",
+            "assets_inventory",
+            "assets_inventory:approve",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/assets-inventory/stock-requests/{id}/fulfilments",
+            "assets_inventory.stock_request_fulfilments.create",
+            "assets_inventory",
+            "assets_inventory:issue",
+            OperationEffect::Write,
+            true,
+        ),
         // HR and payroll: canonical workforce directory.
         route(
             Method::GET,
@@ -2676,8 +2984,20 @@ fn route(
     );
     let operation = if key.starts_with("assets_inventory.goods_receipt_allocations.") {
         operation.requiring_modules(["procurement".to_string()])
+    } else if key.starts_with("assets_inventory.stock_requests.")
+        || key.starts_with("assets_inventory.stock_request_fulfilments.")
+        || matches!(
+            key,
+            "assets_inventory.requester_candidates.list"
+                | "assets_inventory.department_candidates.list"
+        )
+    {
+        operation.requiring_modules(["hr_payroll".to_string()])
     } else if key.starts_with("administration.ai_providers.")
         || key.starts_with("administration.ai_routing.")
+        || key.starts_with("administration.agent_governance.")
+        || key.starts_with("administration.agent_usage.")
+        || key.starts_with("administration.agent_audit.")
     {
         operation.requiring_modules(["agent".to_string()])
     } else if key.starts_with("sis.") && !key.starts_with("sis.learner_numbering.") {
@@ -2697,6 +3017,8 @@ fn route(
         ])
     } else if key.starts_with("procurement.") {
         operation.requiring_modules(["hr_payroll".to_string(), "finance".to_string()])
+    } else if key.starts_with("fleet.") {
+        operation.requiring_modules(["hr_payroll".to_string()])
     } else {
         operation
     };
@@ -2824,6 +3146,11 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "assets_inventory.stock_movements.list"
         | "assets_inventory.stock_movements.read"
         | "assets_inventory.goods_receipt_allocations.list"
+        | "assets_inventory.requester_candidates.list"
+        | "assets_inventory.department_candidates.list"
+        | "assets_inventory.stock_requests.list"
+        | "assets_inventory.stock_requests.read"
+        | "assets_inventory.stock_requests.fulfilment_preview.read"
         | "hr_payroll.imports.list"
         | "hr_payroll.imports.read"
         | "hr_payroll.imports.preview.read"
@@ -2974,6 +3301,15 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "assets_inventory.adjustments.create"
         | "assets_inventory.stock_movements.reverse"
         | "assets_inventory.goods_receipt_allocations.create"
+        | "assets_inventory.stock_requests.create"
+        | "assets_inventory.stock_requests.update"
+        | "assets_inventory.stock_requests.delete"
+        | "assets_inventory.stock_requests.submit"
+        | "assets_inventory.stock_requests.cancel"
+        | "assets_inventory.stock_requests.approve"
+        | "assets_inventory.stock_requests.reject"
+        | "assets_inventory.stock_requests.close"
+        | "assets_inventory.stock_request_fulfilments.create"
         | "hr_payroll.imports.upload"
         | "hr_payroll.imports.preview"
         | "hr_payroll.imports.commit"
@@ -3006,8 +3342,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "timetabling.runs.generate"
         | "timetabling.runs.publish" => AgentExposure::ApprovalRequired,
         "administration.ai_providers.connections.create"
+        | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
-            reason: "Provider credential entry and rotation remain direct human workflows.",
+            reason: "Provider credential and data-approval decisions remain direct human workflows.",
         },
         "administration.ai_providers.connections.disconnect" => AgentExposure::HumanOnly {
             reason: "Destructive provider disconnect and credential purge remain a direct human workflow.",
@@ -3024,6 +3361,29 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "administration.licensing.connect"
         | "administration.licensing.import_offline_lease" => AgentExposure::HumanOnly {
             reason: "License credential entry remains a direct human workflow.",
+        },
+        "administration.agent_governance.readiness"
+        | "administration.agent_governance.capabilities.list"
+        | "administration.agent_usage.options"
+        | "administration.agent_usage.report"
+        | "administration.agent_usage.export"
+        | "administration.agent_audit.runs.list"
+        | "administration.agent_audit.runs.read" => AgentExposure::HumanOnly {
+            reason: "Agent governance, campus usage, and run audit evidence remain direct human workflows.",
+        },
+        "agent.sessions.list"
+        | "agent.sessions.create"
+        | "agent.sessions.read"
+        | "agent.sessions.update"
+        | "agent.sessions.archive"
+        | "agent.messages.list"
+        | "agent.messages.submit"
+        | "agent.runs.list"
+        | "agent.runs.read"
+        | "agent.runs.cancel"
+        | "agent.runs.events.list"
+        | "agent.usage.personal.read" => AgentExposure::Prohibited {
+            reason: "Agent Session control-plane operations cannot invoke themselves as capabilities.",
         },
         _ => panic!("Product operation {key} has no Agent exposure classification"),
     }
@@ -3109,7 +3469,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 282);
+        assert_eq!(operation_catalog().len(), 316);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -3161,7 +3521,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [115, 157, 10, 0]);
+        assert_eq!(counts, [120, 166, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -3300,6 +3660,31 @@ mod tests {
     }
 
     #[test]
+    fn run_capable_user_can_read_owned_work_without_history_management() {
+        let permissions = ["agent:view", "agent:run"];
+        for key in [
+            "agent.sessions.create",
+            "agent.sessions.read",
+            "agent.messages.list",
+            "agent.messages.submit",
+            "agent.runs.list",
+            "agent.runs.read",
+            "agent.runs.cancel",
+            "agent.runs.events.list",
+            "agent.usage.personal.read",
+        ] {
+            assert!(allowed(key, &permissions), "{key} should be allowed");
+        }
+        for key in [
+            "agent.sessions.list",
+            "agent.sessions.update",
+            "agent.sessions.archive",
+        ] {
+            assert!(!allowed(key, &permissions), "{key} requires agent:history");
+        }
+    }
+
+    #[test]
     fn learner_numbering_is_sis_only_and_uses_exact_permissions() {
         let read = operation("sis.learner_numbering.read");
         let update = operation("sis.learner_numbering.update");
@@ -3346,6 +3731,49 @@ mod tests {
             assert!(!decision.allowed);
             assert_eq!(decision.reason.as_str(), "dependency_missing");
         }
+    }
+
+    #[test]
+    fn fleet_requires_the_hr_employee_system_of_record() {
+        for key in [
+            "fleet.vehicles.list",
+            "fleet.vehicles.read",
+            "fleet.vehicles.create",
+            "fleet.vehicles.update",
+            "fleet.vehicles.delete",
+            "fleet.driver_candidates.list",
+            "fleet.drivers.list",
+            "fleet.drivers.read",
+            "fleet.drivers.create",
+            "fleet.drivers.update",
+            "fleet.drivers.delete",
+            "fleet.vehicle_logs.list",
+            "fleet.vehicle_logs.read",
+            "fleet.vehicle_logs.create",
+            "fleet.vehicle_logs.update",
+            "fleet.vehicle_logs.delete",
+        ] {
+            assert_eq!(
+                operation(key).required_modules().collect::<Vec<_>>(),
+                vec!["hr_payroll"],
+                "{key}"
+            );
+        }
+
+        let fleet_only = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [("fleet".to_string(), ModuleEntitlementState::Enabled)],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let denied = evaluate_operation(
+            operation("fleet.vehicles.list"),
+            &fleet_only,
+            &["fleet:view".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(!denied.allowed);
+        assert_eq!(denied.reason.as_str(), "dependency_missing");
     }
 
     #[test]
@@ -3739,6 +4167,138 @@ mod tests {
     }
 
     #[test]
+    fn assets_inventory_stock_requests_require_hr_and_exact_workflow_permissions() {
+        for (method, path, key, permission, effect, exposure) in [
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-request-requesters",
+                "assets_inventory.requester_candidates.list",
+                "assets_inventory:request",
+                OperationEffect::Read,
+                "exposed",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-request-departments",
+                "assets_inventory.department_candidates.list",
+                "assets_inventory:request",
+                OperationEffect::Read,
+                "exposed",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-requests",
+                "assets_inventory.stock_requests.list",
+                "assets_inventory:view",
+                OperationEffect::Read,
+                "exposed",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-requests/{id}",
+                "assets_inventory.stock_requests.read",
+                "assets_inventory:view",
+                OperationEffect::Read,
+                "exposed",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-requests/{id}/fulfilment-preview",
+                "assets_inventory.stock_requests.fulfilment_preview.read",
+                "assets_inventory:view",
+                OperationEffect::Read,
+                "exposed",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests",
+                "assets_inventory.stock_requests.create",
+                "assets_inventory:request",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/assets-inventory/stock-requests/{id}",
+                "assets_inventory.stock_requests.update",
+                "assets_inventory:request",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::DELETE,
+                "/api/1.0/assets-inventory/stock-requests/{id}",
+                "assets_inventory.stock_requests.delete",
+                "assets_inventory:request",
+                OperationEffect::Destructive,
+                "approval_required",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests/{id}/submit",
+                "assets_inventory.stock_requests.submit",
+                "assets_inventory:request",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests/{id}/cancel",
+                "assets_inventory.stock_requests.cancel",
+                "assets_inventory:request",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests/{id}/approve",
+                "assets_inventory.stock_requests.approve",
+                "assets_inventory:approve",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests/{id}/reject",
+                "assets_inventory.stock_requests.reject",
+                "assets_inventory:approve",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests/{id}/close",
+                "assets_inventory.stock_requests.close",
+                "assets_inventory:approve",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests/{id}/fulfilments",
+                "assets_inventory.stock_request_fulfilments.create",
+                "assets_inventory:issue",
+                OperationEffect::Write,
+                "approval_required",
+            ),
+        ] {
+            let route = routed_operation(key);
+            let operation = route.operation();
+            assert_eq!(route.method(), &method, "{key}");
+            assert_eq!(route.route_pattern(), path, "{key}");
+            assert_eq!(operation.module_key(), "assets_inventory", "{key}");
+            assert_eq!(operation.permission(), permission, "{key}");
+            assert_eq!(operation.effect(), effect, "{key}");
+            assert_eq!(operation.agent_exposure().as_str(), exposure, "{key}");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                vec!["hr_payroll"],
+                "{key}"
+            );
+        }
+    }
+
+    #[test]
     fn assets_inventory_goods_receipt_allocation_requires_exact_dependency() {
         let allocation_operations = [
             "assets_inventory.goods_receipt_allocations.list",
@@ -4047,6 +4607,48 @@ mod tests {
         );
         assert!(!decision.allowed);
         assert_eq!(decision.reason.as_str(), "dependency_missing");
+    }
+
+    #[test]
+    fn agent_governance_requires_agent_and_separate_human_permissions() {
+        for (key, permission) in [
+            (
+                "administration.agent_governance.readiness",
+                "agent_policy:view",
+            ),
+            (
+                "administration.agent_governance.capabilities.list",
+                "agent_policy:view",
+            ),
+            ("administration.agent_usage.options", "agent_usage:view"),
+            ("administration.agent_usage.report", "agent_usage:view"),
+            ("administration.agent_usage.export", "agent_usage:export"),
+            ("administration.agent_audit.runs.list", "agent_audit:view"),
+            ("administration.agent_audit.runs.read", "agent_audit:view"),
+        ] {
+            let operation = operation(key);
+            assert_eq!(operation.permission(), permission, "{key}");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                vec!["agent"],
+                "{key}"
+            );
+            assert!(operation.license_required(), "{key}");
+            assert_eq!(operation.agent_exposure().as_str(), "human_only", "{key}");
+        }
+
+        assert!(allowed(
+            "administration.agent_governance.readiness",
+            &["agent_policy:view"]
+        ));
+        assert!(!allowed(
+            "administration.agent_usage.export",
+            &["agent_usage:view"]
+        ));
+        assert!(allowed(
+            "administration.agent_usage.export",
+            &["agent_usage:export"]
+        ));
     }
 
     #[test]

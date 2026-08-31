@@ -13,6 +13,171 @@ use uuid::Uuid;
 
 use crate::descriptor::{CapabilityKey, CapabilityVersion};
 
+/// Stable identity assigned by the trusted Agent runtime before broker work.
+///
+/// This type deliberately has no string parser or serde implementation. HTTP
+/// and model input must never be able to choose the identity used to correlate
+/// runtime, usage, and actor-audit records.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CapabilityCallId(Uuid);
+
+impl CapabilityCallId {
+    /// Wraps an identity created by the trusted Agent runtime or worker.
+    #[must_use]
+    pub const fn from_trusted_runtime(value: Uuid) -> Self {
+        Self(value)
+    }
+
+    #[must_use]
+    pub const fn as_uuid(self) -> Uuid {
+        self.0
+    }
+}
+
+impl fmt::Debug for CapabilityCallId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("CapabilityCallId([redacted])")
+    }
+}
+
+const MAX_WORKER_ID_LENGTH: usize = 120;
+
+/// Bounded, non-serializable worker lease evidence carried to the verifier.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CapabilityWorkerLease {
+    worker_id: String,
+    lease_token: Uuid,
+    fence_version: i64,
+}
+
+impl CapabilityWorkerLease {
+    pub fn parse(
+        worker_id: &str,
+        lease_token: Uuid,
+        fence_version: i64,
+    ) -> Result<Self, CapabilityExecutionProofError> {
+        let worker_id = worker_id.trim();
+        if worker_id.is_empty()
+            || worker_id.len() > MAX_WORKER_ID_LENGTH
+            || worker_id.chars().any(char::is_control)
+            || lease_token.is_nil()
+            || fence_version <= 0
+        {
+            return Err(CapabilityExecutionProofError);
+        }
+        Ok(Self {
+            worker_id: worker_id.to_string(),
+            lease_token,
+            fence_version,
+        })
+    }
+}
+
+impl fmt::Debug for CapabilityWorkerLease {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CapabilityWorkerLease")
+            .field("worker_id_length", &self.worker_id.len())
+            .field("has_positive_fence", &(self.fence_version > 0))
+            .finish_non_exhaustive()
+    }
+}
+
+/// Untrusted execution evidence supplied by the Agent runtime.
+///
+/// Construction only bounds the shape. The broker-owned durability verifier
+/// must prove every field against persisted runtime state immediately before a
+/// handler may execute. This type deliberately implements neither serde trait.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CapabilityExecutionProof {
+    tenant_id: Uuid,
+    user_id: Uuid,
+    capability_call_id: CapabilityCallId,
+    run_id: Uuid,
+    worker_lease: CapabilityWorkerLease,
+    usage_reservation_id: Uuid,
+}
+
+impl CapabilityExecutionProof {
+    pub fn parse(
+        principal: AuthenticatedAgentPrincipal,
+        capability_call_id: CapabilityCallId,
+        run_id: Uuid,
+        worker_lease: CapabilityWorkerLease,
+        usage_reservation_id: Uuid,
+    ) -> Result<Self, CapabilityExecutionProofError> {
+        if principal.tenant_id().is_nil()
+            || principal.user_id().is_nil()
+            || capability_call_id.as_uuid().is_nil()
+            || run_id.is_nil()
+            || usage_reservation_id.is_nil()
+        {
+            return Err(CapabilityExecutionProofError);
+        }
+        Ok(Self {
+            tenant_id: principal.tenant_id(),
+            user_id: principal.user_id(),
+            capability_call_id,
+            run_id,
+            worker_lease,
+            usage_reservation_id,
+        })
+    }
+
+    #[must_use]
+    pub const fn tenant_id(&self) -> Uuid {
+        self.tenant_id
+    }
+
+    #[must_use]
+    pub const fn user_id(&self) -> Uuid {
+        self.user_id
+    }
+
+    #[must_use]
+    pub const fn capability_call_id(&self) -> CapabilityCallId {
+        self.capability_call_id
+    }
+
+    #[must_use]
+    pub const fn run_id(&self) -> Uuid {
+        self.run_id
+    }
+
+    #[must_use]
+    pub fn worker_id(&self) -> &str {
+        &self.worker_lease.worker_id
+    }
+
+    #[must_use]
+    pub const fn lease_token(&self) -> Uuid {
+        self.worker_lease.lease_token
+    }
+
+    #[must_use]
+    pub const fn fence_version(&self) -> i64 {
+        self.worker_lease.fence_version
+    }
+
+    #[must_use]
+    pub const fn usage_reservation_id(&self) -> Uuid {
+        self.usage_reservation_id
+    }
+}
+
+impl fmt::Debug for CapabilityExecutionProof {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CapabilityExecutionProof")
+            .field("worker_lease", &self.worker_lease)
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+#[error("capability execution proof is invalid")]
+pub struct CapabilityExecutionProofError;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AuthenticatedAgentPrincipal {
     tenant_id: Uuid,
@@ -38,13 +203,24 @@ impl AuthenticatedAgentPrincipal {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CapabilityCall {
     key: CapabilityKey,
     version: CapabilityVersion,
     input: Value,
     request_context: RequestContext,
     agent_run_id: Option<Uuid>,
+}
+
+impl fmt::Debug for CapabilityCall {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CapabilityCall")
+            .field("key", &self.key)
+            .field("version", &self.version)
+            .field("has_agent_run_id", &self.agent_run_id.is_some())
+            .finish_non_exhaustive()
+    }
 }
 
 impl CapabilityCall {
@@ -157,6 +333,123 @@ pub enum CapabilityScope {
     Resources(CapabilityResources),
 }
 
+/// Reduced, persistence-safe facts produced by broker preflight.
+///
+/// Provider input and parsed handler input are intentionally absent. The
+/// runtime can persist these facts before execution without gaining access to
+/// the broker's opaque typed input or authorization proof.
+#[derive(Clone, PartialEq, Eq)]
+pub struct PreparedCapabilityCallFacts {
+    capability_call_id: CapabilityCallId,
+    key: CapabilityKey,
+    version: CapabilityVersion,
+    operation_key: String,
+    module_key: String,
+    required_permission: String,
+    input_binding_sha256: [u8; 32],
+    request_context: RequestContext,
+    agent_run_id: Option<Uuid>,
+    scope: CapabilityScope,
+}
+
+pub(crate) struct PreparedCapabilityCallFactsParts {
+    pub capability_call_id: CapabilityCallId,
+    pub key: CapabilityKey,
+    pub version: CapabilityVersion,
+    pub operation_key: String,
+    pub module_key: String,
+    pub required_permission: String,
+    pub input_binding_sha256: [u8; 32],
+    pub request_context: RequestContext,
+    pub agent_run_id: Option<Uuid>,
+    pub scope: CapabilityScope,
+}
+
+impl fmt::Debug for PreparedCapabilityCallFacts {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (scope_kind, resource_count) = match &self.scope {
+            CapabilityScope::TenantWide => ("tenant_wide", 0),
+            CapabilityScope::Resources(resources) => ("resources", resources.values().len()),
+        };
+        formatter
+            .debug_struct("PreparedCapabilityCallFacts")
+            .field("key", &self.key)
+            .field("version", &self.version)
+            .field("has_agent_run_id", &self.agent_run_id.is_some())
+            .field("scope_kind", &scope_kind)
+            .field("resource_count", &resource_count)
+            .finish_non_exhaustive()
+    }
+}
+
+impl PreparedCapabilityCallFacts {
+    pub(crate) fn new(parts: PreparedCapabilityCallFactsParts) -> Self {
+        Self {
+            capability_call_id: parts.capability_call_id,
+            key: parts.key,
+            version: parts.version,
+            operation_key: parts.operation_key,
+            module_key: parts.module_key,
+            required_permission: parts.required_permission,
+            input_binding_sha256: parts.input_binding_sha256,
+            request_context: parts.request_context,
+            agent_run_id: parts.agent_run_id,
+            scope: parts.scope,
+        }
+    }
+
+    #[must_use]
+    pub const fn capability_call_id(&self) -> CapabilityCallId {
+        self.capability_call_id
+    }
+
+    #[must_use]
+    pub const fn key(&self) -> &CapabilityKey {
+        &self.key
+    }
+
+    #[must_use]
+    pub const fn version(&self) -> CapabilityVersion {
+        self.version
+    }
+
+    #[must_use]
+    pub fn operation_key(&self) -> &str {
+        &self.operation_key
+    }
+
+    #[must_use]
+    pub fn module_key(&self) -> &str {
+        &self.module_key
+    }
+
+    #[must_use]
+    pub fn required_permission(&self) -> &str {
+        &self.required_permission
+    }
+
+    /// Broker-derived binding the runtime must persist and compare exactly.
+    #[must_use]
+    pub const fn input_binding_sha256(&self) -> [u8; 32] {
+        self.input_binding_sha256
+    }
+
+    #[must_use]
+    pub const fn request_context(&self) -> RequestContext {
+        self.request_context
+    }
+
+    #[must_use]
+    pub const fn agent_run_id(&self) -> Option<Uuid> {
+        self.agent_run_id
+    }
+
+    #[must_use]
+    pub const fn scope(&self) -> &CapabilityScope {
+        &self.scope
+    }
+}
+
 impl CapabilityScope {
     pub fn resources(
         resources: impl IntoIterator<Item = CapabilityResource>,
@@ -241,12 +534,22 @@ impl AuthorizedCapabilityContext {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct CapabilityResult {
     key: CapabilityKey,
     version: CapabilityVersion,
     content: Value,
     request_context: RequestContext,
+}
+
+impl fmt::Debug for CapabilityResult {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CapabilityResult")
+            .field("key", &self.key)
+            .field("version", &self.version)
+            .finish_non_exhaustive()
+    }
 }
 
 impl CapabilityResult {
@@ -350,9 +653,12 @@ pub enum BrokerErrorCode {
     AuthorityUnavailable,
     AccessDenied,
     InvalidInput,
+    InputTooLarge,
     RecordScopeDenied,
     ExecutionFailed,
     AuditUnavailable,
+    PreparedCallConsumed,
+    DurabilityProofRejected,
 }
 
 impl BrokerErrorCode {
@@ -368,9 +674,12 @@ impl BrokerErrorCode {
             Self::AuthorityUnavailable => "authority_unavailable",
             Self::AccessDenied => "access_denied",
             Self::InvalidInput => "invalid_input",
+            Self::InputTooLarge => "input_too_large",
             Self::RecordScopeDenied => "record_scope_denied",
             Self::ExecutionFailed => "execution_failed",
             Self::AuditUnavailable => "audit_unavailable",
+            Self::PreparedCallConsumed => "prepared_call_consumed",
+            Self::DurabilityProofRejected => "durability_proof_rejected",
         }
     }
 }
@@ -419,6 +728,243 @@ impl fmt::Display for BrokerError {
 
 impl std::error::Error for BrokerError {}
 
+/// Durable classification for a broker call that could not be prepared.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CapabilityRejectionOutcome {
+    Denied,
+    Failed,
+}
+
+impl CapabilityRejectionOutcome {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Denied => "denied",
+            Self::Failed => "failed",
+        }
+    }
+}
+
+/// Code-owned operation metadata resolved before a preparation rejection.
+///
+/// Absence means the requested capability did not resolve to a catalogued
+/// operation; callers must not infer or fabricate these values.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CapabilityRejectionOperationEvidence {
+    operation_key: String,
+    module_key: String,
+    required_permission: String,
+}
+
+impl CapabilityRejectionOperationEvidence {
+    pub(crate) fn new(
+        operation_key: impl Into<String>,
+        module_key: impl Into<String>,
+        required_permission: impl Into<String>,
+    ) -> Self {
+        Self {
+            operation_key: operation_key.into(),
+            module_key: module_key.into(),
+            required_permission: required_permission.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn operation_key(&self) -> &str {
+        &self.operation_key
+    }
+
+    #[must_use]
+    pub fn module_key(&self) -> &str {
+        &self.module_key
+    }
+
+    #[must_use]
+    pub fn required_permission(&self) -> &str {
+        &self.required_permission
+    }
+}
+
+impl fmt::Debug for CapabilityRejectionOperationEvidence {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("CapabilityRejectionOperationEvidence([redacted])")
+    }
+}
+
+/// Reduced evidence for a call intent rejected during broker preparation.
+///
+/// This is deliberately distinct from [`PreparedCapabilityCallFacts`]: it
+/// proves that no executable prepared call exists. It implements neither serde
+/// trait, and its `Debug` output omits principals, request/call/run IDs, input
+/// digests, and resource identifiers.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CapabilityPreparationRejection {
+    principal: AuthenticatedAgentPrincipal,
+    capability_call_id: CapabilityCallId,
+    key: CapabilityKey,
+    version: CapabilityVersion,
+    request_context: RequestContext,
+    agent_run_id: Option<Uuid>,
+    normalized_input_digest_sha256: Option<[u8; 32]>,
+    operation_evidence: Option<CapabilityRejectionOperationEvidence>,
+    scope_evidence: Option<CapabilityScope>,
+    outcome: CapabilityRejectionOutcome,
+    code: BrokerErrorCode,
+    reason_code: &'static str,
+    safe_message: &'static str,
+}
+
+pub(crate) struct CapabilityPreparationRejectionParts {
+    pub principal: AuthenticatedAgentPrincipal,
+    pub capability_call_id: CapabilityCallId,
+    pub key: CapabilityKey,
+    pub version: CapabilityVersion,
+    pub request_context: RequestContext,
+    pub agent_run_id: Option<Uuid>,
+    pub normalized_input_digest_sha256: Option<[u8; 32]>,
+    pub operation_evidence: Option<CapabilityRejectionOperationEvidence>,
+    pub scope_evidence: Option<CapabilityScope>,
+    pub outcome: CapabilityRejectionOutcome,
+    pub code: BrokerErrorCode,
+    pub reason_code: &'static str,
+    pub safe_message: &'static str,
+}
+
+impl CapabilityPreparationRejection {
+    pub(crate) fn new(parts: CapabilityPreparationRejectionParts) -> Self {
+        Self {
+            principal: parts.principal,
+            capability_call_id: parts.capability_call_id,
+            key: parts.key,
+            version: parts.version,
+            request_context: parts.request_context,
+            agent_run_id: parts.agent_run_id,
+            normalized_input_digest_sha256: parts.normalized_input_digest_sha256,
+            operation_evidence: parts.operation_evidence,
+            scope_evidence: parts.scope_evidence,
+            outcome: parts.outcome,
+            code: parts.code,
+            reason_code: parts.reason_code,
+            safe_message: parts.safe_message,
+        }
+    }
+
+    #[must_use]
+    pub const fn principal(&self) -> AuthenticatedAgentPrincipal {
+        self.principal
+    }
+
+    #[must_use]
+    pub const fn capability_call_id(&self) -> CapabilityCallId {
+        self.capability_call_id
+    }
+
+    #[must_use]
+    pub const fn key(&self) -> &CapabilityKey {
+        &self.key
+    }
+
+    #[must_use]
+    pub const fn version(&self) -> CapabilityVersion {
+        self.version
+    }
+
+    #[must_use]
+    pub const fn request_context(&self) -> RequestContext {
+        self.request_context
+    }
+
+    #[must_use]
+    pub const fn agent_run_id(&self) -> Option<Uuid> {
+        self.agent_run_id
+    }
+
+    /// SHA-256 of bounded canonical JSON, or `None` when input exceeded the
+    /// canonical input ceiling and therefore could not be retained safely.
+    #[must_use]
+    pub const fn normalized_input_digest_sha256(&self) -> Option<[u8; 32]> {
+        self.normalized_input_digest_sha256
+    }
+
+    /// Exact code-owned operation metadata when registry resolution completed.
+    #[must_use]
+    pub const fn operation_evidence(&self) -> Option<&CapabilityRejectionOperationEvidence> {
+        self.operation_evidence.as_ref()
+    }
+
+    /// Parsed resource scope when input parsing and scope resolution completed
+    /// before the rejection. Resource identifiers remain sensitive evidence.
+    #[must_use]
+    pub const fn scope_evidence(&self) -> Option<&CapabilityScope> {
+        self.scope_evidence.as_ref()
+    }
+
+    #[must_use]
+    pub const fn outcome(&self) -> CapabilityRejectionOutcome {
+        self.outcome
+    }
+
+    #[must_use]
+    pub const fn code(&self) -> BrokerErrorCode {
+        self.code
+    }
+
+    #[must_use]
+    pub const fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
+
+    #[must_use]
+    pub const fn safe_message(&self) -> &'static str {
+        self.safe_message
+    }
+
+    #[must_use]
+    pub(crate) fn into_broker_error(self) -> BrokerError {
+        BrokerError::new(self.code, self.safe_message, self.request_context)
+    }
+}
+
+impl fmt::Debug for CapabilityPreparationRejection {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (scope_kind, resource_count) = match &self.scope_evidence {
+            None => ("unavailable", 0),
+            Some(CapabilityScope::TenantWide) => ("tenant_wide", 0),
+            Some(CapabilityScope::Resources(resources)) => ("resources", resources.values().len()),
+        };
+        formatter
+            .debug_struct("CapabilityPreparationRejection")
+            .field("key", &self.key)
+            .field("version", &self.version)
+            .field("outcome", &self.outcome)
+            .field("code", &self.code)
+            .field("reason_code", &self.reason_code)
+            .field(
+                "has_normalized_input_digest",
+                &self.normalized_input_digest_sha256.is_some(),
+            )
+            .field("has_operation_evidence", &self.operation_evidence.is_some())
+            .field("has_agent_run_id", &self.agent_run_id.is_some())
+            .field("scope_kind", &scope_kind)
+            .field("resource_count", &resource_count)
+            .finish_non_exhaustive()
+    }
+}
+
+impl fmt::Display for CapabilityPreparationRejection {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.safe_message)
+    }
+}
+
+impl std::error::Error for CapabilityPreparationRejection {}
+
+impl From<CapabilityPreparationRejection> for BrokerError {
+    fn from(rejection: CapabilityPreparationRejection) -> Self {
+        rejection.into_broker_error()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use cp_audit::RequestContext;
@@ -430,9 +976,10 @@ mod tests {
 
     use super::{
         AuthenticatedAgentPrincipal, AuthorizedCapabilityContext, AuthorizedRecordScope,
-        BrokerError, BrokerErrorCode, CapabilityCall, CapabilityExecutionError,
-        CapabilityExecutionErrorCode, CapabilityResource, CapabilityResources, CapabilityResult,
-        CapabilityScope, CurrentAuthority,
+        BrokerError, BrokerErrorCode, CapabilityCall, CapabilityCallId, CapabilityExecutionError,
+        CapabilityExecutionErrorCode, CapabilityExecutionProof, CapabilityResource,
+        CapabilityResources, CapabilityResult, CapabilityScope, CapabilityWorkerLease,
+        CurrentAuthority, PreparedCapabilityCallFacts, PreparedCapabilityCallFactsParts,
     };
 
     fn request_context() -> RequestContext {
@@ -480,6 +1027,153 @@ mod tests {
         assert!(
             CapabilityCall::parse("administration.catalog.read", 0, json!({}), request_context)
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn agent_call_debug_output_is_allowlisted_and_redacted() {
+        let request_id = Uuid::new_v4();
+        let correlation_id = Uuid::new_v4();
+        let run_id = Uuid::new_v4();
+        let capability_call_uuid = Uuid::new_v4();
+        let request_context = RequestContext::from_ids(request_id, correlation_id);
+        let call = CapabilityCall::parse(
+            "administration.catalog.read",
+            1,
+            json!({ "query": "raw-model-input-secret" }),
+            request_context,
+        )
+        .unwrap_or_else(|_| unreachable!())
+        .with_agent_run_id(run_id);
+        let call_debug = format!("{call:?}");
+
+        assert!(call_debug.contains("administration.catalog.read"));
+        assert!(call_debug.contains("has_agent_run_id: true"));
+        for sensitive in [
+            "raw-model-input-secret".to_string(),
+            request_id.to_string(),
+            correlation_id.to_string(),
+            run_id.to_string(),
+        ] {
+            assert!(!call_debug.contains(&sensitive));
+        }
+
+        let capability_call_id = CapabilityCallId::from_trusted_runtime(capability_call_uuid);
+        let resource = CapabilityResource::parse("student", "resource-id-secret")
+            .unwrap_or_else(|_| unreachable!());
+        let scope = CapabilityScope::resources([resource]).unwrap_or_else(|_| unreachable!());
+        let facts = PreparedCapabilityCallFacts::new(PreparedCapabilityCallFactsParts {
+            capability_call_id,
+            key: CapabilityKey::try_from("administration.catalog.read")
+                .unwrap_or_else(|_| unreachable!()),
+            version: CapabilityVersion::try_from(1).unwrap_or_else(|_| unreachable!()),
+            operation_key: "administration.catalog.read".to_string(),
+            module_key: "administration".to_string(),
+            required_permission: "administration:view".to_string(),
+            input_binding_sha256: [0x7e; 32],
+            request_context,
+            agent_run_id: Some(run_id),
+            scope,
+        });
+        let facts_debug = format!("{facts:?}");
+        let call_id_debug = format!("{capability_call_id:?}");
+
+        assert!(facts_debug.contains("administration.catalog.read"));
+        assert!(facts_debug.contains("scope_kind: \"resources\""));
+        assert!(facts_debug.contains("resource_count: 1"));
+        assert_eq!(facts.operation_key(), "administration.catalog.read");
+        assert_eq!(facts.module_key(), "administration");
+        assert_eq!(facts.required_permission(), "administration:view");
+        assert_eq!(facts.input_binding_sha256(), [0x7e; 32]);
+        assert_eq!(call_id_debug, "CapabilityCallId([redacted])");
+        for sensitive in [
+            "resource-id-secret".to_string(),
+            "126, 126, 126".to_string(),
+            capability_call_uuid.to_string(),
+            request_id.to_string(),
+            correlation_id.to_string(),
+            run_id.to_string(),
+        ] {
+            assert!(!facts_debug.contains(&sensitive));
+            assert!(!call_id_debug.contains(&sensitive));
+        }
+
+        let lease_token = Uuid::new_v4();
+        let reservation_id = Uuid::new_v4();
+        let proof = CapabilityExecutionProof::parse(
+            AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::new_v4(), Uuid::new_v4()),
+            capability_call_id,
+            run_id,
+            CapabilityWorkerLease::parse("worker-identity-secret", lease_token, 91)
+                .unwrap_or_else(|_| unreachable!()),
+            reservation_id,
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let proof_debug = format!("{proof:?}");
+        assert!(proof_debug.contains("worker_id_length"));
+        for sensitive in [
+            "worker-identity-secret".to_string(),
+            capability_call_uuid.to_string(),
+            run_id.to_string(),
+            lease_token.to_string(),
+            reservation_id.to_string(),
+            "91".to_string(),
+        ] {
+            assert!(!proof_debug.contains(&sensitive));
+        }
+
+        let result = CapabilityResult::new(
+            CapabilityKey::try_from("administration.catalog.read")
+                .unwrap_or_else(|_| unreachable!()),
+            CapabilityVersion::try_from(1).unwrap_or_else(|_| unreachable!()),
+            json!({ "result": "raw-capability-result-secret" }),
+            request_context,
+        );
+        let result_debug = format!("{result:?}");
+        assert!(result_debug.contains("administration.catalog.read"));
+        for sensitive in [
+            "raw-capability-result-secret".to_string(),
+            request_id.to_string(),
+            correlation_id.to_string(),
+        ] {
+            assert!(!result_debug.contains(&sensitive));
+        }
+    }
+
+    #[test]
+    fn execution_proof_parser_rejects_unbounded_or_missing_evidence() {
+        let tenant_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let call_id = CapabilityCallId::from_trusted_runtime(Uuid::new_v4());
+        let run_id = Uuid::new_v4();
+        let lease_token = Uuid::new_v4();
+        let reservation_id = Uuid::new_v4();
+        let principal = AuthenticatedAgentPrincipal::from_authenticated_request(tenant_id, user_id);
+        let valid = |worker_id: &str, fence_version: i64| {
+            CapabilityExecutionProof::parse(
+                principal,
+                call_id,
+                run_id,
+                CapabilityWorkerLease::parse(worker_id, lease_token, fence_version)?,
+                reservation_id,
+            )
+        };
+
+        assert!(valid(" worker-1 ", 1).is_ok());
+        assert!(valid("", 1).is_err());
+        assert!(valid("worker\n1", 1).is_err());
+        assert!(valid(&"w".repeat(121), 1).is_err());
+        assert!(valid("worker-1", 0).is_err());
+        assert!(
+            CapabilityExecutionProof::parse(
+                AuthenticatedAgentPrincipal::from_authenticated_request(Uuid::nil(), user_id),
+                call_id,
+                run_id,
+                CapabilityWorkerLease::parse("worker-1", lease_token, 1)
+                    .unwrap_or_else(|_| unreachable!()),
+                reservation_id,
+            )
+            .is_err()
         );
     }
 
@@ -578,6 +1272,14 @@ mod tests {
             (BrokerErrorCode::RecordScopeDenied, "record_scope_denied"),
             (BrokerErrorCode::ExecutionFailed, "execution_failed"),
             (BrokerErrorCode::AuditUnavailable, "audit_unavailable"),
+            (
+                BrokerErrorCode::PreparedCallConsumed,
+                "prepared_call_consumed",
+            ),
+            (
+                BrokerErrorCode::DurabilityProofRejected,
+                "durability_proof_rejected",
+            ),
         ];
         for (code, expected) in broker_codes {
             assert_eq!(code.as_str(), expected);

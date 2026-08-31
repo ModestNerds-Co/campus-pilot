@@ -6,7 +6,7 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
@@ -21,6 +21,7 @@ use crate::{
     models::{
         Department, EmployeeAvailabilityReference, EmployeeAvailabilityWithDetails,
         EmployeeReference, EmployeeWithDetails, EmploymentEngagementWithDetails, Position,
+        StockRequestDepartmentReference, StockRequestEmployeeReference,
     },
 };
 
@@ -766,6 +767,190 @@ impl EmployeeOps {
         .await
         .context("Failed to delete employee")?;
         Ok(DeleteOutcome::Deleted)
+    }
+}
+
+/// Typed HR boundary for Assets-owned department stock requests.
+///
+/// HR supplies current identity and department membership only; request state,
+/// approval, stock, and fulfilment remain Assets-owned.
+pub struct StockRequestReferenceOps;
+
+impl StockRequestReferenceOps {
+    pub async fn requester_candidates(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        department_id: Option<Uuid>,
+        limit: i64,
+    ) -> Result<Vec<StockRequestEmployeeReference>> {
+        let search = search
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| format!("%{value}%"));
+        sqlx::query_as::<_, StockRequestEmployeeReference>(
+            r#"
+            SELECT employee.id, employee.account_id, employee.employee_number,
+                   employee.display_name, department.id AS department_id,
+                   department.code AS department_code, department.name AS department_name
+              FROM employees AS employee
+              JOIN departments AS department
+                ON department.id = employee.department_id
+               AND department.tenant_id = employee.tenant_id
+               AND department.status = 'active' AND department.deleted_at IS NULL
+             WHERE employee.tenant_id = $1 AND employee.employment_status = 'active'
+               AND employee.deleted_at IS NULL
+               AND ($2::TEXT IS NULL OR employee.employee_number ILIKE $2
+                    OR employee.display_name ILIKE $2)
+               AND ($3::UUID IS NULL OR employee.department_id = $3)
+             ORDER BY employee.display_name, employee.employee_number
+             LIMIT $4
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search)
+        .bind(department_id)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(pool)
+        .await
+        .context("Failed to list stock request employee references")
+    }
+
+    pub async fn department_candidates(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<StockRequestDepartmentReference>> {
+        let search = search
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| format!("%{value}%"));
+        sqlx::query_as::<_, StockRequestDepartmentReference>(
+            r#"
+            SELECT id, code, name
+              FROM departments
+             WHERE tenant_id = $1 AND status = 'active' AND deleted_at IS NULL
+               AND ($2::TEXT IS NULL OR code ILIKE $2 OR name ILIKE $2)
+             ORDER BY name, code
+             LIMIT $3
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(pool)
+        .await
+        .context("Failed to list stock request department references")
+    }
+
+    /// Locks and proves that the requester is active in the selected active
+    /// department for the duration of the caller's transaction.
+    pub async fn lock_active_requester_department(
+        transaction: &mut Transaction<'_, Postgres>,
+        tenant_id: Uuid,
+        employee_id: Uuid,
+        department_id: Uuid,
+    ) -> Result<StockRequestEmployeeReference> {
+        sqlx::query_as::<_, StockRequestEmployeeReference>(
+            r#"
+            SELECT employee.id, employee.account_id, employee.employee_number,
+                   employee.display_name, department.id AS department_id,
+                   department.code AS department_code, department.name AS department_name
+              FROM employees AS employee
+              JOIN departments AS department
+                ON department.id = employee.department_id
+               AND department.tenant_id = employee.tenant_id
+             WHERE employee.tenant_id = $1 AND employee.id = $2
+               AND employee.department_id = $3
+               AND employee.employment_status = 'active'
+               AND employee.deleted_at IS NULL
+               AND department.status = 'active' AND department.deleted_at IS NULL
+             FOR SHARE OF employee, department
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(employee_id)
+        .bind(department_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .context("Failed to validate stock request HR ownership")?
+        .ok_or_else(|| {
+            anyhow!("Stock requester must be active in the selected active HR department")
+        })
+    }
+
+    /// Locks the current HR identity for actor-separation checks without
+    /// requiring the historical requester to remain actively employed.
+    pub async fn lock_requester_identity(
+        transaction: &mut Transaction<'_, Postgres>,
+        tenant_id: Uuid,
+        employee_id: Uuid,
+    ) -> Result<StockRequestEmployeeReference> {
+        sqlx::query_as::<_, StockRequestEmployeeReference>(
+            r#"
+            SELECT employee.id, employee.account_id, employee.employee_number,
+                   employee.display_name, department.id AS department_id,
+                   department.code AS department_code, department.name AS department_name
+              FROM employees AS employee
+              JOIN departments AS department
+                ON department.id = employee.department_id
+               AND department.tenant_id = employee.tenant_id
+             WHERE employee.tenant_id = $1 AND employee.id = $2
+             FOR SHARE OF employee, department
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(employee_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .context("Failed to lock stock request employee identity")?
+        .ok_or_else(|| anyhow!("Stock requester HR identity is no longer available"))
+    }
+
+    pub async fn employee_references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        employee_ids: &[Uuid],
+    ) -> Result<Vec<StockRequestEmployeeReference>> {
+        if employee_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, StockRequestEmployeeReference>(
+            r#"
+            SELECT employee.id, employee.account_id, employee.employee_number,
+                   employee.display_name, department.id AS department_id,
+                   department.code AS department_code, department.name AS department_name
+              FROM employees AS employee
+              JOIN departments AS department
+                ON department.id = employee.department_id
+               AND department.tenant_id = employee.tenant_id
+             WHERE employee.tenant_id = $1 AND employee.id = ANY($2)
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(employee_ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to rehydrate stock request employee references")
+    }
+
+    pub async fn department_references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        department_ids: &[Uuid],
+    ) -> Result<Vec<StockRequestDepartmentReference>> {
+        if department_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, StockRequestDepartmentReference>(
+            "SELECT id, code, name FROM departments WHERE tenant_id = $1 AND id = ANY($2)",
+        )
+        .bind(tenant_id)
+        .bind(department_ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to rehydrate stock request department references")
     }
 }
 

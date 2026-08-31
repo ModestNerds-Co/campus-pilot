@@ -11,6 +11,7 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  BarChart3,
   ClipboardList,
   Coins,
   GraduationCap,
@@ -40,6 +41,7 @@ import { useNavigationDrawer } from "@/hooks/use-navigation-drawer";
 import { ThemeToggle } from "@/lib/theme";
 import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
+import { AgentWidget } from "@/modules/agent";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { defaultModuleVisual, moduleRouteKey, moduleVisuals } from "./module-registry";
@@ -58,6 +60,7 @@ type LocalNavItem = {
 };
 
 const moduleLabels: Record<string, string> = {
+  agent: "Agent",
   sis: "People and admissions",
   academics: "Academics",
   timetabling: "Timetabling",
@@ -135,10 +138,15 @@ const procurementNavigation: LocalNavItem[] = [
 
 const assetsInventoryNavigation: LocalNavItem[] = [
   { label: "Stock", path: "/modules/assets-inventory/stock", icon: Boxes, permission: "assets_inventory:view" },
+  { label: "Requests", path: "/modules/assets-inventory/requests", icon: ClipboardList, permission: "assets_inventory:view" },
   { label: "Movements", path: "/modules/assets-inventory/movements", icon: ArrowLeftRight, permission: "assets_inventory:view" },
   { label: "Procurement receipts", path: "/modules/assets-inventory/procurement-receipts", icon: PackageCheck, permission: "assets_inventory:receive", requiredModule: "procurement" },
   { label: "Items", path: "/modules/assets-inventory/items", icon: Boxes },
   { label: "Stores", path: "/modules/assets-inventory/stores", icon: Warehouse },
+];
+
+const agentNavigation: LocalNavItem[] = [
+  { label: "Personal usage", path: "/modules/agent/usage", icon: BarChart3, permission: "agent:view" },
 ];
 
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
@@ -163,7 +171,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = (moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
+  const localNavigation = (moduleKey === "agent" ? agentNavigation : moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
     .filter((item) => (!item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission)) && (!item.requiredModule || user?.modules.includes(item.requiredModule)));
 
   useEffect(() => {
@@ -219,13 +227,14 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
           <section aria-labelledby="module-workspace-nav">
             <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="module-workspace-nav">Workspace</h2>
             <div className="space-y-1">
-              <LocalOverviewLink active={isModuleOverview(location.pathname)} moduleKey={moduleKey} />
+              <LocalOverviewLink active={isModuleOverview(location.pathname) || (moduleKey === "agent" && location.pathname.startsWith("/modules/agent/sessions/"))} moduleKey={moduleKey} />
               {localNavigation.map((item) => <LocalLink active={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)} item={item} key={item.path} />)}
             </div>
           </section>
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] p-3">
+          {moduleKey !== "agent" ? <AgentWidget context={{ label: moduleLabel, moduleKey, route: location.pathname }} /> : null}
           <ThemeToggle className="w-full" variant="sidebar" />
           <div className="mt-3 flex items-center gap-3 px-2">
             <span className="flex size-9 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold">{initials(userName)}</span>
@@ -277,13 +286,14 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({ a
     to="/modules/$moduleKey"
   >
     <LayoutDashboard className="size-[17px]" />
-    <span className="flex-1">Overview</span>
+    <span className="flex-1">{moduleKey === "agent" ? "Sessions" : "Overview"}</span>
     {active ? <ChevronRight className="size-3.5" /> : null}
   </Link>
 );
 
 const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, item }) => {
   const Icon = item.icon;
+  if (item.path === "/modules/agent/usage") return <Link className={navClass(active)} to="/modules/agent/usage"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fleet/vehicles") return <Link className={navClass(active)} to="/modules/fleet/vehicles"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fleet/drivers") return <Link className={navClass(active)} to="/modules/fleet/drivers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/fleet/daily-log") return <Link className={navClass(active)} to="/modules/fleet/daily-log"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
@@ -315,6 +325,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/procurement/goods-receipts") return <Link className={navClass(active)} to="/modules/procurement/goods-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/procurement/suppliers") return <Link className={navClass(active)} to="/modules/procurement/suppliers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/assets-inventory/stock") return <Link className={navClass(active)} to="/modules/assets-inventory/stock"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/assets-inventory/requests") return <Link className={navClass(active)} to="/modules/assets-inventory/requests"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/assets-inventory/movements") return <Link className={navClass(active)} to="/modules/assets-inventory/movements"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/assets-inventory/procurement-receipts") return <Link className={navClass(active)} to="/modules/assets-inventory/procurement-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/assets-inventory/items") return <Link className={navClass(active)} to="/modules/assets-inventory/items"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

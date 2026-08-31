@@ -33,6 +33,13 @@ pub(super) struct VersionedActionRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub(super) struct SetProviderDataApprovalRequest {
+    pub approval_class: String,
+    pub expected_approval_version: i64,
+    pub change_reason: String,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct DisconnectQuery {
     pub expected_version: i64,

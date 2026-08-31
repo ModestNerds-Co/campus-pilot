@@ -1,5 +1,6 @@
 import {
   Archive,
+  Bot,
   BookOpen,
   Boxes,
   BriefcaseBusiness,
@@ -24,6 +25,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   administration: {
     icon: Settings2,
     highlights: ["Users and access", "Module licensing", "School configuration"],
+  },
+  agent: {
+    icon: Bot,
+    highlights: ["Sessions and history", "Campus capabilities", "Personal usage"],
   },
   sis: {
     icon: GraduationCap,
@@ -75,7 +80,7 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   },
   assets_inventory: {
     icon: Boxes,
-    highlights: ["Asset register", "Stores and stock", "Custodianship"],
+    highlights: ["Items and stores", "Stock balances", "Movement history"],
   },
   document_registry: {
     icon: Archive,

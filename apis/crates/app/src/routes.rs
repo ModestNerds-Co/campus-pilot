@@ -8,7 +8,9 @@
 
 use crate::middleware::AuthMiddleware;
 use crate::models::api_response::ApiResponse;
-use crate::services::{access, ai_providers, ai_routing, auth, kernel, roles, storage, users};
+use crate::services::{
+    access, agent, ai_providers, ai_routing, auth, kernel, roles, storage, users,
+};
 use actix_web::http::StatusCode;
 use actix_web::web::{ServiceConfig, scope};
 use actix_web::{HttpResponse, Responder, get};
@@ -43,6 +45,19 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .wrap(AuthMiddleware)
                     .configure(ai_providers::routes::routes)
                     .configure(ai_routing::routes::routes),
+            )
+            .service(
+                scope("/agent")
+                    .wrap(RequirePermission::new("agent"))
+                    .wrap(AuthMiddleware)
+                    .configure(agent::session_routes::routes)
+                    .configure(agent::usage_routes::routes),
+            )
+            .service(
+                scope("/agent-governance")
+                    .wrap(RequirePermission::new("agent_policy"))
+                    .wrap(AuthMiddleware)
+                    .configure(agent::governance::routes),
             )
             .service(scope("/kernel").configure(kernel::routes::init))
             .service(scope("/storage").configure(storage::routes::init))
@@ -97,11 +112,7 @@ pub fn init(cfg: &mut ServiceConfig) {
                 scope("/assets-inventory")
                     .wrap(AuthMiddleware)
                     .configure(cp_assets_inventory::routes::routes),
-            )
-            .service(scope("/library").configure(cp_library::routes::routes))
-            .service(scope("/messaging").configure(cp_messaging::routes::routes))
-            .service(scope("/hostel").configure(cp_hostel::routes::routes))
-            .service(scope("/health-services").configure(cp_health::routes::routes)),
+            ),
     );
 }
 
@@ -189,6 +200,12 @@ mod route_wiring_tests {
                 format!("/api/1.0/ai/connections/{record_id}"),
                 "/api/1.0/ai/connections/{connection_id}",
                 "administration.ai_providers.connections.update",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/ai/connections/{record_id}/data-approval"),
+                "/api/1.0/ai/connections/{connection_id}/data-approval",
+                "administration.ai_providers.connections.data_approval.update",
             ),
             (
                 Method::POST,
@@ -555,6 +572,204 @@ mod route_wiring_tests {
                 "/api/1.0/assets-inventory/goods-receipt-allocations".to_string(),
                 "/api/1.0/assets-inventory/goods-receipt-allocations",
                 "assets_inventory.goods_receipt_allocations.create",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-request-requesters".to_string(),
+                "/api/1.0/assets-inventory/stock-request-requesters",
+                "assets_inventory.requester_candidates.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-request-departments".to_string(),
+                "/api/1.0/assets-inventory/stock-request-departments",
+                "assets_inventory.department_candidates.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/assets-inventory/stock-requests".to_string(),
+                "/api/1.0/assets-inventory/stock-requests",
+                "assets_inventory.stock_requests.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}"),
+                "/api/1.0/assets-inventory/stock-requests/{id}",
+                "assets_inventory.stock_requests.read",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/fulfilment-preview"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/fulfilment-preview",
+                "assets_inventory.stock_requests.fulfilment_preview.read",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/assets-inventory/stock-requests".to_string(),
+                "/api/1.0/assets-inventory/stock-requests",
+                "assets_inventory.stock_requests.create",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}"),
+                "/api/1.0/assets-inventory/stock-requests/{id}",
+                "assets_inventory.stock_requests.update",
+            ),
+            (
+                Method::DELETE,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}"),
+                "/api/1.0/assets-inventory/stock-requests/{id}",
+                "assets_inventory.stock_requests.delete",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/submit"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/submit",
+                "assets_inventory.stock_requests.submit",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/approve"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/approve",
+                "assets_inventory.stock_requests.approve",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/reject"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/reject",
+                "assets_inventory.stock_requests.reject",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/cancel"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/cancel",
+                "assets_inventory.stock_requests.cancel",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/close"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/close",
+                "assets_inventory.stock_requests.close",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/assets-inventory/stock-requests/{record_id}/fulfilments"),
+                "/api/1.0/assets-inventory/stock-requests/{id}/fulfilments",
+                "assets_inventory.stock_request_fulfilments.create",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent/sessions".to_string(),
+                "/api/1.0/agent/sessions",
+                "agent.sessions.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/agent/sessions".to_string(),
+                "/api/1.0/agent/sessions",
+                "agent.sessions.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/agent/sessions/{record_id}"),
+                "/api/1.0/agent/sessions/{session_id}",
+                "agent.sessions.read",
+            ),
+            (
+                Method::PATCH,
+                format!("/api/1.0/agent/sessions/{record_id}"),
+                "/api/1.0/agent/sessions/{session_id}",
+                "agent.sessions.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/agent/sessions/{record_id}/archive"),
+                "/api/1.0/agent/sessions/{session_id}/archive",
+                "agent.sessions.archive",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/agent/sessions/{record_id}/messages"),
+                "/api/1.0/agent/sessions/{session_id}/messages",
+                "agent.messages.list",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/agent/sessions/{record_id}/messages"),
+                "/api/1.0/agent/sessions/{session_id}/messages",
+                "agent.messages.submit",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/agent/sessions/{record_id}/runs"),
+                "/api/1.0/agent/sessions/{session_id}/runs",
+                "agent.runs.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/agent/runs/{record_id}"),
+                "/api/1.0/agent/runs/{run_id}",
+                "agent.runs.read",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/agent/runs/{record_id}/cancel"),
+                "/api/1.0/agent/runs/{run_id}/cancel",
+                "agent.runs.cancel",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/agent/runs/{record_id}/events"),
+                "/api/1.0/agent/runs/{run_id}/events",
+                "agent.runs.events.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent/usage/personal".to_string(),
+                "/api/1.0/agent/usage/personal",
+                "agent.usage.personal.read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent-governance/readiness".to_string(),
+                "/api/1.0/agent-governance/readiness",
+                "administration.agent_governance.readiness",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent-governance/capabilities".to_string(),
+                "/api/1.0/agent-governance/capabilities",
+                "administration.agent_governance.capabilities.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent-governance/usage/options".to_string(),
+                "/api/1.0/agent-governance/usage/options",
+                "administration.agent_usage.options",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent-governance/usage".to_string(),
+                "/api/1.0/agent-governance/usage",
+                "administration.agent_usage.report",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent-governance/usage/export".to_string(),
+                "/api/1.0/agent-governance/usage/export",
+                "administration.agent_usage.export",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/agent-governance/runs".to_string(),
+                "/api/1.0/agent-governance/runs",
+                "administration.agent_audit.runs.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/agent-governance/runs/{record_id}"),
+                "/api/1.0/agent-governance/runs/{run_id}",
+                "administration.agent_audit.runs.read",
             ),
         ];
 

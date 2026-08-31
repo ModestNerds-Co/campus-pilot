@@ -187,6 +187,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
           <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="assets-inventory-workspaces">Manage stock and records</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <AssetsInventoryLink description="Review exact on-hand quantities by item and store." label="Stock" to="/modules/assets-inventory/stock" />
+            {(permissions.includes("*") || permissions.includes("assets_inventory:view")) ? <AssetsInventoryLink description="Request stock for a department and track approval and issue status." label="Requests" to="/modules/assets-inventory/requests" /> : null}
             <AssetsInventoryLink description="Open the immutable register of posted stock changes." label="Movements" to="/modules/assets-inventory/movements" />
             {enabledModules.includes("procurement") && (permissions.includes("*") || permissions.includes("assets_inventory:receive")) ? <AssetsInventoryLink description="Allocate posted Procurement receipts to inventory items and stores." label="Procurement receipts" to="/modules/assets-inventory/procurement-receipts" /> : null}
             <AssetsInventoryLink description="Maintain item definitions, quantity precision, and reorder levels." label="Items" to="/modules/assets-inventory/items" />
@@ -285,7 +286,7 @@ const ProcurementLink: React.FC<{ description: string; label: string; to: "/modu
   </Link>
 );
 
-const AssetsInventoryLink: React.FC<{ description: string; label: string; to: "/modules/assets-inventory/stock" | "/modules/assets-inventory/movements" | "/modules/assets-inventory/procurement-receipts" | "/modules/assets-inventory/items" | "/modules/assets-inventory/stores" }> = ({ description, label, to }) => (
+const AssetsInventoryLink: React.FC<{ description: string; label: string; to: "/modules/assets-inventory/stock" | "/modules/assets-inventory/requests" | "/modules/assets-inventory/movements" | "/modules/assets-inventory/procurement-receipts" | "/modules/assets-inventory/items" | "/modules/assets-inventory/stores" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

@@ -261,14 +261,30 @@ fn resolve_command(
         ensure_known_module(module_key)?;
     }
 
-    ResolveRouteCommand::parse(
+    let command = ResolveRouteCommand::parse(
         &request.task_class,
         module_key.as_deref(),
         operation_class.as_deref(),
         request.capability_key.as_deref(),
         request.capability_version,
         request.requires_tools,
-    )
+    )?;
+    let Some((capability_key, capability_version)) = request
+        .capability_key
+        .as_deref()
+        .zip(request.capability_version)
+    else {
+        return Ok(command);
+    };
+    let descriptor = registry
+        .descriptors()
+        .into_iter()
+        .find(|descriptor| {
+            descriptor.key().as_str() == capability_key
+                && i32::from(descriptor.version().get()) == capability_version
+        })
+        .ok_or_else(|| selector_error(SelectorError::UnknownCapability))?;
+    Ok(command.requiring_provider_data_class(descriptor.policy().provider_data_class()))
 }
 
 fn selector_error(error: SelectorError) -> AiRoutingError {

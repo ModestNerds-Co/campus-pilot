@@ -8,14 +8,20 @@
 
 use aws_credential_types::Credentials;
 use aws_sdk_s3::{Client as S3Client, config::Region};
-use cp_agent::CapabilityRegistry;
-use cp_agent_runtime::AiRoutingOps;
+use cp_agent::{
+    AuthorityLoader, CapabilityBroker, CapabilityRegistry, PostgresBrokerAuditSink,
+    RecordScopeAuthorizer,
+};
+use cp_agent_runtime::{AgentSessionOps, AgentUsageRuntime, AiRoutingOps};
 use cp_ai_providers::AiProviderOps;
 use sqlx::PgPool;
 
 use crate::config::Config;
 use crate::db::DatabaseOperations;
-use crate::services::agent::build_capability_registry;
+use crate::services::agent::{
+    AgentSubmissionGate, AgentWorkerReadinessOps, AppAuthorityLoader, AppRecordScopeAuthorizer,
+    build_capability_registry,
+};
 use crate::services::kernel::db::KernelDbOps;
 use crate::services::storage::ops::StorageOps;
 
@@ -27,6 +33,13 @@ pub struct AppState {
     pub kernel_db: Arc<KernelDbOps>,
     pub storage_ops: Arc<StorageOps>,
     pub agent_capabilities: Arc<CapabilityRegistry>,
+    pub agent_authority_loader: Arc<dyn AuthorityLoader>,
+    pub agent_record_scope_authorizer: Arc<dyn RecordScopeAuthorizer>,
+    pub agent_session_ops: Arc<AgentSessionOps>,
+    pub agent_usage_runtime: Arc<AgentUsageRuntime>,
+    pub agent_worker_readiness: Arc<AgentWorkerReadinessOps>,
+    pub agent_capability_broker: Arc<CapabilityBroker>,
+    pub agent_submission_gate: AgentSubmissionGate,
     pub ai_provider_ops: Arc<AiProviderOps>,
     pub ai_routing_ops: Arc<AiRoutingOps>,
     pub config: Arc<Config>,
@@ -41,6 +54,19 @@ impl AppState {
             pool.clone(),
             config.license.clone(),
         ));
+        let agent_authority_loader = Arc::new(AppAuthorityLoader::new(pool.clone()));
+        let agent_record_scope_authorizer = Arc::new(AppRecordScopeAuthorizer::new(pool.clone()));
+        let agent_session_ops = Arc::new(AgentSessionOps::new(pool.clone()));
+        let agent_usage_runtime = Arc::new(AgentUsageRuntime::new(pool.clone()));
+        let agent_worker_readiness = Arc::new(AgentWorkerReadinessOps::new(pool.clone()));
+        let agent_capability_broker = Arc::new(CapabilityBroker::new(
+            build_capability_registry(pool.clone(), config.license.clone()),
+            agent_authority_loader.clone(),
+            agent_record_scope_authorizer.clone(),
+            agent_usage_runtime.prepared_capability_call_verifier(),
+            Arc::new(PostgresBrokerAuditSink::new(pool.clone())),
+        ));
+        let agent_submission_gate = AgentSubmissionGate::new(pool.clone());
         let ai_provider_ops = Arc::new(AiProviderOps::new(
             pool.clone(),
             config.ai_providers.credential_keyring.clone(),
@@ -92,6 +118,13 @@ impl AppState {
             kernel_db,
             storage_ops,
             agent_capabilities,
+            agent_authority_loader,
+            agent_record_scope_authorizer,
+            agent_session_ops,
+            agent_usage_runtime,
+            agent_worker_readiness,
+            agent_capability_broker,
+            agent_submission_gate,
             ai_provider_ops,
             ai_routing_ops,
             config: config_arc,

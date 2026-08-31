@@ -6,6 +6,7 @@
 use std::{collections::HashSet, str::FromStr};
 
 use chrono::{DateTime, Utc};
+use cp_common::{ProviderApprovalClass, ProviderDataClass, ProviderExecutionEnvironmentClass};
 use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
@@ -20,6 +21,7 @@ const MAX_AUDIT_REASON_LENGTH: usize = 500;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskClass {
+    CampusConversation,
     CampusConversationSearch,
     ModuleReadReporting,
     DocumentExtraction,
@@ -31,6 +33,7 @@ impl TaskClass {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::CampusConversation => "campus_conversation",
             Self::CampusConversationSearch => "campus_conversation_search",
             Self::ModuleReadReporting => "module_read_reporting",
             Self::DocumentExtraction => "document_extraction",
@@ -45,6 +48,7 @@ impl FromStr for TaskClass {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.trim() {
+            "campus_conversation" => Ok(Self::CampusConversation),
             "campus_conversation_search" => Ok(Self::CampusConversationSearch),
             "module_read_reporting" => Ok(Self::ModuleReadReporting),
             "document_extraction" => Ok(Self::DocumentExtraction),
@@ -408,6 +412,7 @@ pub struct ResolveRouteCommand {
     pub(crate) module_operation: Option<(String, OperationClass)>,
     pub(crate) capability: Option<(String, i32)>,
     pub(crate) requires_tools: bool,
+    pub(crate) required_provider_data_class: ProviderDataClass,
 }
 
 impl ResolveRouteCommand {
@@ -445,7 +450,17 @@ impl ResolveRouteCommand {
             module_operation,
             capability,
             requires_tools,
+            // User-authored turns may contain personal campus information even
+            // before a typed capability adds stricter context.
+            required_provider_data_class: ProviderDataClass::SensitiveDataApproved,
         })
+    }
+
+    /// Raises, but never lowers, the provider data requirement for hydrated context.
+    #[must_use]
+    pub fn requiring_provider_data_class(mut self, required: ProviderDataClass) -> Self {
+        self.required_provider_data_class = self.required_provider_data_class.max(required);
+        self
     }
 
     pub(crate) fn candidate_scopes(&self) -> Vec<AiRouteScope> {
@@ -477,7 +492,11 @@ pub enum RouteTargetReadiness {
     Ready,
     ConnectionUnavailable,
     StaleModel,
+    ModelLimitsUnavailable,
     ToolsUnsupported,
+    ProviderDataNotApproved,
+    ProviderDataApprovalChanged,
+    LocalExecutionRequired,
 }
 
 /// One secret-free target in route priority order.
@@ -487,14 +506,123 @@ pub struct AiRouteTarget {
     pub priority: i16,
     pub connection_id: Uuid,
     #[serde(skip_serializing)]
+    pub provider_data_approval_id: Uuid,
+    pub provider_data_approval_version: i64,
+    pub provider_data_approval_class: ProviderApprovalClass,
+    pub execution_environment_class: ProviderExecutionEnvironmentClass,
+    #[serde(skip_serializing)]
     pub model_id: Uuid,
     pub provider: String,
     pub account_label: String,
     pub provider_model_id: String,
     pub model_display_name: String,
     pub context_window_tokens: Option<i64>,
+    pub max_output_tokens: Option<i64>,
     pub supports_tools: Option<bool>,
     pub readiness: RouteTargetReadiness,
+}
+
+/// One ready resolved target pinned to the immutable model credential snapshot.
+///
+/// Construction stays crate-private so worker code cannot accidentally rebuild
+/// the execution identity from a mutable provider connection. The pin and model
+/// snapshot UUID are deliberately absent from administration JSON projections.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ResolvedAiRouteTarget {
+    #[serde(flatten)]
+    projection: AiRouteTarget,
+    #[serde(skip_serializing)]
+    expected_credential_version: i64,
+    #[serde(skip_serializing)]
+    max_output_tokens: i64,
+}
+
+impl ResolvedAiRouteTarget {
+    pub(crate) fn from_ready_projection(
+        projection: AiRouteTarget,
+        expected_credential_version: i64,
+    ) -> Option<Self> {
+        if projection.readiness != RouteTargetReadiness::Ready
+            || expected_credential_version <= 0
+            || projection
+                .context_window_tokens
+                .is_none_or(|value| value <= 0)
+        {
+            return None;
+        }
+        let max_output_tokens = projection.max_output_tokens.filter(|value| *value > 0)?;
+        Some(Self {
+            projection,
+            expected_credential_version,
+            max_output_tokens,
+        })
+    }
+
+    /// Stable route-target identity persisted with an execution attempt.
+    #[must_use]
+    pub const fn route_target_id(&self) -> Uuid {
+        self.projection.id
+    }
+
+    /// One-based fallback priority selected by routing resolution.
+    #[must_use]
+    pub const fn priority(&self) -> i16 {
+        self.projection.priority
+    }
+
+    /// Provider connection selected by routing resolution.
+    #[must_use]
+    pub const fn connection_id(&self) -> Uuid {
+        self.projection.connection_id
+    }
+
+    /// Stable provider key used to construct the execution command.
+    #[must_use]
+    pub fn provider_key(&self) -> &str {
+        &self.projection.provider
+    }
+
+    /// Provider-owned model identifier pinned by the model snapshot.
+    #[must_use]
+    pub fn provider_model_id(&self) -> &str {
+        &self.projection.provider_model_id
+    }
+
+    /// Maximum output-token count proven by the current model snapshot.
+    #[must_use]
+    pub const fn max_output_tokens(&self) -> i64 {
+        self.max_output_tokens
+    }
+
+    /// Credential version proven current when this route was resolved.
+    #[must_use]
+    pub const fn expected_credential_version(&self) -> i64 {
+        self.expected_credential_version
+    }
+
+    /// Immutable provider-model snapshot selected by routing resolution.
+    #[must_use]
+    pub const fn model_snapshot_id(&self) -> Uuid {
+        self.projection.model_id
+    }
+
+    /// Immutable provider data-approval version pinned by this route target.
+    #[must_use]
+    pub const fn provider_data_approval_id(&self) -> Uuid {
+        self.projection.provider_data_approval_id
+    }
+
+    /// Required provider data class used for this resolution.
+    #[must_use]
+    pub const fn provider_approval_class(&self) -> ProviderApprovalClass {
+        self.projection.provider_data_approval_class
+    }
+
+    /// Trusted adapter boundary selected for the provider request.
+    #[must_use]
+    pub const fn execution_environment_class(&self) -> ProviderExecutionEnvironmentClass {
+        self.projection.execution_environment_class
+    }
 }
 
 /// One active route scope and its complete ordered fallback chain.
@@ -539,7 +667,8 @@ pub struct ResolvedAiRoute {
     pub precedence: RoutePrecedence,
     pub route_version: i64,
     pub requires_tools: bool,
-    pub targets: Vec<AiRouteTarget>,
+    pub required_provider_data_class: ProviderDataClass,
+    pub targets: Vec<ResolvedAiRouteTarget>,
 }
 
 /// Confirmation that an optimistic archive succeeded.
@@ -556,7 +685,11 @@ pub enum RouteUnusableReason {
     EmptyChain,
     ConnectionUnavailable,
     StaleModel,
+    ModelLimitsUnavailable,
     ToolsUnsupported,
+    ProviderDataNotApproved,
+    ProviderDataApprovalChanged,
+    LocalExecutionRequired,
 }
 
 /// Stable routing errors mapped to HTTP responses by the application crate.
@@ -623,8 +756,20 @@ impl AiRoutingError {
                 RouteUnusableReason::StaleModel => {
                     "A model in the matched AI route is no longer current".to_owned()
                 }
+                RouteUnusableReason::ModelLimitsUnavailable => {
+                    "A model in the matched AI route has no usable token limits".to_owned()
+                }
                 RouteUnusableReason::ToolsUnsupported => {
                     "A model in the matched AI route does not support tools".to_owned()
+                }
+                RouteUnusableReason::ProviderDataNotApproved => {
+                    "A connection in the matched AI route is not approved for this data".to_owned()
+                }
+                RouteUnusableReason::ProviderDataApprovalChanged => {
+                    "A provider data approval changed; save the route again".to_owned()
+                }
+                RouteUnusableReason::LocalExecutionRequired => {
+                    "This data requires an installation-local provider".to_owned()
                 }
             },
             Self::Storage(_) => "AI routing could not be loaded or saved".to_owned(),
@@ -700,13 +845,14 @@ fn invalid_resolve_shape() -> AiRoutingError {
 mod tests {
     use std::str::FromStr;
 
+    use cp_common::{ProviderApprovalClass, ProviderExecutionEnvironmentClass};
     use serde_json::json;
     use uuid::Uuid;
 
     use super::{
         AiRouteScope, AiRouteTarget, AiRoutingError, ArchiveRouteCommand, CreateRouteCommand,
-        OperationClass, ReplaceRouteCommand, ResolveRouteCommand, RoutePrecedence,
-        RouteTargetDraft, RouteTargetReadiness, RouteUnusableReason, TaskClass,
+        OperationClass, ReplaceRouteCommand, ResolveRouteCommand, ResolvedAiRouteTarget,
+        RoutePrecedence, RouteTargetDraft, RouteTargetReadiness, RouteUnusableReason, TaskClass,
     };
 
     #[test]
@@ -763,23 +909,58 @@ mod tests {
     }
 
     #[test]
-    fn route_target_serialization_keeps_snapshot_uuid_internal() {
+    fn route_target_serialization_keeps_execution_identity_internal() {
+        let provider_data_approval_id = Uuid::new_v4();
         let target = AiRouteTarget {
             id: Uuid::new_v4(),
             priority: 1,
             connection_id: Uuid::new_v4(),
+            provider_data_approval_id,
+            provider_data_approval_version: 2,
+            provider_data_approval_class: ProviderApprovalClass::SensitiveDataApproved,
+            execution_environment_class: ProviderExecutionEnvironmentClass::ExternalManaged,
             model_id: Uuid::new_v4(),
             provider: "openai".to_owned(),
             account_label: "Campus account".to_owned(),
             provider_model_id: "gpt-test".to_owned(),
             model_display_name: "GPT Test".to_owned(),
             context_window_tokens: Some(128_000),
+            max_output_tokens: Some(16_384),
             supports_tools: Some(true),
             readiness: RouteTargetReadiness::Ready,
         };
-        let value = serde_json::to_value(target).unwrap();
+        let value = serde_json::to_value(&target).unwrap();
         assert!(value.get("model_id").is_none());
+        assert!(value.get("provider_data_approval_id").is_none());
         assert_eq!(value["provider_model_id"], json!("gpt-test"));
+
+        let resolved = ResolvedAiRouteTarget::from_ready_projection(target.clone(), 7).unwrap();
+        assert_eq!(resolved.route_target_id(), target.id);
+        assert_eq!(resolved.priority(), target.priority);
+        assert_eq!(resolved.connection_id(), target.connection_id);
+        assert_eq!(resolved.provider_key(), target.provider);
+        assert_eq!(resolved.provider_model_id(), target.provider_model_id);
+        assert_eq!(resolved.max_output_tokens(), 16_384);
+        assert_eq!(resolved.expected_credential_version(), 7);
+        assert_eq!(resolved.model_snapshot_id(), target.model_id);
+        let value = serde_json::to_value(resolved).unwrap();
+        assert!(value.get("model_id").is_none());
+        assert!(value.get("expected_credential_version").is_none());
+        assert_eq!(value["max_output_tokens"], json!(16_384));
+
+        assert!(ResolvedAiRouteTarget::from_ready_projection(target.clone(), 0).is_none());
+        let mut missing_limits = target.clone();
+        missing_limits.max_output_tokens = None;
+        assert!(ResolvedAiRouteTarget::from_ready_projection(missing_limits, 7).is_none());
+        let mut invalid_context_limit = target.clone();
+        invalid_context_limit.context_window_tokens = Some(0);
+        assert!(ResolvedAiRouteTarget::from_ready_projection(invalid_context_limit, 7).is_none());
+        let mut invalid_output_limit = target.clone();
+        invalid_output_limit.max_output_tokens = Some(-1);
+        assert!(ResolvedAiRouteTarget::from_ready_projection(invalid_output_limit, 7).is_none());
+        let mut unready = target;
+        unready.readiness = RouteTargetReadiness::StaleModel;
+        assert!(ResolvedAiRouteTarget::from_ready_projection(unready, 7).is_none());
     }
 
     #[test]
@@ -868,6 +1049,7 @@ mod tests {
     #[test]
     fn task_and_operation_enums_cover_every_stable_value() {
         for (value, task_class) in [
+            ("campus_conversation", TaskClass::CampusConversation),
             (
                 "campus_conversation_search",
                 TaskClass::CampusConversationSearch,
@@ -998,6 +1180,10 @@ mod tests {
             AiRoutingError::UnusableRoute {
                 route_set_id: Uuid::new_v4(),
                 reason: RouteUnusableReason::ConnectionUnavailable,
+            },
+            AiRoutingError::UnusableRoute {
+                route_set_id: Uuid::new_v4(),
+                reason: RouteUnusableReason::ModelLimitsUnavailable,
             },
             AiRoutingError::UnusableRoute {
                 route_set_id: Uuid::new_v4(),

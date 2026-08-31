@@ -394,10 +394,10 @@ async fn logout(
     state: web::Data<AppState>,
     body: web::Json<LogoutRequest>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    if let Some(refresh_token) = &body.refresh_token {
-        if let Err(e) = AuthOps::revoke_refresh_token(&state.db, refresh_token).await {
-            log::error!("Failed to revoke refresh token: {:?}", e);
-        }
+    if let Some(refresh_token) = &body.refresh_token
+        && let Err(e) = AuthOps::revoke_refresh_token(&state.db, refresh_token).await
+    {
+        log::error!("Failed to revoke refresh token: {:?}", e);
     }
 
     Ok(HttpResponse::Ok().json(ApiResponse::from_status(

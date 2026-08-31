@@ -16,6 +16,10 @@ pub struct UserOps;
 
 impl UserOps {
     /// List users with pagination and filtering, scoped to a tenant
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the query boundary keeps independently optional filters explicit"
+    )]
     pub async fn list_users(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -144,6 +148,10 @@ impl UserOps {
     }
 
     /// Create a new user within a tenant
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the service boundary mirrors the validated user creation fields"
+    )]
     pub async fn create_user(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -179,6 +187,10 @@ impl UserOps {
     }
 
     /// Update user, scoped to a tenant
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the service boundary mirrors the independently optional user update fields"
+    )]
     pub async fn update_user(
         pool: &PgPool,
         tenant_id: Uuid,

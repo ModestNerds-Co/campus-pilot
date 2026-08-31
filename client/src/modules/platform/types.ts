@@ -15,6 +15,7 @@ export interface ModuleDefinition {
   permission_namespace: string;
   core: boolean;
   stage: "available" | "foundation" | "planned";
+  dependencies: string[];
   permissions: PermissionDefinition[];
 }
 

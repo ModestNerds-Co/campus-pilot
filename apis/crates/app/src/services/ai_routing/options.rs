@@ -18,6 +18,8 @@ pub(crate) struct RoutingTargetOption {
     pub model_display_name: String,
     pub context_window_tokens: Option<i64>,
     pub supports_tools: Option<bool>,
+    pub provider_data_approval_class: String,
+    pub execution_environment_class: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -40,10 +42,9 @@ pub(crate) async fn load_routing_options(
 ) -> Result<RoutingOptions, ServiceError> {
     let connections = provider_ops.list_connections(tenant_id).await?;
     let mut targets = Vec::new();
-    for connection in connections
-        .into_iter()
-        .filter(|connection| connection.status == "ready")
-    {
+    for connection in connections.into_iter().filter(|connection| {
+        connection.status == "ready" && connection.provider_data_approval_class != "unapproved"
+    }) {
         let snapshot = provider_ops.list_models(tenant_id, connection.id).await?;
         targets.extend(
             snapshot
@@ -58,6 +59,8 @@ pub(crate) async fn load_routing_options(
                     model_display_name: model.display_name,
                     context_window_tokens: model.context_window_tokens,
                     supports_tools: model.supports_tools,
+                    provider_data_approval_class: connection.provider_data_approval_class.clone(),
+                    execution_environment_class: connection.execution_environment_class.clone(),
                 }),
         );
     }
@@ -101,6 +104,8 @@ mod tests {
             model_display_name: "GPT-5".to_owned(),
             context_window_tokens: Some(128_000),
             supports_tools: Some(true),
+            provider_data_approval_class: "sensitive_data_approved".to_owned(),
+            execution_environment_class: "external_managed".to_owned(),
         })
         .unwrap_or_else(|_| unreachable!());
         let object = value.as_object().unwrap_or_else(|| unreachable!());

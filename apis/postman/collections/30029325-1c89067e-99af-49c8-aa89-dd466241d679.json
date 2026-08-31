@@ -5079,6 +5079,35 @@
           }
         },
         {
+          "name": "Set Provider Data Approval",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval_class\": \"sensitive_data_approved\",\n  \"expected_approval_version\": {{ai_provider_data_approval_version}},\n  \"change_reason\": \"Approved for campus Agent workloads.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/ai/connections/{{ai_provider_connection_id}}/data-approval",
+            "description": "Appends an audited provider data-approval version. This is a direct human workflow and existing routes become stale."
+          }
+        },
+        {
           "name": "Test Provider Connection",
           "request": {
             "method": "POST",
@@ -5363,6 +5392,11 @@
     },
     {
       "key": "ai_provider_connection_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "ai_provider_data_approval_version",
       "value": "1",
       "type": "default"
     },

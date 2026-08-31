@@ -8,6 +8,8 @@ pub mod attachment_file;
 pub mod entitlements;
 pub mod operation_catalog;
 pub mod permissions;
+pub mod provider_data;
+pub mod record_scope;
 pub mod roles;
 pub mod status_info;
 pub mod tenant;
@@ -28,6 +30,15 @@ pub use operation_catalog::{
     routed_operation_for_route,
 };
 pub use permissions::RequirePermission;
+pub use provider_data::{
+    ProviderApprovalClass, ProviderApprovalClassParseError, ProviderDataClass,
+    ProviderDataClassParseError, ProviderDataEligibilityError, ProviderExecutionEnvironmentClass,
+    ProviderExecutionEnvironmentClassParseError, evaluate_provider_data_eligibility,
+};
+pub use record_scope::{
+    EffectiveRecordScope, RecordScopeFamilyKey, RecordScopeFamilyKeyError, RecordScopeGrant,
+    RecordScopeGrants, RecordScopeKind, RecordScopeKindError,
+};
 pub use roles::Roles;
 pub use status_info::{StatusInfo, status_meaning};
 pub use tenant::TenantId;

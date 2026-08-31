@@ -12,7 +12,8 @@ use cp_agent::{
 use cp_assets_inventory::{
     AssetStatus, GoodsReceiptAllocationOps, GoodsReceiptAllocationResponse, ItemOps, ItemResponse,
     StockBalanceOps, StockBalanceResponse, StockMovementOps, StockMovementResponse,
-    StockMovementSummaryResponse, StoreOps, StoreResponse,
+    StockMovementSummaryResponse, StockRequestCandidateOps, StockRequestOps, StoreOps,
+    StoreResponse,
 };
 use cp_common::PaginationMeta;
 use serde::Deserialize;
@@ -587,6 +588,318 @@ impl Capability for GoodsReceiptAllocationsListCapability {
                 .collect::<Vec<_>>(),
             "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
         }))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct StockRequestCandidatesInput {
+    search: Option<String>,
+    department_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) enum StockRequestCandidateKind {
+    Requesters,
+    Departments,
+}
+
+impl StockRequestCandidateKind {
+    pub(super) const fn operation_key(self) -> &'static str {
+        match self {
+            Self::Requesters => "assets_inventory.requester_candidates.list",
+            Self::Departments => "assets_inventory.department_candidates.list",
+        }
+    }
+}
+
+pub(super) struct StockRequestCandidatesCapability {
+    pool: PgPool,
+    kind: StockRequestCandidateKind,
+    descriptor: CapabilityDescriptor,
+}
+
+impl StockRequestCandidatesCapability {
+    pub(super) fn new(pool: PgPool, kind: StockRequestCandidateKind) -> Self {
+        let (title, description, resource) = match kind {
+            StockRequestCandidateKind::Requesters => (
+                "List stock-request employees",
+                "Returns bounded active employee references available to the stock-request workflow.",
+                "assets_inventory.stock_request_requesters",
+            ),
+            StockRequestCandidateKind::Departments => (
+                "List stock-request departments",
+                "Returns bounded active department references available to the stock-request workflow.",
+                "assets_inventory.stock_request_departments",
+            ),
+        };
+        let output_schema = match kind {
+            StockRequestCandidateKind::Requesters => {
+                json!({ "employees": { "type": "array" } })
+            }
+            StockRequestCandidateKind::Departments => {
+                json!({ "departments": { "type": "array" } })
+            }
+        };
+        Self {
+            pool,
+            kind,
+            descriptor: read_descriptor(
+                kind.operation_key(),
+                title,
+                description,
+                json!({
+                    "search": search_schema(),
+                    "department_id": nullable_uuid_schema()
+                }),
+                output_schema,
+                DataSensitivity::Sensitive,
+                resource,
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for StockRequestCandidatesCapability {
+    type Input = StockRequestCandidatesInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        filtered_resource_scope([("hr_department", input.department_id)])
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let tenant_id = context.principal().tenant_id();
+        match self.kind {
+            StockRequestCandidateKind::Requesters => {
+                let response = StockRequestCandidateOps::requesters(
+                    &self.pool,
+                    tenant_id,
+                    trimmed(input.search.as_deref()),
+                    input.department_id,
+                )
+                .await
+                .map_err(|_| dependency_failure("Stock-request employees could not be loaded."))?;
+                serde_json::to_value(response).map_err(|_| {
+                    dependency_failure("Stock-request employees could not be projected.")
+                })
+            }
+            StockRequestCandidateKind::Departments => {
+                let response = StockRequestCandidateOps::departments(
+                    &self.pool,
+                    tenant_id,
+                    trimmed(input.search.as_deref()),
+                )
+                .await
+                .map_err(|_| {
+                    dependency_failure("Stock-request departments could not be loaded.")
+                })?;
+                serde_json::to_value(response).map_err(|_| {
+                    dependency_failure("Stock-request departments could not be projected.")
+                })
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct StockRequestsListInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    search: Option<String>,
+    status: Option<String>,
+    requester_employee_id: Option<Uuid>,
+    department_id: Option<Uuid>,
+}
+
+pub(super) struct StockRequestsListCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl StockRequestsListCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "assets_inventory.stock_requests.list",
+                "List stock requests",
+                "Returns a bounded stock-request worklist with current quantities and workflow states.",
+                json!({
+                    "page": page_schema(),
+                    "per_page": per_page_schema(),
+                    "search": search_schema(),
+                    "status": { "type": ["string", "null"], "maxLength": 40 },
+                    "requester_employee_id": nullable_uuid_schema(),
+                    "department_id": nullable_uuid_schema()
+                }),
+                json!({
+                    "requests": { "type": "array" },
+                    "pagination": { "type": "object" }
+                }),
+                DataSensitivity::Sensitive,
+                "assets_inventory.stock_requests",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for StockRequestsListCapability {
+    type Input = StockRequestsListInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        filtered_resource_scope([
+            ("hr_employee", input.requester_employee_id),
+            ("hr_department", input.department_id),
+        ])
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let (page, per_page) = bounded_page(input.page, input.per_page);
+        let (response, total) = StockRequestOps::list(
+            &self.pool,
+            context.principal().tenant_id(),
+            page,
+            per_page,
+            trimmed(input.search.as_deref()),
+            trimmed(input.status.as_deref()),
+            input.requester_employee_id,
+            input.department_id,
+        )
+        .await
+        .map_err(|_| dependency_failure("Stock requests could not be loaded."))?;
+        Ok(json!({
+            "requests": response.requests,
+            "pagination": PaginationMeta::new(page as u32, per_page as u32, total)
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) enum StockRequestReadKind {
+    Request,
+    FulfilmentPreview,
+}
+
+impl StockRequestReadKind {
+    pub(super) const fn operation_key(self) -> &'static str {
+        match self {
+            Self::Request => "assets_inventory.stock_requests.read",
+            Self::FulfilmentPreview => "assets_inventory.stock_requests.fulfilment_preview.read",
+        }
+    }
+}
+
+pub(super) struct StockRequestReadCapability {
+    pool: PgPool,
+    kind: StockRequestReadKind,
+    descriptor: CapabilityDescriptor,
+}
+
+impl StockRequestReadCapability {
+    pub(super) fn new(pool: PgPool, kind: StockRequestReadKind) -> Self {
+        let (title, description) = match kind {
+            StockRequestReadKind::Request => (
+                "Read stock request",
+                "Returns one stock request with its lines, status history, and fulfilments.",
+            ),
+            StockRequestReadKind::FulfilmentPreview => (
+                "Read stock-request fulfilment preview",
+                "Returns one approved request with current positive store balances for its remaining lines.",
+            ),
+        };
+        let output_schema = match kind {
+            StockRequestReadKind::Request => json!({ "record": { "type": "object" } }),
+            StockRequestReadKind::FulfilmentPreview => {
+                json!({ "preview": { "type": "object" } })
+            }
+        };
+        Self {
+            pool,
+            kind,
+            descriptor: read_descriptor(
+                kind.operation_key(),
+                title,
+                description,
+                json!({ "record_id": { "type": "string", "format": "uuid" } }),
+                output_schema,
+                DataSensitivity::Sensitive,
+                "assets_inventory.stock_requests",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for StockRequestReadCapability {
+    type Input = AssetsInventoryRecordInput;
+    type Output = Value;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("assets_inventory_stock_request", input.record_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let tenant_id = context.principal().tenant_id();
+        match self.kind {
+            StockRequestReadKind::Request => {
+                let record = StockRequestOps::get(&self.pool, tenant_id, input.record_id)
+                    .await
+                    .map_err(|_| dependency_failure("The stock request could not be loaded."))?
+                    .ok_or_else(|| {
+                        CapabilityExecutionError::new(
+                            CapabilityExecutionErrorCode::InvalidState,
+                            "The stock request was not found.",
+                        )
+                    })?;
+                Ok(json!({ "record": record }))
+            }
+            StockRequestReadKind::FulfilmentPreview => {
+                let preview =
+                    StockRequestOps::fulfilment_preview(&self.pool, tenant_id, input.record_id)
+                        .await
+                        .map_err(|_| {
+                            dependency_failure(
+                                "The stock-request fulfilment preview could not be loaded.",
+                            )
+                        })?
+                        .ok_or_else(|| {
+                            CapabilityExecutionError::new(
+                                CapabilityExecutionErrorCode::InvalidState,
+                                "The stock request was not found.",
+                            )
+                        })?;
+                Ok(json!({ "preview": preview }))
+            }
+        }
     }
 }
 

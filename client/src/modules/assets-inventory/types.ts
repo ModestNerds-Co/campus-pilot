@@ -18,6 +18,8 @@ export interface ApiEnvelope<T> {
   data: T | null;
   pagination: PaginationMeta | null;
   issues: Array<string | { detail?: string }> | null;
+  /** Transport status retained for conflict and not-found UI without leaking Axios. */
+  http_status?: number;
 }
 
 export interface ListParams {

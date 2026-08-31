@@ -38,7 +38,9 @@ import { Route as AdminFinanceRouteImport } from './routes/admin/finance'
 import { Route as AdminFeesRouteImport } from './routes/admin/fees'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin/departments'
 import { Route as AdminClassesRouteImport } from './routes/admin/classes'
+import { Route as ModulesAgentIndexRouteImport } from './routes/modules/agent/index'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
+import { Route as AdminAgentIndexRouteImport } from './routes/admin/agent/index'
 import { Route as ModulesSisSettingsRouteImport } from './routes/modules/sis/settings'
 import { Route as ModulesSisLearnersRouteImport } from './routes/modules/sis/learners'
 import { Route as ModulesSisImportsRouteImport } from './routes/modules/sis/imports'
@@ -70,9 +72,11 @@ import { Route as ModulesFeesFeeStructuresRouteImport } from './routes/modules/f
 import { Route as ModulesFeesBillingAccountsRouteImport } from './routes/modules/fees/billing-accounts'
 import { Route as ModulesAssetsInventoryStoresRouteImport } from './routes/modules/assets-inventory/stores'
 import { Route as ModulesAssetsInventoryStockRouteImport } from './routes/modules/assets-inventory/stock'
+import { Route as ModulesAssetsInventoryRequestsRouteImport } from './routes/modules/assets-inventory/requests'
 import { Route as ModulesAssetsInventoryProcurementReceiptsRouteImport } from './routes/modules/assets-inventory/procurement-receipts'
 import { Route as ModulesAssetsInventoryMovementsRouteImport } from './routes/modules/assets-inventory/movements'
 import { Route as ModulesAssetsInventoryItemsRouteImport } from './routes/modules/assets-inventory/items'
+import { Route as ModulesAgentUsageRouteImport } from './routes/modules/agent/usage'
 import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
@@ -83,13 +87,18 @@ import { Route as ModulesAcademicsAssessmentsRouteImport } from './routes/module
 import { Route as ModulesAcademicsAcademicYearsRouteImport } from './routes/modules/academics/academic-years'
 import { Route as AdminFleetDriversRouteImport } from './routes/admin/fleet/drivers'
 import { Route as AdminFleetDailyLogRouteImport } from './routes/admin/fleet/daily-log'
+import { Route as AdminAgentUsageRouteImport } from './routes/admin/agent/usage'
+import { Route as AdminAgentRunsRouteImport } from './routes/admin/agent/runs'
 import { Route as AdminAgentRoutingRouteImport } from './routes/admin/agent/routing'
 import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
+import { Route as AdminAgentCapabilitiesRouteImport } from './routes/admin/agent/capabilities'
 import { Route as ModulesSisLearnersLearnerIdRouteImport } from './routes/modules/sis/learners_.$learnerId'
 import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './routes/modules/sis/applications_.$applicationId'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
+import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './routes/modules/assets-inventory/requests_.$requestId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
+import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
 import { Route as ModulesAcademicsClassesClassIdRouteImport } from './routes/modules/academics/classes_.$classId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
@@ -237,9 +246,19 @@ const AdminClassesRoute = AdminClassesRouteImport.update({
   path: '/classes',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesAgentIndexRoute = ModulesAgentIndexRouteImport.update({
+  id: '/agent/',
+  path: '/agent/',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const AdminFleetIndexRoute = AdminFleetIndexRouteImport.update({
   id: '/fleet/',
   path: '/fleet/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAgentIndexRoute = AdminAgentIndexRouteImport.update({
+  id: '/agent/',
+  path: '/agent/',
   getParentRoute: () => AdminRoute,
 } as any)
 const ModulesSisSettingsRoute = ModulesSisSettingsRouteImport.update({
@@ -415,6 +434,12 @@ const ModulesAssetsInventoryStockRoute =
     path: '/assets-inventory/stock',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAssetsInventoryRequestsRoute =
+  ModulesAssetsInventoryRequestsRouteImport.update({
+    id: '/assets-inventory/requests',
+    path: '/assets-inventory/requests',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryProcurementReceiptsRoute =
   ModulesAssetsInventoryProcurementReceiptsRouteImport.update({
     id: '/assets-inventory/procurement-receipts',
@@ -433,6 +458,11 @@ const ModulesAssetsInventoryItemsRoute =
     path: '/assets-inventory/items',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAgentUsageRoute = ModulesAgentUsageRouteImport.update({
+  id: '/agent/usage',
+  path: '/agent/usage',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesAcademicsTermsRoute = ModulesAcademicsTermsRouteImport.update({
   id: '/academics/terms',
   path: '/academics/terms',
@@ -489,6 +519,16 @@ const AdminFleetDailyLogRoute = AdminFleetDailyLogRouteImport.update({
   path: '/fleet/daily-log',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAgentUsageRoute = AdminAgentUsageRouteImport.update({
+  id: '/agent/usage',
+  path: '/agent/usage',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAgentRunsRoute = AdminAgentRunsRouteImport.update({
+  id: '/agent/runs',
+  path: '/agent/runs',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAgentRoutingRoute = AdminAgentRoutingRouteImport.update({
   id: '/agent/routing',
   path: '/agent/routing',
@@ -497,6 +537,11 @@ const AdminAgentRoutingRoute = AdminAgentRoutingRouteImport.update({
 const AdminAgentProvidersRoute = AdminAgentProvidersRouteImport.update({
   id: '/agent/providers',
   path: '/agent/providers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAgentCapabilitiesRoute = AdminAgentCapabilitiesRouteImport.update({
+  id: '/agent/capabilities',
+  path: '/agent/capabilities',
   getParentRoute: () => AdminRoute,
 } as any)
 const ModulesSisLearnersLearnerIdRoute =
@@ -523,10 +568,22 @@ const ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute =
     path: '/procurement/purchase-orders/$purchaseOrderId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAssetsInventoryRequestsRequestIdRoute =
+  ModulesAssetsInventoryRequestsRequestIdRouteImport.update({
+    id: '/assets-inventory/requests_/$requestId',
+    path: '/assets-inventory/requests/$requestId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryMovementsMovementIdRoute =
   ModulesAssetsInventoryMovementsMovementIdRouteImport.update({
     id: '/assets-inventory/movements_/$movementId',
     path: '/assets-inventory/movements/$movementId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAgentSessionsSessionIdRoute =
+  ModulesAgentSessionsSessionIdRouteImport.update({
+    id: '/agent/sessions/$sessionId',
+    path: '/agent/sessions/$sessionId',
     getParentRoute: () => ModulesRoute,
   } as any)
 const ModulesAcademicsClassesClassIdRoute =
@@ -566,8 +623,11 @@ export interface FileRoutesByFullPath {
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/agent/capabilities': typeof AdminAgentCapabilitiesRoute
   '/admin/agent/providers': typeof AdminAgentProvidersRoute
   '/admin/agent/routing': typeof AdminAgentRoutingRoute
+  '/admin/agent/runs': typeof AdminAgentRunsRoute
+  '/admin/agent/usage': typeof AdminAgentUsageRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -578,9 +638,11 @@ export interface FileRoutesByFullPath {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/agent/usage': typeof ModulesAgentUsageRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
   '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
   '/modules/assets-inventory/procurement-receipts': typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
@@ -612,9 +674,13 @@ export interface FileRoutesByFullPath {
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
+  '/admin/agent': typeof AdminAgentIndexRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/agent': typeof ModulesAgentIndexRoute
   '/modules/academics/classes/$classId': typeof ModulesAcademicsClassesClassIdRoute
+  '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
+  '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -649,8 +715,11 @@ export interface FileRoutesByTo {
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/agent/capabilities': typeof AdminAgentCapabilitiesRoute
   '/admin/agent/providers': typeof AdminAgentProvidersRoute
   '/admin/agent/routing': typeof AdminAgentRoutingRoute
+  '/admin/agent/runs': typeof AdminAgentRunsRoute
+  '/admin/agent/usage': typeof AdminAgentUsageRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -661,9 +730,11 @@ export interface FileRoutesByTo {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/agent/usage': typeof ModulesAgentUsageRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
   '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
   '/modules/assets-inventory/procurement-receipts': typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
@@ -695,9 +766,13 @@ export interface FileRoutesByTo {
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
+  '/admin/agent': typeof AdminAgentIndexRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
+  '/modules/agent': typeof ModulesAgentIndexRoute
   '/modules/academics/classes/$classId': typeof ModulesAcademicsClassesClassIdRoute
+  '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
+  '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -734,8 +809,11 @@ export interface FileRoutesById {
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/agent/capabilities': typeof AdminAgentCapabilitiesRoute
   '/admin/agent/providers': typeof AdminAgentProvidersRoute
   '/admin/agent/routing': typeof AdminAgentRoutingRoute
+  '/admin/agent/runs': typeof AdminAgentRunsRoute
+  '/admin/agent/usage': typeof AdminAgentUsageRoute
   '/admin/fleet/daily-log': typeof AdminFleetDailyLogRoute
   '/admin/fleet/drivers': typeof AdminFleetDriversRoute
   '/modules/academics/academic-years': typeof ModulesAcademicsAcademicYearsRoute
@@ -746,9 +824,11 @@ export interface FileRoutesById {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/agent/usage': typeof ModulesAgentUsageRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
   '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
   '/modules/assets-inventory/procurement-receipts': typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
@@ -780,9 +860,13 @@ export interface FileRoutesById {
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
+  '/admin/agent/': typeof AdminAgentIndexRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
+  '/modules/agent/': typeof ModulesAgentIndexRoute
   '/modules/academics/classes_/$classId': typeof ModulesAcademicsClassesClassIdRoute
+  '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
+  '/modules/assets-inventory/requests_/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications_/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -820,8 +904,11 @@ export interface FileRouteTypes {
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
+    | '/admin/agent/capabilities'
     | '/admin/agent/providers'
     | '/admin/agent/routing'
+    | '/admin/agent/runs'
+    | '/admin/agent/usage'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -832,9 +919,11 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/agent/usage'
     | '/modules/assets-inventory/items'
     | '/modules/assets-inventory/movements'
     | '/modules/assets-inventory/procurement-receipts'
+    | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
     | '/modules/fees/billing-accounts'
@@ -866,9 +955,13 @@ export interface FileRouteTypes {
     | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/modules/sis/settings'
+    | '/admin/agent'
     | '/admin/fleet'
+    | '/modules/agent'
     | '/modules/academics/classes/$classId'
+    | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
+    | '/modules/assets-inventory/requests/$requestId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
@@ -903,8 +996,11 @@ export interface FileRouteTypes {
     | '/setup/admin'
     | '/setup/school'
     | '/admin'
+    | '/admin/agent/capabilities'
     | '/admin/agent/providers'
     | '/admin/agent/routing'
+    | '/admin/agent/runs'
+    | '/admin/agent/usage'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -915,9 +1011,11 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/agent/usage'
     | '/modules/assets-inventory/items'
     | '/modules/assets-inventory/movements'
     | '/modules/assets-inventory/procurement-receipts'
+    | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
     | '/modules/fees/billing-accounts'
@@ -949,9 +1047,13 @@ export interface FileRouteTypes {
     | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/modules/sis/settings'
+    | '/admin/agent'
     | '/admin/fleet'
+    | '/modules/agent'
     | '/modules/academics/classes/$classId'
+    | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
+    | '/modules/assets-inventory/requests/$requestId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
@@ -987,8 +1089,11 @@ export interface FileRouteTypes {
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
+    | '/admin/agent/capabilities'
     | '/admin/agent/providers'
     | '/admin/agent/routing'
+    | '/admin/agent/runs'
+    | '/admin/agent/usage'
     | '/admin/fleet/daily-log'
     | '/admin/fleet/drivers'
     | '/modules/academics/academic-years'
@@ -999,9 +1104,11 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/agent/usage'
     | '/modules/assets-inventory/items'
     | '/modules/assets-inventory/movements'
     | '/modules/assets-inventory/procurement-receipts'
+    | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
     | '/modules/fees/billing-accounts'
@@ -1033,9 +1140,13 @@ export interface FileRouteTypes {
     | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/modules/sis/settings'
+    | '/admin/agent/'
     | '/admin/fleet/'
+    | '/modules/agent/'
     | '/modules/academics/classes_/$classId'
+    | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements_/$movementId'
+    | '/modules/assets-inventory/requests_/$requestId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
     | '/modules/sis/applications_/$applicationId'
@@ -1260,11 +1371,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClassesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/agent/': {
+      id: '/modules/agent/'
+      path: '/agent'
+      fullPath: '/modules/agent'
+      preLoaderRoute: typeof ModulesAgentIndexRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/admin/fleet/': {
       id: '/admin/fleet/'
       path: '/fleet'
       fullPath: '/admin/fleet'
       preLoaderRoute: typeof AdminFleetIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/agent/': {
+      id: '/admin/agent/'
+      path: '/agent'
+      fullPath: '/admin/agent'
+      preLoaderRoute: typeof AdminAgentIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/modules/sis/settings': {
@@ -1484,6 +1609,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAssetsInventoryStockRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/assets-inventory/requests': {
+      id: '/modules/assets-inventory/requests'
+      path: '/assets-inventory/requests'
+      fullPath: '/modules/assets-inventory/requests'
+      preLoaderRoute: typeof ModulesAssetsInventoryRequestsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/procurement-receipts': {
       id: '/modules/assets-inventory/procurement-receipts'
       path: '/assets-inventory/procurement-receipts'
@@ -1503,6 +1635,13 @@ declare module '@tanstack/react-router' {
       path: '/assets-inventory/items'
       fullPath: '/modules/assets-inventory/items'
       preLoaderRoute: typeof ModulesAssetsInventoryItemsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/agent/usage': {
+      id: '/modules/agent/usage'
+      path: '/agent/usage'
+      fullPath: '/modules/agent/usage'
+      preLoaderRoute: typeof ModulesAgentUsageRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/academics/terms': {
@@ -1575,6 +1714,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFleetDailyLogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/agent/usage': {
+      id: '/admin/agent/usage'
+      path: '/agent/usage'
+      fullPath: '/admin/agent/usage'
+      preLoaderRoute: typeof AdminAgentUsageRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/agent/runs': {
+      id: '/admin/agent/runs'
+      path: '/agent/runs'
+      fullPath: '/admin/agent/runs'
+      preLoaderRoute: typeof AdminAgentRunsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/agent/routing': {
       id: '/admin/agent/routing'
       path: '/agent/routing'
@@ -1587,6 +1740,13 @@ declare module '@tanstack/react-router' {
       path: '/agent/providers'
       fullPath: '/admin/agent/providers'
       preLoaderRoute: typeof AdminAgentProvidersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/agent/capabilities': {
+      id: '/admin/agent/capabilities'
+      path: '/agent/capabilities'
+      fullPath: '/admin/agent/capabilities'
+      preLoaderRoute: typeof AdminAgentCapabilitiesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/modules/sis/learners_/$learnerId': {
@@ -1617,11 +1777,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/assets-inventory/requests_/$requestId': {
+      id: '/modules/assets-inventory/requests_/$requestId'
+      path: '/assets-inventory/requests/$requestId'
+      fullPath: '/modules/assets-inventory/requests/$requestId'
+      preLoaderRoute: typeof ModulesAssetsInventoryRequestsRequestIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/movements_/$movementId': {
       id: '/modules/assets-inventory/movements_/$movementId'
       path: '/assets-inventory/movements/$movementId'
       fullPath: '/modules/assets-inventory/movements/$movementId'
       preLoaderRoute: typeof ModulesAssetsInventoryMovementsMovementIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/agent/sessions/$sessionId': {
+      id: '/modules/agent/sessions/$sessionId'
+      path: '/agent/sessions/$sessionId'
+      fullPath: '/modules/agent/sessions/$sessionId'
+      preLoaderRoute: typeof ModulesAgentSessionsSessionIdRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/academics/classes_/$classId': {
@@ -1653,10 +1827,14 @@ interface AdminRouteChildren {
   AdminSubjectsRoute: typeof AdminSubjectsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminAgentCapabilitiesRoute: typeof AdminAgentCapabilitiesRoute
   AdminAgentProvidersRoute: typeof AdminAgentProvidersRoute
   AdminAgentRoutingRoute: typeof AdminAgentRoutingRoute
+  AdminAgentRunsRoute: typeof AdminAgentRunsRoute
+  AdminAgentUsageRoute: typeof AdminAgentUsageRoute
   AdminFleetDailyLogRoute: typeof AdminFleetDailyLogRoute
   AdminFleetDriversRoute: typeof AdminFleetDriversRoute
+  AdminAgentIndexRoute: typeof AdminAgentIndexRoute
   AdminFleetIndexRoute: typeof AdminFleetIndexRoute
 }
 
@@ -1679,10 +1857,14 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSubjectsRoute: AdminSubjectsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminAgentCapabilitiesRoute: AdminAgentCapabilitiesRoute,
   AdminAgentProvidersRoute: AdminAgentProvidersRoute,
   AdminAgentRoutingRoute: AdminAgentRoutingRoute,
+  AdminAgentRunsRoute: AdminAgentRunsRoute,
+  AdminAgentUsageRoute: AdminAgentUsageRoute,
   AdminFleetDailyLogRoute: AdminFleetDailyLogRoute,
   AdminFleetDriversRoute: AdminFleetDriversRoute,
+  AdminAgentIndexRoute: AdminAgentIndexRoute,
   AdminFleetIndexRoute: AdminFleetIndexRoute,
 }
 
@@ -1698,9 +1880,11 @@ interface ModulesRouteChildren {
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
   ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
+  ModulesAgentUsageRoute: typeof ModulesAgentUsageRoute
   ModulesAssetsInventoryItemsRoute: typeof ModulesAssetsInventoryItemsRoute
   ModulesAssetsInventoryMovementsRoute: typeof ModulesAssetsInventoryMovementsRoute
   ModulesAssetsInventoryProcurementReceiptsRoute: typeof ModulesAssetsInventoryProcurementReceiptsRoute
+  ModulesAssetsInventoryRequestsRoute: typeof ModulesAssetsInventoryRequestsRoute
   ModulesAssetsInventoryStockRoute: typeof ModulesAssetsInventoryStockRoute
   ModulesAssetsInventoryStoresRoute: typeof ModulesAssetsInventoryStoresRoute
   ModulesFeesBillingAccountsRoute: typeof ModulesFeesBillingAccountsRoute
@@ -1732,8 +1916,11 @@ interface ModulesRouteChildren {
   ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
   ModulesSisSettingsRoute: typeof ModulesSisSettingsRoute
+  ModulesAgentIndexRoute: typeof ModulesAgentIndexRoute
   ModulesAcademicsClassesClassIdRoute: typeof ModulesAcademicsClassesClassIdRoute
+  ModulesAgentSessionsSessionIdRoute: typeof ModulesAgentSessionsSessionIdRoute
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
+  ModulesAssetsInventoryRequestsRequestIdRoute: typeof ModulesAssetsInventoryRequestsRequestIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
   ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
@@ -1751,10 +1938,12 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsTeachingAssignmentsRoute:
     ModulesAcademicsTeachingAssignmentsRoute,
   ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
+  ModulesAgentUsageRoute: ModulesAgentUsageRoute,
   ModulesAssetsInventoryItemsRoute: ModulesAssetsInventoryItemsRoute,
   ModulesAssetsInventoryMovementsRoute: ModulesAssetsInventoryMovementsRoute,
   ModulesAssetsInventoryProcurementReceiptsRoute:
     ModulesAssetsInventoryProcurementReceiptsRoute,
+  ModulesAssetsInventoryRequestsRoute: ModulesAssetsInventoryRequestsRoute,
   ModulesAssetsInventoryStockRoute: ModulesAssetsInventoryStockRoute,
   ModulesAssetsInventoryStoresRoute: ModulesAssetsInventoryStoresRoute,
   ModulesFeesBillingAccountsRoute: ModulesFeesBillingAccountsRoute,
@@ -1786,9 +1975,13 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
   ModulesSisSettingsRoute: ModulesSisSettingsRoute,
+  ModulesAgentIndexRoute: ModulesAgentIndexRoute,
   ModulesAcademicsClassesClassIdRoute: ModulesAcademicsClassesClassIdRoute,
+  ModulesAgentSessionsSessionIdRoute: ModulesAgentSessionsSessionIdRoute,
   ModulesAssetsInventoryMovementsMovementIdRoute:
     ModulesAssetsInventoryMovementsMovementIdRoute,
+  ModulesAssetsInventoryRequestsRequestIdRoute:
+    ModulesAssetsInventoryRequestsRequestIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:

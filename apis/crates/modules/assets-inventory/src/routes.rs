@@ -29,6 +29,12 @@ use crate::stock_ops::{
     GoodsReceiptAllocationOps, StockBalanceOps, StockMovementOps,
     bounded_goods_receipt_allocation_page,
 };
+use crate::stock_request_dtos::{
+    ApproveStockRequest, CloseStockRequest, CreateStockRequest, FulfilStockRequest,
+    StockRequestCandidateQuery, StockRequestListQuery, StockRequestReasonCommand,
+    StockRequestVersionCommand, UpdateStockRequest,
+};
+use crate::stock_request_ops::{StockRequestCandidateOps, StockRequestOps};
 
 #[get("/items")]
 async fn list_items(
@@ -513,6 +519,329 @@ async fn allocate_goods_receipt(
     }
 }
 
+#[get("/stock-request-requesters")]
+async fn list_stock_requesters(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<StockRequestCandidateQuery>,
+) -> HttpResponse {
+    match StockRequestCandidateOps::requesters(
+        pool.get_ref(),
+        tenant_id(tenant),
+        query.search.as_deref(),
+        query.department_id,
+    )
+    .await
+    {
+        Ok(response) => ok(response),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/stock-request-departments")]
+async fn list_stock_request_departments(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<StockRequestCandidateQuery>,
+) -> HttpResponse {
+    match StockRequestCandidateOps::departments(
+        pool.get_ref(),
+        tenant_id(tenant),
+        query.search.as_deref(),
+    )
+    .await
+    {
+        Ok(response) => ok(response),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/stock-requests")]
+async fn list_stock_requests(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    query: web::Query<StockRequestListQuery>,
+) -> HttpResponse {
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match StockRequestOps::list(
+        pool.get_ref(),
+        tenant_id(tenant),
+        page,
+        per_page,
+        query.search.as_deref(),
+        query.status.as_deref(),
+        query.requester_employee_id,
+        query.department_id,
+    )
+    .await
+    {
+        Ok((requests, total)) => paginated(requests, page, per_page, total),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/stock-requests/{id}")]
+async fn read_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match StockRequestOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner()).await {
+        Ok(Some(request)) => ok(request),
+        Ok(None) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/stock-requests/{id}/fulfilment-preview")]
+async fn read_stock_request_fulfilment_preview(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    match StockRequestOps::fulfilment_preview(pool.get_ref(), tenant_id(tenant), path.into_inner())
+        .await
+    {
+        Ok(Some(preview)) => ok(preview),
+        Ok(None) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/stock-requests")]
+async fn create_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<CreateStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockRequestOps::create(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(request) => created(request),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[put("/stock-requests/{id}")]
+async fn update_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockRequestOps::update(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(Some(request)) => ok(request),
+        Ok(None) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[delete("/stock-requests/{id}")]
+async fn delete_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<StockRequestVersionCommand>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockRequestOps::delete(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(true) => ok(serde_json::json!({ "deleted": true })),
+        Ok(false) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+macro_rules! version_transition_handler {
+    ($name:ident, $path:literal, $method:ident) => {
+        #[post($path)]
+        async fn $name(
+            pool: web::Data<PgPool>,
+            tenant: web::ReqData<TenantId>,
+            actor: web::ReqData<AuditActor>,
+            request_context: web::ReqData<RequestContext>,
+            path: web::Path<Uuid>,
+            body: web::Json<StockRequestVersionCommand>,
+        ) -> HttpResponse {
+            if let Some(response) = validation_response(&body.0) {
+                return response;
+            }
+            match StockRequestOps::$method(
+                pool.get_ref(),
+                tenant_id(tenant),
+                path.into_inner(),
+                actor.into_inner(),
+                request_context.into_inner(),
+                &body.0,
+            )
+            .await
+            {
+                Ok(Some(request)) => ok(request),
+                Ok(None) => not_found("Stock request"),
+                Err(error) => operation_error(error),
+            }
+        }
+    };
+}
+
+version_transition_handler!(submit_stock_request, "/stock-requests/{id}/submit", submit);
+
+#[post("/stock-requests/{id}/approve")]
+async fn approve_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ApproveStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockRequestOps::approve(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(Some(request)) => ok(request),
+        Ok(None) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+macro_rules! reason_transition_handler {
+    ($name:ident, $path:literal, $method:ident) => {
+        #[post($path)]
+        async fn $name(
+            pool: web::Data<PgPool>,
+            tenant: web::ReqData<TenantId>,
+            actor: web::ReqData<AuditActor>,
+            request_context: web::ReqData<RequestContext>,
+            path: web::Path<Uuid>,
+            body: web::Json<StockRequestReasonCommand>,
+        ) -> HttpResponse {
+            if let Some(response) = validation_response(&body.0) {
+                return response;
+            }
+            match StockRequestOps::$method(
+                pool.get_ref(),
+                tenant_id(tenant),
+                path.into_inner(),
+                actor.into_inner(),
+                request_context.into_inner(),
+                &body.0,
+            )
+            .await
+            {
+                Ok(Some(request)) => ok(request),
+                Ok(None) => not_found("Stock request"),
+                Err(error) => operation_error(error),
+            }
+        }
+    };
+}
+
+reason_transition_handler!(reject_stock_request, "/stock-requests/{id}/reject", reject);
+reason_transition_handler!(cancel_stock_request, "/stock-requests/{id}/cancel", cancel);
+
+#[post("/stock-requests/{id}/close")]
+async fn close_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CloseStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockRequestOps::close(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(Some(request)) => ok(request),
+        Ok(None) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/stock-requests/{id}/fulfilments")]
+async fn fulfil_stock_request(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<FulfilStockRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    match StockRequestOps::fulfil(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor.into_inner(),
+        request_context.into_inner(),
+        &body.0,
+    )
+    .await
+    {
+        Ok(Some(response)) => created(response),
+        Ok(None) => not_found("Stock request"),
+        Err(error) => operation_error(error),
+    }
+}
+
 fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
@@ -587,6 +916,7 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
     if database.is_some_and(|database| database.code().as_deref() == Some("23505"))
         || message.contains("changed since it was loaded")
         || message.contains("changed since the adjustment was counted")
+        || message.contains("changed since the fulfilment was prepared")
         || message.contains("already exists")
         || message.contains("already belongs")
         || message.contains("already been reversed")
@@ -646,7 +976,21 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(adjust_stock)
             .service(reverse_stock_movement)
             .service(list_goods_receipt_allocations)
-            .service(allocate_goods_receipt),
+            .service(allocate_goods_receipt)
+            .service(list_stock_requesters)
+            .service(list_stock_request_departments)
+            .service(list_stock_requests)
+            .service(read_stock_request)
+            .service(read_stock_request_fulfilment_preview)
+            .service(create_stock_request)
+            .service(update_stock_request)
+            .service(delete_stock_request)
+            .service(submit_stock_request)
+            .service(approve_stock_request)
+            .service(reject_stock_request)
+            .service(cancel_stock_request)
+            .service(close_stock_request)
+            .service(fulfil_stock_request),
     );
 }
 

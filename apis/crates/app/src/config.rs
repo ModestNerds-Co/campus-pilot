@@ -8,8 +8,10 @@
 
 use anyhow::{Context, Result, bail};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use cp_agent_runtime::ArtifactKeyring;
 use cp_ai_providers::{CredentialKeyring, ProviderHttpClient};
 use jsonwebtoken::DecodingKey;
+use serde::Deserialize;
 use std::{collections::BTreeMap, env};
 use urlencoding::encode;
 
@@ -21,6 +23,7 @@ pub struct Config {
     pub jwt: JwtConfig,
     pub license: LicenseConfig,
     pub ai_providers: AiProviderConfig,
+    pub agent: AgentConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +54,17 @@ pub struct AiProviderConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct AgentConfig {
+    pub artifact_keyring: Option<ArtifactKeyring>,
+}
+
+#[derive(Deserialize)]
+struct ConfiguredAgentArtifactKey {
+    version: i64,
+    key_base64: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct DatabaseConfig {
     pub url: String,
 }
@@ -73,6 +87,7 @@ impl Config {
         let jwt = JwtConfig::from_env()?;
         let license = LicenseConfig::from_env()?;
         let ai_providers = AiProviderConfig::from_env()?;
+        let agent = AgentConfig::from_env()?;
 
         Ok(Config {
             app,
@@ -81,7 +96,50 @@ impl Config {
             jwt,
             license,
             ai_providers,
+            agent,
         })
+    }
+}
+
+impl AgentConfig {
+    fn from_env() -> Result<Self> {
+        let configured_keys = env::var("AGENT_ARTIFACT_KEYS_JSON")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        let active_key_id = env::var("AGENT_ARTIFACT_ACTIVE_KEY_ID")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        let artifact_keyring =
+            agent_artifact_keyring(configured_keys.as_deref(), active_key_id.as_deref())?;
+        Ok(Self { artifact_keyring })
+    }
+}
+
+fn agent_artifact_keyring(
+    configured_keys: Option<&str>,
+    active_key_id: Option<&str>,
+) -> Result<Option<ArtifactKeyring>> {
+    match (configured_keys, active_key_id) {
+        (None, None) => Ok(None),
+        (Some(configured_keys), Some(active_key_id)) => {
+            let configured = serde_json::from_str::<BTreeMap<String, ConfiguredAgentArtifactKey>>(
+                configured_keys,
+            )
+            .context("AGENT_ARTIFACT_KEYS_JSON must be a JSON object")?;
+            let keys = configured
+                .into_iter()
+                .map(|(key_id, key)| (key_id, (key.version, key.key_base64)))
+                .collect();
+            ArtifactKeyring::from_base64(keys, active_key_id)
+                .context("Agent artifact keyring is invalid")
+                .map(Some)
+        }
+        (Some(_), None) => {
+            bail!("AGENT_ARTIFACT_ACTIVE_KEY_ID must be set with the Agent artifact keyring")
+        }
+        (None, Some(_)) => {
+            bail!("AGENT_ARTIFACT_KEYS_JSON must be set with the active key identifier")
+        }
     }
 }
 
@@ -360,5 +418,47 @@ mod ai_provider_tests {
         );
         assert!(ai_provider_credential_keyring(Some(&configured), Some("missing")).is_err());
         assert!(ai_provider_credential_keyring(Some("[]"), Some("production-1")).is_err());
+    }
+}
+
+#[cfg(test)]
+mod agent_artifact_tests {
+    use std::collections::BTreeMap;
+
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use serde_json::json;
+
+    use super::agent_artifact_keyring;
+
+    #[test]
+    fn artifact_keyring_is_optional_but_cannot_be_partially_configured() {
+        assert!(
+            agent_artifact_keyring(None, None)
+                .unwrap_or_else(|_| unreachable!())
+                .is_none()
+        );
+        assert!(agent_artifact_keyring(Some("{}"), None).is_err());
+        assert!(agent_artifact_keyring(None, Some("production-1")).is_err());
+    }
+
+    #[test]
+    fn artifact_keyring_requires_versioned_32_byte_active_keys() {
+        let configured = serde_json::to_string(&BTreeMap::from([(
+            "production-1",
+            json!({
+                "version": 1,
+                "key_base64": STANDARD.encode([7_u8; 32]),
+            }),
+        )]))
+        .unwrap_or_else(|_| unreachable!());
+        let keyring = agent_artifact_keyring(Some(&configured), Some("production-1"))
+            .unwrap_or_else(|_| unreachable!())
+            .unwrap_or_else(|| unreachable!());
+        assert!(keyring.contains_key("production-1", 1));
+        assert!(agent_artifact_keyring(Some(&configured), Some("missing")).is_err());
+
+        let zero_version = configured.replace("\"version\":1", "\"version\":0");
+        assert!(agent_artifact_keyring(Some(&zero_version), Some("production-1")).is_err());
+        assert!(agent_artifact_keyring(Some("[]"), Some("production-1")).is_err());
     }
 }

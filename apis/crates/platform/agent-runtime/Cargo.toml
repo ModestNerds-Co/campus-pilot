@@ -4,10 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cp-agent = { path = "../../agent" }
 cp-audit = { path = "../audit" }
+cp-common = { path = "../../common" }
+aes-gcm = "0.10"
+async-trait = "0.1.88"
+base64 = "0.21"
 chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 sqlx = { workspace = true }
 thiserror = "2"
 uuid = { workspace = true }

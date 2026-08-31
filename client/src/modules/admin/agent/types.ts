@@ -7,6 +7,11 @@ export type AiProviderKey = "openai" | "anthropic" | "openrouter";
 export type AiProviderAuthMethod = "api_key";
 export type AiProviderConnectionStatus = "untested" | "ready" | "error";
 export type AiProviderTestStatus = "succeeded" | "failed";
+export type AiProviderDataApprovalClass =
+  | "unapproved"
+  | "campus_approved"
+  | "sensitive_data_approved";
+export type AiProviderExecutionEnvironmentClass = "external_managed" | "installation_local";
 
 export interface ProviderCatalogEntry {
   key: AiProviderKey;
@@ -34,8 +39,24 @@ export interface AiProviderConnection {
   last_used_at: string | null;
   model_count: number;
   model_catalog_refreshed_at: string | null;
+  provider_data_approval_id: string;
+  provider_data_approval_version: number;
+  provider_data_approval_class: AiProviderDataApprovalClass;
+  execution_environment_class: AiProviderExecutionEnvironmentClass;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProviderDataApproval {
+  id: string;
+  connection_id: string;
+  approval_version: number;
+  approval_class: AiProviderDataApprovalClass;
+  execution_environment_class: AiProviderExecutionEnvironmentClass;
+  change_source: "system_default" | "administrator";
+  changed_by_name: string | null;
+  change_reason: string;
+  created_at: string;
 }
 
 export interface ProviderModel {
@@ -78,6 +99,12 @@ export interface UpdateProviderConnectionInput {
 export interface RotateProviderCredentialInput {
   api_key: string;
   expected_version: number;
+}
+
+export interface SetProviderDataApprovalInput {
+  approval_class: Exclude<AiProviderDataApprovalClass, "unapproved">;
+  expected_approval_version: number;
+  change_reason: string;
 }
 
 export type AiRouteScopeKind =

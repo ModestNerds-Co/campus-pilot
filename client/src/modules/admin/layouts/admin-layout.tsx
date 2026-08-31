@@ -6,7 +6,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
+  Activity,
+  BarChart3,
   Bot,
+  BrainCircuit,
   ChevronRight,
   Grid2X2,
   KeyRound,
@@ -26,6 +29,7 @@ import { useNavigationDrawer } from "@/hooks/use-navigation-drawer";
 import { ThemeToggle } from "../../../lib/theme";
 import { bootstrapService } from "../../configs";
 import type { SchoolConfiguration } from "../../configs/types";
+import { AgentWidget } from "@/modules/agent";
 import { useAuthStore } from "../../../stores/auth-store";
 import { PageChromeProvider, usePageChromeContext } from "./page-chrome";
 
@@ -68,6 +72,10 @@ const navigationGroups: NavGroup[] = [
   {
     label: "Agent management",
     items: [
+      { label: "Overview", href: "/admin/agent", permission: "agent_policy:view", module: "agent", icon: Bot },
+      { label: "Capabilities", href: "/admin/agent/capabilities", permission: "agent_policy:view", module: "agent", icon: BrainCircuit },
+      { label: "Usage", href: "/admin/agent/usage", permission: "agent_usage:view", module: "agent", icon: BarChart3 },
+      { label: "Runs and audit", href: "/admin/agent/runs", permission: "agent_audit:view", module: "agent", icon: Activity },
       { label: "AI providers", href: "/admin/agent/providers", permission: "ai_providers:view", module: "agent", icon: Bot },
       { label: "Routing", href: "/admin/agent/routing", permission: "ai_routing:view", module: "agent", icon: Waypoints },
     ],
@@ -247,6 +255,7 @@ const AdminLayoutShell: React.FC<AdminLayoutProps> = ({ children }) => {
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] p-3">
+          <AgentWidget context={{ label: "Administration", moduleKey: "administration", route: location.pathname }} />
           <ThemeToggle className="w-full" variant="sidebar" />
           <div className="mt-3 flex items-center gap-3 px-2">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold text-[var(--sidebar-foreground)]">

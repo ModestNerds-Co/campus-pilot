@@ -10,7 +10,7 @@ use sqlx::PgPool;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::types::{AuthenticatedAgentPrincipal, CapabilityResource};
+use crate::types::{AuthenticatedAgentPrincipal, CapabilityCallId, CapabilityResource};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BrokerAuditOutcome {
@@ -19,11 +19,11 @@ pub enum BrokerAuditOutcome {
     Denied,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BrokerAuditRecord {
     pub principal: AuthenticatedAgentPrincipal,
     pub request_context: RequestContext,
-    pub capability_call_id: Uuid,
+    pub capability_call_id: CapabilityCallId,
     pub action_key: String,
     pub capability_version: u16,
     pub agent_run_id: Option<Uuid>,
@@ -59,7 +59,7 @@ impl BrokerAuditSink for PostgresBrokerAuditSink {
         let mut metadata = Map::new();
         metadata.insert(
             "capabilityCallId".to_string(),
-            Value::String(record.capability_call_id.to_string()),
+            Value::String(record.capability_call_id.as_uuid().to_string()),
         );
         metadata.insert(
             "capabilityVersion".to_string(),
@@ -100,7 +100,7 @@ mod tests {
     use sqlx::postgres::PgPoolOptions;
     use uuid::Uuid;
 
-    use crate::types::{AuthenticatedAgentPrincipal, CapabilityResource};
+    use crate::types::{AuthenticatedAgentPrincipal, CapabilityCallId, CapabilityResource};
 
     use super::{BrokerAuditOutcome, BrokerAuditRecord, BrokerAuditSink, PostgresBrokerAuditSink};
 
@@ -118,7 +118,7 @@ mod tests {
                 Uuid::new_v4(),
             ),
             request_context: RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4()),
-            capability_call_id: Uuid::new_v4(),
+            capability_call_id: CapabilityCallId::from_trusted_runtime(Uuid::new_v4()),
             action_key: "administration.catalog.read".to_string(),
             capability_version: 1,
             agent_run_id: Some(run_id),
@@ -150,7 +150,7 @@ mod tests {
                     Uuid::new_v4(),
                 ),
                 request_context: RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4()),
-                capability_call_id: Uuid::new_v4(),
+                capability_call_id: CapabilityCallId::from_trusted_runtime(Uuid::new_v4()),
                 action_key: "agent.capability.invoke".to_string(),
                 capability_version: 1,
                 agent_run_id: None,

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 cp-audit = { path = "../audit" }
+cp-common = { path = "../../common" }
 sqlx = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

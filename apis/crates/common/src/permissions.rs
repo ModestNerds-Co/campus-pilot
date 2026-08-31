@@ -194,7 +194,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Once;
+    use std::{collections::BTreeSet, sync::Once};
 
     use actix_web::{
         App, HttpMessage, HttpResponse,
@@ -242,6 +242,14 @@ mod tests {
         lifecycle: LeaseLifecycle,
     ) -> AccessContext {
         enable_test_logging();
+        let entitlement_modules: Vec<_> = enabled_modules
+            .iter()
+            .copied()
+            .chain(std::iter::once("administration"))
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|module_key| (module_key.to_string(), ModuleEntitlementState::Enabled))
+            .collect();
         AccessContext {
             role_keys: vec!["test-role".to_string()],
             permissions: permissions.iter().map(|value| value.to_string()).collect(),
@@ -249,18 +257,8 @@ mod tests {
                 .iter()
                 .map(|value| value.to_string())
                 .collect(),
-            entitlements: EntitlementSnapshot::new(
-                lifecycle,
-                vec![
-                    (
-                        "administration".to_string(),
-                        ModuleEntitlementState::Enabled,
-                    ),
-                    ("fleet".to_string(), ModuleEntitlementState::Enabled),
-                ],
-                vec![],
-            )
-            .unwrap_or_else(|_| unreachable!()),
+            entitlements: EntitlementSnapshot::new(lifecycle, entitlement_modules, vec![])
+                .unwrap_or_else(|_| unreachable!()),
         }
     }
 
@@ -304,7 +302,7 @@ mod tests {
         .await;
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        let exact_access = access(&["fleet:view"], &["fleet", "vehicle-logs"]);
+        let exact_access = access(&["fleet:view"], &["fleet", "vehicle-logs", "hr_payroll"]);
         let app = actix_test::init_service(
             App::new()
                 .wrap_fn(move |request, service| {
@@ -405,7 +403,7 @@ mod tests {
     async fn lease_lifecycle_matrix_is_enforced_at_the_route_boundary() {
         let restricted = access_with_lifecycle(
             &["fleet:view", "fleet:create"],
-            &["fleet"],
+            &["fleet", "hr_payroll"],
             LeaseLifecycle::Restricted,
         );
         let app = actix_test::init_service(

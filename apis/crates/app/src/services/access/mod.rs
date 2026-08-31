@@ -5,4 +5,5 @@ pub mod models;
 pub mod ops;
 pub mod quota;
 pub mod read_model;
+pub mod record_scopes;
 pub mod routes;

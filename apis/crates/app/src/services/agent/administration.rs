@@ -177,12 +177,12 @@ impl Capability for AdministrationSchoolSettingsCapability {
 
     async fn execute(
         &self,
-        _context: AuthorizedCapabilityContext,
+        context: AuthorizedCapabilityContext,
         _input: Self::Input,
     ) -> Result<Self::Output, CapabilityExecutionError> {
         let profile = self
             .kernel_db
-            .get_school_profile()
+            .get_school_profile(context.principal().tenant_id())
             .await
             .map_err(|_| dependency_failure("School settings could not be loaded."))?;
         Ok(SchoolSettingsOutput { profile })

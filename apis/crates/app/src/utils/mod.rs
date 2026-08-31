@@ -7,6 +7,10 @@
 //
 
 mod jwt;
+#[expect(
+    clippy::module_inception,
+    reason = "this legacy private module remains the password utility implementation behind stable re-exports"
+)]
 mod utils;
 
 pub use jwt::{

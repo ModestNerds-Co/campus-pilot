@@ -16,14 +16,24 @@ import type {
   StockAdjustmentInput, StockBalanceListParams, StockBalancesResponse, StockIssueInput,
   StockMovement, StockMovementListParams, StockMovementsResponse, StockTransferInput,
 } from "./stock-types";
+import type {
+  ApproveStockRequestInput, CloseStockRequestInput, CreateStockRequestInput,
+  FulfilStockRequestInput, FulfilStockRequestResponse, StockRequest,
+  StockRequestDepartmentsResponse, StockRequestFulfilmentPreview, StockRequestListParams,
+  StockRequesterCandidatesResponse, StockRequestsResponse, StockRequestReasonCommand,
+  StockRequestVersionCommand, UpdateStockRequestInput,
+} from "./stock-request-types";
 
 const BASE_URL = "/api/1.0/assets-inventory";
 
-async function request<T>(work: () => Promise<{ data: ApiEnvelope<T> }>): Promise<ApiEnvelope<T>> {
+async function request<T>(work: () => Promise<{ data: ApiEnvelope<T>; status: number }>): Promise<ApiEnvelope<T>> {
   try {
-    return (await work()).data;
+    const response = await work();
+    return { ...response.data, http_status: response.status };
   } catch (error) {
-    if (error instanceof AxiosError && error.response) return error.response.data as ApiEnvelope<T>;
+    if (error instanceof AxiosError && error.response) {
+      return { ...(error.response.data as ApiEnvelope<T>), http_status: error.response.status };
+    }
     throw error;
   }
 }
@@ -49,6 +59,21 @@ export const assetsInventoryService = {
   reverseStockMovement: (id: string, data: ReverseStockMovementInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/stock-movements/${id}/reverse`, data)),
   listGoodsReceiptAllocations: (params?: GoodsReceiptAllocationListParams) => request<GoodsReceiptAllocationSourcesResponse>(() => httpClient.get(`${BASE_URL}/goods-receipt-allocations`, { params })),
   createGoodsReceiptAllocation: (data: GoodsReceiptAllocationInput) => request<StockMovement>(() => httpClient.post(`${BASE_URL}/goods-receipt-allocations`, data)),
+
+  listStockRequesters: (params?: { search?: string; department_id?: string }) => request<StockRequesterCandidatesResponse>(() => httpClient.get(`${BASE_URL}/stock-request-requesters`, { params })),
+  listStockRequestDepartments: (params?: { search?: string }) => request<StockRequestDepartmentsResponse>(() => httpClient.get(`${BASE_URL}/stock-request-departments`, { params })),
+  listStockRequests: (params?: StockRequestListParams) => request<StockRequestsResponse>(() => httpClient.get(`${BASE_URL}/stock-requests`, { params })),
+  readStockRequest: (id: string) => request<StockRequest>(() => httpClient.get(`${BASE_URL}/stock-requests/${id}`)),
+  readStockRequestFulfilmentPreview: (id: string) => request<StockRequestFulfilmentPreview>(() => httpClient.get(`${BASE_URL}/stock-requests/${id}/fulfilment-preview`)),
+  createStockRequest: (data: CreateStockRequestInput) => request<StockRequest>(() => httpClient.post(`${BASE_URL}/stock-requests`, data)),
+  updateStockRequest: (id: string, data: UpdateStockRequestInput) => request<StockRequest>(() => httpClient.put(`${BASE_URL}/stock-requests/${id}`, data)),
+  deleteStockRequest: (id: string, data: StockRequestVersionCommand) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/stock-requests/${id}`, { data })),
+  submitStockRequest: (id: string, data: StockRequestVersionCommand) => request<StockRequest>(() => httpClient.post(`${BASE_URL}/stock-requests/${id}/submit`, data)),
+  approveStockRequest: (id: string, data: ApproveStockRequestInput) => request<StockRequest>(() => httpClient.post(`${BASE_URL}/stock-requests/${id}/approve`, data)),
+  rejectStockRequest: (id: string, data: StockRequestReasonCommand) => request<StockRequest>(() => httpClient.post(`${BASE_URL}/stock-requests/${id}/reject`, data)),
+  cancelStockRequest: (id: string, data: StockRequestReasonCommand) => request<StockRequest>(() => httpClient.post(`${BASE_URL}/stock-requests/${id}/cancel`, data)),
+  closeStockRequest: (id: string, data: CloseStockRequestInput) => request<StockRequest>(() => httpClient.post(`${BASE_URL}/stock-requests/${id}/close`, data)),
+  fulfilStockRequest: (id: string, data: FulfilStockRequestInput) => request<FulfilStockRequestResponse>(() => httpClient.post(`${BASE_URL}/stock-requests/${id}/fulfilments`, data)),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

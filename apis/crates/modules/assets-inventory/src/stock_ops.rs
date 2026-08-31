@@ -261,6 +261,34 @@ impl StockMovementOps {
         request_context: RequestContext,
         request: &IssueStockRequest,
     ) -> Result<StockMovementResponse> {
+        let mut transaction = pool.begin().await.context("Failed to start stock issue")?;
+        let response = Self::issue_in_transaction(
+            &mut transaction,
+            tenant_id,
+            actor,
+            request_context,
+            request,
+        )
+        .await?;
+        transaction
+            .commit()
+            .await
+            .context("Failed to commit stock issue")?;
+        Ok(response)
+    }
+
+    /// Posts an issue inside an existing owning transaction.
+    ///
+    /// This is crate-private so the stock-request fulfilment workflow can link
+    /// the immutable movement before one atomic commit. Callers must not commit
+    /// request state unless this function succeeds.
+    pub(crate) async fn issue_in_transaction(
+        transaction: &mut Transaction<'_, Postgres>,
+        tenant_id: Uuid,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &IssueStockRequest,
+    ) -> Result<StockMovementResponse> {
         let actor_id = actor_id(actor)?;
         let header = MovementHeaderValues::parse(
             "issue",
@@ -271,25 +299,26 @@ impl StockMovementOps {
             request,
         )?;
         ensure_line_count(request.lines.len())?;
-        let mut transaction = pool.begin().await.context("Failed to start stock issue")?;
-        let movement_number = next_movement_number(&mut transaction, tenant_id).await?;
         if let Some(replayed_id) = replay_movement(
-            &mut transaction,
+            transaction,
             tenant_id,
             &header.idempotency_key,
             &header.fingerprint,
         )
         .await?
         {
-            return finish_replayed_movement(transaction, pool, tenant_id, replayed_id).await;
+            return load_movement_transaction(transaction, tenant_id, replayed_id)
+                .await?
+                .ok_or_else(|| anyhow!("The idempotent stock issue could not be loaded"));
         }
+        let movement_number = next_movement_number(transaction, tenant_id).await?;
         let inputs = request
             .lines
             .iter()
             .map(|line| (line.item_id, line.store_id, line.quantity_minor))
             .collect::<Vec<_>>();
-        let lines = prepare_quantity_lines(&mut transaction, tenant_id, &inputs, -1).await?;
-        post_movement(
+        let lines = prepare_quantity_lines(transaction, tenant_id, &inputs, -1).await?;
+        post_movement_in_transaction(
             transaction,
             tenant_id,
             actor,
@@ -1270,6 +1299,42 @@ async fn post_movement(
     reverses_movement: Option<(Uuid, String)>,
     lines: Vec<PreparedMovementLine>,
 ) -> Result<StockMovementResponse> {
+    let response = post_movement_in_transaction(
+        &mut transaction,
+        tenant_id,
+        actor,
+        request_context,
+        actor_id,
+        movement_number,
+        header,
+        source_receipt,
+        reverses_movement,
+        lines,
+    )
+    .await?;
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit stock movement")?;
+    Ok(response)
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one explicit transaction-scoped movement boundary"
+)]
+async fn post_movement_in_transaction(
+    transaction: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    actor: AuditActor,
+    request_context: RequestContext,
+    actor_id: Uuid,
+    movement_number: String,
+    header: MovementHeaderValues,
+    source_receipt: Option<(Uuid, String)>,
+    reverses_movement: Option<(Uuid, String)>,
+    lines: Vec<PreparedMovementLine>,
+) -> Result<StockMovementResponse> {
     if lines.is_empty() || lines.len() > MAX_POSTED_LINES {
         bail!("Stock movement line count is outside its bounded range");
     }
@@ -1303,7 +1368,7 @@ async fn post_movement(
     .bind(&header.idempotency_key)
     .bind(&header.fingerprint)
     .bind(actor_id)
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .context("Failed to create draft stock movement")?;
 
@@ -1339,7 +1404,7 @@ async fn post_movement(
         .bind(line.source_goods_receipt_line_number)
         .bind(&line.source_goods_receipt_description)
         .bind(line.reverses_movement_line_id)
-        .execute(&mut *transaction)
+        .execute(&mut **transaction)
         .await
         .context("Failed to create stock movement line")?;
     }
@@ -1355,12 +1420,12 @@ async fn post_movement(
     .bind(tenant_id)
     .bind(movement_id)
     .bind(actor_id)
-    .execute(&mut *transaction)
+    .execute(&mut **transaction)
     .await
     .context("Failed to post stock movement")?;
 
     append_stock_audit(
-        &mut transaction,
+        transaction,
         tenant_id,
         actor,
         request_context,
@@ -1372,14 +1437,9 @@ async fn post_movement(
         reverses_movement_number.as_deref(),
     )
     .await?;
-    let response = load_movement_transaction(&mut transaction, tenant_id, movement_id)
+    load_movement_transaction(transaction, tenant_id, movement_id)
         .await?
-        .ok_or_else(|| anyhow!("Posted stock movement could not be loaded"))?;
-    transaction
-        .commit()
-        .await
-        .context("Failed to commit stock movement")?;
-    Ok(response)
+        .ok_or_else(|| anyhow!("Posted stock movement could not be loaded"))
 }
 
 async fn load_movement_transaction(

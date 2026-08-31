@@ -25,6 +25,7 @@ pub struct ModuleDefinition {
     pub permission_namespace: &'static str,
     pub core: bool,
     pub stage: &'static str,
+    pub dependencies: Vec<&'static str>,
     pub permissions: Vec<PermissionDefinition>,
 }
 
@@ -183,8 +184,8 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             false,
             "available",
             &[
-                "view", "create", "edit", "delete", "receive", "issue", "transfer", "adjust",
-                "reverse",
+                "view", "create", "edit", "delete", "request", "approve", "receive", "issue",
+                "transfer", "adjust", "reverse",
             ],
         ),
         module(
@@ -216,7 +217,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "Work with authorized campus capabilities through durable Agent sessions.",
             "/modules/agent",
             "agent",
-            false,
+            false, // Licensed module; not part of the core entitlement.
             "planned",
             &["view", "run", "history", "share", "approve"],
         ),
@@ -320,6 +321,41 @@ pub fn administration_permissions() -> Vec<PermissionDefinition> {
             "Manage AI routing",
             "Create, change, and archive Agent provider and model routing rules.",
         ),
+        (
+            "agent_policy:view",
+            "View Agent policy",
+            "Read Agent readiness, capability coverage, and governance state.",
+        ),
+        (
+            "agent_policy:edit",
+            "Manage Agent policy",
+            "Change reviewed Agent governance policy.",
+        ),
+        (
+            "agent_usage:view",
+            "View Agent usage",
+            "Read campus Agent usage totals and trends.",
+        ),
+        (
+            "agent_usage:export",
+            "Export Agent usage",
+            "Export bounded campus Agent usage evidence.",
+        ),
+        (
+            "agent_limits:view",
+            "View Agent limits",
+            "Read configured Agent usage limits.",
+        ),
+        (
+            "agent_limits:edit",
+            "Manage Agent limits",
+            "Change reviewed Agent usage limits.",
+        ),
+        (
+            "agent_audit:view",
+            "View Agent audit",
+            "Read redacted Agent run and audit evidence.",
+        ),
     ]
     .into_iter()
     .map(|(key, label, description)| PermissionDefinition {
@@ -359,6 +395,20 @@ pub fn is_core_module(module_key: &str) -> bool {
     matches!(module_key, "home" | "administration")
 }
 
+pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
+    match module_key {
+        "fees" => &["academics", "finance", "sis"],
+        "fleet" => &["hr_payroll"],
+        "procurement" => &["finance", "hr_payroll"],
+        "timetabling" => &["academics", "hr_payroll"],
+        _ => &[],
+    }
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the catalogue helper keeps each static module definition auditable at its call site"
+)]
 fn module(
     key: &'static str,
     label: &'static str,
@@ -388,6 +438,7 @@ fn module(
         permission_namespace,
         core,
         stage,
+        dependencies: module_dependencies(key).to_vec(),
         permissions,
     }
 }
@@ -471,11 +522,13 @@ mod tests {
             permissions,
             [
                 "assets_inventory:adjust",
+                "assets_inventory:approve",
                 "assets_inventory:create",
                 "assets_inventory:delete",
                 "assets_inventory:edit",
                 "assets_inventory:issue",
                 "assets_inventory:receive",
+                "assets_inventory:request",
                 "assets_inventory:reverse",
                 "assets_inventory:transfer",
                 "assets_inventory:view",
@@ -498,6 +551,27 @@ mod tests {
         );
         assert!(AI_ROUTING_MIGRATION.contains("zz_grant_new_tenant_ai_routing_permissions"));
         assert!(!AI_ROUTING_MIGRATION.contains("UPDATE roles\nSET permissions"));
+    }
+
+    #[test]
+    fn agent_governance_permissions_are_separate_and_unseeded() {
+        let permissions = all_permission_keys().into_iter().collect::<BTreeSet<_>>();
+
+        for permission in [
+            "agent_policy:view",
+            "agent_policy:edit",
+            "agent_usage:view",
+            "agent_usage:export",
+            "agent_limits:view",
+            "agent_limits:edit",
+            "agent_audit:view",
+        ] {
+            assert!(permissions.contains(permission), "missing {permission}");
+        }
+
+        assert!(!AI_ROUTING_MIGRATION.contains("agent_policy:view"));
+        assert!(!AI_ROUTING_MIGRATION.contains("agent_usage:view"));
+        assert!(!AI_ROUTING_MIGRATION.contains("agent_audit:view"));
     }
 
     #[test]
@@ -525,6 +599,50 @@ mod tests {
                     modules.contains(dependency),
                     "unknown operation dependency: {dependency}"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn module_dependencies_are_known_and_apply_to_every_module_operation() {
+        let modules = module_catalog();
+        let known = modules
+            .iter()
+            .map(|module| module.key)
+            .collect::<BTreeSet<_>>();
+        let operations = operation_catalog();
+
+        for module in modules {
+            for dependency in &module.dependencies {
+                assert!(
+                    known.contains(dependency),
+                    "unknown dependency: {dependency}"
+                );
+            }
+            if module.dependencies.is_empty() {
+                continue;
+            }
+            let module_operations = operations
+                .iter()
+                .filter(|entry| entry.operation().module_key() == module.key)
+                .collect::<Vec<_>>();
+            assert!(
+                !module_operations.is_empty(),
+                "{} has no operations",
+                module.key
+            );
+            for entry in module_operations {
+                let required = entry
+                    .operation()
+                    .required_modules()
+                    .collect::<BTreeSet<_>>();
+                for dependency in &module.dependencies {
+                    assert!(
+                        required.contains(dependency),
+                        "{} does not require {dependency}",
+                        entry.operation().key()
+                    );
+                }
             }
         }
     }
@@ -596,10 +714,10 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 10);
             } else if module_key == "assets_inventory" {
                 assert!(module.release_ready());
-                assert_eq!(module.routed_operations(), 20);
-                assert_eq!(module.exposed_operations(), 8);
-                assert_eq!(module.approval_required_operations(), 12);
-                assert_eq!(module.executable_capabilities(), 8);
+                assert_eq!(module.routed_operations(), 34);
+                assert_eq!(module.exposed_operations(), 13);
+                assert_eq!(module.approval_required_operations(), 21);
+                assert_eq!(module.executable_capabilities(), 13);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

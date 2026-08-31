@@ -10,6 +10,9 @@ pub mod routes;
 pub mod stock_dtos;
 mod stock_models;
 pub mod stock_ops;
+pub mod stock_request_dtos;
+mod stock_request_models;
+pub mod stock_request_ops;
 
 pub use dtos::{
     AssetStatus, CreateItemRequest, CreateStoreRequest, DeleteAssetQuery, ItemListQuery,
@@ -31,3 +34,13 @@ pub use stock_ops::{
     GoodsReceiptAllocationOps, StockBalanceOps, StockMovementOps,
     bounded_goods_receipt_allocation_page,
 };
+pub use stock_request_dtos::{
+    ApproveStockRequest, CloseStockRequest, CreateStockRequest, FulfilStockRequest,
+    FulfilStockRequestResponse, PaginatedStockRequestsResponse, StockRequestCandidateQuery,
+    StockRequestDepartmentResponse, StockRequestDepartmentsResponse,
+    StockRequestFulfilmentPreviewResponse, StockRequestLineInput, StockRequestListQuery,
+    StockRequestReasonCommand, StockRequestResponse, StockRequestSummaryResponse,
+    StockRequestVersionCommand, StockRequesterCandidateResponse, StockRequesterCandidatesResponse,
+    UpdateStockRequest,
+};
+pub use stock_request_ops::{StockRequestCandidateOps, StockRequestOps};

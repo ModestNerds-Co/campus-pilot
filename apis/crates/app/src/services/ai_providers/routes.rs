@@ -13,7 +13,7 @@ use actix_web::{
 };
 use cp_ai_providers::{
     CreateConnectionCommand, ProviderFailureCategory, RotateCredentialCommand, ServiceError,
-    UpdateConnectionCommand, provider_catalog,
+    SetProviderDataApprovalCommand, UpdateConnectionCommand, provider_catalog,
 };
 use cp_audit::{AuditActor, RequestContext};
 use cp_common::{ApiResponse, TenantId};
@@ -24,8 +24,8 @@ use uuid::Uuid;
 use crate::state::AppState;
 
 use super::dtos::{
-    CreateConnectionRequest, DisconnectQuery, RotateCredentialRequest, UpdateConnectionRequest,
-    VersionedActionRequest,
+    CreateConnectionRequest, DisconnectQuery, RotateCredentialRequest,
+    SetProviderDataApprovalRequest, UpdateConnectionRequest, VersionedActionRequest,
 };
 
 #[get("/providers")]
@@ -111,6 +111,38 @@ async fn update_connection(
         state
             .ai_provider_ops
             .update_connection(
+                tenant.into_inner().0,
+                connection_id.into_inner(),
+                actor.into_inner(),
+                request_context.into_inner(),
+                command,
+            )
+            .await,
+        StatusCode::OK,
+    )
+}
+
+#[put("/connections/{connection_id}/data-approval")]
+async fn set_data_approval(
+    state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
+    actor: web::ReqData<AuditActor>,
+    request_context: web::ReqData<RequestContext>,
+    connection_id: web::Path<Uuid>,
+    body: web::Json<SetProviderDataApprovalRequest>,
+) -> HttpResponse {
+    let command = match SetProviderDataApprovalCommand::parse(
+        &body.approval_class,
+        body.expected_approval_version,
+        body.change_reason.clone(),
+    ) {
+        Ok(command) => command,
+        Err(error) => return service_error(error),
+    };
+    respond(
+        state
+            .ai_provider_ops
+            .set_data_approval(
                 tenant.into_inner().0,
                 connection_id.into_inner(),
                 actor.into_inner(),
@@ -288,6 +320,7 @@ pub fn routes(cfg: &mut ServiceConfig) {
         .service(create_connection)
         .service(read_connection)
         .service(update_connection)
+        .service(set_data_approval)
         .service(rotate_credential)
         .service(test_connection)
         .service(list_models)

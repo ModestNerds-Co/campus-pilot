@@ -1,13 +1,15 @@
 use actix_multipart::Multipart;
 use actix_web::{HttpResponse, get, post, put, web, web::ServiceConfig};
-use cp_common::RequirePermission;
+use cp_common::{RequirePermission, TenantId};
 use futures_util::StreamExt;
 use serde_json::json;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
     middleware::AuthMiddleware,
     models::api_response::ApiResponse,
+    services::kernel::db::KernelSetupError,
     services::kernel::dtos::{
         CreateAdminReq, LogoUploadResponse, SetupSchoolRequest, UpdateSchoolProfileRequest,
     },
@@ -17,14 +19,25 @@ use crate::{
 
 #[get("status")]
 pub async fn get_kernel_status(app_state: web::Data<AppState>) -> actix_web::Result<HttpResponse> {
-    let status = app_state.kernel_db.get_kernel_status().await.unwrap();
-
-    let response = HttpResponse::Ok().json(ApiResponse::from_status(
-        actix_web::http::StatusCode::OK,
-        Some(status),
-        None,
-    ));
-    Ok(response)
+    match app_state.kernel_db.get_kernel_status().await {
+        Ok(status) => Ok(HttpResponse::Ok().json(ApiResponse::from_status(
+            actix_web::http::StatusCode::OK,
+            Some(status),
+            None,
+        ))),
+        Err(error) => {
+            log::error!("Kernel status could not be loaded: {error:?}");
+            Ok(
+                HttpResponse::ServiceUnavailable().json(ApiResponse::<()>::from_status(
+                    actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
+                    None,
+                    Some(vec![
+                        "Campus Pilot status is temporarily unavailable".to_string(),
+                    ]),
+                )),
+            )
+        }
+    }
 }
 
 #[post("setup-school")]
@@ -53,13 +66,25 @@ pub async fn setup_school(
             None,
             None,
         ))),
-        Err(e) => Ok(
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::from_status(
-                actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+        Err(KernelSetupError::InvalidState) => Ok(HttpResponse::Conflict().json(
+            ApiResponse::<()>::from_status(
+                actix_web::http::StatusCode::CONFLICT,
                 None,
-                Some(vec![format!("Failed to setup school: {}", e)]),
-            )),
-        ),
+                Some(vec![
+                    "Campus Pilot setup has already started or is complete".to_string(),
+                ]),
+            ),
+        )),
+        Err(error @ KernelSetupError::Storage(_)) => {
+            log::error!("School setup failed: {error:?}");
+            Ok(
+                HttpResponse::ServiceUnavailable().json(ApiResponse::<()>::from_status(
+                    actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
+                    None,
+                    Some(vec!["Campus Pilot setup could not be saved".to_string()]),
+                )),
+            )
+        }
     }
 }
 
@@ -145,19 +170,40 @@ pub async fn setup_admin(
             })),
             None,
         ))),
-        Err(e) => Ok(
-            HttpResponse::InternalServerError().json(ApiResponse::<()>::from_status(
-                actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+        Err(KernelSetupError::InvalidState) => Ok(HttpResponse::Conflict().json(
+            ApiResponse::<()>::from_status(
+                actix_web::http::StatusCode::CONFLICT,
                 None,
-                Some(vec![format!("Failed to create admin user: {}", e)]),
-            )),
-        ),
+                Some(vec![
+                    "Campus Pilot administrator setup is not available".to_string(),
+                ]),
+            ),
+        )),
+        Err(error @ KernelSetupError::Storage(_)) => {
+            log::error!("Administrator setup failed: {error:?}");
+            Ok(
+                HttpResponse::ServiceUnavailable().json(ApiResponse::<()>::from_status(
+                    actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
+                    None,
+                    Some(vec![
+                        "Campus Pilot administrator setup could not be saved".to_string(),
+                    ]),
+                )),
+            )
+        }
     }
 }
 
 #[get("school-profile")]
-pub async fn get_school_profile(app_state: web::Data<AppState>) -> actix_web::Result<HttpResponse> {
-    match app_state.kernel_db.get_school_profile().await {
+pub async fn get_school_profile(
+    app_state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
+) -> actix_web::Result<HttpResponse> {
+    match app_state
+        .kernel_db
+        .get_school_profile(tenant.into_inner().into_inner())
+        .await
+    {
         Ok(profile) => Ok(HttpResponse::Ok().json(ApiResponse::from_status(
             actix_web::http::StatusCode::OK,
             Some(profile),
@@ -179,6 +225,7 @@ pub async fn get_school_profile(app_state: web::Data<AppState>) -> actix_web::Re
 #[put("school-profile")]
 pub async fn update_school_profile(
     app_state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     req: web::Json<UpdateSchoolProfileRequest>,
 ) -> actix_web::Result<HttpResponse> {
     // Validate request
@@ -195,7 +242,7 @@ pub async fn update_school_profile(
 
     match app_state
         .kernel_db
-        .update_school_profile(req.into_inner())
+        .update_school_profile(tenant.into_inner().into_inner(), req.into_inner())
         .await
     {
         Ok(profile) => Ok(HttpResponse::Ok().json(ApiResponse::from_status(
@@ -219,8 +266,10 @@ pub async fn update_school_profile(
 #[post("school-profile/logo")]
 pub async fn upload_school_logo(
     app_state: web::Data<AppState>,
+    tenant: web::ReqData<TenantId>,
     mut payload: Multipart,
 ) -> actix_web::Result<HttpResponse> {
+    let tenant_id = tenant.into_inner().into_inner();
     let mut logo_light_url: Option<String> = None;
     let mut logo_dark_url: Option<String> = None;
 
@@ -267,25 +316,21 @@ pub async fn upload_school_logo(
             file_data.extend_from_slice(&data);
         }
 
-        // Determine file extension from content type or filename
-        let extension = filename.rsplit('.').next().unwrap_or("png");
+        if !matches!(field_name.as_str(), "logo_light" | "logo_dark") {
+            continue;
+        }
 
-        // Generate unique filename
-        let unique_filename = format!(
-            "school_{}_{}.{}",
-            field_name,
-            uuid::Uuid::new_v4(),
-            extension
-        );
+        let extension = sanitized_logo_extension(&filename);
+
+        // Tenant ownership is encoded into the storage namespace as well as
+        // the database row so two campuses can never overwrite each other's
+        // objects, even when their uploaded filenames match.
+        let object_key = school_logo_object_key(tenant_id, &field_name, &extension);
 
         // Upload to storage
         match app_state
             .storage_ops
-            .upload_file(
-                &unique_filename,
-                &file_data,
-                &format!("image/{}", extension),
-            )
+            .upload_file(&object_key, &file_data, &format!("image/{}", extension))
             .await
         {
             Ok(url) => {
@@ -311,7 +356,7 @@ pub async fn upload_school_logo(
     // Update database with new logo URLs
     match app_state
         .kernel_db
-        .update_school_logos(logo_light_url.clone(), logo_dark_url.clone())
+        .update_school_logos(tenant_id, logo_light_url.clone(), logo_dark_url.clone())
         .await
     {
         Ok((light, dark)) => Ok(HttpResponse::Ok().json(ApiResponse::from_status(
@@ -335,6 +380,32 @@ pub async fn upload_school_logo(
     }
 }
 
+fn sanitized_logo_extension(filename: &str) -> String {
+    let extension = filename
+        .rsplit_once('.')
+        .map(|(_, extension)| extension)
+        .unwrap_or("png")
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .take(10)
+        .collect::<String>()
+        .to_ascii_lowercase();
+
+    if extension.is_empty() {
+        "png".to_string()
+    } else {
+        extension
+    }
+}
+
+fn school_logo_object_key(tenant_id: Uuid, field_name: &str, extension: &str) -> String {
+    format!(
+        "tenants/{tenant_id}/school-profile/logos/{field_name}_{}.{}",
+        Uuid::new_v4(),
+        extension
+    )
+}
+
 pub fn init(cfg: &mut ServiceConfig) {
     cfg.service(get_kernel_status)
         .service(setup_school)
@@ -347,4 +418,25 @@ pub fn init(cfg: &mut ServiceConfig) {
                 .service(update_school_profile)
                 .service(upload_school_logo),
         );
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::{sanitized_logo_extension, school_logo_object_key};
+
+    #[test]
+    fn school_logo_key_is_tenant_prefixed_and_filename_safe() {
+        let tenant_id = Uuid::parse_str("b6ccde44-c41a-4e90-861f-169cd708ab7c")
+            .unwrap_or_else(|error| panic!("fixture UUID must be valid: {error}"));
+        let extension = sanitized_logo_extension("../../campus.logo.PnG/../");
+        let key = school_logo_object_key(tenant_id, "logo_light", &extension);
+
+        assert!(key.starts_with(&format!(
+            "tenants/{tenant_id}/school-profile/logos/logo_light_"
+        )));
+        assert!(!key.contains(".."));
+        assert!(!extension.contains('/'));
+    }
 }

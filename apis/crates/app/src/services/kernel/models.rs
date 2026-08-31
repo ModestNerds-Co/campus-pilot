@@ -20,7 +20,7 @@ impl fmt::Display for SystemState {
 }
 
 impl SystemState {
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_db_value(s: &str) -> Self {
         match s {
             "SchoolConfigured" => SystemState::SchoolConfigured,
             "Ready" => SystemState::Ready,

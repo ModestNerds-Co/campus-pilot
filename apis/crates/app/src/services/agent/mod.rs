@@ -7,13 +7,25 @@ mod administration_access;
 mod ai_providers;
 mod ai_routing;
 mod assets_inventory;
+mod authority;
 mod fees;
 mod finance;
 mod fleet;
+pub mod governance;
 mod hr;
+mod origin;
 mod procurement;
+mod record_scope;
+mod session_dtos;
+pub mod session_routes;
 mod sis;
+mod submission_gate;
 mod timetabling;
+mod usage_dtos;
+pub mod usage_routes;
+mod worker_executor;
+mod worker_readiness;
+mod worker_supervisor;
 
 use cp_agent::CapabilityRegistry;
 use sqlx::PgPool;
@@ -50,7 +62,9 @@ use ai_routing::{
 use assets_inventory::{
     AssetsInventoryListCapability, AssetsInventoryListKind, AssetsInventoryReadCapability,
     AssetsInventoryReadKind, GoodsReceiptAllocationsListCapability, StockBalancesListCapability,
-    StockMovementReadCapability, StockMovementsListCapability,
+    StockMovementReadCapability, StockMovementsListCapability, StockRequestCandidateKind,
+    StockRequestCandidatesCapability, StockRequestReadCapability, StockRequestReadKind,
+    StockRequestsListCapability,
 };
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
@@ -88,6 +102,21 @@ use sis::{
 use timetabling::{
     LatestTimetableRunCapability, TimetableConfigurationCapability, TimetableRunReadCapability,
     TimetableRunsListCapability,
+};
+
+pub use authority::AppAuthorityLoader;
+pub use record_scope::{
+    AppRecordScopeAuthorizer, INITIAL_WORKER_OPERATION_KEYS, is_initial_worker_operation,
+};
+pub use submission_gate::AgentSubmissionGate;
+pub use worker_executor::ProviderAgentRunExecutor;
+pub use worker_readiness::{
+    AgentWorkerCoverageProof, AgentWorkerInstance, AgentWorkerReadiness, AgentWorkerReadinessError,
+    AgentWorkerReadinessOps, AgentWorkerReadinessReason,
+};
+pub use worker_supervisor::{
+    AgentExecutionFailure, AgentRunExecutor, AgentWorkerSupervisor, AgentWorkerSupervisorError,
+    AgentWorkerTick,
 };
 
 #[must_use]
@@ -168,6 +197,25 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| {
             panic!("invalid Assets goods-receipt allocations capability: {error}")
         });
+    for kind in [
+        StockRequestCandidateKind::Requesters,
+        StockRequestCandidateKind::Departments,
+    ] {
+        registry
+            .register(StockRequestCandidatesCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
+        .register(StockRequestsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Assets stock-requests list capability: {error}"));
+    for kind in [
+        StockRequestReadKind::Request,
+        StockRequestReadKind::FulfilmentPreview,
+    ] {
+        registry
+            .register(StockRequestReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     for kind in [
         AcademicsListKind::AcademicYears,
         AcademicsListKind::Terms,
@@ -470,13 +518,19 @@ pub fn build_capability_registry(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::{
+        collections::{BTreeMap, BTreeSet},
+        sync::{Arc, Mutex},
+    };
 
     use async_trait::async_trait;
     use cp_agent::{
         AuthenticatedAgentPrincipal, AuthorityLoadError, AuthorityLoader, AuthorizedRecordScope,
         BrokerAuditError, BrokerAuditRecord, BrokerAuditSink, BrokerErrorCode, CapabilityBroker,
-        CapabilityCall, CurrentAuthority, RecordScopeAuthorizer, RecordScopeDenied,
+        CapabilityCall, CapabilityCallId, CapabilityExecutionProof, CapabilityResult,
+        CapabilityWorkerLease, CurrentAuthority, DurabilityProofRejected,
+        PreparedCapabilityCallFacts, PreparedCapabilityCallVerifier, RecordScopeAuthorizer,
+        RecordScopeDenied,
     };
     use cp_audit::RequestContext;
     use cp_common::{
@@ -485,7 +539,6 @@ mod tests {
     };
     use serde_json::json;
     use sqlx::postgres::PgPoolOptions;
-    use std::collections::BTreeMap;
     use uuid::Uuid;
 
     use crate::config::LicenseConfig;
@@ -520,6 +573,101 @@ mod tests {
     }
 
     struct TestAudit;
+
+    fn call_id() -> CapabilityCallId {
+        CapabilityCallId::from_trusted_runtime(Uuid::new_v4())
+    }
+
+    fn run_id() -> Uuid {
+        Uuid::from_u128(0x410)
+    }
+
+    fn lease_token() -> Uuid {
+        Uuid::from_u128(0x420)
+    }
+
+    fn reservation_id() -> Uuid {
+        Uuid::from_u128(0x430)
+    }
+
+    struct TestDurabilityVerifier {
+        consumed: Mutex<BTreeSet<CapabilityCallId>>,
+    }
+
+    #[async_trait]
+    impl PreparedCapabilityCallVerifier for TestDurabilityVerifier {
+        async fn verify_and_consume(
+            &self,
+            principal: AuthenticatedAgentPrincipal,
+            facts: &PreparedCapabilityCallFacts,
+            proof: &CapabilityExecutionProof,
+        ) -> Result<(), DurabilityProofRejected> {
+            let exact = facts.agent_run_id().is_some_and(|persisted_run_id| {
+                proof.tenant_id() == principal.tenant_id()
+                    && proof.user_id() == principal.user_id()
+                    && proof.capability_call_id() == facts.capability_call_id()
+                    && proof.run_id() == persisted_run_id
+                    && proof.worker_id() == "app-agent-test-worker"
+                    && proof.lease_token() == lease_token()
+                    && proof.fence_version() == 1
+                    && proof.usage_reservation_id() == reservation_id()
+                    && facts.operation_key() == facts.key().as_str()
+                    && !facts.module_key().is_empty()
+                    && !facts.required_permission().is_empty()
+                    && facts.input_binding_sha256() != [0; 32]
+            });
+            if !exact {
+                return Err(DurabilityProofRejected);
+            }
+            let mut consumed = self
+                .consumed
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if !consumed.insert(facts.capability_call_id()) {
+                return Err(DurabilityProofRejected);
+            }
+            Ok(())
+        }
+    }
+
+    fn test_verifier() -> Arc<TestDurabilityVerifier> {
+        Arc::new(TestDurabilityVerifier {
+            consumed: Mutex::new(BTreeSet::new()),
+        })
+    }
+
+    #[async_trait]
+    trait TestInvoke {
+        async fn invoke(
+            &self,
+            principal: AuthenticatedAgentPrincipal,
+            capability_call_id: CapabilityCallId,
+            call: CapabilityCall,
+        ) -> Result<CapabilityResult, cp_agent::BrokerError>;
+    }
+
+    #[async_trait]
+    impl TestInvoke for CapabilityBroker {
+        async fn invoke(
+            &self,
+            principal: AuthenticatedAgentPrincipal,
+            capability_call_id: CapabilityCallId,
+            call: CapabilityCall,
+        ) -> Result<CapabilityResult, cp_agent::BrokerError> {
+            let call = call.with_agent_run_id(run_id());
+            let mut prepared = self.prepare(principal, capability_call_id, call).await?;
+            let proof = CapabilityExecutionProof::parse(
+                principal,
+                capability_call_id,
+                run_id(),
+                CapabilityWorkerLease::parse("app-agent-test-worker", lease_token(), 1)
+                    .unwrap_or_else(|_| unreachable!()),
+                reservation_id(),
+            )
+            .unwrap_or_else(|_| unreachable!());
+            self.execute_prepared(&mut prepared, proof).await
+        }
+    }
 
     #[async_trait]
     impl BrokerAuditSink for TestAudit {
@@ -652,12 +800,17 @@ mod tests {
                 "administration.school_settings.read",
                 "administration.users.list",
                 "administration.users.read",
+                "assets_inventory.department_candidates.list",
                 "assets_inventory.goods_receipt_allocations.list",
                 "assets_inventory.items.list",
                 "assets_inventory.items.read",
+                "assets_inventory.requester_candidates.list",
                 "assets_inventory.stock_balances.list",
                 "assets_inventory.stock_movements.list",
                 "assets_inventory.stock_movements.read",
+                "assets_inventory.stock_requests.fulfilment_preview.read",
+                "assets_inventory.stock_requests.list",
+                "assets_inventory.stock_requests.read",
                 "assets_inventory.stores.list",
                 "assets_inventory.stores.read",
                 "fees.billing_accounts.list",
@@ -738,6 +891,7 @@ mod tests {
             registry,
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -746,6 +900,7 @@ mod tests {
         let result = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse("administration.catalog.read", 1, json!({}), request_context)
                     .unwrap_or_else(|_| unreachable!()),
             )
@@ -769,6 +924,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let request_context = RequestContext::from_ids(Uuid::new_v4(), Uuid::new_v4());
@@ -778,6 +934,7 @@ mod tests {
                     Uuid::new_v4(),
                     Uuid::new_v4(),
                 ),
+                call_id(),
                 CapabilityCall::parse("administration.modules.list", 1, json!({}), request_context)
                     .unwrap_or_else(|_| unreachable!()),
             )
@@ -803,6 +960,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -826,6 +984,7 @@ mod tests {
             let error = broker
                 .invoke(
                     principal,
+                    call_id(),
                     CapabilityCall::parse(key, 1, input, request_context)
                         .unwrap_or_else(|_| unreachable!()),
                 )
@@ -842,6 +1001,7 @@ mod tests {
         let invalid = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "administration.users.list",
                     1,
@@ -866,6 +1026,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -877,6 +1038,7 @@ mod tests {
             let error = broker
                 .invoke(
                     principal,
+                    call_id(),
                     CapabilityCall::parse(
                         key,
                         1,
@@ -902,6 +1064,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -922,6 +1085,7 @@ mod tests {
             let error = broker
                 .invoke(
                     principal,
+                    call_id(),
                     CapabilityCall::parse(key, 1, input, request_context)
                         .unwrap_or_else(|_| unreachable!()),
                 )
@@ -939,6 +1103,7 @@ mod tests {
         let invalid = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "administration.ai_providers.connections.list",
                     1,
@@ -963,6 +1128,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -990,6 +1156,7 @@ mod tests {
             let error = broker
                 .invoke(
                     principal,
+                    call_id(),
                     CapabilityCall::parse(key, 1, input, request_context)
                         .unwrap_or_else(|_| unreachable!()),
                 )
@@ -1007,6 +1174,7 @@ mod tests {
         let invalid = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "administration.ai_routing.routes.list",
                     1,
@@ -1031,6 +1199,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -1075,6 +1244,7 @@ mod tests {
             let error = broker
                 .invoke(
                     principal,
+                    call_id(),
                     CapabilityCall::parse(key, 1, input, request_context)
                         .unwrap_or_else(|_| unreachable!()),
                 )
@@ -1096,6 +1266,7 @@ mod tests {
         let invalid = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "procurement.reference_data.read",
                     1,
@@ -1112,6 +1283,7 @@ mod tests {
         let irrelevant_filter = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "procurement.suppliers.list",
                     1,
@@ -1136,6 +1308,7 @@ mod tests {
             build_capability_registry(pool, license_config()),
             Arc::new(TestAuthorityLoader(authority())),
             Arc::new(TenantWideScope),
+            test_verifier(),
             Arc::new(TestAudit),
         );
         let principal =
@@ -1175,6 +1348,7 @@ mod tests {
             let error = broker
                 .invoke(
                     principal,
+                    call_id(),
                     CapabilityCall::parse(key, 1, input, request_context)
                         .unwrap_or_else(|_| unreachable!()),
                 )
@@ -1192,6 +1366,7 @@ mod tests {
         let invalid = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "assets_inventory.items.list",
                     1,
@@ -1208,6 +1383,7 @@ mod tests {
         let invalid_status = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "assets_inventory.stores.list",
                     1,
@@ -1224,6 +1400,7 @@ mod tests {
         let invalid_kind = broker
             .invoke(
                 principal,
+                call_id(),
                 CapabilityCall::parse(
                     "assets_inventory.stock_movements.list",
                     1,

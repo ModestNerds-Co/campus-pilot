@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE school_profile\n            SET logo_light_url = COALESCE($1, logo_light_url),\n                logo_dark_url = COALESCE($2, logo_dark_url),\n                updated_at = NOW()\n            WHERE tenant_id = $3 AND deleted_at IS NULL\n            RETURNING logo_light_url, logo_dark_url\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "logo_light_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "logo_dark_url",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "307bbc4fe15f6666c1ce004f5af89d3b6fe18882832c572b03ac770a93c95b7e"
+}

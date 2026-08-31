@@ -3,18 +3,26 @@
 //! Full-chain replacements, archives, and actor-aware audit evidence share one
 //! transaction. A matched but unusable scope never falls through to a broader one.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use chrono::{DateTime, Utc};
 use cp_audit::{AuditActor, AuditOutcome, AuditTarget, NewAuditEvent, RequestContext};
+use cp_common::{
+    ProviderApprovalClass, ProviderDataClass, ProviderDataEligibilityError,
+    ProviderExecutionEnvironmentClass, evaluate_provider_data_eligibility,
+};
 use serde_json::{Map, Value};
 use sqlx::{Executor, FromRow, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::types::{
     AiRouteScope, AiRouteSet, AiRouteTarget, AiRoutingError, ArchiveRouteCommand, ArchivedAiRoute,
-    CreateRouteCommand, ReplaceRouteCommand, ResolveRouteCommand, ResolvedAiRoute, RoutePrecedence,
-    RouteTargetDraft, RouteTargetReadiness, RouteUnusableReason,
+    CreateRouteCommand, ReplaceRouteCommand, ResolveRouteCommand, ResolvedAiRoute,
+    ResolvedAiRouteTarget, RoutePrecedence, RouteTargetDraft, RouteTargetReadiness,
+    RouteUnusableReason,
 };
 
 const ROUTE_SET_PROJECTION: &str = r#"
@@ -30,6 +38,7 @@ const ROUTE_TARGET_PROJECTION: &str = r#"
         r.priority,
         r.connection_id,
         r.model_id,
+        r.provider_data_approval_id,
         r.requires_tools,
         c.provider,
         c.account_label,
@@ -37,9 +46,14 @@ const ROUTE_TARGET_PROJECTION: &str = r#"
         c.credential_version AS current_credential_version,
         c.model_catalog_version AS current_catalog_version,
         c.deleted_at AS connection_deleted_at,
+        pinned_approval.approval_version AS provider_data_approval_version,
+        pinned_approval.approval_class AS provider_data_approval_class,
+        latest_approval.id AS current_provider_data_approval_id,
+        'external_managed'::TEXT AS execution_environment_class,
         m.provider_model_id,
         m.display_name AS model_display_name,
         m.context_window_tokens,
+        m.max_output_tokens,
         m.supports_tools,
         m.credential_version AS model_credential_version,
         m.catalog_version AS model_catalog_version,
@@ -49,6 +63,18 @@ const ROUTE_TARGET_PROJECTION: &str = r#"
       ON c.id = r.connection_id AND c.tenant_id = r.tenant_id
     JOIN ai_provider_models m
       ON m.id = r.model_id AND m.tenant_id = r.tenant_id
+    JOIN ai_provider_data_approval_versions pinned_approval
+      ON pinned_approval.id = r.provider_data_approval_id
+     AND pinned_approval.tenant_id = r.tenant_id
+     AND pinned_approval.connection_id = r.connection_id
+    JOIN LATERAL (
+        SELECT approval.id
+        FROM ai_provider_data_approval_versions approval
+        WHERE approval.tenant_id = r.tenant_id
+          AND approval.connection_id = r.connection_id
+        ORDER BY approval.approval_version DESC
+        LIMIT 1
+    ) latest_approval ON TRUE
 "#;
 
 /// Shared routing service used by Administration APIs and the Agent worker.
@@ -90,7 +116,7 @@ impl AiRoutingOps {
         }
         let route_set_ids = rows.iter().map(|row| row.id).collect::<Vec<_>>();
         let target_rows = load_target_rows(&self.pool, tenant_id, &route_set_ids).await?;
-        assemble_routes(rows, target_rows, false)
+        assemble_routes(rows, target_rows, false, ProviderDataClass::CampusApproved)
     }
 
     /// Reads one current route set without returning provider credentials or fingerprints.
@@ -101,7 +127,7 @@ impl AiRoutingOps {
     ) -> Result<AiRouteSet, AiRoutingError> {
         let row = load_route_set(&self.pool, tenant_id, route_set_id).await?;
         let target_rows = load_target_rows(&self.pool, tenant_id, &[route_set_id]).await?;
-        assemble_one_route(row, target_rows, false)
+        assemble_one_route(row, target_rows, false, ProviderDataClass::CampusApproved)
     }
 
     /// Creates one unique active scope and its complete immutable target chain.
@@ -318,7 +344,13 @@ impl AiRoutingOps {
                 continue;
             };
             let target_rows = load_target_rows(&mut *transaction, tenant_id, &[row.id]).await?;
-            let route = assemble_one_route(row, target_rows, command.requires_tools)?;
+            let resolved_target_rows = target_rows.clone();
+            let route = assemble_one_route(
+                row,
+                target_rows,
+                command.requires_tools,
+                command.required_provider_data_class,
+            )?;
             if route.targets.is_empty() {
                 return Err(AiRoutingError::UnusableRoute {
                     route_set_id: route.id,
@@ -335,6 +367,24 @@ impl AiRoutingOps {
                     reason: unusable_reason(target.readiness),
                 });
             }
+            if route.targets.len() != resolved_target_rows.len() {
+                return Err(stored_route_invariant());
+            }
+            let targets = route
+                .targets
+                .into_iter()
+                .zip(resolved_target_rows)
+                .map(|(projection, row)| {
+                    // Readiness proved the immutable model snapshot belongs to
+                    // the connection's current credential. Pin that snapshot
+                    // version; never reload the mutable connection for routing.
+                    ResolvedAiRouteTarget::from_ready_projection(
+                        projection,
+                        row.model_credential_version,
+                    )
+                    .ok_or_else(stored_route_invariant)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
             transaction.commit().await?;
             return Ok(ResolvedAiRoute {
                 route_set_id: route.id,
@@ -342,7 +392,8 @@ impl AiRoutingOps {
                 precedence: RoutePrecedence::for_scope(&route.scope),
                 route_version: route.version,
                 requires_tools: route.requires_tools,
-                targets: route.targets,
+                required_provider_data_class: command.required_provider_data_class,
+                targets,
             });
         }
         Err(AiRoutingError::NoMatchingRoute)
@@ -370,6 +421,7 @@ struct RouteTargetRow {
     priority: i16,
     connection_id: Uuid,
     model_id: Uuid,
+    provider_data_approval_id: Uuid,
     requires_tools: bool,
     provider: String,
     account_label: String,
@@ -377,9 +429,14 @@ struct RouteTargetRow {
     current_credential_version: i64,
     current_catalog_version: i64,
     connection_deleted_at: Option<DateTime<Utc>>,
+    provider_data_approval_version: i64,
+    provider_data_approval_class: String,
+    current_provider_data_approval_id: Uuid,
+    execution_environment_class: String,
     provider_model_id: String,
     model_display_name: String,
     context_window_tokens: Option<i64>,
+    max_output_tokens: Option<i64>,
     supports_tools: Option<bool>,
     model_credential_version: i64,
     model_catalog_version: i64,
@@ -387,9 +444,42 @@ struct RouteTargetRow {
 }
 
 impl RouteTargetRow {
+    #[cfg(test)]
     fn readiness(&self, requested_requires_tools: bool) -> RouteTargetReadiness {
+        self.readiness_for(requested_requires_tools, ProviderDataClass::CampusApproved)
+    }
+
+    fn readiness_for(
+        &self,
+        requested_requires_tools: bool,
+        required_provider_data_class: ProviderDataClass,
+    ) -> RouteTargetReadiness {
         if self.connection_deleted_at.is_some() || self.connection_status != "ready" {
             return RouteTargetReadiness::ConnectionUnavailable;
+        }
+        if self.provider_data_approval_id != self.current_provider_data_approval_id {
+            return RouteTargetReadiness::ProviderDataApprovalChanged;
+        }
+        let Ok(approval) = ProviderApprovalClass::from_str(&self.provider_data_approval_class)
+        else {
+            return RouteTargetReadiness::ProviderDataNotApproved;
+        };
+        let Ok(environment) =
+            ProviderExecutionEnvironmentClass::from_str(&self.execution_environment_class)
+        else {
+            return RouteTargetReadiness::ProviderDataNotApproved;
+        };
+        if let Err(error) =
+            evaluate_provider_data_eligibility(required_provider_data_class, approval, environment)
+        {
+            return match error {
+                ProviderDataEligibilityError::ProviderDataNotApproved => {
+                    RouteTargetReadiness::ProviderDataNotApproved
+                }
+                ProviderDataEligibilityError::LocalExecutionRequired => {
+                    RouteTargetReadiness::LocalExecutionRequired
+                }
+            };
         }
         if self.model_deleted_at.is_some()
             || self.model_credential_version != self.current_credential_version
@@ -397,27 +487,47 @@ impl RouteTargetRow {
         {
             return RouteTargetReadiness::StaleModel;
         }
+        if self.context_window_tokens.is_none_or(|value| value <= 0)
+            || self.max_output_tokens.is_none_or(|value| value <= 0)
+        {
+            return RouteTargetReadiness::ModelLimitsUnavailable;
+        }
         if (self.requires_tools || requested_requires_tools) && self.supports_tools != Some(true) {
             return RouteTargetReadiness::ToolsUnsupported;
         }
         RouteTargetReadiness::Ready
     }
 
-    fn into_projection(self, requested_requires_tools: bool) -> AiRouteTarget {
-        let readiness = self.readiness(requested_requires_tools);
-        AiRouteTarget {
+    fn into_projection(
+        self,
+        requested_requires_tools: bool,
+        required_provider_data_class: ProviderDataClass,
+    ) -> Result<AiRouteTarget, AiRoutingError> {
+        let readiness = self.readiness_for(requested_requires_tools, required_provider_data_class);
+        let provider_data_approval_class =
+            ProviderApprovalClass::from_str(&self.provider_data_approval_class)
+                .map_err(|_| stored_route_invariant())?;
+        let execution_environment_class =
+            ProviderExecutionEnvironmentClass::from_str(&self.execution_environment_class)
+                .map_err(|_| stored_route_invariant())?;
+        Ok(AiRouteTarget {
             id: self.id,
             priority: self.priority,
             connection_id: self.connection_id,
+            provider_data_approval_id: self.provider_data_approval_id,
+            provider_data_approval_version: self.provider_data_approval_version,
+            provider_data_approval_class,
+            execution_environment_class,
             model_id: self.model_id,
             provider: self.provider,
             account_label: self.account_label,
             provider_model_id: self.provider_model_id,
             model_display_name: self.model_display_name,
             context_window_tokens: self.context_window_tokens,
+            max_output_tokens: self.max_output_tokens,
             supports_tools: self.supports_tools,
             readiness,
-        }
+        })
     }
 }
 
@@ -425,6 +535,7 @@ impl RouteTargetRow {
 struct ValidatedTarget {
     connection_id: Uuid,
     model_id: Uuid,
+    provider_data_approval_id: Uuid,
 }
 
 async fn validate_chain(
@@ -445,7 +556,9 @@ async fn validate_chain(
             SELECT
                 c.status,
                 m.id AS model_id,
-                m.supports_tools
+                m.supports_tools,
+                approval.id AS provider_data_approval_id,
+                approval.approval_class AS provider_data_approval_class
             FROM ai_provider_connections c
             JOIN ai_provider_models m
               ON m.connection_id = c.id
@@ -453,6 +566,14 @@ async fn validate_chain(
              AND m.provider_model_id = $3
              AND m.credential_version = c.credential_version
              AND m.catalog_version = c.model_catalog_version
+            JOIN LATERAL (
+                SELECT current_approval.id, current_approval.approval_class
+                FROM ai_provider_data_approval_versions current_approval
+                WHERE current_approval.tenant_id = c.tenant_id
+                  AND current_approval.connection_id = c.id
+                ORDER BY current_approval.approval_version DESC
+                LIMIT 1
+            ) approval ON TRUE
             WHERE c.tenant_id = $1
               AND c.id = $2
               AND c.deleted_at IS NULL
@@ -477,6 +598,12 @@ async fn validate_chain(
                 "Every route target connection must be ready",
             ));
         }
+        if row.provider_data_approval_class == "unapproved" {
+            return Err(AiRoutingError::invalid(
+                "provider_data_not_approved",
+                "Every route target connection must have an explicit data approval",
+            ));
+        }
         if requires_tools && row.supports_tools != Some(true) {
             return Err(AiRoutingError::invalid(
                 "tools_not_supported",
@@ -488,6 +615,7 @@ async fn validate_chain(
             ValidatedTarget {
                 connection_id: draft.connection_id,
                 model_id: row.model_id,
+                provider_data_approval_id: row.provider_data_approval_id,
             },
         );
     }
@@ -506,6 +634,8 @@ struct TargetValidationRow {
     status: String,
     model_id: Uuid,
     supports_tools: Option<bool>,
+    provider_data_approval_id: Uuid,
+    provider_data_approval_class: String,
 }
 
 async fn insert_targets(
@@ -522,9 +652,9 @@ async fn insert_targets(
             r#"
             INSERT INTO ai_task_routes (
                 id, tenant_id, route_set_id, priority, connection_id, model_id,
-                requires_tools, created_by
+                provider_data_approval_id, requires_tools, created_by
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             "#,
         )
         .bind(Uuid::new_v4())
@@ -533,6 +663,7 @@ async fn insert_targets(
         .bind(priority)
         .bind(target.connection_id)
         .bind(target.model_id)
+        .bind(target.provider_data_approval_id)
         .bind(requires_tools)
         .bind(created_by)
         .execute(&mut **transaction)
@@ -660,6 +791,7 @@ fn assemble_routes(
     rows: Vec<RouteSetRow>,
     targets: Vec<RouteTargetRow>,
     requested_requires_tools: bool,
+    required_provider_data_class: ProviderDataClass,
 ) -> Result<Vec<AiRouteSet>, AiRoutingError> {
     let mut by_route = HashMap::<Uuid, Vec<RouteTargetRow>>::new();
     for target in targets {
@@ -671,7 +803,12 @@ fn assemble_routes(
     rows.into_iter()
         .map(|row| {
             let targets = by_route.remove(&row.id).unwrap_or_default();
-            assemble_one_route(row, targets, requested_requires_tools)
+            assemble_one_route(
+                row,
+                targets,
+                requested_requires_tools,
+                required_provider_data_class,
+            )
         })
         .collect()
 }
@@ -680,6 +817,7 @@ fn assemble_one_route(
     row: RouteSetRow,
     targets: Vec<RouteTargetRow>,
     requested_requires_tools: bool,
+    required_provider_data_class: ProviderDataClass,
 ) -> Result<AiRouteSet, AiRoutingError> {
     let requirements = targets
         .iter()
@@ -696,8 +834,10 @@ fn assemble_one_route(
         requires_tools,
         targets: targets
             .into_iter()
-            .map(|target| target.into_projection(requested_requires_tools))
-            .collect(),
+            .map(|target| {
+                target.into_projection(requested_requires_tools, required_provider_data_class)
+            })
+            .collect::<Result<Vec<_>, _>>()?,
         version: row.version,
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -765,7 +905,15 @@ fn unusable_reason(readiness: RouteTargetReadiness) -> RouteUnusableReason {
         RouteTargetReadiness::Ready => RouteUnusableReason::EmptyChain,
         RouteTargetReadiness::ConnectionUnavailable => RouteUnusableReason::ConnectionUnavailable,
         RouteTargetReadiness::StaleModel => RouteUnusableReason::StaleModel,
+        RouteTargetReadiness::ModelLimitsUnavailable => RouteUnusableReason::ModelLimitsUnavailable,
         RouteTargetReadiness::ToolsUnsupported => RouteUnusableReason::ToolsUnsupported,
+        RouteTargetReadiness::ProviderDataNotApproved => {
+            RouteUnusableReason::ProviderDataNotApproved
+        }
+        RouteTargetReadiness::ProviderDataApprovalChanged => {
+            RouteUnusableReason::ProviderDataApprovalChanged
+        }
+        RouteTargetReadiness::LocalExecutionRequired => RouteUnusableReason::LocalExecutionRequired,
     }
 }
 
@@ -812,6 +960,7 @@ mod tests {
     use crate::{AiRoutingError, RouteTargetReadiness, RouteUnusableReason};
     use chrono::Utc;
     use cp_audit::{AuditActor, RequestContext};
+    use cp_common::{ProviderDataClass, ProviderDataEligibilityError};
     use sqlx::{PgPool, postgres::PgPoolOptions};
     use uuid::Uuid;
 
@@ -819,12 +968,14 @@ mod tests {
         include_str!("../../../../migrations/083_create_ai_task_routing.sql");
 
     fn target_row(route_set_id: Uuid, priority: i16, requires_tools: bool) -> RouteTargetRow {
+        let provider_data_approval_id = Uuid::new_v4();
         RouteTargetRow {
             id: Uuid::new_v4(),
             route_set_id,
             priority,
             connection_id: Uuid::new_v4(),
             model_id: Uuid::new_v4(),
+            provider_data_approval_id,
             requires_tools,
             provider: "openai".to_owned(),
             account_label: "Primary".to_owned(),
@@ -832,14 +983,55 @@ mod tests {
             current_credential_version: 2,
             current_catalog_version: 3,
             connection_deleted_at: None,
+            provider_data_approval_version: 2,
+            provider_data_approval_class: "sensitive_data_approved".to_owned(),
+            current_provider_data_approval_id: provider_data_approval_id,
+            execution_environment_class: "external_managed".to_owned(),
             provider_model_id: "gpt-test".to_owned(),
             model_display_name: "GPT Test".to_owned(),
             context_window_tokens: Some(1000),
+            max_output_tokens: Some(250),
             supports_tools: Some(true),
             model_credential_version: 2,
             model_catalog_version: 3,
             model_deleted_at: None,
         }
+    }
+
+    #[test]
+    fn target_readiness_rejects_approval_drift_and_every_external_local_only_route() {
+        let route_set_id = Uuid::new_v4();
+        let ready = target_row(route_set_id, 1, false);
+        assert_eq!(
+            ready.readiness_for(false, ProviderDataClass::SensitiveDataApproved),
+            RouteTargetReadiness::Ready
+        );
+
+        let mut changed = ready.clone();
+        changed.current_provider_data_approval_id = Uuid::new_v4();
+        assert_eq!(
+            changed.readiness_for(false, ProviderDataClass::CampusApproved),
+            RouteTargetReadiness::ProviderDataApprovalChanged
+        );
+
+        let mut campus_only = ready.clone();
+        campus_only.provider_data_approval_class = "campus_approved".to_owned();
+        assert_eq!(
+            campus_only.readiness_for(false, ProviderDataClass::SensitiveDataApproved),
+            RouteTargetReadiness::ProviderDataNotApproved
+        );
+        assert_eq!(
+            ready.readiness_for(false, ProviderDataClass::LocalOnly),
+            RouteTargetReadiness::LocalExecutionRequired
+        );
+        assert_eq!(
+            cp_common::evaluate_provider_data_eligibility(
+                ProviderDataClass::LocalOnly,
+                cp_common::ProviderApprovalClass::SensitiveDataApproved,
+                cp_common::ProviderExecutionEnvironmentClass::ExternalManaged,
+            ),
+            Err(ProviderDataEligibilityError::LocalExecutionRequired)
+        );
     }
 
     #[test]
@@ -874,12 +1066,58 @@ mod tests {
             RouteTargetReadiness::StaleModel
         );
 
+        let mut missing_context_limit = ready.clone();
+        missing_context_limit.context_window_tokens = None;
+        assert_eq!(
+            missing_context_limit.readiness(false),
+            RouteTargetReadiness::ModelLimitsUnavailable
+        );
+
+        let mut nonpositive_output_limit = ready.clone();
+        nonpositive_output_limit.max_output_tokens = Some(0);
+        assert_eq!(
+            nonpositive_output_limit.readiness(false),
+            RouteTargetReadiness::ModelLimitsUnavailable
+        );
+
         let mut no_tools = ready;
         no_tools.supports_tools = None;
         assert_eq!(
             no_tools.readiness(true),
             RouteTargetReadiness::ToolsUnsupported
         );
+    }
+
+    #[test]
+    fn resolved_worker_target_retains_snapshot_pin_across_credential_rotation() {
+        let route_set_id = Uuid::new_v4();
+        let resolved_row = target_row(route_set_id, 1, false);
+        let expected_credential_version = resolved_row.model_credential_version;
+        let resolved = crate::types::ResolvedAiRouteTarget::from_ready_projection(
+            resolved_row
+                .clone()
+                .into_projection(false, ProviderDataClass::CampusApproved)
+                .unwrap(),
+            expected_credential_version,
+        )
+        .unwrap();
+
+        let mut rotated_connection = resolved_row;
+        rotated_connection.current_credential_version += 1;
+        assert_eq!(
+            rotated_connection.readiness(false),
+            RouteTargetReadiness::StaleModel
+        );
+        assert_eq!(
+            resolved.expected_credential_version(),
+            expected_credential_version
+        );
+        assert_ne!(
+            resolved.expected_credential_version(),
+            rotated_connection.current_credential_version
+        );
+        assert_eq!(resolved.model_snapshot_id(), rotated_connection.model_id);
+        assert_eq!(resolved.max_output_tokens(), 250);
     }
 
     #[test]
@@ -904,6 +1142,7 @@ mod tests {
                 target_row(route_set_id, 2, true),
             ],
             false,
+            ProviderDataClass::CampusApproved,
         )
         .unwrap_err();
         assert_eq!(error.code(), "routing_storage_error");
@@ -926,6 +1165,7 @@ mod tests {
         }
         assert!(ROUTE_SET_PROJECTION.contains("scope_kind"));
         assert!(ROUTE_TARGET_PROJECTION.contains("account_label"));
+        assert!(ROUTE_TARGET_PROJECTION.contains("max_output_tokens"));
         for forbidden in [
             "credential_ciphertext",
             "credential_nonce",
@@ -968,6 +1208,10 @@ mod tests {
         assert_eq!(
             unusable_reason(RouteTargetReadiness::ConnectionUnavailable),
             RouteUnusableReason::ConnectionUnavailable
+        );
+        assert_eq!(
+            unusable_reason(RouteTargetReadiness::ModelLimitsUnavailable),
+            RouteUnusableReason::ModelLimitsUnavailable
         );
         assert_eq!(
             unusable_reason(RouteTargetReadiness::ToolsUnsupported),
@@ -1034,10 +1278,18 @@ mod tests {
             .execute(&pool)
             .await
             .expect("migration 083 must apply");
+        sqlx::query(
+            "ALTER TABLE ai_provider_models ADD COLUMN IF NOT EXISTS max_output_tokens BIGINT",
+        )
+        .execute(&pool)
+        .await
+        .expect("routing contract model-limit column must exist");
 
         let first = seed_tenant_with_provider(&pool, "routing-a", true).await;
         let second = seed_tenant_with_provider(&pool, "routing-b", true).await;
         let unsupported = seed_provider(&pool, first.tenant_id, first.actor_id, false).await;
+        let legacy_limits =
+            seed_provider_with_max_output(&pool, first.tenant_id, first.actor_id, true, None).await;
         let ops = AiRoutingOps::new(pool.clone());
         let read_ops = AiRoutingOps::for_reads(pool.clone());
         let actor = AuditActor::person(first.actor_id);
@@ -1063,6 +1315,56 @@ mod tests {
             )
             .await
             .expect("default route must create");
+        let missing_limits_route = ops
+            .create_route(
+                first.tenant_id,
+                actor,
+                RequestContext::generate(None),
+                crate::CreateRouteCommand::parse(
+                    crate::AiRouteScope::parse(
+                        "task_class",
+                        Some("document_extraction"),
+                        None,
+                        None,
+                        None,
+                        None,
+                    )
+                    .unwrap(),
+                    false,
+                    vec![
+                        crate::RouteTargetDraft::parse(
+                            legacy_limits.connection_id,
+                            &legacy_limits.provider_model_id,
+                        )
+                        .unwrap(),
+                    ],
+                    "Legacy model-limit route",
+                )
+                .unwrap(),
+            )
+            .await
+            .expect("legacy route must retain its immutable model snapshot");
+        let missing_limits = ops
+            .resolve_route(
+                first.tenant_id,
+                crate::ResolveRouteCommand::parse(
+                    "document_extraction",
+                    None,
+                    None,
+                    None,
+                    None,
+                    false,
+                )
+                .unwrap(),
+            )
+            .await;
+        assert!(matches!(
+            missing_limits,
+            Err(AiRoutingError::UnusableRoute {
+                route_set_id,
+                reason: RouteUnusableReason::ModelLimitsUnavailable,
+            }) if route_set_id == missing_limits_route.id
+        ));
         let duplicate_default = ops
             .create_route(
                 first.tenant_id,
@@ -1123,7 +1425,7 @@ mod tests {
             .list_routes(first.tenant_id)
             .await
             .expect("current routes must list");
-        assert_eq!(listed.len(), 2);
+        assert_eq!(listed.len(), 3);
         assert!(
             read_ops
                 .list_routes(second.tenant_id)
@@ -1236,6 +1538,106 @@ mod tests {
             .expect("capability route must resolve first");
         assert_eq!(resolved.route_set_id, capability.id);
         assert_eq!(resolved.precedence, crate::RoutePrecedence::Capability);
+        assert_eq!(resolved.targets.len(), 1);
+        let resolved_target = &resolved.targets[0];
+        let pinned_connection_id = resolved_target.connection_id();
+        let pinned_credential_version = resolved_target.expected_credential_version();
+        let pinned_model_snapshot_id = resolved_target.model_snapshot_id();
+        assert_eq!(pinned_connection_id, capability_provider.connection_id);
+        assert_eq!(pinned_credential_version, 1);
+        let target_is_fresh = sqlx::query_scalar::<_, bool>(
+            r#"
+            SELECT EXISTS (
+                SELECT 1
+                  FROM ai_provider_connections AS connection
+                  JOIN ai_provider_models AS model
+                    ON model.connection_id = connection.id
+                   AND model.tenant_id = connection.tenant_id
+                 WHERE connection.tenant_id = $1
+                   AND connection.id = $2
+                   AND connection.status = 'ready'
+                   AND connection.deleted_at IS NULL
+                   AND connection.credential_version = $3
+                   AND model.id = $4
+                   AND model.credential_version = connection.credential_version
+                   AND model.catalog_version = connection.model_catalog_version
+                   AND model.deleted_at IS NULL
+            )
+            "#,
+        )
+        .bind(first.tenant_id)
+        .bind(pinned_connection_id)
+        .bind(pinned_credential_version)
+        .bind(pinned_model_snapshot_id)
+        .fetch_one(&pool)
+        .await
+        .expect("resolved worker target freshness must be queryable");
+        assert!(target_is_fresh);
+
+        sqlx::query(
+            r#"
+            UPDATE ai_provider_connections
+               SET credential_version = credential_version + 1,
+                   credential_fingerprint = $2,
+                   version = version + 1,
+                   updated_at = CLOCK_TIMESTAMP()
+             WHERE id = $1
+            "#,
+        )
+        .bind(pinned_connection_id)
+        .bind(format!("sha256:rotated-{pinned_connection_id}"))
+        .execute(&pool)
+        .await
+        .expect("credential rotation must persist");
+        let target_is_fresh = sqlx::query_scalar::<_, bool>(
+            r#"
+            SELECT EXISTS (
+                SELECT 1
+                  FROM ai_provider_connections AS connection
+                  JOIN ai_provider_models AS model
+                    ON model.connection_id = connection.id
+                   AND model.tenant_id = connection.tenant_id
+                 WHERE connection.tenant_id = $1
+                   AND connection.id = $2
+                   AND connection.status = 'ready'
+                   AND connection.deleted_at IS NULL
+                   AND connection.credential_version = $3
+                   AND model.id = $4
+                   AND model.credential_version = connection.credential_version
+                   AND model.catalog_version = connection.model_catalog_version
+                   AND model.deleted_at IS NULL
+            )
+            "#,
+        )
+        .bind(first.tenant_id)
+        .bind(pinned_connection_id)
+        .bind(pinned_credential_version)
+        .bind(pinned_model_snapshot_id)
+        .fetch_one(&pool)
+        .await
+        .expect("rotated worker target freshness must be queryable");
+        assert!(!target_is_fresh);
+        let rotated_before_execution = ops
+            .resolve_route(
+                first.tenant_id,
+                crate::ResolveRouteCommand::parse(
+                    "module_read_reporting",
+                    Some("finance"),
+                    Some("read"),
+                    Some("finance.journals.list"),
+                    Some(1),
+                    true,
+                )
+                .unwrap(),
+            )
+            .await;
+        assert!(matches!(
+            rotated_before_execution,
+            Err(AiRoutingError::UnusableRoute {
+                route_set_id,
+                reason: RouteUnusableReason::StaleModel,
+            }) if route_set_id == capability.id
+        ));
 
         let stale = ops
             .replace_route(
@@ -1610,6 +2012,16 @@ mod tests {
         actor_id: Uuid,
         supports_tools: bool,
     ) -> SeededProvider {
+        seed_provider_with_max_output(pool, tenant_id, actor_id, supports_tools, Some(16_384)).await
+    }
+
+    async fn seed_provider_with_max_output(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        actor_id: Uuid,
+        supports_tools: bool,
+        max_output_tokens: Option<i64>,
+    ) -> SeededProvider {
         let connection_id = Uuid::new_v4();
         let model_id = Uuid::new_v4();
         let provider_model_id = format!("test-model-{connection_id}");
@@ -1640,15 +2052,16 @@ mod tests {
             INSERT INTO ai_provider_models (
                 id, tenant_id, connection_id, credential_version, catalog_version,
                 provider_model_id, display_name, context_window_tokens,
-                supports_tools, refreshed_at
+                max_output_tokens, supports_tools, refreshed_at
             )
-            VALUES ($1, $2, $3, 1, 1, $4, 'Routing Test Model', 100000, $5, NOW())
+            VALUES ($1, $2, $3, 1, 1, $4, 'Routing Test Model', 100000, $5, $6, NOW())
             "#,
         )
         .bind(model_id)
         .bind(tenant_id)
         .bind(connection_id)
         .bind(&provider_model_id)
+        .bind(max_output_tokens)
         .bind(supports_tools)
         .execute(pool)
         .await

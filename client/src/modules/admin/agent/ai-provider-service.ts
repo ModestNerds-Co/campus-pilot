@@ -11,10 +11,12 @@ import type { ApiEnvelope } from "@/modules/users/types";
 import type {
   AiProviderConnection,
   CreateProviderConnectionInput,
+  ProviderDataApproval,
   ProviderCatalogEntry,
   ProviderModelSnapshot,
   ProviderTestOutcome,
   RotateProviderCredentialInput,
+  SetProviderDataApprovalInput,
   UpdateProviderConnectionInput,
 } from "./types";
 
@@ -46,6 +48,11 @@ export const aiProviderService = {
 
   updateConnection: (connectionId: string, input: UpdateProviderConnectionInput) =>
     request<AiProviderConnection>(() => httpClient.put(`${BASE_URL}/connections/${connectionId}`, input)),
+
+  setDataApproval: (connectionId: string, input: SetProviderDataApprovalInput) =>
+    request<ProviderDataApproval>(() =>
+      httpClient.put(`${BASE_URL}/connections/${connectionId}/data-approval`, input),
+    ),
 
   rotateCredential: (connectionId: string, input: RotateProviderCredentialInput) =>
     request<AiProviderConnection>(() =>
@@ -85,4 +92,3 @@ export function aiProviderErrorMessage(
   if (typeof issue === "string") return issue;
   return issue?.detail || response.message || fallback;
 }
-

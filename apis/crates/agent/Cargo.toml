@@ -9,6 +9,7 @@ cp-audit = { path = "../platform/audit" }
 async-trait = "0.1.88"
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 sqlx = { workspace = true }
 uuid = { workspace = true }
 thiserror = "2.0"

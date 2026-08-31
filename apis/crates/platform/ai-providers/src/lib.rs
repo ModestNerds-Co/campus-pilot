@@ -7,15 +7,26 @@
 
 mod client;
 mod crypto;
+mod execution;
+mod execution_binding;
+mod execution_client;
+mod execution_types;
 mod service;
 mod types;
 
 pub use client::{ProviderEndpoints, ProviderHttpClient};
 pub use crypto::{CredentialKeyring, KeyringError};
+pub use execution::PreparedProviderExecution;
+pub use execution_types::{
+    ExecuteProviderCommand, ProviderExecutionError, ProviderExecutionFailure,
+    ProviderExecutionResponse, ProviderExecutionTarget, ProviderMessage, ProviderToolCall,
+    ProviderToolDefinition, ProviderUsage,
+};
 pub use service::AiProviderOps;
 pub use types::{
     AiProviderConnection, AuthMethod, ConnectionModelSnapshot, ConnectionStatus,
     ConnectionTestOutcome, ConnectionTestResult, CreateConnectionCommand, DisconnectedConnection,
-    ProviderCatalogEntry, ProviderFailureCategory, ProviderKey, ProviderModel,
-    RotateCredentialCommand, ServiceError, UpdateConnectionCommand, provider_catalog,
+    ProviderCatalogEntry, ProviderDataApproval, ProviderFailureCategory, ProviderKey,
+    ProviderModel, RotateCredentialCommand, ServiceError, SetProviderDataApprovalCommand,
+    UpdateConnectionCommand, provider_catalog,
 };

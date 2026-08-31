@@ -21,20 +21,14 @@ use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use std::time::Duration;
 
-mod config;
-mod db;
-mod middleware;
-mod models;
-mod routes;
-mod services;
-mod state;
-mod utils;
-
-use crate::config::Config;
-use crate::middleware::RequestContextMiddleware;
-use crate::models::ApiResponse;
-use crate::services::access::{ops::AccessOps, routes::refresh_license_inner};
-use state::AppState;
+use campus_pilot::{
+    config::Config,
+    middleware::RequestContextMiddleware,
+    models::ApiResponse,
+    routes,
+    services::access::{ops::AccessOps, routes::refresh_license_inner},
+    state::AppState,
+};
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<std::io::Result<()>> {

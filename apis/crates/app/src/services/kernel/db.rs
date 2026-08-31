@@ -1,5 +1,6 @@
 use anyhow::Context;
 use sqlx::PgPool;
+use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
@@ -12,6 +13,20 @@ use crate::{
 
 pub struct KernelDbOps {
     pool: PgPool,
+}
+
+#[derive(Debug, Error)]
+pub enum KernelSetupError {
+    #[error("Campus Pilot setup has already started or is complete")]
+    InvalidState,
+    #[error("Campus Pilot setup could not be saved")]
+    Storage(#[source] anyhow::Error),
+}
+
+impl KernelSetupError {
+    fn storage(error: impl Into<anyhow::Error>) -> Self {
+        Self::Storage(error.into())
+    }
 }
 
 impl KernelDbOps {
@@ -40,11 +55,14 @@ impl KernelDbOps {
                 .await
                 .unwrap_or_else(|_| "Uninitialized".to_string());
 
-        let state = SystemState::from_str(&state_str);
+        let state = SystemState::from_db_value(&state_str);
 
         // If system is Ready or SchoolConfigured, fetch school info
         let school = if matches!(state, SystemState::Ready | SystemState::SchoolConfigured) {
-            self.get_school_info().await.ok()
+            match self.default_tenant_id().await {
+                Ok(tenant_id) => self.get_school_info(tenant_id).await.ok(),
+                Err(_) => None,
+            }
         } else {
             None
         };
@@ -52,7 +70,7 @@ impl KernelDbOps {
         Ok(KernelStatus { state, school })
     }
 
-    async fn get_school_info(&self) -> ApiResult<SchoolInfo> {
+    async fn get_school_info(&self, tenant_id: Uuid) -> ApiResult<SchoolInfo> {
         let school = sqlx::query_as!(
             SchoolInfo,
             r#"
@@ -60,8 +78,9 @@ impl KernelDbOps {
                    address_line1, address_line2, city, province, country,
                    logo_light_url, logo_dark_url
             FROM school_profile
-            WHERE id = 'singleton'
-            "#
+            WHERE tenant_id = $1 AND deleted_at IS NULL
+            "#,
+            tenant_id
         )
         .fetch_one(&self.pool)
         .await
@@ -87,15 +106,45 @@ impl KernelDbOps {
         Ok(())
     }
 
-    pub async fn setup_school(&self, req: SetupSchoolRequest) -> ApiResult<()> {
-        let tenant_id = self.default_tenant_id().await?;
+    pub async fn setup_school(&self, req: SetupSchoolRequest) -> Result<(), KernelSetupError> {
         let timezone = req.timezone.unwrap_or_else(|| "Africa/Harare".to_string());
 
         let mut tx = self
             .pool
             .begin()
             .await
-            .context("Failed to start transaction")?;
+            .context("Failed to start school setup transaction")
+            .map_err(KernelSetupError::storage)?;
+
+        // Acquire the bootstrap transition in the database. The predicate and
+        // row lock make concurrent/replayed unauthenticated setup requests fail
+        // closed without leaving a persistent lock after rollback or process exit.
+        let acquired = sqlx::query_scalar::<_, bool>(
+            r#"
+            UPDATE system_state
+            SET kernel_lock = TRUE, updated_at = NOW()
+            WHERE id = 'singleton'
+              AND state = 'Uninitialized'
+              AND kernel_lock = FALSE
+              AND deleted_at IS NULL
+            RETURNING TRUE
+            "#,
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .context("Failed to acquire school setup transition")
+        .map_err(KernelSetupError::storage)?;
+        if acquired.is_none() {
+            return Err(KernelSetupError::InvalidState);
+        }
+
+        let tenant_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM tenants WHERE slug = 'default' AND deleted_at IS NULL",
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to load the default tenant for school setup")
+        .map_err(KernelSetupError::storage)?;
 
         // Keep the tenant record's own name/timezone in sync with the school profile.
         sqlx::query!(
@@ -106,23 +155,25 @@ impl KernelDbOps {
         )
         .execute(&mut *tx)
         .await
-        .context("Failed to update tenant record")?;
+        .context("Failed to update tenant record")
+        .map_err(KernelSetupError::storage)?;
 
-        // Insert or update school profile
+        // Insert or update only the default tenant's school profile. The partial
+        // unique index guarantees one active profile per tenant without reviving
+        // or overwriting another tenant's row.
         sqlx::query!(
             r#"
             INSERT INTO school_profile (
-                id, tenant_id, name, legal_name, emap_code, phone, email,
+                tenant_id, name, legal_name, emap_code, phone, email,
                 address_line1, address_line2, city, province, country,
                 timezone, locale, logo_light_url, logo_dark_url
             )
             VALUES (
-                'singleton', $1, $2, $3, $4, $5, $6,
+                $1, $2, $3, $4, $5, $6,
                 $7, $8, $9, $10, $11,
                 $12, $13, $14, $15
             )
-            ON CONFLICT (id) DO UPDATE SET
-                tenant_id = EXCLUDED.tenant_id,
+            ON CONFLICT (tenant_id) WHERE deleted_at IS NULL DO UPDATE SET
                 name = EXCLUDED.name,
                 legal_name = EXCLUDED.legal_name,
                 emap_code = EXCLUDED.emap_code,
@@ -135,8 +186,8 @@ impl KernelDbOps {
                 country = EXCLUDED.country,
                 timezone = EXCLUDED.timezone,
                 locale = EXCLUDED.locale,
-                logo_light_url = EXCLUDED.logo_light_url,
-                logo_dark_url = EXCLUDED.logo_dark_url,
+                logo_light_url = COALESCE(EXCLUDED.logo_light_url, school_profile.logo_light_url),
+                logo_dark_url = COALESCE(EXCLUDED.logo_dark_url, school_profile.logo_dark_url),
                 updated_at = NOW()
             "#,
             tenant_id,
@@ -157,13 +208,25 @@ impl KernelDbOps {
         )
         .execute(&mut *tx)
         .await
-        .context("Failed to insert school profile")?;
+        .context("Failed to insert school profile")
+        .map_err(KernelSetupError::storage)?;
 
-        tx.commit().await.context("Failed to commit transaction")?;
+        sqlx::query(
+            r#"
+            UPDATE system_state
+            SET state = 'SchoolConfigured', kernel_lock = FALSE, updated_at = NOW()
+            WHERE id = 'singleton' AND kernel_lock = TRUE
+            "#,
+        )
+        .execute(&mut *tx)
+        .await
+        .context("Failed to complete school setup transition")
+        .map_err(KernelSetupError::storage)?;
 
-        // Update system state to SchoolConfigured (outside transaction)
-        self.update_system_state(SystemState::SchoolConfigured)
-            .await?;
+        tx.commit()
+            .await
+            .context("Failed to commit school setup transaction")
+            .map_err(KernelSetupError::storage)?;
 
         Ok(())
     }
@@ -174,14 +237,40 @@ impl KernelDbOps {
         email: &str,
         phone: Option<&str>,
         password_hash: &str,
-    ) -> ApiResult<Uuid> {
-        let tenant_id = self.default_tenant_id().await?;
-
+    ) -> Result<Uuid, KernelSetupError> {
         let mut tx = self
             .pool
             .begin()
             .await
-            .context("Failed to start transaction")?;
+            .context("Failed to start administrator setup transaction")
+            .map_err(KernelSetupError::storage)?;
+
+        let acquired = sqlx::query_scalar::<_, bool>(
+            r#"
+            UPDATE system_state
+            SET kernel_lock = TRUE, updated_at = NOW()
+            WHERE id = 'singleton'
+              AND state = 'SchoolConfigured'
+              AND kernel_lock = FALSE
+              AND deleted_at IS NULL
+            RETURNING TRUE
+            "#,
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .context("Failed to acquire administrator setup transition")
+        .map_err(KernelSetupError::storage)?;
+        if acquired.is_none() {
+            return Err(KernelSetupError::InvalidState);
+        }
+
+        let tenant_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM tenants WHERE slug = 'default' AND deleted_at IS NULL",
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .context("Failed to load the default tenant for administrator setup")
+        .map_err(KernelSetupError::storage)?;
 
         // Check if user already exists (within this tenant)
         let existing_user: Option<(Uuid,)> = sqlx::query_as(
@@ -194,10 +283,11 @@ impl KernelDbOps {
         .bind(email)
         .fetch_optional(&mut *tx)
         .await
-        .context("Failed to check for existing user")?;
+        .context("Failed to check for existing user")
+        .map_err(KernelSetupError::storage)?;
 
         if existing_user.is_some() {
-            return Err(anyhow::anyhow!("User with this email already exists"));
+            return Err(KernelSetupError::InvalidState);
         }
 
         // Create the campus owner. Role assignments use immutable keys so the
@@ -217,17 +307,30 @@ impl KernelDbOps {
         .bind(vec!["campus_owner"])
         .fetch_one(&mut *tx)
         .await
-        .context("Failed to create admin user")?;
+        .context("Failed to create admin user")
+        .map_err(KernelSetupError::storage)?;
 
-        tx.commit().await.context("Failed to commit transaction")?;
+        sqlx::query(
+            r#"
+            UPDATE system_state
+            SET state = 'Ready', kernel_lock = FALSE, updated_at = NOW()
+            WHERE id = 'singleton' AND kernel_lock = TRUE
+            "#,
+        )
+        .execute(&mut *tx)
+        .await
+        .context("Failed to complete administrator setup transition")
+        .map_err(KernelSetupError::storage)?;
 
-        // Update system state to Ready (outside transaction)
-        self.update_system_state(SystemState::Ready).await?;
+        tx.commit()
+            .await
+            .context("Failed to commit administrator setup transaction")
+            .map_err(KernelSetupError::storage)?;
 
         Ok(user_id)
     }
 
-    pub async fn get_school_profile(&self) -> ApiResult<SchoolProfileResponse> {
+    pub async fn get_school_profile(&self, tenant_id: Uuid) -> ApiResult<SchoolProfileResponse> {
         let profile = sqlx::query_as!(
             SchoolProfileResponse,
             r#"
@@ -235,8 +338,9 @@ impl KernelDbOps {
                    address_line1, address_line2, city, province, country,
                    timezone, locale, logo_light_url, logo_dark_url
             FROM school_profile
-            WHERE id = 'singleton'
-            "#
+            WHERE tenant_id = $1 AND deleted_at IS NULL
+            "#,
+            tenant_id
         )
         .fetch_one(&self.pool)
         .await
@@ -247,6 +351,7 @@ impl KernelDbOps {
 
     pub async fn update_school_profile(
         &self,
+        tenant_id: Uuid,
         req: UpdateSchoolProfileRequest,
     ) -> ApiResult<SchoolProfileResponse> {
         let profile = sqlx::query_as!(
@@ -266,7 +371,7 @@ impl KernelDbOps {
                 timezone = COALESCE($11, timezone),
                 locale = COALESCE($12, locale),
                 updated_at = NOW()
-            WHERE id = 'singleton'
+            WHERE tenant_id = $13 AND deleted_at IS NULL
             RETURNING id, name, legal_name, emap_code, email, phone,
                       address_line1, address_line2, city, province, country,
                       timezone, locale, logo_light_url, logo_dark_url
@@ -282,7 +387,8 @@ impl KernelDbOps {
             req.province,
             req.country,
             req.timezone,
-            req.locale
+            req.locale,
+            tenant_id
         )
         .fetch_one(&self.pool)
         .await
@@ -293,6 +399,7 @@ impl KernelDbOps {
 
     pub async fn update_school_logos(
         &self,
+        tenant_id: Uuid,
         logo_light_url: Option<String>,
         logo_dark_url: Option<String>,
     ) -> ApiResult<(Option<String>, Option<String>)> {
@@ -302,11 +409,12 @@ impl KernelDbOps {
             SET logo_light_url = COALESCE($1, logo_light_url),
                 logo_dark_url = COALESCE($2, logo_dark_url),
                 updated_at = NOW()
-            WHERE id = 'singleton'
+            WHERE tenant_id = $3 AND deleted_at IS NULL
             RETURNING logo_light_url, logo_dark_url
             "#,
             logo_light_url,
-            logo_dark_url
+            logo_dark_url,
+            tenant_id
         )
         .fetch_one(&self.pool)
         .await
