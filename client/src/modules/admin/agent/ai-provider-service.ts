@@ -10,10 +10,16 @@ import type { ApiEnvelope } from "@/modules/users/types";
 
 import type {
   AiProviderConnection,
+  AiDeviceCodeProviderKey,
+  AiOAuthProviderKey,
   CreateProviderConnectionInput,
   ProviderDataApproval,
   ProviderCatalogEntry,
   ProviderModelSnapshot,
+  ProviderDeviceCodePoll,
+  ProviderDeviceCodeStart,
+  ProviderOAuthCompleteInput,
+  ProviderOAuthStart,
   ProviderTestOutcome,
   RotateProviderCredentialInput,
   SetProviderDataApprovalInput,
@@ -39,6 +45,30 @@ export const aiProviderService = {
 
   listConnections: () =>
     request<AiProviderConnection[]>(() => httpClient.get(`${BASE_URL}/connections`)),
+
+  startOAuth: (provider: AiOAuthProviderKey, reconnectConnectionId?: string) =>
+    request<ProviderOAuthStart>(() => httpClient.post(`${BASE_URL}/oauth/start`, {
+      provider,
+      reconnect_connection_id: reconnectConnectionId,
+    })),
+
+  completeOAuth: (input: ProviderOAuthCompleteInput) =>
+    request<AiProviderConnection | { connected: true }>(() =>
+      httpClient.post(`${BASE_URL}/oauth/complete`, input),
+    ),
+
+  startDeviceCode: (provider: AiDeviceCodeProviderKey, reconnectConnectionId?: string) =>
+    request<ProviderDeviceCodeStart>(() =>
+      httpClient.post(`${BASE_URL}/device-code/start`, {
+        provider,
+        reconnect_connection_id: reconnectConnectionId,
+      }),
+    ),
+
+  pollDeviceCode: (attemptId: string) =>
+    request<ProviderDeviceCodePoll>(() =>
+      httpClient.post(`${BASE_URL}/device-code/poll`, { attempt_id: attemptId }),
+    ),
 
   getConnection: (connectionId: string) =>
     request<AiProviderConnection>(() => httpClient.get(`${BASE_URL}/connections/${connectionId}`)),

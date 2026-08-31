@@ -8,7 +8,10 @@ import {
   AlertTriangle,
   Bot,
   CheckCircle2,
+  Copy,
+  ExternalLink,
   KeyRound,
+  Link2,
   Loader2,
   Pencil,
   Plug,
@@ -21,7 +24,6 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { SearchableSelect } from "@/components/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
@@ -33,19 +35,64 @@ import { useAuthStore } from "@/stores/auth-store";
 
 import { aiProviderErrorMessage, aiProviderService } from "./ai-provider-service";
 import type {
+  AiApiKeyProviderKey,
+  AiDeviceCodeProviderKey,
+  AiOAuthProviderKey,
   AiProviderConnection,
   AiProviderConnectionStatus,
   AiProviderDataApprovalClass,
   AiProviderKey,
   ProviderCatalogEntry,
+  ProviderDeviceCodeStart,
   ProviderModelSnapshot,
+  ProviderOAuthStart,
   ProviderTestOutcome,
 } from "./types";
 
 type ProviderDrawer =
-  | { kind: "connect" }
+  | { kind: "connect"; initialProvider?: AiProviderKey; reconnectConnectionId?: string }
   | { kind: "update" | "rotate" | "test" | "models" | "approval" | "disconnect"; connection: AiProviderConnection }
   | null;
+
+type ProviderOption = {
+  key: AiProviderKey;
+  label: string;
+  detail: string;
+  authMethod: "api_key" | "oauth" | "device_code";
+  mark: string;
+};
+
+const SUBSCRIPTION_PROVIDERS: ProviderOption[] = [
+  {
+    key: "codex",
+    label: "ChatGPT",
+    detail: "Connect a ChatGPT subscription through Codex.",
+    authMethod: "oauth",
+    mark: "GPT",
+  },
+  {
+    key: "claude_code",
+    label: "Claude.ai",
+    detail: "Connect a Claude.ai subscription through Claude Code.",
+    authMethod: "oauth",
+    mark: "AI",
+  },
+  {
+    key: "kimi_code",
+    label: "Kimi Code",
+    detail: "Connect a Kimi Code subscription with device login.",
+    authMethod: "device_code",
+    mark: "Kimi",
+  },
+];
+
+const API_KEY_PROVIDERS: ProviderOption[] = [
+  { key: "openai", label: "OpenAI API", detail: "Use a campus-owned OpenAI API key.", authMethod: "api_key", mark: "OA" },
+  { key: "anthropic", label: "Anthropic API", detail: "Use a campus-owned Anthropic API key.", authMethod: "api_key", mark: "A" },
+  { key: "openrouter", label: "OpenRouter API", detail: "Use one key to reach approved OpenRouter models.", authMethod: "api_key", mark: "OR" },
+];
+
+const PROVIDER_OPTIONS = [...SUBSCRIPTION_PROVIDERS, ...API_KEY_PROVIDERS];
 
 export function AiProvidersPage() {
   const user = useAuthStore((state) => state.user);
@@ -189,6 +236,11 @@ export function AiProvidersPage() {
                   connection={connection}
                   key={connection.id}
                   onOpen={(kind) => setDrawer({ kind, connection })}
+                  onReconnect={() => setDrawer({
+                    kind: "connect",
+                    initialProvider: connection.provider,
+                    reconnectConnectionId: connection.id,
+                  })}
                   provider={providers.find((item) => item.key === connection.provider)}
                 />
               ))}
@@ -207,8 +259,13 @@ export function AiProvidersPage() {
           setDrawer(null);
         }}
         onApprovalSaved={() => void load(true)}
+        onConnectionCompleted={() => {
+          setDrawer(null);
+          void load(true);
+        }}
         onModelsRefreshed={() => void load(true)}
         onUpdated={replaceConnection}
+        connections={connections}
         providers={providers}
       />
     </div>
@@ -219,11 +276,13 @@ function ConnectionRow({
   canEdit,
   connection,
   onOpen,
+  onReconnect,
   provider,
 }: {
   canEdit: boolean;
   connection: AiProviderConnection;
   onOpen: (kind: Exclude<ProviderDrawer, null | { kind: "connect" }>["kind"]) => void;
+  onReconnect: () => void;
   provider: ProviderCatalogEntry | undefined;
 }) {
   const testCopy = connection.last_tested_at
@@ -284,9 +343,15 @@ function ConnectionRow({
             <Button aria-label={`Edit ${connection.account_label}`} onClick={() => onOpen("update")} size="icon-sm" variant="ghost">
               <Pencil className="size-3.5" />
             </Button>
-            <Button aria-label={`Rotate credential for ${connection.account_label}`} onClick={() => onOpen("rotate")} size="icon-sm" variant="ghost">
-              <RotateCw className="size-3.5" />
-            </Button>
+            {connection.auth_method === "api_key" ? (
+              <Button aria-label={`Rotate API key for ${connection.account_label}`} onClick={() => onOpen("rotate")} size="icon-sm" variant="ghost">
+                <RotateCw className="size-3.5" />
+              </Button>
+            ) : (
+              <Button onClick={onReconnect} size="sm" variant="ghost">
+                <ExternalLink className="size-3.5" />Reconnect
+              </Button>
+            )}
             <Button aria-label={`Disconnect ${connection.account_label}`} onClick={() => onOpen("disconnect")} size="icon-sm" variant="ghost">
               <Trash2 className="size-3.5 text-[var(--tone-danger)]" />
             </Button>
@@ -299,8 +364,10 @@ function ConnectionRow({
 
 function ProviderWorkflowDrawer({
   canEdit,
+  connections,
   drawer,
   onClose,
+  onConnectionCompleted,
   onDisconnected,
   onApprovalSaved,
   onModelsRefreshed,
@@ -308,8 +375,10 @@ function ProviderWorkflowDrawer({
   providers,
 }: {
   canEdit: boolean;
+  connections: AiProviderConnection[];
   drawer: ProviderDrawer;
   onClose: () => void;
+  onConnectionCompleted: () => void;
   onDisconnected: (connectionId: string) => void;
   onApprovalSaved: () => void;
   onModelsRefreshed: () => void;
@@ -318,9 +387,13 @@ function ProviderWorkflowDrawer({
 }) {
   const connection = drawer && "connection" in drawer ? drawer.connection : null;
   const connectionProvider = providers.find((provider) => provider.key === connection?.provider);
-  const [providerKey, setProviderKey] = useState<AiProviderKey | null>(providers[0]?.key ?? null);
+  const initialProvider = drawer?.kind === "connect" ? drawer.initialProvider ?? null : null;
+  const reconnectConnectionId = drawer?.kind === "connect" ? drawer.reconnectConnectionId : undefined;
+  const [providerKey, setProviderKey] = useState<AiProviderKey | null>(initialProvider);
   const [accountLabel, setAccountLabel] = useState(connection?.account_label ?? "");
   const [apiKey, setApiKey] = useState("");
+  const [oauthFlow, setOauthFlow] = useState<(ProviderOAuthStart & { callbackValue: string }) | null>(null);
+  const [deviceFlow, setDeviceFlow] = useState<ProviderDeviceCodeStart | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -399,7 +472,7 @@ function ProviderWorkflowDrawer({
 
   const create = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!providerKey || !accountLabel.trim() || !apiKey.trim()) {
+    if (!providerKey || !isApiKeyProvider(providerKey) || !accountLabel.trim() || !apiKey.trim()) {
       setFormError("Choose a provider, enter an account label, and enter its API key.");
       return;
     }
@@ -418,6 +491,82 @@ function ProviderWorkflowDrawer({
       toast.success("Provider connection saved");
       onUpdated(response.data);
       onClose();
+    });
+  };
+
+  const startOAuth = (provider: AiOAuthProviderKey) => {
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    void run(async () => {
+      const response = await aiProviderService.startOAuth(provider, reconnectConnectionId);
+      if (!response.success || !response.data) {
+        popup?.close();
+        setFormError(aiProviderErrorMessage(response, "The provider login could not be started."));
+        return;
+      }
+      setOauthFlow({ ...response.data, callbackValue: "" });
+      setDeviceFlow(null);
+      if (popup) popup.location.assign(response.data.authorize_url);
+    });
+  };
+
+  const completeOAuth = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!oauthFlow?.callbackValue.trim()) {
+      setFormError("Paste the provider callback before finishing the connection.");
+      return;
+    }
+    void run(async () => {
+      const response = await aiProviderService.completeOAuth({
+        attempt_id: oauthFlow.attempt_id,
+        callback_value: oauthFlow.callbackValue.trim(),
+      });
+      if (!response.success) {
+        setFormError(aiProviderErrorMessage(response, "The provider login could not be completed."));
+        return;
+      }
+      toast.success(`${providerLabel(oauthFlow.provider)} connected`);
+      onConnectionCompleted();
+    });
+  };
+
+  const startDeviceCode = (provider: AiDeviceCodeProviderKey) => {
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    void run(async () => {
+      const response = await aiProviderService.startDeviceCode(provider, reconnectConnectionId);
+      if (!response.success || !response.data) {
+        popup?.close();
+        setFormError(aiProviderErrorMessage(response, "The Kimi Code login could not be started."));
+        return;
+      }
+      setDeviceFlow(response.data);
+      setOauthFlow(null);
+      if (popup) popup.location.assign(response.data.verification_uri_complete);
+    });
+  };
+
+  const pollDeviceCode = () => {
+    if (!deviceFlow) return;
+    void run(async () => {
+      const response = await aiProviderService.pollDeviceCode(deviceFlow.attempt_id);
+      if (!response.success || !response.data) {
+        setFormError(aiProviderErrorMessage(response, "Kimi Code approval could not be checked."));
+        return;
+      }
+      if (response.data.status === "connected") {
+        toast.success("Kimi Code connected");
+        onConnectionCompleted();
+        return;
+      }
+      if (response.data.status === "pending") {
+        toast("Kimi Code is still waiting for approval");
+        return;
+      }
+      setDeviceFlow(null);
+      setFormError(response.data.status === "expired"
+        ? "The Kimi Code login expired. Start it again."
+        : "The Kimi Code login was denied. Start it again if this was a mistake.");
     });
   };
 
@@ -545,42 +694,184 @@ function ProviderWorkflowDrawer({
   };
 
   if (drawer.kind === "connect") {
-    const selectedProvider = providers.find((provider) => provider.key === providerKey);
-    return (
-      <DialogShell onClose={close} open>
-        <DialogHeader onClose={busy ? undefined : onClose} title="Connect provider" />
-        <form onSubmit={create}>
-          <DialogBody className="space-y-6">
-            <DrawerIntro icon={<Plug className="size-5" />} text="Save a campus-owned provider connection. It must pass a test before Agent can use it." />
-            <Field label="Provider" labelFor="provider-key">
-              <SearchableSelect
-                allowClear={false}
-                id="provider-key"
-                onChange={(value) => setProviderKey(value)}
-                options={providers.map((provider) => ({
-                  id: provider.key,
-                  value: provider.label,
-                  label: provider.auth_methods.includes("api_key") ? "API key" : "Unavailable",
-                }))}
-                placeholder="Choose provider"
-                value={providerKey}
+    const selectedOption = PROVIDER_OPTIONS.find((provider) => provider.key === providerKey);
+    const selectedCatalog = providers.find((provider) => provider.key === providerKey);
+    const selectedAvailable = selectedOption
+      ? providerIsAvailable(selectedOption, selectedCatalog)
+      : false;
+    const selectedSetupReason = selectedOption
+      ? providerSetupReason(selectedOption, selectedCatalog)
+      : null;
+    const isReconnect = Boolean(reconnectConnectionId && providerKey === initialProvider);
+
+    if (oauthFlow) {
+      const isCodex = oauthFlow.provider === "codex";
+      return (
+        <DialogShell onClose={close} open>
+          <DialogHeader onClose={busy ? undefined : onClose} title={`Finish connecting ${providerLabel(oauthFlow.provider)}`} />
+          <form onSubmit={completeOAuth}>
+            <DialogBody className="space-y-6">
+              <DrawerIntro
+                icon={<Link2 className="size-5" />}
+                text={isCodex
+                  ? "After approval reaches localhost, copy the complete URL from the address bar and paste it here."
+                  : "After approval, copy the complete code#state value shown by Claude and paste it here."}
               />
-            </Field>
-            <Field label="Account label" labelFor="provider-account-label">
-              <Input data-autofocus="true" id="provider-account-label" onChange={(event) => setAccountLabel(event.target.value)} placeholder="e.g. School OpenAI account" required value={accountLabel} />
-              <FieldHint>Use a label administrators will recognize when configuring routes.</FieldHint>
-            </Field>
-            <Field label="API key" labelFor="provider-api-key">
-              <Input autoComplete="new-password" id="provider-api-key" onChange={(event) => setApiKey(event.target.value)} required type="password" value={apiKey} />
-              <FieldHint>{selectedProvider?.credential_hint || "Enter the key issued by the provider."} It will not be shown again.</FieldHint>
-            </Field>
+              <a
+                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                href={oauthFlow.authorize_url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Open {providerLabel(oauthFlow.provider)} <ExternalLink className="size-4" />
+              </a>
+              <Field label={isCodex ? "Localhost callback URL" : "Claude authorization code"} labelFor="provider-oauth-callback">
+                <Input
+                  autoComplete="off"
+                  data-autofocus="true"
+                  id="provider-oauth-callback"
+                  onChange={(event) => setOauthFlow((current) => current ? { ...current, callbackValue: event.target.value } : null)}
+                  placeholder={isCodex ? "http://localhost:1455/auth/callback?code=…&state=…" : "code#state"}
+                  required
+                  value={oauthFlow.callbackValue}
+                />
+              </Field>
+              <FormError message={formError} />
+            </DialogBody>
+            <DialogFooter>
+              <Button disabled={busy} onClick={onClose} type="button" variant="secondary">Cancel</Button>
+              <Button disabled={busy || !oauthFlow.callbackValue.trim()} type="submit">
+                {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+                {busy ? "Connecting…" : "Finish connection"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogShell>
+      );
+    }
+
+    if (deviceFlow) {
+      return (
+        <DialogShell onClose={close} open>
+          <DialogHeader onClose={busy ? undefined : onClose} title="Finish connecting Kimi Code" />
+          <DialogBody className="space-y-6">
+            <DrawerIntro icon={<ExternalLink className="size-5" />} text="Approve the Kimi Code login in the provider window, then check its status here." />
+            <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Verification code</p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <code className="text-xl font-semibold tracking-[0.12em] text-[var(--text-strong)]">{deviceFlow.user_code}</code>
+                <Button
+                  onClick={() => void navigator.clipboard.writeText(deviceFlow.user_code)
+                    .then(() => toast.success("Verification code copied"))
+                    .catch(() => toast.error("Verification code could not be copied"))}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  <Copy className="size-3.5" />Copy code
+                </Button>
+              </div>
+            </div>
+            <a
+              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--text-strong)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              href={deviceFlow.verification_uri_complete}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Open Kimi Code login <ExternalLink className="size-4" />
+            </a>
+            <FieldHint>Approval checks may be repeated every {Math.max(deviceFlow.interval, 1)} seconds.</FieldHint>
             <FormError message={formError} />
           </DialogBody>
           <DialogFooter>
             <Button disabled={busy} onClick={onClose} type="button" variant="secondary">Cancel</Button>
-            <Button disabled={busy || !providerKey || !accountLabel.trim() || !apiKey.trim()} type="submit">
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-              {busy ? "Saving…" : "Save connection"}
+            <Button disabled={busy} onClick={pollDeviceCode} type="button">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+              {busy ? "Checking…" : "Check approval"}
+            </Button>
+          </DialogFooter>
+        </DialogShell>
+      );
+    }
+
+    const submitConnection = (event: React.FormEvent) => {
+      if (!providerKey) {
+        event.preventDefault();
+        setFormError("Choose a provider.");
+        return;
+      }
+      if (!selectedOption || !selectedAvailable) {
+        event.preventDefault();
+        setFormError(selectedSetupReason || "Server setup required");
+        return;
+      }
+      if (isApiKeyProvider(providerKey)) {
+        create(event);
+        return;
+      }
+      event.preventDefault();
+      if (isOAuthProvider(providerKey)) startOAuth(providerKey);
+      else startDeviceCode(providerKey);
+    };
+
+    return (
+      <DialogShell onClose={close} open>
+        <DialogHeader onClose={busy ? undefined : onClose} title={isReconnect && selectedOption ? `Reconnect ${selectedOption.label}` : "Connect provider"} />
+        <form onSubmit={submitConnection}>
+          <DialogBody className="space-y-6">
+            <DrawerIntro icon={<Plug className="size-5" />} text="Choose a subscription login or a campus-owned API key." />
+            <ProviderOptionGroup
+              catalog={providers}
+              connectedProviders={connections.map((item) => item.provider)}
+              label="Subscription accounts"
+              onSelect={(key) => {
+                setProviderKey(key);
+                setFormError(null);
+              }}
+              options={SUBSCRIPTION_PROVIDERS}
+              selected={providerKey}
+            />
+            <ProviderOptionGroup
+              catalog={providers}
+              connectedProviders={connections.map((item) => item.provider)}
+              label="API keys"
+              onSelect={(key) => {
+                setProviderKey(key);
+                setFormError(null);
+              }}
+              options={API_KEY_PROVIDERS}
+              selected={providerKey}
+            />
+            {providerKey && isApiKeyProvider(providerKey) && selectedAvailable ? (
+              <div className="space-y-5 border-t border-[var(--border)] pt-6">
+                <Field label="Account label" labelFor="provider-account-label">
+                  <Input data-autofocus="true" id="provider-account-label" onChange={(event) => setAccountLabel(event.target.value)} placeholder={`e.g. School ${selectedOption?.label ?? "provider"} account`} required value={accountLabel} />
+                  <FieldHint>Use a label administrators will recognize when configuring routes.</FieldHint>
+                </Field>
+                <Field label="API key" labelFor="provider-api-key">
+                  <Input autoComplete="new-password" id="provider-api-key" onChange={(event) => setApiKey(event.target.value)} required type="password" value={apiKey} />
+                  <FieldHint>{selectedCatalog?.credential_hint || "Enter the key issued by the provider."} It will not be shown again.</FieldHint>
+                </Field>
+              </div>
+            ) : providerKey && selectedOption ? (
+              <div className={`border p-4 ${selectedAvailable ? "border-[var(--brand-100)] bg-[var(--brand-soft)]" : "border-[var(--tone-warn-bd)] bg-[var(--tone-warn-bg)]"}`}>
+                <p className="text-sm font-semibold text-[var(--text-strong)]">{isReconnect ? "Reconnect" : "Connect"} {selectedOption.label}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                  {!selectedAvailable
+                    ? selectedSetupReason || "Server setup required"
+                    : selectedOption.authMethod === "device_code"
+                    ? "A Kimi Code login page will open and provide a verification code."
+                    : "The provider approval page will open in a new browser tab."}
+                </p>
+              </div>
+            ) : null}
+            <FormError message={formError} />
+          </DialogBody>
+          <DialogFooter>
+            <Button disabled={busy} onClick={onClose} type="button" variant="secondary">Cancel</Button>
+            <Button disabled={busy || !providerKey || !selectedAvailable || (isApiKeyProvider(providerKey) && (!accountLabel.trim() || !apiKey.trim()))} type="submit">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : providerKey && isApiKeyProvider(providerKey) ? <KeyRound className="size-4" /> : <ExternalLink className="size-4" />}
+              {busy ? "Connecting…" : !selectedAvailable && providerKey ? "Server setup required" : providerKey && isApiKeyProvider(providerKey) ? "Save connection" : selectedOption ? `${isReconnect ? "Reconnect" : "Connect"} ${selectedOption.label}` : "Choose provider"}
             </Button>
           </DialogFooter>
         </form>
@@ -854,7 +1145,11 @@ function ProviderWorkflowDrawer({
       <DialogBody className="space-y-6">
         <ConnectionIdentity connection={connection} />
         <DrawerIntro danger icon={<Trash2 className="size-5" />} text="Disconnecting removes this campus connection. It will be refused while an Agent route still uses it." />
-        <p className="text-sm leading-6 text-[var(--text-muted)]">To reconnect later, an administrator must enter a new API key.</p>
+        <p className="text-sm leading-6 text-[var(--text-muted)]">
+          {connection.auth_method === "api_key"
+            ? "To reconnect later, an administrator must enter a new API key."
+            : "To reconnect later, an administrator must complete the provider login again."}
+        </p>
         <FormError message={formError} />
       </DialogBody>
       <DialogFooter>
@@ -865,6 +1160,87 @@ function ProviderWorkflowDrawer({
       </DialogFooter>
     </DialogShell>
   );
+}
+
+function ProviderOptionGroup({
+  catalog,
+  connectedProviders,
+  label,
+  onSelect,
+  options,
+  selected,
+}: {
+  catalog: ProviderCatalogEntry[];
+  connectedProviders: AiProviderKey[];
+  label: string;
+  onSelect: (key: AiProviderKey) => void;
+  options: ProviderOption[];
+  selected: AiProviderKey | null;
+}) {
+  return (
+    <fieldset>
+      <legend className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{label}</legend>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {options.map((option) => {
+          const entry = catalog.find((item) => item.key === option.key);
+          const available = providerIsAvailable(option, entry);
+          const connected = connectedProviders.includes(option.key);
+          const active = selected === option.key;
+          return (
+            <button
+              aria-pressed={active}
+              className={`min-h-[116px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] ${active ? "border-[var(--brand-strong)] bg-[var(--brand-soft)]" : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)]"}`}
+              key={option.key}
+              onClick={() => onSelect(option.key)}
+              type="button"
+            >
+              <span className="flex items-start gap-3">
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-[8px] text-[11px] font-bold ${available ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "bg-[var(--surface-muted)] text-[var(--text-muted)]"}`}>
+                  {option.mark}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-[var(--text-strong)]">{option.label}</span>
+                    {connected ? <Badge tone="info">Connected</Badge> : null}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-[var(--text-muted)]">
+                    {available ? option.detail : providerSetupReason(option, entry)}
+                  </span>
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function isApiKeyProvider(provider: AiProviderKey): provider is AiApiKeyProviderKey {
+  return provider === "openai" || provider === "anthropic" || provider === "openrouter";
+}
+
+function isOAuthProvider(provider: AiProviderKey): provider is AiOAuthProviderKey {
+  return provider === "codex" || provider === "claude_code";
+}
+
+function providerIsAvailable(option: ProviderOption, entry: ProviderCatalogEntry | undefined) {
+  if (!entry) return false;
+  if (option.authMethod === "api_key") {
+    return entry.auth_methods.includes("api_key") && entry.available !== false;
+  }
+  return entry.auth_methods.includes("subscription_oauth") && entry.available === true;
+}
+
+function providerSetupReason(option: ProviderOption, entry: ProviderCatalogEntry | undefined) {
+  if (entry?.setup_reason?.trim()) return entry.setup_reason;
+  return option.authMethod === "api_key" && !entry
+    ? "Provider unavailable"
+    : "Server setup required";
+}
+
+function providerLabel(provider: AiProviderKey) {
+  return PROVIDER_OPTIONS.find((option) => option.key === provider)?.label ?? provider;
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
@@ -934,13 +1310,14 @@ function hasPermission(permissions: string[] | undefined, permission: string) {
 
 function statusLabel(status: AiProviderConnectionStatus) {
   if (status === "ready") return "Ready";
+  if (status === "needs_reconnect") return "Reconnect required";
   if (status === "error") return "Needs attention";
   return "Not tested";
 }
 
 function statusTone(status: AiProviderConnectionStatus): "success" | "danger" | "neutral" {
   if (status === "ready") return "success";
-  if (status === "error") return "danger";
+  if (status === "error" || status === "needs_reconnect") return "danger";
   return "neutral";
 }
 

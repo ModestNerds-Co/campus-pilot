@@ -36,6 +36,36 @@ const MAX_REPORT_DAYS: i64 = 92;
 const DEFAULT_REPORT_DAYS: i64 = 30;
 const MAX_EXPORT_ROWS: i64 = 10_000;
 
+const RUNTIME_READINESS_QUERY: &str = r#"
+    SELECT
+        (SELECT COUNT(*) FROM agent_threads
+         WHERE tenant_id = $1 AND deleted_at IS NULL) AS session_count,
+        (SELECT COUNT(*) FROM agent_runs
+         WHERE tenant_id = $1 AND status = 'queued' AND deleted_at IS NULL)
+            AS queued_run_count,
+        (SELECT COUNT(*) FROM agent_runs
+         WHERE tenant_id = $1
+           AND status IN ('running', 'awaiting_approval')
+           AND deleted_at IS NULL) AS active_run_count,
+        (SELECT COUNT(*) FROM agent_run_queue
+         WHERE tenant_id = $1 AND state = 'leased'
+           AND lease_expires_at <= STATEMENT_TIMESTAMP()
+           AND deleted_at IS NULL) AS expired_lease_count,
+        (SELECT COUNT(*) FROM agent_limit_rules
+         WHERE tenant_id = $1 AND deleted_at IS NULL) AS configured_limit_count,
+        agent_has_ready_worker() AS worker_available,
+        (SELECT COUNT(*) FROM agent_worker_instances
+         WHERE deleted_at IS NULL) AS registered_worker_count,
+        (SELECT COUNT(*) FROM agent_worker_instances
+         WHERE status = 'ready'
+           AND heartbeat_expires_at > STATEMENT_TIMESTAMP()
+           AND startup_coverage_completed_at IS NOT NULL
+           AND artifact_key_coverage_sha256 IS NOT NULL
+           AND provider_key_coverage_sha256 IS NOT NULL
+           AND provider_route_coverage_sha256 IS NOT NULL
+           AND deleted_at IS NULL) AS ready_worker_count
+"#;
+
 /// Application-owned, read-only Agent governance service.
 #[derive(Debug, Clone)]
 pub struct AgentGovernanceOps {
@@ -68,39 +98,14 @@ impl AgentGovernanceOps {
             .list_routes(tenant_id)
             .await
             .map_err(|_| GovernanceError::DependencyUnavailable)?;
-        let runtime = sqlx::query_as::<_, RuntimeReadinessRow>(
-            r#"
-            SELECT
-                (SELECT COUNT(*) FROM agent_threads
-                 WHERE tenant_id = $1 AND deleted_at IS NULL) AS session_count,
-                (SELECT COUNT(*) FROM agent_runs
-                 WHERE tenant_id = $1 AND status = 'queued' AND deleted_at IS NULL)
-                    AS queued_run_count,
-                (SELECT COUNT(*) FROM agent_runs
-                 WHERE tenant_id = $1
-                   AND status IN ('running', 'awaiting_approval')
-                   AND deleted_at IS NULL) AS active_run_count,
-                (SELECT COUNT(*) FROM agent_run_queue
-                 WHERE tenant_id = $1 AND state = 'leased'
-                   AND lease_expires_at <= STATEMENT_TIMESTAMP()
-                   AND deleted_at IS NULL) AS expired_lease_count,
-                (SELECT COUNT(*) FROM agent_limit_rules
-                 WHERE tenant_id = $1 AND deleted_at IS NULL) AS configured_limit_count,
-                agent_has_ready_worker() AS worker_available,
-                (SELECT COUNT(*) FROM agent_worker_instances
-                 WHERE deleted_at IS NULL) AS registered_worker_count,
-                (SELECT COUNT(*) FROM agent_worker_instances
-                 WHERE lifecycle_state = 'ready'
-                   AND ready_at IS NOT NULL
-                   AND heartbeat_at >= CLOCK_TIMESTAMP() - INTERVAL '45 seconds'
-                   AND draining_at IS NULL
-                   AND unavailable_at IS NULL
-                   AND deleted_at IS NULL) AS ready_worker_count
-            "#,
-        )
-        .bind(tenant_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let runtime = sqlx::query_as::<_, RuntimeReadinessRow>(RUNTIME_READINESS_QUERY)
+            .bind(tenant_id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|error| {
+                log::error!("Agent governance readiness state could not be loaded: {error}");
+                GovernanceError::Storage(error)
+            })?;
 
         let agent_module = module_states.get("agent");
         let executable_keys = registry
@@ -1919,9 +1924,9 @@ mod tests {
     use chrono::{Duration, Utc};
 
     use super::{
-        CapabilityInventoryQuery, GovernanceError, ParsedCapabilityInventoryQuery, ReportRange,
-        UsageQuery, csv_field, csv_text_field, governance_error, page_count, respond,
-        worker_readiness_reason,
+        CapabilityInventoryQuery, GovernanceError, ParsedCapabilityInventoryQuery,
+        RUNTIME_READINESS_QUERY, ReportRange, UsageQuery, csv_field, csv_text_field,
+        governance_error, page_count, respond, worker_readiness_reason,
     };
 
     #[test]
@@ -1991,6 +1996,34 @@ mod tests {
         assert_eq!(worker_readiness_reason(true, 1), "ready");
         assert_eq!(worker_readiness_reason(false, 0), "not_registered");
         assert_eq!(worker_readiness_reason(false, 2), "no_fresh_ready_worker");
+    }
+
+    #[test]
+    fn runtime_readiness_query_uses_the_migration_091_worker_contract() {
+        for required in [
+            "status = 'ready'",
+            "heartbeat_expires_at > STATEMENT_TIMESTAMP()",
+            "startup_coverage_completed_at IS NOT NULL",
+            "artifact_key_coverage_sha256 IS NOT NULL",
+            "provider_key_coverage_sha256 IS NOT NULL",
+            "provider_route_coverage_sha256 IS NOT NULL",
+        ] {
+            assert!(
+                RUNTIME_READINESS_QUERY.contains(required),
+                "readiness must retain migration 091 predicate: {required}"
+            );
+        }
+        for removed_column in [
+            "lifecycle_state",
+            "ready_at",
+            "draining_at",
+            "unavailable_at",
+        ] {
+            assert!(
+                !RUNTIME_READINESS_QUERY.contains(removed_column),
+                "readiness must not query non-contract column: {removed_column}"
+            );
+        }
     }
 
     #[test]

@@ -3,9 +3,13 @@
  * Credential input exists only in mutation payloads and is never part of a response type.
  */
 
-export type AiProviderKey = "openai" | "anthropic" | "openrouter";
-export type AiProviderAuthMethod = "api_key";
-export type AiProviderConnectionStatus = "untested" | "ready" | "error";
+export type AiApiKeyProviderKey = "openai" | "anthropic" | "openrouter";
+export type AiOAuthProviderKey = "codex" | "claude_code";
+export type AiDeviceCodeProviderKey = "kimi_code";
+export type AiSubscriptionProviderKey = AiOAuthProviderKey | AiDeviceCodeProviderKey;
+export type AiProviderKey = AiApiKeyProviderKey | AiSubscriptionProviderKey;
+export type AiProviderAuthMethod = "api_key" | "subscription_oauth";
+export type AiProviderConnectionStatus = "untested" | "ready" | "error" | "needs_reconnect";
 export type AiProviderTestStatus = "succeeded" | "failed";
 export type AiProviderDataApprovalClass =
   | "unapproved"
@@ -17,6 +21,8 @@ export interface ProviderCatalogEntry {
   key: AiProviderKey;
   label: string;
   auth_methods: AiProviderAuthMethod[];
+  available?: boolean;
+  setup_reason?: string | null;
   credential_hint: string;
   supports_connection_test: boolean;
   supports_model_refresh: boolean;
@@ -85,8 +91,8 @@ export interface ProviderTestOutcome {
 }
 
 export interface CreateProviderConnectionInput {
-  provider: AiProviderKey;
-  auth_method: AiProviderAuthMethod;
+  provider: AiApiKeyProviderKey;
+  auth_method: "api_key";
   account_label: string;
   api_key: string;
 }
@@ -99,6 +105,32 @@ export interface UpdateProviderConnectionInput {
 export interface RotateProviderCredentialInput {
   api_key: string;
   expected_version: number;
+}
+
+export interface ProviderOAuthStart {
+  attempt_id: string;
+  provider: AiOAuthProviderKey;
+  authorize_url: string;
+}
+
+export interface ProviderOAuthCompleteInput {
+  attempt_id: string;
+  callback_value: string;
+}
+
+export interface ProviderDeviceCodeStart {
+  attempt_id: string;
+  provider: AiDeviceCodeProviderKey;
+  verification_uri_complete: string;
+  user_code: string;
+  interval: number;
+}
+
+export type ProviderDeviceCodeStatus = "pending" | "connected" | "expired" | "denied";
+
+export interface ProviderDeviceCodePoll {
+  status: ProviderDeviceCodeStatus;
+  connection?: AiProviderConnection;
 }
 
 export interface SetProviderDataApprovalInput {
