@@ -1,3 +1,8 @@
+//! Owns the single-install bootstrap lifecycle and tenant-scoped school profile persistence.
+//!
+//! Bootstrap is closed permanently once the default campus has an active Campus Owner;
+//! a stale mutable system-state row must never reopen unauthenticated setup.
+
 use anyhow::Context;
 use sqlx::PgPool;
 use thiserror::Error;
@@ -49,13 +54,31 @@ impl KernelDbOps {
     }
 
     pub async fn get_kernel_status(&self) -> ApiResult<KernelStatus> {
-        let state_str: String =
-            sqlx::query_scalar("SELECT state::TEXT FROM system_state WHERE id='singleton'")
-                .fetch_one(&self.pool)
-                .await
-                .unwrap_or_else(|_| "Uninitialized".to_string());
+        let (state_str, has_active_campus_owner): (String, bool) = sqlx::query_as(
+            r#"
+            SELECT state.state::TEXT,
+                   EXISTS (
+                       SELECT 1
+                       FROM tenants AS tenant
+                       JOIN users AS campus_owner ON campus_owner.tenant_id = tenant.id
+                       WHERE tenant.slug = 'default'
+                         AND tenant.deleted_at IS NULL
+                         AND campus_owner.deleted_at IS NULL
+                         AND campus_owner.is_active = TRUE
+                         AND 'campus_owner' = ANY(campus_owner.roles)
+                   )
+            FROM system_state AS state
+            WHERE state.id = 'singleton' AND state.deleted_at IS NULL
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to load bootstrap state")?;
 
-        let state = SystemState::from_db_value(&state_str);
+        // The durable lifecycle is monotonic. Existing owner authority is
+        // canonical evidence that bootstrap already completed, even if a
+        // legacy migration or manual repair left the status row behind.
+        let state = SystemState::from_bootstrap_facts(&state_str, has_active_campus_owner);
 
         // If system is Ready or SchoolConfigured, fetch school info
         let school = if matches!(state, SystemState::Ready | SystemState::SchoolConfigured) {
@@ -127,6 +150,16 @@ impl KernelDbOps {
               AND state = 'Uninitialized'
               AND kernel_lock = FALSE
               AND deleted_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM tenants AS tenant
+                  JOIN users AS campus_owner ON campus_owner.tenant_id = tenant.id
+                  WHERE tenant.slug = 'default'
+                    AND tenant.deleted_at IS NULL
+                    AND campus_owner.deleted_at IS NULL
+                    AND campus_owner.is_active = TRUE
+                    AND 'campus_owner' = ANY(campus_owner.roles)
+              )
             RETURNING TRUE
             "#,
         )
@@ -253,6 +286,16 @@ impl KernelDbOps {
               AND state = 'SchoolConfigured'
               AND kernel_lock = FALSE
               AND deleted_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM tenants AS tenant
+                  JOIN users AS campus_owner ON campus_owner.tenant_id = tenant.id
+                  WHERE tenant.slug = 'default'
+                    AND tenant.deleted_at IS NULL
+                    AND campus_owner.deleted_at IS NULL
+                    AND campus_owner.is_active = TRUE
+                    AND 'campus_owner' = ANY(campus_owner.roles)
+              )
             RETURNING TRUE
             "#,
         )

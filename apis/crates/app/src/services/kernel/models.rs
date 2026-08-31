@@ -1,3 +1,7 @@
+//! Defines the externally visible bootstrap lifecycle and its monotonic reconciliation rule.
+//!
+//! An active Campus Owner proves setup is complete even when persisted legacy state is stale.
+
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -27,6 +31,14 @@ impl SystemState {
             _ => SystemState::Uninitialized,
         }
     }
+
+    pub(crate) fn from_bootstrap_facts(s: &str, has_active_campus_owner: bool) -> Self {
+        if has_active_campus_owner {
+            Self::Ready
+        } else {
+            Self::from_db_value(s)
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -49,4 +61,37 @@ pub struct KernelStatus {
     pub state: SystemState,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub school: Option<SchoolInfo>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SystemState;
+
+    #[test]
+    fn active_campus_owner_closes_stale_bootstrap_state() {
+        assert!(matches!(
+            SystemState::from_bootstrap_facts("SchoolConfigured", true),
+            SystemState::Ready
+        ));
+        assert!(matches!(
+            SystemState::from_bootstrap_facts("Uninitialized", true),
+            SystemState::Ready
+        ));
+    }
+
+    #[test]
+    fn campus_without_owner_keeps_its_persisted_bootstrap_stage() {
+        assert!(matches!(
+            SystemState::from_bootstrap_facts("Uninitialized", false),
+            SystemState::Uninitialized
+        ));
+        assert!(matches!(
+            SystemState::from_bootstrap_facts("SchoolConfigured", false),
+            SystemState::SchoolConfigured
+        ));
+        assert!(matches!(
+            SystemState::from_bootstrap_facts("Ready", false),
+            SystemState::Ready
+        ));
+    }
 }
