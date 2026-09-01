@@ -5981,6 +5981,8 @@ mod tests {
         assert!(!allowed("academics.teachers.update", &teacher));
         assert!(!allowed("academics.grade_levels.create", &teacher));
         assert!(!allowed("academics.grade_levels.update", &teacher));
+        assert!(!allowed("administration.users.create", &teacher));
+        assert!(!allowed("administration.roles.create", &teacher));
         assert!(!allowed("timetabling.runs.generate", &teacher));
         assert!(!allowed("administration.users.list", &teacher));
 

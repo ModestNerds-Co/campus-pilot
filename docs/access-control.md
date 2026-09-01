@@ -31,7 +31,7 @@ The initial seeded campus roles are:
 
 - Campus Owner — full access to every enabled campus module.
 - School Administrator — manages people, access, configuration, and licensing without becoming a platform operator.
-- Teacher — assigned-class teaching, learner, timetable, library, and communication access; no academic-structure or teacher-profile administration.
+- Teacher — assigned-class teaching, learner, timetable, library, and communication access; no user, role, teacher-profile, grade-level, academic-structure, grading-policy, publication, or progression administration. A broader school responsibility uses a separately named custom role rather than widening the seeded Teacher baseline.
 - Student — self-service learning, timetable, fee, library, and communication access.
 - Registrar — admissions, enrolment, and learner-record access.
 - Academic Manager — campus-wide assessment setup, mark-sheet publication, and controlled corrections.

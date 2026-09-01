@@ -524,8 +524,8 @@ fn module_permission(
             "Read academic structures and published records.".to_string(),
         ),
         ("academics", "teach") => (
-            "Work with assigned classes".to_string(),
-            "Prepare assigned mark sheets, enter marks, and add teacher comments.".to_string(),
+            "Record assigned learner marks".to_string(),
+            "Start and submit assigned mark sheets, enter marks, and add assigned report comments. This does not configure grade levels, teacher profiles, or grading policy.".to_string(),
         ),
         ("academics", "create") => (
             "Create academic structures".to_string(),
@@ -604,7 +604,7 @@ mod tests {
 
         assert_eq!(
             permission("academics:teach").label,
-            "Work with assigned classes"
+            "Record assigned learner marks"
         );
         assert!(
             permission("academics:teach")

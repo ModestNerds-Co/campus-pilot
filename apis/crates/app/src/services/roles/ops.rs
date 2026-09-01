@@ -1,7 +1,8 @@
 //! Persists tenant-scoped role definitions and resolves assignment authority.
 //!
-//! Role keys are immutable assignment identifiers. Role names and permissions
-//! remain editable, while deletion is limited to unassigned custom roles.
+//! Role keys are immutable assignment identifiers. Built-in permission
+//! baselines are fixed; dynamic custom roles remain editable and may be deleted
+//! only while unassigned.
 
 use std::collections::BTreeSet;
 

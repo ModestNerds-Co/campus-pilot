@@ -395,7 +395,7 @@ function permissionGroups(section: PermissionSection): PermissionGroup[] {
     {
       key: "academics-teaching",
       label: "Teaching work",
-      description: "Read academic records and work only with assigned classes.",
+      description: "Enter marks and comments for assigned classes. Teacher profiles, grade levels, grading policy, and publication remain administrative.",
       permissions: teaching,
     },
     {
