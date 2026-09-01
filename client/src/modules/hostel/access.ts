@@ -11,8 +11,7 @@ export function hostelAccessProfile(
 ): HostelAccessProfile {
   const allowed = (permission: string) =>
     permissions.includes("*") || permissions.includes(permission);
-  const hasCampusOccupancy =
-    permissions.includes("*") || recordScopes?.["hostel.occupancy"] === "campus";
+  const hasCampusOccupancy = recordScopes?.["hostel.occupancy"] === "campus";
   const canAllocate = hasCampusOccupancy && allowed("hostel:allocate");
 
   return {

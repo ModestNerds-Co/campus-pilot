@@ -13,6 +13,8 @@ interface ProtectedRouteProps {
   requiredPermission?: string;
   requiredAnyPermissions?: readonly string[];
   requiredModule?: string;
+  requiredRecordScope?: string;
+  requiredRecordScopeKind?: "self" | "assigned" | "self_and_assigned" | "campus";
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -20,6 +22,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   requiredAnyPermissions,
   requiredModule,
+  requiredRecordScope,
+  requiredRecordScopeKind,
 }) => {
   const navigate = useNavigate();
   const { isAuthenticated, accessToken, checkAuth } = useAuthStore();
@@ -52,8 +56,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         currentUser?.permissions?.includes("*") ||
         requiredAnyPermissions.some((permission) => currentUser?.permissions?.includes(permission));
       const hasModule = !requiredModule || currentUser?.modules?.includes(requiredModule);
+      const hasRecordScope =
+        !requiredRecordScope ||
+        (requiredRecordScopeKind
+          ? currentUser?.record_scopes?.[requiredRecordScope] === requiredRecordScopeKind
+          : Boolean(currentUser?.record_scopes?.[requiredRecordScope]));
 
-      if (!hasPermission || !hasAnyPermission || !hasModule) {
+      if (!hasPermission || !hasAnyPermission || !hasModule || !hasRecordScope) {
         navigate({ to: "/home", replace: true });
         return;
       }
@@ -65,7 +74,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return () => {
       active = false;
     };
-  }, [isAuthenticated, accessToken, checkAuth, navigate, requiredAnyPermissions, requiredPermission, requiredModule]);
+  }, [isAuthenticated, accessToken, checkAuth, navigate, requiredAnyPermissions, requiredPermission, requiredModule, requiredRecordScope, requiredRecordScopeKind]);
 
   if (isChecking) {
     return (

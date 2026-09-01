@@ -26,7 +26,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 import { accessService } from "./access-service";
 import { defaultModuleVisual, moduleRouteKey, moduleVisuals, stageLabel } from "./module-registry";
-import type { ModuleDefinition } from "./types";
+import type { ModuleDefinition, RecordScopeFamilyDefinition } from "./types";
 
 const RECENT_MODULE_KEY = "campuspilot_recent_module";
 
@@ -35,6 +35,7 @@ export const CampusHome: React.FC = () => {
   const { user, logout } = useAuthStore();
   const [school, setSchool] = useState<SchoolConfiguration | null>(null);
   const [catalog, setCatalog] = useState<ModuleDefinition[]>([]);
+  const [recordScopeFamilies, setRecordScopeFamilies] = useState<RecordScopeFamilyDefinition[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentModuleKey, setRecentModuleKey] = useState(() => localStorage.getItem(RECENT_MODULE_KEY));
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +57,7 @@ export const CampusHome: React.FC = () => {
         }
         if (catalogResponse.success && catalogResponse.data) {
           setCatalog(catalogResponse.data.modules);
+          setRecordScopeFamilies(catalogResponse.data.record_scope_families);
           setLoadError(null);
         } else {
           setLoadError("Your campus modules could not be loaded. Refresh the page to try again.");
@@ -89,9 +91,15 @@ export const CampusHome: React.FC = () => {
       const authorized =
         hasOwnerAccess ||
         user.permissions?.some((permission) => permission.startsWith(`${module.permission_namespace}:`));
-      return enabled && authorized;
+      const moduleScopeFamilies = recordScopeFamilies.filter(
+        (family) => family.module_key === module.key,
+      );
+      const scopeAuthorized =
+        moduleScopeFamilies.length === 0 ||
+        moduleScopeFamilies.some((family) => Boolean(user.record_scopes?.[family.key]));
+      return enabled && authorized && scopeAuthorized;
     }).map((module) => modulePresentation(module, user.permissions ?? []));
-  }, [catalog, user]);
+  }, [catalog, recordScopeFamilies, user]);
 
   const filteredModules = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

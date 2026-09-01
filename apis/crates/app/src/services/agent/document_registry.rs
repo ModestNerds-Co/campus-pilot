@@ -154,17 +154,22 @@ impl Capability for RegistryReadCapability {
                     .map_err(|_| dependency_failure())?
             ),
             RegistryReadKind::SeriesList => {
-                let (values, total) =
-                    DocumentRegistryOps::list_series(&self.pool, principal.tenant_id(), &query)
-                        .await
-                        .map_err(|_| dependency_failure())?;
+                let (values, total) = DocumentRegistryOps::list_series(
+                    &self.pool,
+                    principal.tenant_id(),
+                    &query,
+                    restricted,
+                )
+                .await
+                .map_err(|_| dependency_failure())?;
                 json!({"series":values,"total":total})
             }
             RegistryReadKind::SeriesRead => json!(
                 DocumentRegistryOps::get_series(
                     &self.pool,
                     principal.tenant_id(),
-                    required_id(input.record_id)?
+                    required_id(input.record_id)?,
+                    restricted,
                 )
                 .await
                 .map_err(|_| dependency_failure())?

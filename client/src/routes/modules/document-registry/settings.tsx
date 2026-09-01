@@ -1,2 +1,2 @@
 import { createFileRoute } from "@tanstack/react-router";import { ProtectedRoute } from "@/components/protected-route";import { DocumentRegistrySettingsWorkspace } from "@/modules/document-registry";
-export const Route=createFileRoute("/modules/document-registry/settings")({component:()=> <ProtectedRoute requiredModule="document_registry" requiredPermission="document_registry:view"><DocumentRegistrySettingsWorkspace/></ProtectedRoute>});
+export const Route=createFileRoute("/modules/document-registry/settings")({component:()=> <ProtectedRoute requiredModule="document_registry" requiredPermission="document_registry:view" requiredRecordScope="document_registry.records" requiredRecordScopeKind="campus"><DocumentRegistrySettingsWorkspace/></ProtectedRoute>});

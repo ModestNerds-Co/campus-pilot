@@ -154,7 +154,7 @@ pub struct UpdateFileRequest {
 #[derive(Debug, Deserialize, Validate)]
 pub struct ReclassifyFileRequest {
     pub series_id: Uuid,
-    pub sensitivity: Option<String>,
+    pub sensitivity: String,
     #[validate(length(min = 1, max = 2000))]
     pub reason: String,
     #[validate(range(min = 1))]

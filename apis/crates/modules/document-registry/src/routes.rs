@@ -18,8 +18,8 @@ use validator::Validate;
 use crate::{
     ActivityPage, CloseFileRequest, CreateReviewRequest, CreateSeriesRequest, DocumentRegistryOps,
     DocumentStorage, DownloadResponse, ExecuteDestructionRequest, FilesPage, NewRegistryFile,
-    ReclassifyFileRequest, RegistryListQuery, ReviewDecisionRequest, ReviewsPage, SeriesPage,
-    UpdateFileRequest, UpdateNumberingPolicyRequest, UpdateSeriesRequest,
+    ReclassifyFileRequest, RegistryListQuery, RegistryScope, ReviewDecisionRequest, ReviewsPage,
+    SeriesPage, UpdateFileRequest, UpdateNumberingPolicyRequest, UpdateSeriesRequest,
     storage::MAX_DOCUMENT_BYTES,
 };
 
@@ -76,7 +76,14 @@ async fn list_series(
         return forbidden();
     }
     let (page, per_page) = bounded_page(&query);
-    match DocumentRegistryOps::list_series(&pool, tenant_id(tenant), &query).await {
+    match DocumentRegistryOps::list_series(
+        &pool,
+        tenant_id(tenant),
+        &query,
+        allowed(&authority, "document_registry:restricted"),
+    )
+    .await
+    {
         Ok((series, total)) => paginated(SeriesPage { series }, page, per_page, total),
         Err(error) => operation_error(error),
     }
@@ -100,6 +107,7 @@ async fn create_series(
         DocumentRegistryOps::create_series(
             &pool,
             tenant_id(tenant),
+            allowed(&authority, "document_registry:restricted"),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -118,7 +126,13 @@ async fn read_series(
         return forbidden();
     }
     found(
-        DocumentRegistryOps::get_series(&pool, tenant_id(tenant), path.into_inner()).await,
+        DocumentRegistryOps::get_series(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
+        )
+        .await,
         "Classification",
     )
 }
@@ -143,6 +157,7 @@ async fn update_series(
             &pool,
             tenant_id(tenant),
             path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -256,9 +271,10 @@ async fn create_file(
     let Some(bytes) = bytes else {
         return bad_request("Choose a PDF, JPEG, or PNG document");
     };
-    if sensitivity.as_deref() == Some("restricted")
-        && !allowed(&authority, "document_registry:restricted")
-    {
+    let Some(sensitivity) = sensitivity else {
+        return bad_request("Choose a document sensitivity");
+    };
+    if sensitivity == "restricted" && !allowed(&authority, "document_registry:restricted") {
         return forbidden();
     }
     created_or_error(
@@ -273,7 +289,7 @@ async fn create_file(
                 title,
                 description,
                 document_date,
-                sensitivity,
+                sensitivity: Some(sensitivity),
                 original_file_name,
                 media_type,
                 bytes,
@@ -328,6 +344,7 @@ async fn update_file(
             &pool,
             tenant_id(tenant),
             path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -347,7 +364,7 @@ async fn reclassify_file(
     body: web::Json<ReclassifyFileRequest>,
 ) -> HttpResponse {
     if !allowed(&authority, "document_registry:classify")
-        || (body.sensitivity.as_deref() == Some("restricted")
+        || (body.sensitivity == "restricted"
             && !allowed(&authority, "document_registry:restricted"))
     {
         return forbidden();
@@ -360,6 +377,7 @@ async fn reclassify_file(
             &pool,
             tenant_id(tenant),
             path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -389,6 +407,7 @@ async fn close_file(
             &pool,
             tenant_id(tenant),
             path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -424,24 +443,36 @@ async fn download_file(
     storage: web::Data<DocumentStorage>,
     tenant: web::ReqData<TenantId>,
     authority: Authority,
+    actor: web::ReqData<AuditActor>,
+    context: web::ReqData<RequestContext>,
     path: web::Path<Uuid>,
 ) -> HttpResponse {
     if !allowed(&authority, "document_registry:view") {
         return forbidden();
     }
-    match DocumentRegistryOps::object_key(
-        &pool,
-        tenant_id(tenant),
-        path.into_inner(),
-        allowed(&authority, "document_registry:restricted"),
-    )
-    .await
+    let tenant_id = tenant_id(tenant);
+    let document_id = path.into_inner();
+    let can_view_restricted = allowed(&authority, "document_registry:restricted");
+    match DocumentRegistryOps::object_key(&pool, tenant_id, document_id, can_view_restricted).await
     {
         Ok(Some(key)) => match storage.download_url(&key, 60).await {
-            Ok(url) => ok(DownloadResponse {
-                url,
-                expires_in_seconds: 60,
-            }),
+            Ok(url) => match DocumentRegistryOps::record_download_authorized(
+                &pool,
+                tenant_id,
+                document_id,
+                can_view_restricted,
+                actor.into_inner(),
+                context.into_inner(),
+                60,
+            )
+            .await
+            {
+                Ok(()) => ok(DownloadResponse {
+                    url,
+                    expires_in_seconds: 60,
+                }),
+                Err(error) => operation_error(error),
+            },
             Err(error) => operation_error(error),
         },
         Ok(None) => not_found("Document"),
@@ -533,6 +564,7 @@ async fn create_review(
             &pool,
             tenant_id(tenant),
             path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -559,8 +591,11 @@ async fn approve_review(
     updated_or_error(
         DocumentRegistryOps::decide_review(
             &pool,
-            tenant_id(tenant),
             path.into_inner(),
+            RegistryScope::new(
+                tenant_id(tenant),
+                allowed(&authority, "document_registry:restricted"),
+            ),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -589,8 +624,11 @@ async fn reject_review(
     updated_or_error(
         DocumentRegistryOps::decide_review(
             &pool,
-            tenant_id(tenant),
             path.into_inner(),
+            RegistryScope::new(
+                tenant_id(tenant),
+                allowed(&authority, "document_registry:restricted"),
+            ),
             actor.into_inner(),
             context.into_inner(),
             &body,
@@ -622,8 +660,11 @@ async fn execute_review(
         DocumentRegistryOps::execute_destruction(
             &pool,
             &storage,
-            tenant_id(tenant),
             path.into_inner(),
+            RegistryScope::new(
+                tenant_id(tenant),
+                allowed(&authority, "document_registry:restricted"),
+            ),
             actor.into_inner(),
             context.into_inner(),
             &body,

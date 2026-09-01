@@ -10,5 +10,5 @@ pub mod routes;
 pub mod storage;
 
 pub use dtos::*;
-pub use ops::DocumentRegistryOps;
+pub use ops::{DocumentRegistryOps, RegistryScope};
 pub use storage::DocumentStorage;

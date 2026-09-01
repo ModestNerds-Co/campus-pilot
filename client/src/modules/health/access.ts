@@ -14,9 +14,8 @@ export function healthAccessProfile(
   permissions: readonly string[],
   recordScopes: HealthRecordScopes | undefined,
 ) {
-  const wildcard = permissions.includes("*");
-  const hasCampusPatients = wildcard || recordScopes?.["health.patients"] === "campus";
-  const hasCampusCare = wildcard || recordScopes?.["health.care"] === "campus";
+  const hasCampusPatients = recordScopes?.["health.patients"] === "campus";
+  const hasCampusCare = recordScopes?.["health.care"] === "campus";
   const canReadReferences = hasCampusPatients && hasPermission(permissions, "health:manage");
 
   return {

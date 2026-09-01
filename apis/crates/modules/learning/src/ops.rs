@@ -72,7 +72,7 @@ impl LearningOps {
         .await
         .context("Failed to load Learning settings")?;
         let document_series_name = match row.document_series_id {
-            Some(id) => DocumentRegistryOps::get_series(pool, tenant_id, id)
+            Some(id) => DocumentRegistryOps::get_series(pool, tenant_id, id, false)
                 .await?
                 .map(|series| series.name),
             None => None,
@@ -94,7 +94,7 @@ impl LearningOps {
         request: &UpdateLearningSettingsRequest,
     ) -> Result<Option<LearningSettingsResponse>> {
         if let Some(series_id) = request.document_series_id {
-            let series = DocumentRegistryOps::get_series(pool, tenant_id, series_id)
+            let series = DocumentRegistryOps::get_series(pool, tenant_id, series_id, false)
                 .await?
                 .ok_or_else(|| anyhow!("The selected document classification was not found"))?;
             if series.status != "active" {

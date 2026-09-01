@@ -21,6 +21,21 @@ use crate::{
 
 pub struct DocumentRegistryOps;
 
+#[derive(Debug, Clone, Copy)]
+pub struct RegistryScope {
+    tenant_id: Uuid,
+    can_view_restricted: bool,
+}
+
+impl RegistryScope {
+    pub fn new(tenant_id: Uuid, can_view_restricted: bool) -> Self {
+        Self {
+            tenant_id,
+            can_view_restricted,
+        }
+    }
+}
+
 impl DocumentRegistryOps {
     /// Lists bounded, non-restricted governed file references that another
     /// authorised module may offer for linking. Private bytes, object keys,
@@ -173,6 +188,7 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         query: &RegistryListQuery,
+        can_view_restricted: bool,
     ) -> Result<(Vec<SeriesResponse>, i64)> {
         validate_optional(
             query.status.as_deref(),
@@ -185,6 +201,7 @@ impl DocumentRegistryOps {
             .bind(tenant_id)
             .bind(query.status.as_deref())
             .bind(search.as_deref())
+            .bind(can_view_restricted)
             .bind(per_page)
             .bind((page - 1) * per_page)
             .fetch_all(pool)
@@ -204,10 +221,12 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
+        can_view_restricted: bool,
     ) -> Result<Option<SeriesResponse>> {
         sqlx::query_as::<_, SeriesRow>(SERIES_BY_ID)
             .bind(tenant_id)
             .bind(id)
+            .bind(can_view_restricted)
             .fetch_optional(pool)
             .await
             .context("load Document Registry classification")
@@ -217,6 +236,7 @@ impl DocumentRegistryOps {
     pub async fn create_series(
         pool: &PgPool,
         tenant_id: Uuid,
+        can_view_restricted: bool,
         actor: AuditActor,
         context: RequestContext,
         request: &CreateSeriesRequest,
@@ -269,7 +289,7 @@ impl DocumentRegistryOps {
         tx.commit()
             .await
             .context("commit classification creation")?;
-        Self::get_series(pool, tenant_id, id)
+        Self::get_series(pool, tenant_id, id, can_view_restricted)
             .await?
             .ok_or_else(|| anyhow!("The classification could not be reloaded"))
     }
@@ -278,6 +298,7 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
+        can_view_restricted: bool,
         actor: AuditActor,
         context: RequestContext,
         request: &UpdateSeriesRequest,
@@ -327,7 +348,7 @@ impl DocumentRegistryOps {
             )
             .await?;
             tx.commit().await.context("commit classification update")?;
-            return Self::get_series(pool, tenant_id, id).await;
+            return Self::get_series(pool, tenant_id, id, can_view_restricted).await;
         }
         Ok(None)
     }
@@ -405,6 +426,7 @@ impl DocumentRegistryOps {
         let series = sqlx::query_as::<_, SeriesRow>(SERIES_BY_ID)
             .bind(tenant_id)
             .bind(request.series_id)
+            .bind(true)
             .fetch_optional(pool)
             .await
             .context("load the selected classification")?
@@ -464,6 +486,7 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
+        can_view_restricted: bool,
         actor: AuditActor,
         context: RequestContext,
         request: &UpdateFileRequest,
@@ -477,10 +500,21 @@ impl DocumentRegistryOps {
         let changed = sqlx::query_scalar::<_, Uuid>(
             r#"UPDATE document_registry_files SET title=$4,description=$5,document_date=$6,
                    sensitivity=$7,version=version+1,updated_by=$8
-               WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status <> 'destroyed' AND deleted_at IS NULL RETURNING id"#,
-        ).bind(tenant_id).bind(id).bind(request.version).bind(required("Document title", &request.title)?)
-          .bind(clean(request.description.as_deref())).bind(request.document_date).bind(&request.sensitivity).bind(actor_id)
-          .fetch_optional(&mut *tx).await.context("update document metadata")?;
+               WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='filed'
+                 AND deleted_at IS NULL AND ($9 OR sensitivity <> 'restricted') RETURNING id"#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(request.version)
+        .bind(required("Document title", &request.title)?)
+        .bind(clean(request.description.as_deref()))
+        .bind(request.document_date)
+        .bind(&request.sensitivity)
+        .bind(actor_id)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("update document metadata")?;
         if changed.is_some() {
             append_evidence(
                 &mut tx,
@@ -498,7 +532,7 @@ impl DocumentRegistryOps {
             tx.commit()
                 .await
                 .context("commit document metadata update")?;
-            return Self::get_file(pool, tenant_id, id, true).await;
+            return Self::get_file(pool, tenant_id, id, can_view_restricted).await;
         }
         Ok(None)
     }
@@ -507,15 +541,17 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
+        can_view_restricted: bool,
         actor: AuditActor,
         context: RequestContext,
         request: &ReclassifyFileRequest,
     ) -> Result<Option<FileResponse>> {
         let actor_id = person_actor_id(actor)?;
-        validate_sensitivity(request.sensitivity.as_deref())?;
+        validate_sensitivity(Some(&request.sensitivity))?;
         let series = sqlx::query_as::<_, SeriesRow>(SERIES_BY_ID)
             .bind(tenant_id)
             .bind(request.series_id)
+            .bind(true)
             .fetch_optional(pool)
             .await
             .context("load replacement classification")?
@@ -523,15 +559,12 @@ impl DocumentRegistryOps {
         if series.status != "active" {
             bail!("The selected classification is inactive");
         }
-        let sensitivity = request
-            .sensitivity
-            .as_deref()
-            .unwrap_or(&series.default_sensitivity);
-        let existing = Self::get_file(pool, tenant_id, id, true).await?;
+        let sensitivity = &request.sensitivity;
+        let existing = Self::get_file(pool, tenant_id, id, can_view_restricted).await?;
         let Some(existing) = existing else {
             return Ok(None);
         };
-        if existing.version != request.version || existing.status == "destroyed" {
+        if existing.version != request.version || existing.status != "filed" {
             return Ok(None);
         }
         let base_date = if series.retention_trigger == "filed" {
@@ -551,10 +584,11 @@ impl DocumentRegistryOps {
             r#"UPDATE document_registry_files SET series_id=$4,series_code_snapshot=$5,series_name_snapshot=$6,
                    retention_trigger_snapshot=$7,retention_period_months_snapshot=$8,final_disposition_snapshot=$9,
                    sensitivity=$10,retain_until=$11,version=version+1,updated_by=$12
-               WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status <> 'destroyed' AND deleted_at IS NULL RETURNING id"#,
+               WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='filed'
+                 AND deleted_at IS NULL AND ($13 OR sensitivity <> 'restricted') RETURNING id"#,
         ).bind(tenant_id).bind(id).bind(request.version).bind(series.id).bind(&series.code).bind(&series.name)
           .bind(&series.retention_trigger).bind(series.retention_period_months).bind(&series.final_disposition)
-          .bind(sensitivity).bind(retain_until).bind(actor_id).fetch_optional(&mut *tx).await
+          .bind(sensitivity).bind(retain_until).bind(actor_id).bind(can_view_restricted).fetch_optional(&mut *tx).await
           .context("reclassify the document")?;
         if changed.is_some() {
             append_evidence(&mut tx, tenant_id, actor, context, "file", id, Some(id),
@@ -563,7 +597,7 @@ impl DocumentRegistryOps {
             tx.commit()
                 .await
                 .context("commit document reclassification")?;
-            return Self::get_file(pool, tenant_id, id, true).await;
+            return Self::get_file(pool, tenant_id, id, can_view_restricted).await;
         }
         Ok(None)
     }
@@ -572,12 +606,13 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
+        can_view_restricted: bool,
         actor: AuditActor,
         context: RequestContext,
         request: &CloseFileRequest,
     ) -> Result<Option<FileResponse>> {
         let actor_id = person_actor_id(actor)?;
-        let current = Self::get_file(pool, tenant_id, id, true).await?;
+        let current = Self::get_file(pool, tenant_id, id, can_view_restricted).await?;
         let Some(current) = current else {
             return Ok(None);
         };
@@ -594,9 +629,19 @@ impl DocumentRegistryOps {
         let changed = sqlx::query_scalar::<_, Uuid>(
             r#"UPDATE document_registry_files SET status='closed',closed_by=$4,closed_at=NOW(),
                    close_reason=$5,retain_until=$6,version=version+1,updated_by=$4
-               WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='filed' AND deleted_at IS NULL RETURNING id"#,
-        ).bind(tenant_id).bind(id).bind(request.version).bind(actor_id).bind(required("Closure reason", &request.reason)?)
-          .bind(retain_until).fetch_optional(&mut *tx).await.context("close the document")?;
+               WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='filed'
+                 AND deleted_at IS NULL AND ($7 OR sensitivity <> 'restricted') RETURNING id"#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(request.version)
+        .bind(actor_id)
+        .bind(required("Closure reason", &request.reason)?)
+        .bind(retain_until)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("close the document")?;
         if changed.is_some() {
             append_evidence(
                 &mut tx,
@@ -612,7 +657,7 @@ impl DocumentRegistryOps {
             )
             .await?;
             tx.commit().await.context("commit document closure")?;
-            return Self::get_file(pool, tenant_id, id, true).await;
+            return Self::get_file(pool, tenant_id, id, can_view_restricted).await;
         }
         Ok(None)
     }
@@ -644,6 +689,54 @@ impl DocumentRegistryOps {
         sqlx::query_scalar::<_, String>(
             "SELECT object_key FROM document_registry_files WHERE tenant_id=$1 AND id=$2 AND status <> 'destroyed' AND object_key IS NOT NULL AND deleted_at IS NULL AND ($3 OR sensitivity <> 'restricted')",
         ).bind(tenant_id).bind(id).bind(can_view_restricted).fetch_optional(pool).await.context("authorize private document download")
+    }
+
+    pub async fn record_download_authorized(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        can_view_restricted: bool,
+        actor: AuditActor,
+        context: RequestContext,
+        expires_in_seconds: i64,
+    ) -> Result<()> {
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start private document download evidence")?;
+        let current = sqlx::query_scalar::<_, Uuid>(
+            r#"SELECT id FROM document_registry_files
+               WHERE tenant_id=$1 AND id=$2 AND status <> 'destroyed'
+                 AND object_key IS NOT NULL AND deleted_at IS NULL
+                 AND ($3 OR sensitivity <> 'restricted')
+               FOR SHARE"#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("recheck private document download authority")?;
+        if current.is_none() {
+            bail!("The document is no longer available for download");
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            context,
+            "file",
+            id,
+            Some(id),
+            "document_download_authorized",
+            "document_registry.file.download",
+            json!({"expires_in_seconds": expires_in_seconds}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit private document download evidence")?;
+        Ok(())
     }
 
     pub async fn retention_due(
@@ -708,6 +801,7 @@ impl DocumentRegistryOps {
         pool: &PgPool,
         tenant_id: Uuid,
         file_id: Uuid,
+        can_view_restricted: bool,
         actor: AuditActor,
         context: RequestContext,
         request: &CreateReviewRequest,
@@ -722,23 +816,6 @@ impl DocumentRegistryOps {
         if request.recommendation == "destroy" && request.proposed_retain_until.is_some() {
             bail!("A destruction request cannot include a new retention date");
         }
-        let file = Self::get_file(pool, tenant_id, file_id, true)
-            .await?
-            .ok_or_else(|| anyhow!("The document was not found"))?;
-        if file.version != request.file_version {
-            bail!("The document changed since it was loaded");
-        }
-        if file.status != "closed"
-            || file
-                .retain_until
-                .map(|d| d > Utc::now().date_naive())
-                .unwrap_or(true)
-        {
-            bail!("The document is not due for disposition review");
-        }
-        if file.final_disposition == "permanent" {
-            bail!("Permanent documents cannot enter disposition review");
-        }
         if let Some(date) = request.proposed_retain_until
             && date <= Utc::now().date_naive()
         {
@@ -749,6 +826,34 @@ impl DocumentRegistryOps {
             .begin()
             .await
             .context("start disposition review request")?;
+        let file = sqlx::query_as::<_, (i32, String, Option<NaiveDate>, String)>(
+            r#"SELECT version,status,retain_until,final_disposition_snapshot
+               FROM document_registry_files
+               WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL
+                 AND ($3 OR sensitivity <> 'restricted')
+               FOR UPDATE"#,
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock the document for disposition review")?
+        .ok_or_else(|| anyhow!("The document was not found"))?;
+        if file.0 != request.file_version {
+            bail!("The document changed since it was loaded");
+        }
+        if file.1 != "closed"
+            || file
+                .2
+                .map(|date| date > Utc::now().date_naive())
+                .unwrap_or(true)
+        {
+            bail!("The document is not due for disposition review");
+        }
+        if file.3 == "permanent" {
+            bail!("Permanent documents cannot enter disposition review");
+        }
         sqlx::query(
             r#"INSERT INTO document_registry_disposition_reviews
                (id,tenant_id,file_id,recommendation,proposed_retain_until,request_reason,requested_by)
@@ -771,44 +876,81 @@ impl DocumentRegistryOps {
         tx.commit()
             .await
             .context("commit disposition review request")?;
-        Self::get_review(pool, tenant_id, id, true)
+        Self::get_review(pool, tenant_id, id, can_view_restricted)
             .await?
             .ok_or_else(|| anyhow!("The disposition review could not be reloaded"))
     }
 
     pub async fn decide_review(
         pool: &PgPool,
-        tenant_id: Uuid,
         id: Uuid,
+        scope: RegistryScope,
         actor: AuditActor,
         context: RequestContext,
         request: &ReviewDecisionRequest,
         approve: bool,
     ) -> Result<Option<ReviewResponse>> {
+        let RegistryScope {
+            tenant_id,
+            can_view_restricted,
+        } = scope;
         let actor_id = person_actor_id(actor)?;
-        let review = Self::get_review(pool, tenant_id, id, true).await?;
-        let Some(review) = review else {
+        let reason = required("Decision reason", &request.reason)?;
+        let mut tx = pool.begin().await.context("start disposition decision")?;
+        let review =
+            sqlx::query_as::<_, (Uuid, String, Option<NaiveDate>, String, i32, Uuid, String)>(
+                r#"SELECT review.file_id,review.recommendation,review.proposed_retain_until,
+                      review.status,review.version,review.requested_by,file.status
+               FROM document_registry_disposition_reviews review
+               JOIN document_registry_files file
+                 ON file.id=review.file_id AND file.tenant_id=review.tenant_id
+               WHERE review.tenant_id=$1 AND review.id=$2
+                 AND review.deleted_at IS NULL AND file.deleted_at IS NULL
+                 AND ($3 OR file.sensitivity <> 'restricted')
+               FOR UPDATE OF review,file"#,
+            )
+            .bind(tenant_id)
+            .bind(id)
+            .bind(can_view_restricted)
+            .fetch_optional(&mut *tx)
+            .await
+            .context("lock the disposition review decision")?;
+        let Some((
+            file_id,
+            recommendation,
+            proposed_retain_until,
+            status,
+            version,
+            requested_by,
+            file_status,
+        )) = review
+        else {
             return Ok(None);
         };
-        if review.version != request.version || review.status != "pending" {
+        if version != request.version || status != "pending" || file_status != "closed" {
             return Ok(None);
         }
-        if approve && review.requested_by == actor_id {
+        if approve && requested_by == actor_id {
             bail!("The requester cannot approve their own disposition review");
         }
-        let mut tx = pool.begin().await.context("start disposition decision")?;
-        if approve && review.recommendation == "retain" {
-            sqlx::query("UPDATE document_registry_files SET retain_until=$4,version=version+1,updated_by=$3 WHERE tenant_id=$1 AND id=$2 AND status='closed'")
-                .bind(tenant_id).bind(review.file_id).bind(actor_id).bind(review.proposed_retain_until)
+        let review_changed = if approve && recommendation == "retain" {
+            let file_changed = sqlx::query("UPDATE document_registry_files SET retain_until=$4,version=version+1,updated_by=$3 WHERE tenant_id=$1 AND id=$2 AND status='closed'")
+                .bind(tenant_id).bind(file_id).bind(actor_id).bind(proposed_retain_until)
                 .execute(&mut *tx).await.context("apply the retention extension")?;
+            if file_changed.rows_affected() != 1 {
+                return Ok(None);
+            }
             sqlx::query("UPDATE document_registry_disposition_reviews SET status='executed',reviewed_by=$4,reviewed_at=NOW(),review_reason=$5,executed_by=$4,executed_at=NOW(),version=version+1 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='pending'")
-                .bind(tenant_id).bind(id).bind(request.version).bind(actor_id).bind(required("Decision reason", &request.reason)?)
-                .execute(&mut *tx).await.context("approve the retention extension")?;
+                .bind(tenant_id).bind(id).bind(request.version).bind(actor_id).bind(reason)
+                .execute(&mut *tx).await.context("approve the retention extension")?
         } else {
             let status = if approve { "approved" } else { "rejected" };
             sqlx::query("UPDATE document_registry_disposition_reviews SET status=$4,reviewed_by=$5,reviewed_at=NOW(),review_reason=$6,version=version+1 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='pending'")
-                .bind(tenant_id).bind(id).bind(request.version).bind(status).bind(actor_id).bind(required("Decision reason", &request.reason)?)
-                .execute(&mut *tx).await.context("record the disposition decision")?;
+                .bind(tenant_id).bind(id).bind(request.version).bind(status).bind(actor_id).bind(reason)
+                .execute(&mut *tx).await.context("record the disposition decision")?
+        };
+        if review_changed.rows_affected() != 1 {
+            return Ok(None);
         }
         let event = if approve {
             "disposition_review_approved"
@@ -822,7 +964,7 @@ impl DocumentRegistryOps {
             context,
             "disposition_review",
             id,
-            Some(review.file_id),
+            Some(file_id),
             event,
             if approve {
                 "document_registry.disposition.approve"
@@ -833,41 +975,63 @@ impl DocumentRegistryOps {
         )
         .await?;
         tx.commit().await.context("commit disposition decision")?;
-        Self::get_review(pool, tenant_id, id, true).await
+        Self::get_review(pool, tenant_id, id, can_view_restricted).await
     }
 
     pub async fn execute_destruction(
         pool: &PgPool,
         storage: &DocumentStorage,
-        tenant_id: Uuid,
         id: Uuid,
+        scope: RegistryScope,
         actor: AuditActor,
         context: RequestContext,
         request: &ExecuteDestructionRequest,
     ) -> Result<Option<ReviewResponse>> {
+        let RegistryScope {
+            tenant_id,
+            can_view_restricted,
+        } = scope;
         let actor_id = person_actor_id(actor)?;
         let mut tx = pool
             .begin()
             .await
             .context("start approved document destruction")?;
-        let file_id = sqlx::query_scalar::<_, Uuid>(
-            "SELECT file_id FROM document_registry_disposition_reviews WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='approved' AND recommendation='destroy' FOR UPDATE",
-        ).bind(tenant_id).bind(id).bind(request.version).fetch_optional(&mut *tx).await.context("lock approved disposition review")?;
-        let Some(file_id) = file_id else {
+        let locked = sqlx::query_as::<_, (Uuid, String)>(
+            r#"SELECT review.file_id,file.object_key
+               FROM document_registry_disposition_reviews review
+               JOIN document_registry_files file
+                 ON file.id=review.file_id AND file.tenant_id=review.tenant_id
+               WHERE review.tenant_id=$1 AND review.id=$2 AND review.version=$3
+                 AND review.status='approved' AND review.recommendation='destroy'
+                 AND review.deleted_at IS NULL AND file.deleted_at IS NULL
+                 AND file.status='closed' AND file.object_key IS NOT NULL
+                 AND ($4 OR file.sensitivity <> 'restricted')
+               FOR UPDATE OF review,file"#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(request.version)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock approved disposition review")?;
+        let Some((file_id, object_key)) = locked else {
             return Ok(None);
         };
-        let object_key = sqlx::query_scalar::<_, String>(
-            "SELECT object_key FROM document_registry_files WHERE tenant_id=$1 AND id=$2 AND status='closed' AND object_key IS NOT NULL FOR UPDATE",
-        ).bind(tenant_id).bind(file_id).fetch_optional(&mut *tx).await.context("lock document object for destruction")?
-          .ok_or_else(|| anyhow!("The document is not available for destruction"))?;
         storage.delete(&object_key).await?;
-        sqlx::query(
+        let file_changed = sqlx::query(
             "UPDATE document_registry_files SET status='destroyed',object_key=NULL,destroyed_by=$3,destroyed_at=NOW(),destruction_reason=$4,version=version+1,updated_by=$3 WHERE tenant_id=$1 AND id=$2 AND status='closed'",
         ).bind(tenant_id).bind(file_id).bind(actor_id).bind(required("Destruction reason", &request.reason)?)
           .execute(&mut *tx).await.context("retain the destruction evidence")?;
-        sqlx::query(
+        if file_changed.rows_affected() != 1 {
+            bail!("The document changed before destruction could be recorded");
+        }
+        let review_changed = sqlx::query(
             "UPDATE document_registry_disposition_reviews SET status='executed',executed_by=$4,executed_at=NOW(),version=version+1 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='approved'",
         ).bind(tenant_id).bind(id).bind(request.version).bind(actor_id).execute(&mut *tx).await.context("execute disposition review")?;
+        if review_changed.rows_affected() != 1 {
+            bail!("The disposition review changed before execution could be recorded");
+        }
         append_evidence(
             &mut tx,
             tenant_id,
@@ -884,7 +1048,7 @@ impl DocumentRegistryOps {
         tx.commit()
             .await
             .context("commit approved document destruction")?;
-        Self::get_review(pool, tenant_id, id, true).await
+        Self::get_review(pool, tenant_id, id, can_view_restricted).await
     }
 }
 
@@ -1107,9 +1271,9 @@ async fn append_evidence(
 }
 
 const SENSITIVITIES: &[&str] = &["general", "internal", "confidential", "restricted"];
-const SERIES_SELECT: &str = "SELECT series.id,series.code,series.name,series.description,series.retention_trigger,series.retention_period_months,series.final_disposition,series.default_sensitivity,series.status,series.version,(SELECT COUNT(*) FROM document_registry_files file WHERE file.tenant_id=series.tenant_id AND file.series_id=series.id AND file.deleted_at IS NULL) AS file_count,series.created_at,series.updated_at FROM document_registry_series series WHERE series.tenant_id=$1 AND series.deleted_at IS NULL AND ($2::TEXT IS NULL OR series.status=$2) AND ($3::TEXT IS NULL OR series.code ILIKE $3 OR series.name ILIKE $3) ORDER BY series.name LIMIT $4 OFFSET $5";
+const SERIES_SELECT: &str = "SELECT series.id,series.code,series.name,series.description,series.retention_trigger,series.retention_period_months,series.final_disposition,series.default_sensitivity,series.status,series.version,(SELECT COUNT(*) FROM document_registry_files file WHERE file.tenant_id=series.tenant_id AND file.series_id=series.id AND file.deleted_at IS NULL AND ($4 OR file.sensitivity <> 'restricted')) AS file_count,series.created_at,series.updated_at FROM document_registry_series series WHERE series.tenant_id=$1 AND series.deleted_at IS NULL AND ($2::TEXT IS NULL OR series.status=$2) AND ($3::TEXT IS NULL OR series.code ILIKE $3 OR series.name ILIKE $3) ORDER BY series.name LIMIT $5 OFFSET $6";
 const SERIES_COUNT: &str = "SELECT COUNT(*) FROM document_registry_series series WHERE series.tenant_id=$1 AND series.deleted_at IS NULL AND ($2::TEXT IS NULL OR series.status=$2) AND ($3::TEXT IS NULL OR series.code ILIKE $3 OR series.name ILIKE $3)";
-const SERIES_BY_ID: &str = "SELECT series.id,series.code,series.name,series.description,series.retention_trigger,series.retention_period_months,series.final_disposition,series.default_sensitivity,series.status,series.version,(SELECT COUNT(*) FROM document_registry_files file WHERE file.tenant_id=series.tenant_id AND file.series_id=series.id AND file.deleted_at IS NULL) AS file_count,series.created_at,series.updated_at FROM document_registry_series series WHERE series.tenant_id=$1 AND series.id=$2 AND series.deleted_at IS NULL";
+const SERIES_BY_ID: &str = "SELECT series.id,series.code,series.name,series.description,series.retention_trigger,series.retention_period_months,series.final_disposition,series.default_sensitivity,series.status,series.version,(SELECT COUNT(*) FROM document_registry_files file WHERE file.tenant_id=series.tenant_id AND file.series_id=series.id AND file.deleted_at IS NULL AND ($3 OR file.sensitivity <> 'restricted')) AS file_count,series.created_at,series.updated_at FROM document_registry_series series WHERE series.tenant_id=$1 AND series.id=$2 AND series.deleted_at IS NULL";
 const FILE_SELECT: &str = "SELECT file.id,file.reference,file.series_id,file.series_code_snapshot,file.series_name_snapshot,file.retention_trigger_snapshot,file.retention_period_months_snapshot,file.final_disposition_snapshot,file.sensitivity,file.title,file.description,file.document_date,file.filed_on,file.retain_until,file.status,file.original_file_name,file.media_type,file.byte_size,file.sha256_hex,file.object_key,file.scanned_at,file.version,file.closed_at,file.close_reason,file.destroyed_at,file.destruction_reason,file.created_at,file.updated_at FROM document_registry_files file WHERE file.tenant_id=$1 AND file.deleted_at IS NULL AND ($2::TEXT IS NULL OR file.status=$2) AND ($3::UUID IS NULL OR file.series_id=$3) AND ($4::TEXT IS NULL OR file.sensitivity=$4) AND ($5::TEXT IS NULL OR file.reference ILIKE $5 OR file.title ILIKE $5 OR file.series_name_snapshot ILIKE $5) AND ($6 OR file.sensitivity <> 'restricted') ORDER BY file.filed_on DESC,file.reference DESC LIMIT $7 OFFSET $8";
 const FILE_COUNT: &str = "SELECT COUNT(*) FROM document_registry_files file WHERE file.tenant_id=$1 AND file.deleted_at IS NULL AND ($2::TEXT IS NULL OR file.status=$2) AND ($3::UUID IS NULL OR file.series_id=$3) AND ($4::TEXT IS NULL OR file.sensitivity=$4) AND ($5::TEXT IS NULL OR file.reference ILIKE $5 OR file.title ILIKE $5 OR file.series_name_snapshot ILIKE $5) AND ($6 OR file.sensitivity <> 'restricted')";
 const FILE_BY_ID: &str = "SELECT file.id,file.reference,file.series_id,file.series_code_snapshot,file.series_name_snapshot,file.retention_trigger_snapshot,file.retention_period_months_snapshot,file.final_disposition_snapshot,file.sensitivity,file.title,file.description,file.document_date,file.filed_on,file.retain_until,file.status,file.original_file_name,file.media_type,file.byte_size,file.sha256_hex,file.object_key,file.scanned_at,file.version,file.closed_at,file.close_reason,file.destroyed_at,file.destruction_reason,file.created_at,file.updated_at FROM document_registry_files file WHERE file.tenant_id=$1 AND file.id=$2 AND file.deleted_at IS NULL AND ($3 OR file.sensitivity <> 'restricted')";

@@ -6385,6 +6385,34 @@
       ]
     },
     {
+      "name": "Document Registry",
+      "description": "Private governed files, retention classifications, immutable closure, and independently reviewed disposition.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Read Numbering Policy", "request": { "method": "GET", "url": "{{base_url}}/document-registry/numbering-policy" } },
+        { "name": "Update Numbering Policy", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"prefix\": \"DOC-\",\n  \"padding\": 6,\n  \"next_sequence\": 1,\n  \"version\": 1\n}" }, "url": "{{base_url}}/document-registry/numbering-policy" } },
+        { "name": "List Classifications", "request": { "method": "GET", "url": "{{base_url}}/document-registry/series?page=1&per_page=25&status=active" } },
+        { "name": "Create Classification", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"ADM\",\n  \"name\": \"Administration\",\n  \"description\": \"Official administration records\",\n  \"retention_trigger\": \"closed\",\n  \"retention_period_months\": 84,\n  \"final_disposition\": \"review\",\n  \"default_sensitivity\": \"internal\"\n}" }, "url": "{{base_url}}/document-registry/series" } },
+        { "name": "Read Classification", "request": { "method": "GET", "url": "{{base_url}}/document-registry/series/{{document_registry_series_id}}" } },
+        { "name": "Update Classification", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"ADM\",\n  \"name\": \"Administration\",\n  \"description\": \"Official administration records\",\n  \"retention_trigger\": \"closed\",\n  \"retention_period_months\": 84,\n  \"final_disposition\": \"review\",\n  \"default_sensitivity\": \"internal\",\n  \"status\": \"active\",\n  \"version\": 1\n}" }, "url": "{{base_url}}/document-registry/series/{{document_registry_series_id}}" } },
+        { "name": "List Documents", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files?page=1&per_page=25" } },
+        { "name": "File Document", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{"key":"file","type":"file","src":[]},{"key":"series_id","value":"{{document_registry_series_id}}","type":"text"},{"key":"title","value":"Governed record","type":"text"},{"key":"description","value":"","type":"text"},{"key":"document_date","value":"2026-09-02","type":"text"},{"key":"sensitivity","value":"internal","type":"text"}] }, "url": "{{base_url}}/document-registry/files", "description": "Sensitivity is explicit and required. Restricted uploads also require document_registry:restricted." } },
+        { "name": "Read Document", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}" } },
+        { "name": "Update Filed Document", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Governed record\",\n  \"description\": \"Updated while still filed\",\n  \"document_date\": \"2026-09-02\",\n  \"sensitivity\": \"internal\",\n  \"version\": {{document_registry_file_version}}\n}" }, "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}", "description": "Closed and destroyed records reject metadata changes." } },
+        { "name": "Reclassify Filed Document", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"series_id\": \"{{document_registry_series_id}}\",\n  \"sensitivity\": \"internal\",\n  \"reason\": \"Correct the records classification\",\n  \"version\": {{document_registry_file_version}}\n}" }, "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/reclassify", "description": "Sensitivity is explicit. The server also rechecks the stored record's restricted authority." } },
+        { "name": "Close Document", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Record is complete\",\n  \"version\": {{document_registry_file_version}}\n}" }, "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/close" } },
+        { "name": "Read Document Activity", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/activity" } },
+        { "name": "Prepare Private Download", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/download", "description": "Returns a short-lived URL and appends reduced download authorization evidence." } },
+        { "name": "List Retention Due", "request": { "method": "GET", "url": "{{base_url}}/document-registry/retention-due" } },
+        { "name": "List Disposition Reviews", "request": { "method": "GET", "url": "{{base_url}}/document-registry/disposition-reviews?page=1&per_page=25&status=pending" } },
+        { "name": "Read Disposition Review", "request": { "method": "GET", "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}" } },
+        { "name": "Request Disposition Review", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"recommendation\": \"retain\",\n  \"proposed_retain_until\": \"2027-09-02\",\n  \"reason\": \"Operational need continues\",\n  \"file_version\": {{document_registry_file_version}}\n}" }, "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/disposition-reviews" } },
+        { "name": "Approve Disposition Review", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Independent review completed\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/approve" } },
+        { "name": "Reject Disposition Review", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Retention evidence is incomplete\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/reject" } },
+        { "name": "Execute Approved Destruction", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Approved retention period elapsed\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/execute" } }
+      ]
+    },
+    {
       "name": "E-learning",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
       "item": [
@@ -6766,6 +6794,31 @@
     {
       "key": "hostel_preview_fingerprint",
       "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_series_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_file_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_file_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_review_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_review_version",
+      "value": "1",
       "type": "default"
     },
     {

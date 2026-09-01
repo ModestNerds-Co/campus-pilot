@@ -68,6 +68,8 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
     <ProtectedRoute
       requiredModule={module.key}
       requiredPermission={`${module.permission_namespace}:view`}
+      requiredRecordScope={module.key === "document_registry" ? "document_registry.records" : undefined}
+      requiredRecordScopeKind={module.key === "document_registry" ? "campus" : undefined}
     >
       {module.key === "timetabling" ? (
         <TimetableWorkspace module={module} />
