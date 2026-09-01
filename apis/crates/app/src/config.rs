@@ -75,6 +75,8 @@ pub struct StorageConfig {
     pub public_endpoint: Option<String>,
     pub region: String,
     pub bucket: String,
+    pub private_bucket: String,
+    pub document_scanner_address: String,
     pub access_key: String,
     pub secret_key: String,
 }
@@ -226,6 +228,13 @@ impl StorageConfig {
         let public_endpoint = env::var("STORAGE_PUBLIC_ENDPOINT").ok();
         let region = env::var("STORAGE_REGION").unwrap_or_else(|_| "us-east-1".to_string());
         let bucket = env::var("STORAGE_BUCKET").context("STORAGE_BUCKET must be set")?;
+        let private_bucket =
+            env::var("STORAGE_PRIVATE_BUCKET").unwrap_or_else(|_| format!("{bucket}-private"));
+        if private_bucket == bucket {
+            bail!("STORAGE_PRIVATE_BUCKET must differ from the public STORAGE_BUCKET");
+        }
+        let document_scanner_address =
+            env::var("DOCUMENT_SCANNER_ADDRESS").unwrap_or_else(|_| "clamav:3310".to_string());
         let access_key =
             env::var("STORAGE_ACCESS_KEY").context("STORAGE_ACCESS_KEY must be set")?;
         let secret_key =
@@ -236,6 +245,8 @@ impl StorageConfig {
             public_endpoint,
             region,
             bucket,
+            private_bucket,
+            document_scanner_address,
             access_key,
             secret_key,
         })

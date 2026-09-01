@@ -1,0 +1,26 @@
+{
+  "info": {
+    "name": "Campus Pilot - Document Registry",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api/1.0" },
+    { "key": "token", "value": "" },
+    { "key": "series_id", "value": "" },
+    { "key": "document_id", "value": "" },
+    { "key": "review_id", "value": "" }
+  ],
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+  "item": [
+    { "name": "Read numbering", "request": { "method": "GET", "url": "{{base_url}}/document-registry/numbering-policy" } },
+    { "name": "List classifications", "request": { "method": "GET", "url": "{{base_url}}/document-registry/series" } },
+    { "name": "Create classification", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"ADM\",\n  \"name\": \"Administrative records\",\n  \"description\": null,\n  \"retention_trigger\": \"closed\",\n  \"retention_period_months\": 84,\n  \"final_disposition\": \"review\",\n  \"default_sensitivity\": \"internal\"\n}" }, "url": "{{base_url}}/document-registry/series" } },
+    { "name": "File document", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{"key":"series_id","value":"{{series_id}}","type":"text"},{"key":"title","value":"Test document","type":"text"},{"key":"description","value":"","type":"text"},{"key":"document_date","value":"","type":"text"},{"key":"sensitivity","value":"internal","type":"text"},{"key":"file","type":"file","src":""}] }, "url": "{{base_url}}/document-registry/files" } },
+    { "name": "List documents", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files" } },
+    { "name": "Read document", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_id}}" } },
+    { "name": "Read document activity", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_id}}/activity" } },
+    { "name": "Close document", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"The file is complete\",\n  \"version\": 1\n}" }, "url": "{{base_url}}/document-registry/files/{{document_id}}/close" } },
+    { "name": "List retention due", "request": { "method": "GET", "url": "{{base_url}}/document-registry/retention-due" } },
+    { "name": "List disposition reviews", "request": { "method": "GET", "url": "{{base_url}}/document-registry/disposition-reviews" } }
+  ]
+}

@@ -10,6 +10,7 @@ mod ai_routing;
 mod assets_inventory;
 mod attendance;
 mod authority;
+mod document_registry;
 mod fees;
 mod finance;
 mod fleet;
@@ -81,6 +82,7 @@ use attendance::{
     AttendanceReferencesCapability, AttendanceRegisterReadCapability,
     AttendanceRegistersListCapability,
 };
+use document_registry::{RegistryReadCapability, RegistryReadKind};
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
     FeesLearnerCandidatesCapability, FeesListCapability, FeesListKind, FeesReadCapability,
@@ -649,6 +651,21 @@ pub fn build_capability_registry(
     registry
         .register(TransferPreviewCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Hostel transfer-preview capability: {error}"));
+    for kind in [
+        RegistryReadKind::NumberingPolicy,
+        RegistryReadKind::SeriesList,
+        RegistryReadKind::SeriesRead,
+        RegistryReadKind::FilesList,
+        RegistryReadKind::FileRead,
+        RegistryReadKind::FileActivity,
+        RegistryReadKind::RetentionDue,
+        RegistryReadKind::ReviewsList,
+        RegistryReadKind::ReviewRead,
+    ] {
+        registry
+            .register(RegistryReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     registry
         .register(TimetableConfigurationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
@@ -1005,6 +1022,15 @@ mod tests {
                 "attendance.references.read",
                 "attendance.registers.list",
                 "attendance.registers.read",
+                "document_registry.disposition_reviews.list",
+                "document_registry.disposition_reviews.read",
+                "document_registry.files.activity.list",
+                "document_registry.files.list",
+                "document_registry.files.read",
+                "document_registry.numbering_policy.read",
+                "document_registry.retention_due.list",
+                "document_registry.series.list",
+                "document_registry.series.read",
                 "fees.billing_accounts.list",
                 "fees.billing_accounts.read",
                 "fees.fee_structures.list",

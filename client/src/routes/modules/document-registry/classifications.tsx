@@ -1,0 +1,2 @@
+import { createFileRoute } from "@tanstack/react-router";import { ProtectedRoute } from "@/components/protected-route";import { DocumentRegistryClassificationsWorkspace } from "@/modules/document-registry";
+export const Route=createFileRoute("/modules/document-registry/classifications")({component:()=> <ProtectedRoute requiredModule="document_registry" requiredPermission="document_registry:view"><DocumentRegistryClassificationsWorkspace/></ProtectedRoute>});

@@ -17,6 +17,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { LibraryCatalogueWorkspace } from "@/modules/library";
 import { HealthPatientsWorkspace } from "@/modules/health";
 import { HostelResidencesWorkspace } from "@/modules/hostel";
+import { DocumentRegistryDocumentsWorkspace } from "@/modules/document-registry";
 
 export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
   moduleKey,
@@ -64,6 +65,8 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
         <HealthPatientsWorkspace />
       ) : module.key === "hostel" ? (
         <HostelResidencesWorkspace />
+      ) : module.key === "document_registry" ? (
+        <DocumentRegistryDocumentsWorkspace />
       ) : (
         <ModuleFoundation module={module} />
       )}

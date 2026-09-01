@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";import { ProtectedRoute } from "@/components/protected-route";import { DocumentRegistryDocumentDetailWorkspace } from "@/modules/document-registry";
+export const Route=createFileRoute("/modules/document-registry/documents/$documentId")({component:DocumentRoute});
+function DocumentRoute(){const{documentId}=Route.useParams();return <ProtectedRoute requiredModule="document_registry" requiredPermission="document_registry:view"><DocumentRegistryDocumentDetailWorkspace documentId={documentId}/></ProtectedRoute>}

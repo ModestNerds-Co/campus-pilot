@@ -134,6 +134,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_health::routes::routes),
             )
             .service(
+                scope("/document-registry")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_document_registry::routes::routes),
+            )
+            .service(
                 scope("/hr-payroll")
                     .wrap(AuthMiddleware)
                     .configure(cp_hr_payroll::routes::routes),
@@ -983,6 +988,132 @@ mod route_wiring_tests {
                 format!("/api/1.0/messaging/inbox/{record_id}/read"),
                 "/api/1.0/messaging/inbox/{id}/read",
                 "messaging.inbox.mark_read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/document-registry/numbering-policy".to_string(),
+                "/api/1.0/document-registry/numbering-policy",
+                "document_registry.numbering_policy.read",
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/document-registry/numbering-policy".to_string(),
+                "/api/1.0/document-registry/numbering-policy",
+                "document_registry.numbering_policy.update",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/document-registry/series".to_string(),
+                "/api/1.0/document-registry/series",
+                "document_registry.series.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/document-registry/series".to_string(),
+                "/api/1.0/document-registry/series",
+                "document_registry.series.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/document-registry/series/{record_id}"),
+                "/api/1.0/document-registry/series/{id}",
+                "document_registry.series.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/document-registry/series/{record_id}"),
+                "/api/1.0/document-registry/series/{id}",
+                "document_registry.series.update",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/document-registry/files".to_string(),
+                "/api/1.0/document-registry/files",
+                "document_registry.files.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/document-registry/files".to_string(),
+                "/api/1.0/document-registry/files",
+                "document_registry.files.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/document-registry/files/{record_id}"),
+                "/api/1.0/document-registry/files/{id}",
+                "document_registry.files.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/document-registry/files/{record_id}"),
+                "/api/1.0/document-registry/files/{id}",
+                "document_registry.files.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/files/{record_id}/reclassify"),
+                "/api/1.0/document-registry/files/{id}/reclassify",
+                "document_registry.files.reclassify",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/files/{record_id}/close"),
+                "/api/1.0/document-registry/files/{id}/close",
+                "document_registry.files.close",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/document-registry/files/{record_id}/activity"),
+                "/api/1.0/document-registry/files/{id}/activity",
+                "document_registry.files.activity.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/document-registry/files/{record_id}/download"),
+                "/api/1.0/document-registry/files/{id}/download",
+                "document_registry.files.download",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/document-registry/retention-due".to_string(),
+                "/api/1.0/document-registry/retention-due",
+                "document_registry.retention_due.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/document-registry/disposition-reviews".to_string(),
+                "/api/1.0/document-registry/disposition-reviews",
+                "document_registry.disposition_reviews.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/document-registry/disposition-reviews/{record_id}"),
+                "/api/1.0/document-registry/disposition-reviews/{id}",
+                "document_registry.disposition_reviews.read",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/files/{record_id}/disposition-reviews"),
+                "/api/1.0/document-registry/files/{id}/disposition-reviews",
+                "document_registry.disposition_reviews.create",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/disposition-reviews/{record_id}/approve"),
+                "/api/1.0/document-registry/disposition-reviews/{id}/approve",
+                "document_registry.disposition_reviews.approve",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/disposition-reviews/{record_id}/reject"),
+                "/api/1.0/document-registry/disposition-reviews/{id}/reject",
+                "document_registry.disposition_reviews.reject",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/disposition-reviews/{record_id}/execute"),
+                "/api/1.0/document-registry/disposition-reviews/{id}/execute",
+                "document_registry.disposition_reviews.execute",
             ),
             (
                 Method::GET,

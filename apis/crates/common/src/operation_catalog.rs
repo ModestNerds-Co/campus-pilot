@@ -3613,6 +3613,196 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Document Registry: private filing, classification, retention, and disposition evidence.
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/numbering-policy",
+            "document_registry.numbering_policy.read",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/document-registry/numbering-policy",
+            "document_registry.numbering_policy.update",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/series",
+            "document_registry.series.list",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/series",
+            "document_registry.series.create",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/series/{id}",
+            "document_registry.series.read",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/document-registry/series/{id}",
+            "document_registry.series.update",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/files",
+            "document_registry.files.list",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/files",
+            "document_registry.files.create",
+            "document_registry",
+            "document_registry:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/files/{id}",
+            "document_registry.files.read",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/document-registry/files/{id}",
+            "document_registry.files.update",
+            "document_registry",
+            "document_registry:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/files/{id}/reclassify",
+            "document_registry.files.reclassify",
+            "document_registry",
+            "document_registry:classify",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/files/{id}/close",
+            "document_registry.files.close",
+            "document_registry",
+            "document_registry:close",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/files/{id}/activity",
+            "document_registry.files.activity.list",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/files/{id}/download",
+            "document_registry.files.download",
+            "document_registry",
+            "document_registry:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/retention-due",
+            "document_registry.retention_due.list",
+            "document_registry",
+            "document_registry:dispose",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/disposition-reviews",
+            "document_registry.disposition_reviews.list",
+            "document_registry",
+            "document_registry:dispose",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/disposition-reviews/{id}",
+            "document_registry.disposition_reviews.read",
+            "document_registry",
+            "document_registry:dispose",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/files/{id}/disposition-reviews",
+            "document_registry.disposition_reviews.create",
+            "document_registry",
+            "document_registry:dispose",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/disposition-reviews/{id}/approve",
+            "document_registry.disposition_reviews.approve",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/disposition-reviews/{id}/reject",
+            "document_registry.disposition_reviews.reject",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/disposition-reviews/{id}/execute",
+            "document_registry.disposition_reviews.execute",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
         // Health services: canonical patients, care, visits, medication, and follow-up.
         route(
             Method::GET,
@@ -4408,6 +4598,15 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "health.medication_plans.list"
         | "health.medication_administrations.list"
         | "health.follow_ups.list" => AgentExposure::Exposed,
+        "document_registry.numbering_policy.read"
+        | "document_registry.series.list"
+        | "document_registry.series.read"
+        | "document_registry.files.list"
+        | "document_registry.files.read"
+        | "document_registry.files.activity.list"
+        | "document_registry.retention_due.list"
+        | "document_registry.disposition_reviews.list"
+        | "document_registry.disposition_reviews.read" => AgentExposure::Exposed,
         "hostel.references.read"
         | "hostel.residences.list"
         | "hostel.residences.read"
@@ -4646,6 +4845,16 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "health.medication_administrations.create"
         | "health.follow_ups.create"
         | "health.follow_ups.update" => AgentExposure::ApprovalRequired,
+        "document_registry.numbering_policy.update"
+        | "document_registry.series.create"
+        | "document_registry.series.update"
+        | "document_registry.files.update"
+        | "document_registry.files.reclassify"
+        | "document_registry.files.close"
+        | "document_registry.disposition_reviews.create"
+        | "document_registry.disposition_reviews.approve"
+        | "document_registry.disposition_reviews.reject"
+        | "document_registry.disposition_reviews.execute" => AgentExposure::ApprovalRequired,
         "hostel.residences.create"
         | "hostel.residences.update"
         | "hostel.rooms.create"
@@ -4658,6 +4867,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "hostel.pastoral_records.create"
         | "hostel.pastoral_records.update"
         | "hostel.pastoral_records.resolve" => AgentExposure::ApprovalRequired,
+        "document_registry.files.create" => AgentExposure::HumanOnly {
+            reason: "Private document bytes must be selected and security-scanned in a direct human workflow.",
+        },
+        "document_registry.files.download" => AgentExposure::HumanOnly {
+            reason: "Private document bytes are never returned to an Agent provider.",
+        },
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -4756,6 +4971,10 @@ mod tests {
                 ("library".to_string(), ModuleEntitlementState::Enabled),
                 ("hostel".to_string(), ModuleEntitlementState::Enabled),
                 ("health".to_string(), ModuleEntitlementState::Enabled),
+                (
+                    "document_registry".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
@@ -4791,7 +5010,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 441);
+        assert_eq!(operation_catalog().len(), 462);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -4843,7 +5062,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [172, 239, 18, 12]);
+        assert_eq!(counts, [181, 249, 20, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

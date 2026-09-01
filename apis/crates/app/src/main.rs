@@ -99,6 +99,8 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     info!("Setting up storage bucket... 🗄️");
     app_state.storage_ops.ensure_bucket_setup().await?;
     info!("Storage bucket configured successfully 📦");
+    app_state.document_storage.ensure_ready().await?;
+    info!("Private Document Registry storage and malware scanner are ready");
 
     let refresh_state = Arc::clone(&app_state);
     tokio::spawn(async move {
@@ -138,6 +140,7 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
             // ERP module crates take a bare PgPool rather than the full
             // AppState, so they never need to depend on the `app` crate.
             .app_data(web::Data::new(app_state.db.clone()))
+            .app_data(web::Data::from(app_state.document_storage.clone()))
             .app_data(JsonConfig::default().error_handler(|err, _req| {
                 let message: String = match &err {
                     actix_web::error::JsonPayloadError::ContentType => {

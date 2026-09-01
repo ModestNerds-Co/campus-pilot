@@ -126,6 +126,15 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "hostel.allocations.transfer_preview",
     "hostel.pastoral_records.list",
     "hostel.pastoral_records.read",
+    "document_registry.numbering_policy.read",
+    "document_registry.series.list",
+    "document_registry.series.read",
+    "document_registry.files.list",
+    "document_registry.files.read",
+    "document_registry.files.activity.list",
+    "document_registry.retention_due.list",
+    "document_registry.disposition_reviews.list",
+    "document_registry.disposition_reviews.read",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -405,7 +414,12 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "hostel.rooms.list"
         | "hostel.allocations.preview"
         | "hostel.allocations.list"
-        | "hostel.pastoral_records.list" => Some(OperationScopePolicy::Dataset),
+        | "hostel.pastoral_records.list"
+        | "document_registry.numbering_policy.read"
+        | "document_registry.series.list"
+        | "document_registry.files.list"
+        | "document_registry.retention_due.list"
+        | "document_registry.disposition_reviews.list" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -493,6 +507,15 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "hostel.pastoral_records.read" => {
             Some(OperationScopePolicy::OneResource("hostel_pastoral_record"))
         }
+        "document_registry.series.read" => Some(OperationScopePolicy::OneResource(
+            "document_registry_series",
+        )),
+        "document_registry.files.read" | "document_registry.files.activity.list" => {
+            Some(OperationScopePolicy::OneResource("document_registry_file"))
+        }
+        "document_registry.disposition_reviews.read" => Some(OperationScopePolicy::OneResource(
+            "document_registry_disposition_review",
+        )),
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
                 allowed_kinds: &["academic_year"],
@@ -716,6 +739,15 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "hostel_pastoral_record" => Some(
             "SELECT EXISTS(SELECT 1 FROM hostel_pastoral_records WHERE tenant_id = $1 AND id = $2)",
         ),
+        "document_registry_series" => Some(
+            "SELECT EXISTS(SELECT 1 FROM document_registry_series WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "document_registry_file" => Some(
+            "SELECT EXISTS(SELECT 1 FROM document_registry_files WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "document_registry_disposition_review" => Some(
+            "SELECT EXISTS(SELECT 1 FROM document_registry_disposition_reviews WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         _ => None,
     }
 }
@@ -795,7 +827,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 104);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 113);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -815,7 +847,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 172);
+        assert_eq!(exposed.len(), 181);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

@@ -535,6 +535,22 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: DOCUMENT_REGISTRY,
     },
     ExactRoute {
+        path: "/modules/document-registry/classifications",
+        access: DOCUMENT_REGISTRY,
+    },
+    ExactRoute {
+        path: "/modules/document-registry/retention",
+        access: DOCUMENT_REGISTRY,
+    },
+    ExactRoute {
+        path: "/modules/document-registry/reviews",
+        access: DOCUMENT_REGISTRY,
+    },
+    ExactRoute {
+        path: "/modules/document-registry/settings",
+        access: DOCUMENT_REGISTRY,
+    },
+    ExactRoute {
         path: "/modules/internal-audit",
         access: INTERNAL_AUDIT,
     },
@@ -549,6 +565,10 @@ const EXACT_ROUTES: &[ExactRoute] = &[
 ];
 
 const UUID_ROUTES: &[UuidRoute] = &[
+    UuidRoute {
+        prefix: "/modules/document-registry/documents/",
+        access: DOCUMENT_REGISTRY,
+    },
     UuidRoute {
         prefix: "/modules/academics/reporting/report-batches/",
         access: ACADEMICS,

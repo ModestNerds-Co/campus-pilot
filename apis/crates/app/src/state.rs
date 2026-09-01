@@ -14,6 +14,7 @@ use cp_agent::{
 };
 use cp_agent_runtime::{AgentSessionOps, AgentUsageRuntime, AiRoutingOps};
 use cp_ai_providers::AiProviderOps;
+use cp_document_registry::DocumentStorage;
 use sqlx::PgPool;
 
 use crate::config::Config;
@@ -32,6 +33,7 @@ pub struct AppState {
     pub db_ops: Arc<DatabaseOperations>,
     pub kernel_db: Arc<KernelDbOps>,
     pub storage_ops: Arc<StorageOps>,
+    pub document_storage: Arc<DocumentStorage>,
     pub agent_capabilities: Arc<CapabilityRegistry>,
     pub agent_authority_loader: Arc<dyn AuthorityLoader>,
     pub agent_record_scope_authorizer: Arc<dyn RecordScopeAuthorizer>,
@@ -106,10 +108,16 @@ impl AppState {
         };
 
         let storage_ops = Arc::new(StorageOps::new(
-            s3_client,
-            presign_client,
+            s3_client.clone(),
+            presign_client.clone(),
             config.storage.bucket.clone(),
             config.storage.endpoint.clone(),
+        ));
+        let document_storage = Arc::new(DocumentStorage::new(
+            s3_client,
+            presign_client,
+            config.storage.private_bucket.clone(),
+            config.storage.document_scanner_address.clone(),
         ));
 
         Self {
@@ -117,6 +125,7 @@ impl AppState {
             db_ops,
             kernel_db,
             storage_ops,
+            document_storage,
             agent_capabilities,
             agent_authority_loader,
             agent_record_scope_authorizer,

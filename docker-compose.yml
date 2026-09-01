@@ -68,6 +68,25 @@ services:
       - campus
     restart: "no"
 
+  clamav:
+    image: clamav/clamav:1.5.4-debian13-slim
+    container_name: campus-pilot-clamav
+    restart: unless-stopped
+    environment:
+      CLAMAV_NO_MILTERD: "true"
+    expose:
+      - "3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping=3"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    networks:
+      - campus
+
   apis:
     build:
       context: ./apis
@@ -81,6 +100,8 @@ services:
         condition: service_healthy
       minio-setup:
         condition: service_completed_successfully
+      clamav:
+        condition: service_healthy
     environment:
       APP_PORT: ${APP_PORT:-8000}
       RUST_LOG: ${RUST_LOG:-info}
@@ -107,6 +128,8 @@ services:
       STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-https://campus-storage.antonlabs.cc}
       STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
       STORAGE_BUCKET: ${STORAGE_BUCKET:-campus-pilot}
+      STORAGE_PRIVATE_BUCKET: ${STORAGE_PRIVATE_BUCKET:-campus-pilot-private}
+      DOCUMENT_SCANNER_ADDRESS: ${DOCUMENT_SCANNER_ADDRESS:-clamav:3310}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
     ports:
@@ -158,6 +181,8 @@ services:
       STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-https://campus-storage.antonlabs.cc}
       STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
       STORAGE_BUCKET: ${STORAGE_BUCKET:-campus-pilot}
+      STORAGE_PRIVATE_BUCKET: ${STORAGE_PRIVATE_BUCKET:-campus-pilot-private}
+      DOCUMENT_SCANNER_ADDRESS: ${DOCUMENT_SCANNER_ADDRESS:-clamav:3310}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
     networks:
@@ -200,3 +225,5 @@ volumes:
     name: campus-pilot-postgres
   minio_data:
     name: campus-pilot-minio
+  clamav_data:
+    name: campus-pilot-clamav

@@ -1419,6 +1419,7 @@ dependencies = [
  "cp-attendance",
  "cp-audit",
  "cp-common",
+ "cp-document-registry",
  "cp-fees",
  "cp-finance",
  "cp-fleet",
@@ -1786,6 +1787,27 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.16",
+ "uuid",
+ "validator",
+]
+
+[[package]]
+name = "cp-document-registry"
+version = "1.0.0"
+dependencies = [
+ "actix-multipart",
+ "actix-web",
+ "anyhow",
+ "aws-sdk-s3",
+ "chrono",
+ "cp-audit",
+ "cp-common",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "tokio",
  "uuid",
  "validator",
 ]

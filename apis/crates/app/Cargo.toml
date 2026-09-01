@@ -26,6 +26,7 @@ cp-timetabling = { path = "../modules/timetabling" }
 cp-attendance = { path = "../modules/attendance" }
 cp-gradebook = { path = "../modules/gradebook" }
 cp-academic-reporting = { path = "../modules/academic-reporting" }
+cp-document-registry = { path = "../modules/document-registry" }
 
 sqlx = { workspace = true }
 serde = { workspace = true }

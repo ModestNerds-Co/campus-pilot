@@ -15,6 +15,8 @@ import {
   CalendarCheck2,
   BarChart3,
   ClipboardList,
+  ArchiveRestore,
+  FileArchive,
   Coins,
   CircleDollarSign,
   DoorOpen,
@@ -217,6 +219,13 @@ const hostelNavigation: LocalNavItem[] = [
   { label: "Pastoral records", path: "/modules/hostel/pastoral", icon: HeartHandshake, permission: "hostel:pastoral" },
 ];
 
+const documentRegistryNavigation: LocalNavItem[] = [
+  { label: "Classifications", path: "/modules/document-registry/classifications", icon: ArchiveRestore },
+  { label: "Retention", path: "/modules/document-registry/retention", icon: Clock3, permission: "document_registry:dispose" },
+  { label: "Disposition reviews", path: "/modules/document-registry/reviews", icon: FileArchive, permission: "document_registry:dispose" },
+  { label: "Settings", path: "/modules/document-registry/settings", icon: Settings2 },
+];
+
 const messagingNavigation: LocalNavItem[] = [
   {
     label: "Inbox",
@@ -395,6 +404,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                   ? healthNavigation
                   : moduleKey === "hostel"
                     ? hostelNavigation
+                    : moduleKey === "document_registry"
+                      ? documentRegistryNavigation
                     : moduleKey === "messaging"
                     ? messagingNavigation
                     : moduleKey === "sis"
@@ -633,6 +644,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
               ? "Patients"
               : moduleKey === "hostel"
                 ? "Residences"
+              : moduleKey === "document_registry"
+                ? "Documents"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1076,6 +1089,14 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
         {active ? <ChevronRight className="size-3.5" /> : null}
       </Link>
     );
+  if (item.path === "/modules/document-registry/classifications")
+    return <Link className={navClass(active)} to="/modules/document-registry/classifications"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/document-registry/retention")
+    return <Link className={navClass(active)} to="/modules/document-registry/retention"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/document-registry/reviews")
+    return <Link className={navClass(active)} to="/modules/document-registry/reviews"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/document-registry/settings")
+    return <Link className={navClass(active)} to="/modules/document-registry/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/messaging/inbox")
     return (
       <Link className={navClass(active)} to="/modules/messaging/inbox">
