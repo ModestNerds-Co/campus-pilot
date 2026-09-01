@@ -12,6 +12,8 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { hasPermission } from "@/modules/users/access-control";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { hrPayrollService } from "./service";
 import type { Department, DirectoryStatus, Position } from "./types";
@@ -22,6 +24,11 @@ type DirectoryKind = "department" | "position";
 export function DirectoryList({ kind }: { kind: DirectoryKind }) {
   const isDepartment = kind === "department";
   const label = isDepartment ? "Department" : "Position";
+  const permissions = useAuthStore((state) => state.user?.permissions);
+  const canCreate = hasPermission(permissions, "hr_payroll:create");
+  const canEdit = hasPermission(permissions, "hr_payroll:edit");
+  const canDelete = hasPermission(permissions, "hr_payroll:delete");
+  const hasActions = canEdit || canDelete;
   const [records, setRecords] = useState<DirectoryRecord[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +74,7 @@ export function DirectoryList({ kind }: { kind: DirectoryKind }) {
   }, [isDepartment]);
 
   const remove = async () => {
-    if (!deleteRecord) return;
+    if (!canDelete || !deleteRecord) return;
     const response = isDepartment
       ? await hrPayrollService.deleteDepartment(deleteRecord.id)
       : await hrPayrollService.deletePosition(deleteRecord.id);
@@ -78,7 +85,7 @@ export function DirectoryList({ kind }: { kind: DirectoryKind }) {
     } else toast.error(response.issues?.[0]?.toString() || response.message || `${label} could not be removed`);
   };
 
-  usePageChrome(`${label}s`, <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add {kind}</Button>);
+  usePageChrome(`${label}s`, canCreate ? <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add {kind}</Button> : undefined);
 
   return (
     <div className="space-y-6">
@@ -94,22 +101,22 @@ export function DirectoryList({ kind }: { kind: DirectoryKind }) {
         {!loading && records.length > 0 ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}
       </TableControlsBar>
       <TableWrap>
-        {loading ? <TableLoading columns={4} label={`Loading ${kind}s…`} /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? (
-          <TableEmpty description={submittedSearch || status !== "all" ? "Change the current filters." : `Add the first ${kind}.`} icon={<Building2 />} title={submittedSearch || status !== "all" ? `No ${kind}s match these filters` : `No ${kind}s yet`} />
-        ) : <TableScroll><Table><THead><tr><TH>{label}</TH><TH>Code</TH>{!isDepartment ? <TH>Department</TH> : null}<TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>
+        {loading ? <TableLoading columns={(isDepartment ? 3 : 4) + (hasActions ? 1 : 0)} label={`Loading ${kind}s…`} /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? (
+          <TableEmpty description={submittedSearch || status !== "all" ? "Change the current filters." : canCreate ? `Add the first ${kind}.` : `No ${kind}s are configured.`} icon={<Building2 />} title={submittedSearch || status !== "all" ? `No ${kind}s match these filters` : `No ${kind}s yet`} />
+        ) : <TableScroll><Table><THead><tr><TH>{label}</TH><TH>Code</TH>{!isDepartment ? <TH>Department</TH> : null}<TH>Status</TH>{hasActions ? <TH className="text-right">Actions</TH> : null}</tr></THead><TBody>
           {records.map((record) => <TR key={record.id}>
             <TD><span className="font-medium text-[var(--text-strong)]">{"name" in record ? record.name : record.title}</span></TD>
             <TD className="font-tabular text-[var(--text-muted)]">{record.code}</TD>
             {!isDepartment && "department_id" in record ? <TD className="text-[var(--text-muted)]">{departments.find((item) => item.id === record.department_id)?.name || "—"}</TD> : null}
             <TD><Badge tone={record.status === "active" ? "success" : "neutral"}>{record.status}</Badge></TD>
-            <TD className="text-right"><div className="relative inline-flex"><button aria-label={`${label} actions`} className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>
-              {menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }}><Edit className="size-4" />Edit</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }}><Trash2 className="size-4" />Remove</button></div> : null}
-            </div></TD>
+            {hasActions ? <TD className="text-right"><div className="relative inline-flex"><button aria-label={`${label} actions`} className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>
+              {menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">{canEdit ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }}><Edit className="size-4" />Edit</button> : null}{canDelete ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }}><Trash2 className="size-4" />Remove</button> : null}</div> : null}
+            </div></TD> : null}
           </TR>)}
         </TBody></Table></TableScroll>}
       </TableWrap>
-      <DirectoryDrawer departments={departments} kind={kind} onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={drawerRecord !== undefined} record={drawerRecord ?? null} />
-      <ConfirmDrawer confirmLabel={`Remove ${kind}`} description={`Remove ${deleteRecord ? ("name" in deleteRecord ? deleteRecord.name : deleteRecord.title) : `this ${kind}`}? Records using it must be reassigned first.`} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={deleteRecord !== null} title={`Remove ${kind}?`} />
+      <DirectoryDrawer departments={departments} kind={kind} onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={(drawerRecord === null && canCreate) || (drawerRecord !== null && drawerRecord !== undefined && canEdit)} record={drawerRecord ?? null} />
+      <ConfirmDrawer confirmLabel={`Remove ${kind}`} description={`Remove ${deleteRecord ? ("name" in deleteRecord ? deleteRecord.name : deleteRecord.title) : `this ${kind}`}? Records using it must be reassigned first.`} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={canDelete && deleteRecord !== null} title={`Remove ${kind}?`} />
     </div>
   );
 }

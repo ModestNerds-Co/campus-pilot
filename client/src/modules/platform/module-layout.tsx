@@ -59,6 +59,11 @@ import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
 import { AgentWidget } from "@/modules/agent";
 import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
+import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
+import {
+  SIS_ADMINISTRATION_PERMISSIONS,
+  SIS_IMPORT_ACCESS_PERMISSIONS,
+} from "@/modules/sis/access";
 import { useAuthStore } from "@/stores/auth-store";
 
 import {
@@ -146,6 +151,7 @@ const hrNavigation: LocalNavItem[] = [
     label: "Employee imports",
     path: "/modules/hr-payroll/imports",
     icon: FileUp,
+    anyPermissions: [...HR_ADMINISTRATION_PERMISSIONS],
   },
   {
     label: "Employment",
@@ -161,11 +167,13 @@ const hrNavigation: LocalNavItem[] = [
     label: "Departments",
     path: "/modules/hr-payroll/departments",
     icon: Building2,
+    anyPermissions: [...HR_ADMINISTRATION_PERMISSIONS],
   },
   {
     label: "Positions",
     path: "/modules/hr-payroll/positions",
     icon: BriefcaseBusiness,
+    anyPermissions: [...HR_ADMINISTRATION_PERMISSIONS],
   },
 ];
 
@@ -299,10 +307,11 @@ const sisNavigation: LocalNavItem[] = [
     label: "Applications",
     path: "/modules/sis/applications",
     icon: ClipboardList,
+    anyPermissions: [...SIS_ADMINISTRATION_PERMISSIONS],
   },
   { label: "Enrolments", path: "/modules/sis/enrolments", icon: School },
-  { label: "Data imports", path: "/modules/sis/imports", icon: FileUp },
-  { label: "Settings", path: "/modules/sis/settings", icon: Settings2 },
+  { label: "Data imports", path: "/modules/sis/imports", icon: FileUp, anyPermissions: [...SIS_IMPORT_ACCESS_PERMISSIONS] },
+  { label: "Settings", path: "/modules/sis/settings", icon: Settings2, permission: "sis:edit" },
 ];
 
 const financeNavigation: LocalNavItem[] = [
@@ -430,7 +439,12 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
     triggerRef: menuButtonRef,
   } = useNavigationDrawer(sidebarOpen, setSidebarOpen);
   const moduleKey = moduleKeyFromPath(location.pathname);
-  const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
+  const hasSisAdministrationAccess =
+    user?.permissions.includes("*") ||
+    SIS_ADMINISTRATION_PERMISSIONS.some((permission) => user?.permissions.includes(permission));
+  const moduleLabel = moduleKey === "sis" && !hasSisAdministrationAccess
+    ? "Learners"
+    : moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
   const localNavigation = (

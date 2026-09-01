@@ -11,7 +11,8 @@ use actix_web::http::StatusCode;
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, delete, get, post, put, web};
 use cp_audit::{AuditActor, RequestContext};
 use cp_common::{
-    ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
+    AccessContext, ApiResponse, PaginationMeta, RecordScopeGrants, RequirePermission, TenantId,
+    flatten_validation_errors,
 };
 use cp_imports::{MAX_SOURCE_BYTES, parse_source};
 use futures_util::StreamExt;
@@ -36,8 +37,9 @@ use crate::{
         NewHrImport, PreviewRowsQuery,
     },
     ops::{
-        DeleteOutcome, DepartmentOps, EmployeeAvailabilityOps, EmployeeOps,
-        EmploymentEngagementOps, PositionOps,
+        DeleteOutcome, DepartmentOps, EmployeeAvailabilityOps, EmployeeAvailabilityReadScope,
+        EmployeeOps, EmployeeReadScope, EmploymentEngagementOps, EmploymentEngagementReadScope,
+        HrImportReadScope, PositionOps,
     },
 };
 
@@ -45,12 +47,18 @@ use crate::{
 async fn list_imports(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
     query: web::Query<ImportListQuery>,
 ) -> HttpResponse {
+    let Some(scope) = HrImportReadScope::from_authority(&access, &grants) else {
+        return record_scope_denied();
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    match HrImportOps::list(
+    match HrImportOps::list_for_scope(
         pool.get_ref(),
         tenant.into_inner().into_inner(),
+        scope,
         page,
         per_page,
     )
@@ -138,11 +146,17 @@ async fn upload_import(
 async fn read_import(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
-    match HrImportOps::get(
+    let Some(scope) = HrImportReadScope::from_authority(&access, &grants) else {
+        return record_scope_denied();
+    };
+    match HrImportOps::get_for_scope(
         pool.get_ref(),
         tenant.into_inner().into_inner(),
+        scope,
         id.into_inner(),
     )
     .await
@@ -196,13 +210,19 @@ async fn preview_import_mapping(
 async fn read_import_preview(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
     id: web::Path<Uuid>,
     query: web::Query<PreviewRowsQuery>,
 ) -> HttpResponse {
+    let Some(scope) = HrImportReadScope::from_authority(&access, &grants) else {
+        return record_scope_denied();
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    match HrImportOps::preview(
+    match HrImportOps::preview_for_scope(
         pool.get_ref(),
         tenant.into_inner().into_inner(),
+        scope,
         id.into_inner(),
         page,
         per_page,
@@ -430,12 +450,20 @@ async fn delete_position(
 async fn list_employees(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
+    actor: web::ReqData<AuditActor>,
     query: web::Query<EmployeeListQuery>,
 ) -> HttpResponse {
+    let Some(scope) = EmployeeReadScope::from_authority(&access, &grants, actor.into_inner())
+    else {
+        return record_scope_denied();
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    match EmployeeOps::list(
+    match EmployeeOps::list_for_scope(
         &pool,
         tenant.into_inner().into_inner(),
+        scope,
         page,
         per_page,
         trimmed(query.search.as_deref()),
@@ -462,9 +490,23 @@ async fn list_employees(
 async fn get_employee(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
+    actor: web::ReqData<AuditActor>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
-    match EmployeeOps::get_by_id(&pool, tenant.into_inner().into_inner(), id.into_inner()).await {
+    let Some(scope) = EmployeeReadScope::from_authority(&access, &grants, actor.into_inner())
+    else {
+        return record_scope_denied();
+    };
+    match EmployeeOps::get_by_id_for_scope(
+        &pool,
+        tenant.into_inner().into_inner(),
+        scope,
+        id.into_inner(),
+    )
+    .await
+    {
         Ok(Some(value)) => ok(EmployeeResponse::from(value)),
         Ok(None) => not_found("Employee was not found"),
         Err(error) => internal_error("Employee could not be loaded", error),
@@ -547,12 +589,21 @@ async fn delete_employee(
 async fn list_employment_engagements(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
+    actor: web::ReqData<AuditActor>,
     query: web::Query<EmploymentEngagementListQuery>,
 ) -> HttpResponse {
+    let Some(scope) =
+        EmploymentEngagementReadScope::from_authority(&access, &grants, actor.into_inner())
+    else {
+        return record_scope_denied();
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    match EmploymentEngagementOps::list(
+    match EmploymentEngagementOps::list_for_scope(
         &pool,
         tenant.into_inner().into_inner(),
+        scope,
         page,
         per_page,
         trimmed(query.search.as_deref()),
@@ -581,11 +632,20 @@ async fn list_employment_engagements(
 async fn get_employment_engagement(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
+    actor: web::ReqData<AuditActor>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
-    match EmploymentEngagementOps::get_by_id(
+    let Some(scope) =
+        EmploymentEngagementReadScope::from_authority(&access, &grants, actor.into_inner())
+    else {
+        return record_scope_denied();
+    };
+    match EmploymentEngagementOps::get_by_id_for_scope(
         &pool,
         tenant.into_inner().into_inner(),
+        scope,
         id.into_inner(),
     )
     .await
@@ -661,12 +721,21 @@ async fn delete_employment_engagement(
 async fn list_employee_availability(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
+    actor: web::ReqData<AuditActor>,
     query: web::Query<EmployeeAvailabilityListQuery>,
 ) -> HttpResponse {
+    let Some(scope) =
+        EmployeeAvailabilityReadScope::from_authority(&access, &grants, actor.into_inner())
+    else {
+        return record_scope_denied();
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    match EmployeeAvailabilityOps::list(
+    match EmployeeAvailabilityOps::list_for_scope(
         &pool,
         tenant.into_inner().into_inner(),
+        scope,
         page,
         per_page,
         trimmed(query.search.as_deref()),
@@ -697,11 +766,20 @@ async fn list_employee_availability(
 async fn get_employee_availability(
     pool: web::Data<sqlx::PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
+    grants: web::ReqData<RecordScopeGrants>,
+    actor: web::ReqData<AuditActor>,
     id: web::Path<Uuid>,
 ) -> HttpResponse {
-    match EmployeeAvailabilityOps::get_by_id(
+    let Some(scope) =
+        EmployeeAvailabilityReadScope::from_authority(&access, &grants, actor.into_inner())
+    else {
+        return record_scope_denied();
+    };
+    match EmployeeAvailabilityOps::get_by_id_for_scope(
         &pool,
         tenant.into_inner().into_inner(),
+        scope,
         id.into_inner(),
     )
     .await
@@ -864,6 +942,14 @@ fn missing_actor() -> HttpResponse {
     ))
 }
 
+fn record_scope_denied() -> HttpResponse {
+    HttpResponse::Forbidden().json(ApiResponse::from_status(
+        StatusCode::FORBIDDEN,
+        None::<()>,
+        Some(vec!["Record access is not available".to_string()]),
+    ))
+}
+
 fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {
     (
         page.unwrap_or(1).max(1),
@@ -999,12 +1085,19 @@ fn delete_response(result: anyhow::Result<DeleteOutcome>, subject: &str) -> Http
 
 #[cfg(test)]
 mod tests {
-    use super::{bounded_page, trimmed};
+    use actix_web::http::StatusCode;
+
+    use super::{bounded_page, record_scope_denied, trimmed};
 
     #[test]
     fn directory_filters_are_bounded() {
         assert_eq!(bounded_page(Some(0), Some(500)), (1, 100));
         assert_eq!(trimmed(Some("  staff  ")), Some("staff"));
         assert_eq!(trimmed(Some("  ")), None);
+    }
+
+    #[test]
+    fn missing_record_scope_is_forbidden() {
+        assert_eq!(record_scope_denied().status(), StatusCode::FORBIDDEN);
     }
 }

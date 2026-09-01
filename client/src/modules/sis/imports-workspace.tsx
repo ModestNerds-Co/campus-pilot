@@ -32,6 +32,7 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { responseMessage, sisService } from "./service";
 import type {
@@ -76,6 +77,9 @@ const HEADER_ALIASES: Record<string, string[]> = {
 };
 
 export function SisImportsWorkspace() {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("sis:create");
+  const canEdit = permissions.includes("*") || permissions.includes("sis:edit");
   const [records, setRecords] = useState<SisImportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,8 +113,8 @@ export function SisImportsWorkspace() {
   useEffect(() => { void load(); }, [load]);
 
   const action = useMemo(
-    () => <Button onClick={() => setUploadOpen(true)}><Upload className="size-4" />New import</Button>,
-    [],
+    () => canCreate ? <Button onClick={() => setUploadOpen(true)}><Upload className="size-4" />New import</Button> : null,
+    [canCreate],
   );
   usePageChrome("Data imports", action);
 
@@ -154,7 +158,7 @@ export function SisImportsWorkspace() {
                     <TD className="font-tabular text-[var(--text-body)]">{record.source_row_count}</TD>
                     <TD><PreviewTotals record={record} /></TD>
                     <TD><Badge tone={statusTone(record.status)}>{displayStatus(record.status)}</Badge></TD>
-                    <TD className="text-right"><Button onClick={() => setSelected(record)} size="sm" variant="secondary">{record.status === "uploaded" ? "Map columns" : "Open"}</Button></TD>
+                    <TD className="text-right"><Button onClick={() => setSelected(record)} size="sm" variant="secondary">{canEdit && record.status === "uploaded" ? "Map columns" : "Open"}</Button></TD>
                   </TR>
                 ))}
               </TBody>
@@ -163,11 +167,14 @@ export function SisImportsWorkspace() {
         )}
       </TableWrap>
       <UploadImportDrawer
+        canCreate={canCreate}
         onClose={() => setUploadOpen(false)}
         onUploaded={(record) => { setUploadOpen(false); setSelected(record); void load(); }}
-        open={uploadOpen}
+        open={canCreate && uploadOpen}
       />
       <ImportReviewDrawer
+        canCreate={canCreate}
+        canEdit={canEdit}
         onChanged={() => void load()}
         onClose={() => setSelected(null)}
         record={selected}
@@ -176,7 +183,7 @@ export function SisImportsWorkspace() {
   );
 }
 
-function UploadImportDrawer({ onClose, onUploaded, open }: { onClose: () => void; onUploaded: (record: SisImportRecord) => void; open: boolean }) {
+function UploadImportDrawer({ canCreate, onClose, onUploaded, open }: { canCreate: boolean; onClose: () => void; onUploaded: (record: SisImportRecord) => void; open: boolean }) {
   const [target, setTarget] = useState<SisImportTarget>("learners");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -189,7 +196,7 @@ function UploadImportDrawer({ onClose, onUploaded, open }: { onClose: () => void
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!file || uploading) return;
+    if (!canCreate || !file || uploading) return;
     setUploading(true);
     try {
       const response = await sisService.uploadImport(target, file);
@@ -221,7 +228,7 @@ function UploadImportDrawer({ onClose, onUploaded, open }: { onClose: () => void
   );
 }
 
-function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => void; onClose: () => void; record: SisImportRecord | null }) {
+function ImportReviewDrawer({ canCreate, canEdit, onChanged, onClose, record }: { canCreate: boolean; canEdit: boolean; onChanged: () => void; onClose: () => void; record: SisImportRecord | null }) {
   const [current, setCurrent] = useState<SisImportRecord | null>(record);
   const [preview, setPreview] = useState<SisImportPreview | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -254,7 +261,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
 
   const fields = current ? MAPPING_FIELDS[current.entity_key] : [];
   const validate = async () => {
-    if (!current || saving) return;
+    if (!canEdit || !current || saving) return;
     setSaving(true);
     try {
       const payload: SisImportMapping = {
@@ -278,7 +285,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
   };
 
   const commit = async () => {
-    if (!current || !preview || saving) return;
+    if (!canCreate || !current || !preview || saving) return;
     setSaving(true);
     try {
       const response = await sisService.commitImport(current.id, preview.id);
@@ -312,7 +319,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
                   {fields.map(([key, label, required]) => (
                     <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center" key={key}>
                       <Label htmlFor={`mapping-${key}`}>{label}{required ? <span className="text-[var(--tone-danger)]"> *</span> : null}</Label>
-                      <Select id={`mapping-${key}`} onChange={(event) => setMapping((value) => ({ ...value, [key]: event.target.value }))} value={mapping[key] ?? ""}>
+                      <Select disabled={!canEdit} id={`mapping-${key}`} onChange={(event) => setMapping((value) => ({ ...value, [key]: event.target.value }))} value={mapping[key] ?? ""}>
                         <option value="">Do not import</option>
                         {current.source_headers.map((header) => {
                           const usedByAnotherField = Object.entries(mapping).some(([mappedKey, mappedHeader]) => mappedKey !== key && mappedHeader === header);
@@ -322,7 +329,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
                     </div>
                   ))}
                 </div>
-                {current.entity_key === "learners" ? <div><Label htmlFor="import-date-format">Date of birth format</Label><Select className="mt-1.5" id="import-date-format" onChange={(event) => setDateFormat(event.target.value as ImportDateFormat)} value={dateFormat}><option value="yyyy_mm_dd">YYYY-MM-DD</option><option value="dd_mm_yyyy">DD/MM/YYYY</option><option value="mm_dd_yyyy">MM/DD/YYYY</option></Select></div> : null}
+                {current.entity_key === "learners" ? <div><Label htmlFor="import-date-format">Date of birth format</Label><Select className="mt-1.5" disabled={!canEdit} id="import-date-format" onChange={(event) => setDateFormat(event.target.value as ImportDateFormat)} value={dateFormat}><option value="yyyy_mm_dd">YYYY-MM-DD</option><option value="dd_mm_yyyy">DD/MM/YYYY</option><option value="mm_dd_yyyy">MM/DD/YYYY</option></Select></div> : null}
               </div>
             ) : preview ? (
               <PreviewContent committed={isCommitted} preview={preview} target={current.entity_key} />
@@ -332,9 +339,9 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
       </DialogBody>
       <DialogFooter>
         <Button disabled={saving} onClick={onClose} type="button" variant="ghost">Close</Button>
-        {current && mode === "preview" && !isCommitted ? <Button disabled={saving} onClick={() => setMode("mapping")} type="button" variant="secondary">Change mapping</Button> : null}
-        {current && mode === "mapping" && !isCommitted ? <Button disabled={saving} onClick={() => void validate()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Validating…</> : "Create preview"}</Button> : null}
-        {current && mode === "preview" && preview && !isCommitted ? <Button disabled={saving || preview.ready_rows === 0} onClick={() => void commit()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Committing…</> : `Commit ${preview.ready_rows} ready rows`}</Button> : null}
+        {canEdit && current && mode === "preview" && !isCommitted ? <Button disabled={saving} onClick={() => setMode("mapping")} type="button" variant="secondary">Change mapping</Button> : null}
+        {canEdit && current && mode === "mapping" && !isCommitted ? <Button disabled={saving} onClick={() => void validate()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Validating…</> : "Create preview"}</Button> : null}
+        {canCreate && current && mode === "preview" && preview && !isCommitted ? <Button disabled={saving || preview.ready_rows === 0} onClick={() => void commit()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Committing…</> : `Commit ${preview.ready_rows} ready rows`}</Button> : null}
       </DialogFooter>
     </DialogShell>
   );

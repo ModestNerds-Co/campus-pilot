@@ -12,6 +12,7 @@ cp-sis = { path = "../sis" }
 actix-web = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
+log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

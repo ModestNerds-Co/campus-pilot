@@ -5,6 +5,11 @@ import { ArrowRight, CheckCircle2, CircleDashed } from "lucide-react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
+import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
+import {
+  SIS_ADMINISTRATION_PERMISSIONS,
+  SIS_IMPORT_ACCESS_PERMISSIONS,
+} from "@/modules/sis/access";
 
 import { accessService } from "./access-service";
 import {
@@ -138,9 +143,13 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   }
 
   if (module.key === "hr_payroll") {
+    const canAdministerHr = permissions.includes("*") || HR_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission));
     return (
       <div className="space-y-8">
-        <ModuleIntroduction module={module} />
+        <ModuleIntroduction
+          description={canAdministerHr ? module.description : "View your workforce record, employment history, and availability."}
+          module={module}
+        />
         <section aria-labelledby="hr-workspaces">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">
             Working areas
@@ -149,7 +158,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
             className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]"
             id="hr-workspaces"
           >
-            Manage the workforce directory
+            {canAdministerHr ? "Manage the workforce directory" : "Employee records"}
           </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <HrLink
@@ -157,11 +166,11 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
               label="Employees"
               to="/modules/hr-payroll/employees"
             />
-            <HrLink
+            {canAdministerHr ? <HrLink
               description="Map and validate existing employee records before importing them."
               label="Employee imports"
               to="/modules/hr-payroll/imports"
-            />
+            /> : null}
             <HrLink
               description="Keep dated contract and assignment history."
               label="Employment"
@@ -172,16 +181,16 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
               label="Availability"
               to="/modules/hr-payroll/availability"
             />
-            <HrLink
+            {canAdministerHr ? <HrLink
               description="Organize employees by operational area."
               label="Departments"
               to="/modules/hr-payroll/departments"
-            />
-            <HrLink
+            /> : null}
+            {canAdministerHr ? <HrLink
               description="Maintain the positions employees may hold."
               label="Positions"
               to="/modules/hr-payroll/positions"
-            />
+            /> : null}
           </div>
         </section>
       </div>
@@ -432,9 +441,15 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   }
 
   if (module.key === "sis") {
+    const canAdministerSis = permissions.includes("*") || SIS_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission));
+    const canEditSisSettings = permissions.includes("*") || permissions.includes("sis:edit");
     return (
       <div className="space-y-8">
-        <ModuleIntroduction module={module} />
+        <ModuleIntroduction
+          description={canAdministerSis ? module.description : "View assigned learner, guardian, and enrolment records."}
+          module={module}
+          title={canAdministerSis ? undefined : "Learners"}
+        />
         <section aria-labelledby="sis-workspaces">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">
             Working areas
@@ -443,44 +458,44 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
             className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]"
             id="sis-workspaces"
           >
-            Manage people and admissions
+            {canAdministerSis ? "Manage people and admissions" : "Assigned learner records"}
           </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <SisLink
-              description="Maintain learner records used across admissions and enrolment."
+              description={canAdministerSis ? "Maintain learner records used across admissions and enrolment." : "View learners assigned through your classes."}
               label="Learners"
               to="/modules/sis/learners"
             />
             <SisLink
-              description="Maintain the people responsible for learners."
+              description={canAdministerSis ? "Maintain the people responsible for learners." : "View guardians linked to assigned learners."}
               label="Guardians"
               to="/modules/sis/guardians"
             />
             <SisLink
-              description="Connect learners to guardians and their responsibilities."
+              description={canAdministerSis ? "Connect learners to guardians and their responsibilities." : "View guardian relationships for assigned learners."}
               label="Guardian relationships"
               to="/modules/sis/guardian-relationships"
             />
-            <SisLink
+            {canAdministerSis ? <SisLink
               description="Track applications against an academic year and target grade."
               label="Applications"
               to="/modules/sis/applications"
-            />
+            /> : null}
             <SisLink
-              description="Place learners in an Academics class for an academic year."
+              description={canAdministerSis ? "Place learners in an Academics class for an academic year." : "View class enrolments for assigned learners."}
               label="Enrolments"
               to="/modules/sis/enrolments"
             />
-            <SisLink
+            {permissions.includes("*") || SIS_IMPORT_ACCESS_PERMISSIONS.some((permission) => permissions.includes(permission)) ? <SisLink
               description="Map and validate existing learner or guardian records before importing them."
               label="Data imports"
               to="/modules/sis/imports"
-            />
-            <SisLink
+            /> : null}
+            {canEditSisSettings ? <SisLink
               description="Set the prefix, padding, and next sequence for new learner numbers."
               label="Settings"
               to="/modules/sis/settings"
-            />
+            /> : null}
           </div>
         </section>
       </div>
@@ -591,9 +606,10 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   );
 };
 
-const ModuleIntroduction: React.FC<{ description?: string; module: ModuleDefinition }> = ({
+const ModuleIntroduction: React.FC<{ description?: string; module: ModuleDefinition; title?: string }> = ({
   description,
   module,
+  title,
 }) => {
   const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
   const Icon = visual.icon;
@@ -613,7 +629,7 @@ const ModuleIntroduction: React.FC<{ description?: string; module: ModuleDefinit
             {stageLabel(module.stage)}
           </div>
           <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
-            {module.label}
+            {title ?? module.label}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">
             {description ?? module.description}

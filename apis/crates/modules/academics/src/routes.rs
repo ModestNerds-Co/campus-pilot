@@ -5,8 +5,10 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
+use cp_audit::AuditActor;
 use cp_common::{
-    ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
+    AccessContext, ApiResponse, EffectiveRecordScope, PaginationMeta, RecordScopeFamilyKey,
+    RecordScopeGrants, RequirePermission, TenantId, flatten_validation_errors,
 };
 use cp_hr_payroll::models::EmployeeReference;
 use serde::Serialize;
@@ -31,9 +33,16 @@ use crate::{
     },
     ops::{
         AcademicGradeLevelOps, AcademicTermOps, AcademicYearOps, ClassGroupOps, DeleteOutcome,
-        SubjectOps, TeacherProfileOps, TeachingAssignmentOps,
+        SubjectOps, TeacherProfileOps, TeacherProfileReadScope, TeachingAssignmentOps,
+        TeachingAssignmentReadScope,
     },
 };
+
+type AcademicsAuthority = (
+    web::ReqData<AuditActor>,
+    web::ReqData<AccessContext>,
+    web::ReqData<RecordScopeGrants>,
+);
 
 #[get("/academic-years")]
 async fn list_academic_years(
@@ -427,16 +436,21 @@ async fn list_teacher_candidates(
 async fn list_teachers(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: AcademicsAuthority,
     query: web::Query<TeacherListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = teacher_profile_read_scope(authority) else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (teachers, total) = TeacherProfileOps::list(
+    let (teachers, total) = TeacherProfileOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
         per_page,
         trimmed(query.search.as_deref()),
         query.status.map(crate::dtos::ActiveStatus::as_str),
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -457,12 +471,20 @@ async fn list_teachers(
 async fn read_teacher(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: AcademicsAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let teacher =
-        TeacherProfileOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-            .await
-            .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = teacher_profile_read_scope(authority) else {
+        return Ok(forbidden());
+    };
+    let teacher = TeacherProfileOps::get_by_id_scoped(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(teacher.map(TeacherProfileResponse::from), "Teacher"))
 }
 
@@ -606,10 +628,14 @@ async fn delete_class(
 async fn list_assignments(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: AcademicsAuthority,
     query: web::Query<AssignmentListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = teaching_assignment_read_scope(authority) else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (assignments, total) = TeachingAssignmentOps::list(
+    let (assignments, total) = TeachingAssignmentOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
@@ -618,6 +644,7 @@ async fn list_assignments(
         query.academic_year_id,
         query.class_group_id,
         query.teacher_profile_id,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -638,12 +665,20 @@ async fn list_assignments(
 async fn read_assignment(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: AcademicsAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let assignment =
-        TeachingAssignmentOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-            .await
-            .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = teaching_assignment_read_scope(authority) else {
+        return Ok(forbidden());
+    };
+    let assignment = TeachingAssignmentOps::get_by_id_scoped(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(
         assignment.map(TeachingAssignmentResponse::from),
         "Teaching assignment",
@@ -706,6 +741,40 @@ struct TeacherCandidatesResponse {
     employees: Vec<EmployeeReference>,
 }
 
+fn teacher_profile_read_scope(authority: AcademicsAuthority) -> Option<TeacherProfileReadScope> {
+    let (actor, access, grants) = authority;
+    if access.has_permission("*") || access.has_permission("academics:manage") {
+        return Some(TeacherProfileReadScope::campus());
+    }
+    let family = RecordScopeFamilyKey::parse("academics.teachers").ok()?;
+    match grants.effective_scope(&family)? {
+        EffectiveRecordScope::Campus => Some(TeacherProfileReadScope::campus()),
+        EffectiveRecordScope::SelfRecord
+        | EffectiveRecordScope::Assigned
+        | EffectiveRecordScope::SelfAndAssigned => {
+            actor.user_id().map(TeacherProfileReadScope::account)
+        }
+    }
+}
+
+fn teaching_assignment_read_scope(
+    authority: AcademicsAuthority,
+) -> Option<TeachingAssignmentReadScope> {
+    let (actor, access, grants) = authority;
+    if access.has_permission("*") || access.has_permission("academics:manage") {
+        return Some(TeachingAssignmentReadScope::campus());
+    }
+    let family = RecordScopeFamilyKey::parse("academics.teaching_assignments").ok()?;
+    match grants.effective_scope(&family)? {
+        EffectiveRecordScope::Campus => Some(TeachingAssignmentReadScope::campus()),
+        EffectiveRecordScope::SelfRecord
+        | EffectiveRecordScope::Assigned
+        | EffectiveRecordScope::SelfAndAssigned => {
+            actor.user_id().map(TeachingAssignmentReadScope::account)
+        }
+    }
+}
+
 fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
@@ -753,6 +822,16 @@ fn not_found(label: &str) -> HttpResponse {
         StatusCode::NOT_FOUND,
         None::<()>,
         Some(vec![format!("{label} not found")]),
+    ))
+}
+
+fn forbidden() -> HttpResponse {
+    HttpResponse::Forbidden().json(ApiResponse::from_status(
+        StatusCode::FORBIDDEN,
+        None::<()>,
+        Some(vec![
+            "Academics record scope is unavailable for this operation".to_string(),
+        ]),
     ))
 }
 

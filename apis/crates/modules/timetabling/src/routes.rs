@@ -2,7 +2,7 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, get, post, put, web};
-use cp_common::{ApiResponse, PaginationMeta, RequirePermission, TenantId};
+use cp_common::{AccessContext, ApiResponse, PaginationMeta, RequirePermission, TenantId};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -58,10 +58,15 @@ async fn generate_timetable(
 async fn latest_run(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    access: web::ReqData<AccessContext>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let run = TimetablingOps::latest_run(pool.get_ref(), tenant.into_inner().into_inner())
-        .await
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+    let tenant_id = tenant.into_inner().into_inner();
+    let run = if access.has_permission("timetabling:edit") || access.has_permission("*") {
+        TimetablingOps::latest_run(pool.get_ref(), tenant_id).await
+    } else {
+        TimetablingOps::latest_published_run(pool.get_ref(), tenant_id).await
+    }
+    .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(ok(run))
 }
 

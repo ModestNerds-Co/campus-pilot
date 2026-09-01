@@ -10,7 +10,8 @@ use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
 use cp_audit::{AuditActor, RequestContext};
 use cp_common::{
-    ApiResponse, PaginationMeta, RequirePermission, TenantId, flatten_validation_errors,
+    AccessContext, ApiResponse, EffectiveRecordScope, PaginationMeta, RecordScopeFamilyKey,
+    RecordScopeGrants, RequirePermission, TenantId, flatten_validation_errors,
 };
 use cp_imports::{MAX_SOURCE_BYTES, parse_source};
 use futures_util::StreamExt;
@@ -37,9 +38,15 @@ use crate::{
     numbering::{LearnerNumberingPolicyOps, LearnerNumberingUpdateOutcome},
     ops::{
         AccountCandidateOps, ApplicationOps, DeleteOutcome, EnrolmentOps, GuardianOps,
-        GuardianRelationshipOps, LearnerOps,
+        GuardianRelationshipOps, LearnerOps, SisCampusReadScope, SisRecordScope,
     },
 };
+
+type SisAuthority = (
+    web::ReqData<AuditActor>,
+    web::ReqData<AccessContext>,
+    web::ReqData<RecordScopeGrants>,
+);
 
 #[get("/learner-numbering")]
 async fn read_learner_numbering_policy(
@@ -84,15 +91,20 @@ async fn update_learner_numbering_policy(
 async fn list_imports(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     query: web::Query<ImportListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = campus_read_scope(&authority.1, &authority.2, "sis.imports") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (imports, total) = SisImportOps::list(
+    let (imports, total) = SisImportOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
         per_page,
         query.target,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -196,11 +208,16 @@ async fn upload_import(
 async fn read_import(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let record = SisImportOps::get(pool.get_ref(), tenant_id(tenant), path.into_inner())
-        .await
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = campus_read_scope(&authority.1, &authority.2, "sis.imports") else {
+        return Ok(forbidden());
+    };
+    let record =
+        SisImportOps::get_scoped(pool.get_ref(), tenant_id(tenant), path.into_inner(), scope)
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(record, "Import"))
 }
 
@@ -245,16 +262,21 @@ async fn preview_import_mapping(
 async fn read_import_preview(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
     query: web::Query<PreviewRowsQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = campus_read_scope(&authority.1, &authority.2, "sis.imports") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let preview = SisImportOps::preview(
+    let preview = SisImportOps::preview_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         path.into_inner(),
         page,
         per_page,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -305,16 +327,21 @@ async fn list_account_candidates(
 async fn list_learners(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     query: web::Query<DirectoryListQuery<crate::dtos::LearnerStatus>>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = record_scope(authority, "sis.learners") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (learners, total) = LearnerOps::list(
+    let (learners, total) = LearnerOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
         per_page,
         trimmed(query.search.as_deref()),
         query.status.map(crate::dtos::LearnerStatus::as_str),
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -332,11 +359,16 @@ async fn list_learners(
 async fn read_learner(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let learner = LearnerOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-        .await
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = record_scope(authority, "sis.learners") else {
+        return Ok(forbidden());
+    };
+    let learner =
+        LearnerOps::get_by_id_scoped(pool.get_ref(), tenant_id(tenant), path.into_inner(), scope)
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(learner.map(LearnerResponse::from), "Learner"))
 }
 
@@ -414,16 +446,21 @@ async fn delete_learner(
 async fn list_guardians(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     query: web::Query<DirectoryListQuery<crate::dtos::ActiveStatus>>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = record_scope(authority, "sis.guardians") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (guardians, total) = GuardianOps::list(
+    let (guardians, total) = GuardianOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
         per_page,
         trimmed(query.search.as_deref()),
         query.status.map(crate::dtos::ActiveStatus::as_str),
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -441,11 +478,16 @@ async fn list_guardians(
 async fn read_guardian(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let guardian = GuardianOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-        .await
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = record_scope(authority, "sis.guardians") else {
+        return Ok(forbidden());
+    };
+    let guardian =
+        GuardianOps::get_by_id_scoped(pool.get_ref(), tenant_id(tenant), path.into_inner(), scope)
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(guardian.map(GuardianResponse::from), "Guardian"))
 }
 
@@ -523,10 +565,14 @@ async fn delete_guardian(
 async fn list_guardian_relationships(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     query: web::Query<RelationshipListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = record_scope(authority, "sis.guardian_relationships") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (relationships, total) = GuardianRelationshipOps::list(
+    let (relationships, total) = GuardianRelationshipOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
@@ -535,6 +581,7 @@ async fn list_guardian_relationships(
         query.status.map(crate::dtos::ActiveStatus::as_str),
         query.learner_id,
         query.guardian_id,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -550,12 +597,20 @@ async fn list_guardian_relationships(
 async fn read_guardian_relationship(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let relationship =
-        GuardianRelationshipOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-            .await
-            .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = record_scope(authority, "sis.guardian_relationships") else {
+        return Ok(forbidden());
+    };
+    let relationship = GuardianRelationshipOps::get_by_id_scoped(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(relationship, "Guardian relationship"))
 }
 
@@ -610,10 +665,14 @@ async fn delete_guardian_relationship(
 async fn list_applications(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     query: web::Query<ApplicationListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = record_scope(authority, "sis.applications") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (applications, total) = ApplicationOps::list(
+    let (applications, total) = ApplicationOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
@@ -623,6 +682,7 @@ async fn list_applications(
         query.academic_year_id,
         query.target_grade_level_id,
         query.learner_id,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -638,12 +698,20 @@ async fn list_applications(
 async fn read_application(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let application =
-        ApplicationOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-            .await
-            .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = record_scope(authority, "sis.applications") else {
+        return Ok(forbidden());
+    };
+    let application = ApplicationOps::get_by_id_scoped(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(application, "Application"))
 }
 
@@ -695,10 +763,14 @@ async fn delete_application(
 async fn list_enrolments(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     query: web::Query<EnrolmentListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = record_scope(authority, "sis.enrolments") else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (enrolments, total) = EnrolmentOps::list(
+    let (enrolments, total) = EnrolmentOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         page,
@@ -708,6 +780,7 @@ async fn list_enrolments(
         query.academic_year_id,
         query.class_group_id,
         query.learner_id,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -723,11 +796,16 @@ async fn list_enrolments(
 async fn read_enrolment(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: SisAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let enrolment = EnrolmentOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-        .await
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = record_scope(authority, "sis.enrolments") else {
+        return Ok(forbidden());
+    };
+    let enrolment =
+        EnrolmentOps::get_by_id_scoped(pool.get_ref(), tenant_id(tenant), path.into_inner(), scope)
+            .await
+            .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(enrolment, "Enrolment"))
 }
 
@@ -774,6 +852,48 @@ fn trimmed(value: Option<&str>) -> Option<&str> {
     value.map(str::trim).filter(|value| !value.is_empty())
 }
 
+fn record_scope(authority: SisAuthority, family: &str) -> Option<SisRecordScope> {
+    let (actor, access, grants) = authority;
+    record_scope_for(&access, &grants, actor.into_inner(), family)
+}
+
+fn record_scope_for(
+    access: &AccessContext,
+    grants: &RecordScopeGrants,
+    actor: AuditActor,
+    family: &str,
+) -> Option<SisRecordScope> {
+    if access.has_permission("*") {
+        return Some(SisRecordScope::Campus);
+    }
+    let family = RecordScopeFamilyKey::parse(family).ok()?;
+    match grants.effective_scope(&family) {
+        Some(EffectiveRecordScope::Campus) => Some(SisRecordScope::Campus),
+        Some(EffectiveRecordScope::SelfRecord) => actor.user_id().map(SisRecordScope::SelfRecords),
+        Some(EffectiveRecordScope::Assigned) => actor.user_id().map(SisRecordScope::AssignedTo),
+        Some(EffectiveRecordScope::SelfAndAssigned) => {
+            actor.user_id().map(SisRecordScope::SelfAndAssigned)
+        }
+        None => None,
+    }
+}
+
+fn campus_read_scope(
+    access: &AccessContext,
+    grants: &RecordScopeGrants,
+    family: &str,
+) -> Option<SisCampusReadScope> {
+    if access.has_permission("*") {
+        return Some(SisCampusReadScope);
+    }
+    let family = RecordScopeFamilyKey::parse(family).ok()?;
+    matches!(
+        grants.effective_scope(&family),
+        Some(EffectiveRecordScope::Campus)
+    )
+    .then_some(SisCampusReadScope)
+}
+
 fn validation_response<T: Validate>(value: &T) -> Option<HttpResponse> {
     value.validate().err().map(|errors| {
         HttpResponse::BadRequest().json(ApiResponse::from_status(
@@ -806,6 +926,16 @@ fn not_found(label: &str) -> HttpResponse {
         StatusCode::NOT_FOUND,
         None::<()>,
         Some(vec![format!("{label} not found")]),
+    ))
+}
+
+fn forbidden() -> HttpResponse {
+    HttpResponse::Forbidden().json(ApiResponse::from_status(
+        StatusCode::FORBIDDEN,
+        None::<()>,
+        Some(vec![
+            "SIS record scope is unavailable for this operation".to_string(),
+        ]),
     ))
 }
 
@@ -952,7 +1082,42 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-    use super::{bounded_page, trimmed};
+    use cp_audit::AuditActor;
+    use cp_common::{
+        AccessContext, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
+        RecordScopeFamilyKey, RecordScopeGrant, RecordScopeGrants, RecordScopeKind,
+    };
+    use uuid::Uuid;
+
+    use crate::ops::{SisCampusReadScope, SisRecordScope};
+
+    use super::{bounded_page, campus_read_scope, record_scope_for, trimmed};
+
+    fn access(permissions: &[&str]) -> AccessContext {
+        AccessContext {
+            role_keys: Vec::new(),
+            permissions: permissions
+                .iter()
+                .map(|permission| (*permission).to_string())
+                .collect(),
+            enabled_modules: vec!["sis".to_string()],
+            entitlements: EntitlementSnapshot::new(
+                LeaseLifecycle::Active,
+                [("sis".to_string(), ModuleEntitlementState::Enabled)],
+                [],
+            )
+            .unwrap_or_else(|_| unreachable!()),
+        }
+    }
+
+    fn grants(family: &str, kinds: &[RecordScopeKind]) -> RecordScopeGrants {
+        RecordScopeGrants::from_grants(kinds.iter().copied().map(|kind| {
+            RecordScopeGrant::new(
+                RecordScopeFamilyKey::parse(family).unwrap_or_else(|_| unreachable!()),
+                kind,
+            )
+        }))
+    }
 
     #[test]
     fn sis_filters_are_bounded_and_blank_search_is_ignored() {
@@ -960,5 +1125,124 @@ mod tests {
         assert_eq!(bounded_page(None, None), (1, 25));
         assert_eq!(trimmed(Some("  ")), None);
         assert_eq!(trimmed(Some(" Learner  ")), Some("Learner"));
+    }
+
+    #[test]
+    fn teacher_assigned_scope_is_bound_to_the_authenticated_account() {
+        let user_id = Uuid::new_v4();
+        let teacher = access(&["sis:view"]);
+        for family in [
+            "sis.learners",
+            "sis.guardians",
+            "sis.guardian_relationships",
+            "sis.enrolments",
+        ] {
+            assert_eq!(
+                record_scope_for(
+                    &teacher,
+                    &grants(family, &[RecordScopeKind::Assigned]),
+                    AuditActor::person(user_id),
+                    family,
+                ),
+                Some(SisRecordScope::AssignedTo(user_id)),
+                "{family} must retain the teacher account binding"
+            );
+        }
+    }
+
+    #[test]
+    fn self_and_assigned_grants_union_without_widening_to_campus() {
+        let user_id = Uuid::new_v4();
+        assert_eq!(
+            record_scope_for(
+                &access(&["sis:view"]),
+                &grants(
+                    "sis.learners",
+                    &[RecordScopeKind::SelfRecord, RecordScopeKind::Assigned],
+                ),
+                AuditActor::person(user_id),
+                "sis.learners",
+            ),
+            Some(SisRecordScope::SelfAndAssigned(user_id))
+        );
+    }
+
+    #[test]
+    fn registrar_campus_grants_and_owner_wildcard_retain_campus_visibility() {
+        assert_eq!(
+            record_scope_for(
+                &access(&["sis:view"]),
+                &grants("sis.applications", &[RecordScopeKind::Campus]),
+                AuditActor::person(Uuid::new_v4()),
+                "sis.applications",
+            ),
+            Some(SisRecordScope::Campus)
+        );
+        assert_eq!(
+            record_scope_for(
+                &access(&["*"]),
+                &RecordScopeGrants::empty(),
+                AuditActor::system(),
+                "sis.enrolments",
+            ),
+            Some(SisRecordScope::Campus)
+        );
+    }
+
+    #[test]
+    fn missing_family_or_missing_person_identity_fails_closed() {
+        let teacher = access(&["sis:view"]);
+        assert_eq!(
+            record_scope_for(
+                &teacher,
+                &RecordScopeGrants::empty(),
+                AuditActor::person(Uuid::new_v4()),
+                "sis.learners",
+            ),
+            None
+        );
+        assert_eq!(
+            record_scope_for(
+                &teacher,
+                &grants("sis.learners", &[RecordScopeKind::Assigned]),
+                AuditActor::system(),
+                "sis.learners",
+            ),
+            None
+        );
+        assert_eq!(
+            record_scope_for(
+                &teacher,
+                &grants("sis.learners", &[RecordScopeKind::Assigned]),
+                AuditActor::person(Uuid::new_v4()),
+                "sis.applications",
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn import_reads_require_exact_campus_scope() {
+        let registrar = access(&["sis:view"]);
+        assert_eq!(
+            campus_read_scope(
+                &registrar,
+                &grants("sis.imports", &[RecordScopeKind::Campus]),
+                "sis.imports",
+            ),
+            Some(SisCampusReadScope)
+        );
+        assert_eq!(
+            campus_read_scope(
+                &registrar,
+                &grants("sis.imports", &[RecordScopeKind::Assigned]),
+                "sis.imports",
+            ),
+            None
+        );
+        assert_eq!(
+            campus_read_scope(&registrar, &RecordScopeGrants::empty(), "sis.imports"),
+            None
+        );
     }
 }

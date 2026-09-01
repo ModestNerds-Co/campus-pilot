@@ -9,11 +9,17 @@ import { Table, TableControlsBar, TableControlsPagination, TableControlsSearch, 
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { responseMessage, sisService } from "./service";
 import type { DirectoryStatus, Guardian, GuardianRelationship, Learner, RelationshipType } from "./types";
 
 export function GuardianRelationshipsList() {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("sis:create");
+  const canEdit = permissions.includes("*") || permissions.includes("sis:edit");
+  const canDelete = permissions.includes("*") || permissions.includes("sis:delete");
+  const canMutate = canEdit || canDelete;
   const [records, setRecords] = useState<GuardianRelationship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +47,14 @@ export function GuardianRelationshipsList() {
   }, [page, status, submittedSearch]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (drawerRecord !== undefined && !(drawerRecord ? canEdit : canCreate)) setDrawerRecord(undefined);
+    if (!canDelete) setDeleteRecord(null);
+    if (!canMutate) setMenuId(null);
+  }, [canCreate, canDelete, canEdit, canMutate, drawerRecord]);
 
   const remove = async () => {
-    if (!deleteRecord || deleting) return;
+    if (!canDelete || !deleteRecord || deleting) return;
     setDeleting(true);
     const response = await sisService.deleteGuardianRelationship(deleteRecord.id);
     setDeleting(false);
@@ -53,15 +64,15 @@ export function GuardianRelationshipsList() {
     void load();
   };
 
-  usePageChrome("Guardian relationships", <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add relationship</Button>);
+  usePageChrome("Guardian relationships", canCreate ? <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add relationship</Button> : null);
   const filtered = submittedSearch || status !== "all";
 
   return <div className="space-y-6">
     <p className="text-sm text-[var(--text-muted)]">Connect each learner to the guardians responsible for collection and communications.</p>
     <TableControlsBar><TableControlsSearch onSubmit={(event) => { event.preventDefault(); setPage(1); setSubmittedSearch(search.trim()); }}><Input aria-label="Search guardian relationships" leadingIcon={<Search />} onChange={(event) => setSearch(event.target.value)} placeholder="Search learner or guardian…" value={search} /><Button type="submit" variant="secondary">Search</Button></TableControlsSearch><Select aria-label="Status filter" className="sm:w-40" onChange={(event) => { setPage(1); setStatus(event.target.value); }} value={status}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></Select>{!loading && records.length > 0 ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}</TableControlsBar>
-    <TableWrap>{loading ? <TableLoading columns={6} label="Loading guardian relationships…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={filtered ? "Change the current filters." : "Add the first learner and guardian connection."} icon={<Link2 />} title={filtered ? "No relationships match these filters" : "No guardian relationships yet"} /> : <TableScroll><Table><THead><tr><TH>Learner</TH><TH>Guardian</TH><TH>Relationship</TH><TH>Responsibilities</TH><TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>{records.map((record) => <TR key={record.id}><TD><div className="font-medium text-[var(--text-strong)]">{record.learner_name}</div><div className="font-tabular text-xs text-[var(--text-muted)]">{record.learner_number}</div></TD><TD className="font-medium text-[var(--text-strong)]">{record.guardian_name}</TD><TD className="capitalize text-[var(--text-muted)]">{record.relationship_type}</TD><TD className="text-[var(--text-muted)]">{responsibilities(record)}</TD><TD><Badge tone={record.status === "active" ? "success" : "neutral"}>{record.status}</Badge></TD><TD className="text-right"><div className="relative inline-flex"><button aria-label="Guardian relationship actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button></div> : null}</div></TD></TR>)}</TBody></Table></TableScroll>}</TableWrap>
-    <RelationshipDrawer onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={drawerRecord !== undefined} record={drawerRecord ?? null} />
-    <ConfirmDrawer confirmLabel="Remove relationship" description={`Remove the connection between ${deleteRecord?.learner_name || "this learner"} and ${deleteRecord?.guardian_name || "this guardian"}?`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={deleteRecord !== null} title="Remove guardian relationship?" />
+    <TableWrap>{loading ? <TableLoading columns={canMutate ? 6 : 5} label="Loading guardian relationships…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={filtered ? "Change the current filters." : "Add the first learner and guardian connection."} icon={<Link2 />} title={filtered ? "No relationships match these filters" : "No guardian relationships yet"} /> : <TableScroll><Table><THead><tr><TH>Learner</TH><TH>Guardian</TH><TH>Relationship</TH><TH>Responsibilities</TH><TH>Status</TH>{canMutate ? <TH className="text-right">Actions</TH> : null}</tr></THead><TBody>{records.map((record) => <TR key={record.id}><TD><div className="font-medium text-[var(--text-strong)]">{record.learner_name}</div><div className="font-tabular text-xs text-[var(--text-muted)]">{record.learner_number}</div></TD><TD className="font-medium text-[var(--text-strong)]">{record.guardian_name}</TD><TD className="capitalize text-[var(--text-muted)]">{record.relationship_type}</TD><TD className="text-[var(--text-muted)]">{responsibilities(record)}</TD><TD><Badge tone={record.status === "active" ? "success" : "neutral"}>{record.status}</Badge></TD>{canMutate ? <TD className="text-right"><div className="relative inline-flex"><button aria-label="Guardian relationship actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">{canEdit ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button> : null}{canDelete ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button> : null}</div> : null}</div></TD> : null}</TR>)}</TBody></Table></TableScroll>}</TableWrap>
+    <RelationshipDrawer onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={drawerRecord !== undefined && (drawerRecord ? canEdit : canCreate)} record={drawerRecord ?? null} />
+    <ConfirmDrawer confirmLabel="Remove relationship" description={`Remove the connection between ${deleteRecord?.learner_name || "this learner"} and ${deleteRecord?.guardian_name || "this guardian"}?`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={canDelete && deleteRecord !== null} title="Remove guardian relationship?" />
   </div>;
 }
 

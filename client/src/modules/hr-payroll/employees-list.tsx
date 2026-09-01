@@ -9,13 +9,20 @@ import { Table, TableControlsBar, TableControlsPagination, TableControlsSearch, 
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { hasPermission } from "@/modules/users/access-control";
 import { usersService } from "@/modules/users/services/users-service";
 import type { User } from "@/modules/users/types";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { hrPayrollService } from "./service";
 import type { Department, Employee, EmployeeInput, EmploymentStatus, Position } from "./types";
 
 export function EmployeesList() {
+  const permissions = useAuthStore((state) => state.user?.permissions);
+  const canCreate = hasPermission(permissions, "hr_payroll:create");
+  const canEdit = hasPermission(permissions, "hr_payroll:edit");
+  const canDelete = hasPermission(permissions, "hr_payroll:delete");
+  const hasActions = canEdit || canDelete;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,25 +48,25 @@ export function EmployeesList() {
 
   useEffect(() => { void load(); }, [load]);
   const remove = async () => {
-    if (!deleteEmployee) return;
+    if (!canDelete || !deleteEmployee) return;
     const response = await hrPayrollService.deleteEmployee(deleteEmployee.id);
     if (response.success) { toast.success("Employee removed"); setDeleteEmployee(null); void load(); }
     else toast.error(response.message || "Employee could not be removed");
   };
 
-  usePageChrome("Employees", <Button onClick={() => setDrawerEmployee(null)}><Plus className="size-4" />Add employee</Button>);
+  usePageChrome("Employees", canCreate ? <Button onClick={() => setDrawerEmployee(null)}><Plus className="size-4" />Add employee</Button> : undefined);
   return <div className="space-y-6">
     <p className="text-sm text-[var(--text-muted)]">Employees are the shared workforce records used by HR, Fleet, and other campus modules.</p>
     <TableControlsBar><TableControlsSearch onSubmit={(event) => { event.preventDefault(); setPage(1); setSubmittedSearch(search.trim()); }}><Input aria-label="Search employees" leadingIcon={<Search />} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, number, or work email…" value={search} /><Button type="submit" variant="secondary">Search</Button></TableControlsSearch>
       <Select aria-label="Employment status" className="sm:w-44" onChange={(event) => { setPage(1); setStatus(event.target.value as typeof status); }} value={status}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option><option value="terminated">Terminated</option></Select>
       {!loading && employees.length ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}
     </TableControlsBar>
-    <TableWrap>{loading ? <TableLoading columns={5} label="Loading employees…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : employees.length === 0 ? <TableEmpty description={submittedSearch || status !== "all" ? "Change the current filters." : "Add the first campus employee."} icon={<UserRound />} title={submittedSearch || status !== "all" ? "No employees match these filters" : "No employees yet"} /> : <TableScroll><Table><THead><tr><TH>Employee</TH><TH>Assignment</TH><TH>System account</TH><TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>
-      {employees.map((employee) => <TR key={employee.id}><TD><div className="font-medium text-[var(--text-strong)]">{employee.display_name}</div><div className="font-tabular text-xs text-[var(--text-muted)]">{employee.employee_number}{employee.work_email ? ` · ${employee.work_email}` : ""}</div></TD><TD><div className="text-[var(--text-strong)]">{employee.position_title || "—"}</div><div className="text-xs text-[var(--text-muted)]">{employee.department_name || "No department"}</div></TD><TD>{employee.account_email ? <span className="text-[var(--text-strong)]">{employee.account_email}</span> : <span className="text-[var(--text-muted)]">Not linked</span>}</TD><TD><Badge tone={employee.employment_status === "active" ? "success" : employee.employment_status === "suspended" ? "warning" : "neutral"}>{employee.employment_status}</Badge></TD><TD className="text-right"><div className="relative inline-flex"><button aria-label="Employee actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === employee.id ? null : employee.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === employee.id ? <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerEmployee(employee); setMenuId(null); }}><Edit className="size-4" />Edit employee</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setAccountEmployee(employee); setMenuId(null); }}><KeyRound className="size-4" />{employee.account_id ? "Change account" : "Link account"}</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteEmployee(employee); setMenuId(null); }}><Trash2 className="size-4" />Remove</button></div> : null}</div></TD></TR>)}
+    <TableWrap>{loading ? <TableLoading columns={hasActions ? 5 : 4} label="Loading employees…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : employees.length === 0 ? <TableEmpty description={submittedSearch || status !== "all" ? "Change the current filters." : canCreate ? "Add the first campus employee." : "No campus employees are available."} icon={<UserRound />} title={submittedSearch || status !== "all" ? "No employees match these filters" : "No employees yet"} /> : <TableScroll><Table><THead><tr><TH>Employee</TH><TH>Assignment</TH><TH>System account</TH><TH>Status</TH>{hasActions ? <TH className="text-right">Actions</TH> : null}</tr></THead><TBody>
+      {employees.map((employee) => <TR key={employee.id}><TD><div className="font-medium text-[var(--text-strong)]">{employee.display_name}</div><div className="font-tabular text-xs text-[var(--text-muted)]">{employee.employee_number}{employee.work_email ? ` · ${employee.work_email}` : ""}</div></TD><TD><div className="text-[var(--text-strong)]">{employee.position_title || "—"}</div><div className="text-xs text-[var(--text-muted)]">{employee.department_name || "No department"}</div></TD><TD>{employee.account_email ? <span className="text-[var(--text-strong)]">{employee.account_email}</span> : <span className="text-[var(--text-muted)]">Not linked</span>}</TD><TD><Badge tone={employee.employment_status === "active" ? "success" : employee.employment_status === "suspended" ? "warning" : "neutral"}>{employee.employment_status}</Badge></TD>{hasActions ? <TD className="text-right"><div className="relative inline-flex"><button aria-label="Employee actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === employee.id ? null : employee.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === employee.id ? <div className="absolute right-0 top-9 z-10 w-48 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">{canEdit ? <><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerEmployee(employee); setMenuId(null); }}><Edit className="size-4" />Edit employee</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setAccountEmployee(employee); setMenuId(null); }}><KeyRound className="size-4" />{employee.account_id ? "Change account" : "Link account"}</button></> : null}{canDelete ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteEmployee(employee); setMenuId(null); }}><Trash2 className="size-4" />Remove</button> : null}</div> : null}</div></TD> : null}</TR>)}
     </TBody></Table></TableScroll>}</TableWrap>
-    <EmployeeDrawer employee={drawerEmployee ?? null} onClose={() => setDrawerEmployee(undefined)} onSaved={() => { setDrawerEmployee(undefined); void load(); }} open={drawerEmployee !== undefined} />
-    <AccountDrawer employee={accountEmployee} onClose={() => setAccountEmployee(null)} onSaved={() => { setAccountEmployee(null); void load(); }} />
-    <ConfirmDrawer confirmLabel="Remove employee" description={`Remove ${deleteEmployee?.display_name || "this employee"}? Employees with employment history, availability, or active module profiles remain part of the campus record and cannot be removed.`} onClose={() => setDeleteEmployee(null)} onConfirm={() => void remove()} open={deleteEmployee !== null} title="Remove employee?" />
+    <EmployeeDrawer employee={drawerEmployee ?? null} onClose={() => setDrawerEmployee(undefined)} onSaved={() => { setDrawerEmployee(undefined); void load(); }} open={(drawerEmployee === null && canCreate) || (drawerEmployee !== null && drawerEmployee !== undefined && canEdit)} />
+    <AccountDrawer employee={canEdit ? accountEmployee : null} onClose={() => setAccountEmployee(null)} onSaved={() => { setAccountEmployee(null); void load(); }} />
+    <ConfirmDrawer confirmLabel="Remove employee" description={`Remove ${deleteEmployee?.display_name || "this employee"}? Employees with employment history, availability, or active module profiles remain part of the campus record and cannot be removed.`} onClose={() => setDeleteEmployee(null)} onConfirm={() => void remove()} open={canDelete && deleteEmployee !== null} title="Remove employee?" />
   </div>;
 }
 

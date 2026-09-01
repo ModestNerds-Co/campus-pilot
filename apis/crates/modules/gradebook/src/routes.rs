@@ -415,6 +415,7 @@ fn validation_response<T: Validate>(value: &T) -> Option<HttpResponse> {
 }
 
 fn operation_error(error: anyhow::Error) -> HttpResponse {
+    let diagnostic = format!("{error:#}");
     let message = error.to_string();
     if message.contains("changed")
         || message.contains("already exists")
@@ -442,6 +443,7 @@ fn operation_error(error: anyhow::Error) -> HttpResponse {
             Some(vec![message]),
         ))
     } else {
+        log::error!("Gradebook operation failed: {diagnostic}");
         internal_error()
     }
 }

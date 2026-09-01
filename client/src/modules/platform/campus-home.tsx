@@ -20,6 +20,8 @@ import { ThemeToggle } from "@/lib/theme";
 import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
 import { AgentWidget } from "@/modules/agent";
+import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
+import { SIS_ADMINISTRATION_PERMISSIONS } from "@/modules/sis/access";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { accessService } from "./access-service";
@@ -88,7 +90,7 @@ export const CampusHome: React.FC = () => {
         hasOwnerAccess ||
         user.permissions?.some((permission) => permission.startsWith(`${module.permission_namespace}:`));
       return enabled && authorized;
-    });
+    }).map((module) => modulePresentation(module, user.permissions ?? []));
   }, [catalog, user]);
 
   const filteredModules = useMemo(() => {
@@ -516,6 +518,76 @@ const ModuleLauncherSkeleton = () => (
     </div>
   </div>
 );
+
+function modulePresentation(module: ModuleDefinition, permissions: string[]): ModuleDefinition {
+  const hasAllAccess = permissions.includes("*");
+
+  if (
+    module.key === "sis" &&
+    !hasAllAccess &&
+    !SIS_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission))
+  ) {
+    return {
+      ...module,
+      label: "Learners",
+      description: "View assigned learner, guardian, and enrolment records.",
+    };
+  }
+
+  if (
+    module.key === "academics" &&
+    !hasAllAccess &&
+    !ACADEMIC_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission))
+  ) {
+    return {
+      ...module,
+      description: permissions.includes("academics:teach")
+        ? "Open assigned mark sheets, report drafts, and academic records."
+        : "View published academic records.",
+    };
+  }
+
+  if (
+    module.key === "timetabling" &&
+    !hasAllAccess &&
+    !permissions.includes("timetabling:edit") &&
+    !permissions.includes("timetabling:manage")
+  ) {
+    return { ...module, description: "View your published timetable." };
+  }
+
+  if (
+    module.key === "facilities" &&
+    !hasAllAccess &&
+    !permissions.includes("facilities:manage")
+  ) {
+    return { ...module, description: "Submit and track campus work requests." };
+  }
+
+  if (
+    module.key === "library" &&
+    !hasAllAccess &&
+    !["library:create", "library:edit", "library:delete", "library:circulate", "library:manage"]
+      .some((permission) => permissions.includes(permission))
+  ) {
+    return { ...module, description: "Search the catalogue and review your borrowing record." };
+  }
+
+  if (
+    module.key === "messaging" &&
+    !hasAllAccess &&
+    !permissions.includes("messaging:send") &&
+    !permissions.includes("messaging:manage")
+  ) {
+    return { ...module, description: "Read messages and work on assigned-class drafts." };
+  }
+
+  if (module.key === "learning" && !hasAllAccess && permissions.includes("learning:teach")) {
+    return { ...module, description: "Open assigned learning spaces, assignments, submissions, and feedback." };
+  }
+
+  return module;
+}
 
 function greeting() {
   const hour = new Date().getHours();

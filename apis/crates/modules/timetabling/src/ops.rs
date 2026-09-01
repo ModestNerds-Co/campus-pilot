@@ -134,6 +134,30 @@ impl TimetablingOps {
             .context("Failed to decode latest timetable run")
     }
 
+    /// Loads only the current published timetable for view-only personas.
+    pub async fn latest_published_run(
+        pool: &PgPool,
+        tenant_id: Uuid,
+    ) -> Result<Option<TimetableRun>> {
+        let row = sqlx::query_as::<_, TimetableRunRow>(
+            r#"
+            SELECT id, status, configuration_snapshot, entries, unresolved,
+                   quality_score, created_at, published_at
+            FROM timetable_runs
+            WHERE tenant_id = $1 AND status = 'published'
+            ORDER BY published_at DESC NULLS LAST, created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load the published timetable run")?;
+        row.map(TimetableRun::try_from)
+            .transpose()
+            .context("Failed to decode the published timetable run")
+    }
+
     pub async fn list_runs(
         pool: &PgPool,
         tenant_id: Uuid,

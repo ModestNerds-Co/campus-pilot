@@ -12,6 +12,8 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { hasPermission } from "@/modules/users/access-control";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { hrPayrollService, hrResponseMessage } from "./service";
 import type {
@@ -47,6 +49,9 @@ const HEADER_ALIASES: Record<string, string[]> = {
 };
 
 export function HrImportsWorkspace() {
+  const permissions = useAuthStore((state) => state.user?.permissions);
+  const canCreate = hasPermission(permissions, "hr_payroll:create");
+  const canEdit = hasPermission(permissions, "hr_payroll:edit");
   const [records, setRecords] = useState<HrImportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +76,7 @@ export function HrImportsWorkspace() {
   }, [page]);
 
   useEffect(() => { void load(); }, [load]);
-  const action = useMemo(() => <Button onClick={() => setUploadOpen(true)}><Upload className="size-4" />New import</Button>, []);
+  const action = useMemo(() => canCreate ? <Button onClick={() => setUploadOpen(true)}><Upload className="size-4" />New import</Button> : undefined, [canCreate]);
   usePageChrome("Employee imports", action);
 
   return (
@@ -93,13 +98,13 @@ export function HrImportsWorkspace() {
               <TD className="font-tabular text-[var(--text-body)]">{record.source_row_count}</TD>
               <TD><PreviewTotals record={record} /></TD>
               <TD><Badge tone={statusTone(record.status)}>{displayStatus(record.status)}</Badge></TD>
-              <TD className="text-right"><Button onClick={() => setSelected(record)} size="sm" variant="secondary">{record.status === "uploaded" ? "Map columns" : "Open"}</Button></TD>
+              <TD className="text-right"><Button onClick={() => setSelected(record)} size="sm" variant="secondary">{record.status === "uploaded" && canEdit ? "Map columns" : "Open"}</Button></TD>
             </TR>)}
           </TBody></Table></TableScroll>
         )}
       </TableWrap>
-      <UploadImportDrawer onClose={() => setUploadOpen(false)} onUploaded={(record) => { setUploadOpen(false); setSelected(record); void load(); }} open={uploadOpen} />
-      <ImportReviewDrawer onChanged={() => void load()} onClose={() => setSelected(null)} record={selected} />
+      <UploadImportDrawer onClose={() => setUploadOpen(false)} onUploaded={(record) => { setUploadOpen(false); setSelected(record); void load(); }} open={canCreate && uploadOpen} />
+      <ImportReviewDrawer canCommit={canCreate} canMap={canEdit} onChanged={() => void load()} onClose={() => setSelected(null)} record={selected} />
     </div>
   );
 }
@@ -135,7 +140,7 @@ function UploadImportDrawer({ onClose, onUploaded, open }: { onClose: () => void
   </DialogShell>;
 }
 
-function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => void; onClose: () => void; record: HrImportRecord | null }) {
+function ImportReviewDrawer({ canCommit, canMap, onChanged, onClose, record }: { canCommit: boolean; canMap: boolean; onChanged: () => void; onClose: () => void; record: HrImportRecord | null }) {
   const [current, setCurrent] = useState<HrImportRecord | null>(record);
   const [preview, setPreview] = useState<HrImportPreview | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -163,7 +168,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
   }, [record]);
 
   const validate = async () => {
-    if (!current || saving) return;
+    if (!canMap || !current || saving) return;
     setSaving(true);
     try {
       const payload: HrImportMapping = { columns: Object.fromEntries(Object.entries(mapping).filter(([, header]) => header)), date_format: dateFormat };
@@ -178,7 +183,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
   };
 
   const commit = async () => {
-    if (!current || !preview || saving) return;
+    if (!canCommit || !current || !preview || saving) return;
     setSaving(true);
     try {
       const response = await hrPayrollService.commitImport(current.id, preview.id);
@@ -198,7 +203,7 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
     <DialogBody className="space-y-6">
       {!current ? null : <>
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--text-strong)]">{current.file_name}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{current.source_row_count} rows · {current.source_headers.length} columns · {current.source_format.toUpperCase()}</p></div><Badge tone={statusTone(current.status)}>{displayStatus(current.status)}</Badge></div></div>
-        {loading ? <div className="flex items-center gap-2 py-8 text-sm text-[var(--text-muted)]"><Loader2 className="size-4 animate-spin" />Loading preview…</div> : mode === "mapping" ? <div className="space-y-5">
+        {loading ? <div className="flex items-center gap-2 py-8 text-sm text-[var(--text-muted)]"><Loader2 className="size-4 animate-spin" />Loading preview…</div> : mode === "mapping" && canMap ? <div className="space-y-5">
           <div><h3 className="text-sm font-semibold text-[var(--text-strong)]">Column mapping</h3><p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Choose the source column for each employee field. Department and position accept existing codes or names.</p></div>
           <div className="space-y-4">{MAPPING_FIELDS.map(([key, label, required]) => <div className="grid gap-2 sm:grid-cols-[190px_minmax(0,1fr)] sm:items-center" key={key}>
             <Label htmlFor={`hr-mapping-${key}`}>{label}{required ? <span className="text-[var(--tone-danger)]"> *</span> : null}</Label>
@@ -213,9 +218,9 @@ function ImportReviewDrawer({ onChanged, onClose, record }: { onChanged: () => v
     </DialogBody>
     <DialogFooter>
       <Button disabled={saving} onClick={onClose} type="button" variant="ghost">Close</Button>
-      {current && mode === "preview" && !isCommitted ? <Button disabled={saving} onClick={() => setMode("mapping")} type="button" variant="secondary">Change mapping</Button> : null}
-      {current && mode === "mapping" && !isCommitted ? <Button disabled={saving} onClick={() => void validate()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Validating…</> : "Create preview"}</Button> : null}
-      {current && mode === "preview" && preview && !isCommitted ? <Button disabled={saving || preview.ready_rows === 0} onClick={() => void commit()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Committing…</> : `Commit ${preview.ready_rows} ready rows`}</Button> : null}
+      {canMap && current && mode === "preview" && !isCommitted ? <Button disabled={saving} onClick={() => setMode("mapping")} type="button" variant="secondary">Change mapping</Button> : null}
+      {canMap && current && mode === "mapping" && !isCommitted ? <Button disabled={saving} onClick={() => void validate()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Validating…</> : "Create preview"}</Button> : null}
+      {canCommit && current && mode === "preview" && preview && !isCommitted ? <Button disabled={saving || preview.ready_rows === 0} onClick={() => void commit()} type="button">{saving ? <><Loader2 className="size-4 animate-spin" />Committing…</> : `Commit ${preview.ready_rows} ready rows`}</Button> : null}
     </DialogFooter>
   </DialogShell>;
 }

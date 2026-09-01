@@ -510,6 +510,24 @@ impl AssessmentCycleOps {
     }
 }
 
+/// Proof that a request may read assessment components at the represented scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AssessmentComponentReadScope(Option<Uuid>);
+
+impl AssessmentComponentReadScope {
+    pub(crate) const fn campus() -> Self {
+        Self(None)
+    }
+
+    pub(crate) const fn account(account_id: Uuid) -> Self {
+        Self(Some(account_id))
+    }
+
+    const fn account_filter(self) -> Option<Uuid> {
+        self.0
+    }
+}
+
 pub struct AssessmentComponentOps;
 
 impl AssessmentComponentOps {
@@ -595,14 +613,63 @@ impl AssessmentComponentOps {
         status: Option<&str>,
         teaching_assignment_id: Option<Uuid>,
     ) -> Result<(Vec<AssessmentComponentResponse>, i64)> {
+        Self::list_with_account_filter(
+            pool,
+            tenant_id,
+            cycle_id,
+            page,
+            per_page,
+            status,
+            teaching_assignment_id,
+            None,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        cycle_id: Uuid,
+        page: i64,
+        per_page: i64,
+        status: Option<&str>,
+        teaching_assignment_id: Option<Uuid>,
+        scope: AssessmentComponentReadScope,
+    ) -> Result<(Vec<AssessmentComponentResponse>, i64)> {
+        Self::list_with_account_filter(
+            pool,
+            tenant_id,
+            cycle_id,
+            page,
+            per_page,
+            status,
+            teaching_assignment_id,
+            scope.account_filter(),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn list_with_account_filter(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        cycle_id: Uuid,
+        page: i64,
+        per_page: i64,
+        status: Option<&str>,
+        teaching_assignment_id: Option<Uuid>,
+        account_id: Option<Uuid>,
+    ) -> Result<(Vec<AssessmentComponentResponse>, i64)> {
         let offset = (page - 1) * per_page;
         let rows = sqlx::query_as::<_, AssessmentComponentResponse>(&component_select(
-            "component.assessment_cycle_id = $2 AND ($3::TEXT IS NULL OR component.status = $3) AND ($4::UUID IS NULL OR component.teaching_assignment_id = $4) ORDER BY class_group.name, subject.name, component.occurs_on NULLS LAST, component.name LIMIT $5 OFFSET $6",
+            "component.assessment_cycle_id = $2 AND ($3::TEXT IS NULL OR component.status = $3) AND ($4::UUID IS NULL OR component.teaching_assignment_id = $4) AND ($5::UUID IS NULL OR employee.account_id = $5) ORDER BY class_group.name, subject.name, component.occurs_on NULLS LAST, component.name LIMIT $6 OFFSET $7",
         ))
         .bind(tenant_id)
         .bind(cycle_id)
         .bind(status)
         .bind(teaching_assignment_id)
+        .bind(account_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -614,12 +681,29 @@ impl AssessmentComponentOps {
             WHERE tenant_id = $1 AND assessment_cycle_id = $2 AND deleted_at IS NULL
               AND ($3::TEXT IS NULL OR status = $3)
               AND ($4::UUID IS NULL OR teaching_assignment_id = $4)
+              AND ($5::UUID IS NULL OR EXISTS (
+                    SELECT 1
+                    FROM teaching_assignments AS assignment
+                    JOIN teacher_profiles AS teacher
+                      ON teacher.tenant_id = assignment.tenant_id
+                     AND teacher.id = assignment.teacher_profile_id
+                     AND teacher.deleted_at IS NULL
+                    JOIN employees AS employee
+                      ON employee.tenant_id = teacher.tenant_id
+                     AND employee.id = teacher.employee_id
+                     AND employee.deleted_at IS NULL
+                    WHERE assignment.tenant_id = assessment_components.tenant_id
+                      AND assignment.id = assessment_components.teaching_assignment_id
+                      AND assignment.deleted_at IS NULL
+                      AND employee.account_id = $5
+              ))
             "#,
         )
         .bind(tenant_id)
         .bind(cycle_id)
         .bind(status)
         .bind(teaching_assignment_id)
+        .bind(account_id)
         .fetch_one(pool)
         .await
         .context("Failed to count assessment components")?;
@@ -631,12 +715,33 @@ impl AssessmentComponentOps {
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<AssessmentComponentResponse>> {
-        sqlx::query_as::<_, AssessmentComponentResponse>(&component_select("component.id = $2"))
-            .bind(tenant_id)
-            .bind(id)
-            .fetch_optional(pool)
-            .await
-            .context("Failed to load assessment component")
+        Self::get_by_id_with_account_filter(pool, tenant_id, id, None).await
+    }
+
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: AssessmentComponentReadScope,
+    ) -> Result<Option<AssessmentComponentResponse>> {
+        Self::get_by_id_with_account_filter(pool, tenant_id, id, scope.account_filter()).await
+    }
+
+    async fn get_by_id_with_account_filter(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        account_id: Option<Uuid>,
+    ) -> Result<Option<AssessmentComponentResponse>> {
+        sqlx::query_as::<_, AssessmentComponentResponse>(&component_select(
+            "component.id = $2 AND ($3::UUID IS NULL OR employee.account_id = $3)",
+        ))
+        .bind(tenant_id)
+        .bind(id)
+        .bind(account_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load assessment component")
     }
 
     pub async fn create(

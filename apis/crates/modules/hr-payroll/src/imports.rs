@@ -17,6 +17,8 @@ use sqlx::{Acquire, FromRow, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 use validator::ValidateEmail;
 
+use crate::ops::HrImportReadScope;
+
 const MODULE_KEY: &str = "hr_payroll";
 const ENTITY_KEY: &str = "employees";
 
@@ -340,6 +342,17 @@ impl HrImportOps {
         Ok((rows, total))
     }
 
+    /// Lists import metadata only after the HTTP boundary proves campus scope.
+    pub async fn list_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        _scope: HrImportReadScope,
+        page: i64,
+        per_page: i64,
+    ) -> Result<(Vec<HrImportRecord>, i64)> {
+        Self::list(pool, tenant_id, page, per_page).await
+    }
+
     pub async fn get(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<Option<HrImportRecord>> {
         sqlx::query_as::<_, HrImportRecord>(&format!(
             "{} WHERE import.tenant_id = $1 AND import.module_key = $2 AND import.entity_key = $3 AND import.id = $4",
@@ -352,6 +365,16 @@ impl HrImportOps {
         .fetch_optional(pool)
         .await
         .context("Failed to load employee import")
+    }
+
+    /// Loads import metadata only after the HTTP boundary proves campus scope.
+    pub async fn get_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        _scope: HrImportReadScope,
+        id: Uuid,
+    ) -> Result<Option<HrImportRecord>> {
+        Self::get(pool, tenant_id, id).await
     }
 
     pub async fn retained_source(
@@ -588,6 +611,18 @@ impl HrImportOps {
             rows,
             total_rows,
         }))
+    }
+
+    /// Loads a validated import preview only after campus scope is proved.
+    pub async fn preview_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        _scope: HrImportReadScope,
+        import_id: Uuid,
+        page: i64,
+        per_page: i64,
+    ) -> Result<Option<HrImportPreview>> {
+        Self::preview(pool, tenant_id, import_id, page, per_page).await
     }
 
     pub async fn commit(

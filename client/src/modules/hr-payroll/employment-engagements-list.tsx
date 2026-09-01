@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { hasPermission } from "@/modules/users/access-control";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { hrPayrollService, hrResponseMessage } from "./service";
 import type {
@@ -50,6 +52,11 @@ import type {
 } from "./types";
 
 export function EmploymentEngagementsList() {
+  const permissions = useAuthStore((state) => state.user?.permissions);
+  const canCreate = hasPermission(permissions, "hr_payroll:create");
+  const canEdit = hasPermission(permissions, "hr_payroll:edit");
+  const canDelete = hasPermission(permissions, "hr_payroll:delete");
+  const hasActions = canEdit || canDelete;
   const [records, setRecords] = useState<EmploymentEngagement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +105,7 @@ export function EmploymentEngagementsList() {
     void load();
   }, [load]);
   const remove = async () => {
-    if (!deleteRecord || deleting) return;
+    if (!canDelete || !deleteRecord || deleting) return;
     setDeleting(true);
     const response = await hrPayrollService.deleteEmploymentEngagement(
       deleteRecord.id,
@@ -118,10 +125,10 @@ export function EmploymentEngagementsList() {
 
   usePageChrome(
     "Employment",
-    <Button onClick={() => setDrawerRecord(null)}>
+    canCreate ? <Button onClick={() => setDrawerRecord(null)}>
       <Plus className="size-4" />
       Add engagement
-    </Button>,
+    </Button> : undefined,
   );
   const filtered = submittedSearch || status !== "all";
 
@@ -177,7 +184,7 @@ export function EmploymentEngagementsList() {
       </TableControlsBar>
       <TableWrap>
         {loading ? (
-          <TableLoading columns={6} label="Loading employment history…" />
+          <TableLoading columns={hasActions ? 6 : 5} label="Loading employment history…" />
         ) : error ? (
           <TableError description={error} onRetry={() => void load()} />
         ) : records.length === 0 ? (
@@ -185,7 +192,9 @@ export function EmploymentEngagementsList() {
             description={
               filtered
                 ? "Change the current filters."
-                : "Add the first employment engagement."
+                : canCreate
+                  ? "Add the first employment engagement."
+                  : "No employment history is available."
             }
             icon={<BriefcaseBusiness />}
             title={
@@ -204,7 +213,7 @@ export function EmploymentEngagementsList() {
                   <TH>Assignment</TH>
                   <TH>Dates</TH>
                   <TH>Status</TH>
-                  <TH className="text-right">Actions</TH>
+                  {hasActions ? <TH className="text-right">Actions</TH> : null}
                 </tr>
               </THead>
               <TBody>
@@ -250,9 +259,9 @@ export function EmploymentEngagementsList() {
                         {displayStatus(record.status)}
                       </Badge>
                     </TD>
-                    <TD className="text-right">
-                      {record.status === "ended" ||
-                      record.status === "cancelled" ? (
+                    {hasActions ? <TD className="text-right">
+                      {(record.status === "ended" || record.status === "cancelled" || !canEdit) &&
+                      !(record.status === "draft" && canDelete) ? (
                         <span className="text-[var(--text-subtle)]">—</span>
                       ) : (
                         <div className="relative inline-flex">
@@ -268,7 +277,7 @@ export function EmploymentEngagementsList() {
                           </button>
                           {menuId === record.id ? (
                             <div className="absolute right-0 top-9 z-10 w-44 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">
-                              <button
+                              {canEdit ? <button
                                 className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]"
                                 onClick={() => {
                                   setDrawerRecord(record);
@@ -278,8 +287,8 @@ export function EmploymentEngagementsList() {
                               >
                                 <Edit className="size-4" />
                                 Edit
-                              </button>
-                              {record.status === "draft" ? (
+                              </button> : null}
+                              {record.status === "draft" && canDelete ? (
                                 <button
                                   className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]"
                                   onClick={() => {
@@ -296,7 +305,7 @@ export function EmploymentEngagementsList() {
                           ) : null}
                         </div>
                       )}
-                    </TD>
+                    </TD> : null}
                   </TR>
                 ))}
               </TBody>
@@ -310,7 +319,7 @@ export function EmploymentEngagementsList() {
           setDrawerRecord(undefined);
           void load();
         }}
-        open={drawerRecord !== undefined}
+        open={(drawerRecord === null && canCreate) || (drawerRecord !== null && drawerRecord !== undefined && canEdit)}
         record={drawerRecord ?? null}
       />
       <ConfirmDrawer
@@ -319,7 +328,7 @@ export function EmploymentEngagementsList() {
         isPending={deleting}
         onClose={() => setDeleteRecord(null)}
         onConfirm={() => void remove()}
-        open={deleteRecord !== null}
+        open={canDelete && deleteRecord !== null}
         title="Remove employment engagement?"
       />
     </div>

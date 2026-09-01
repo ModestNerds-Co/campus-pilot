@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sqlx::{Acquire, FromRow, PgPool, Postgres, Transaction};
 use uuid::Uuid;
+
+use crate::ops::SisCampusReadScope;
 use validator::ValidateEmail;
 
 use crate::numbering::align_imported_learner_number;
@@ -392,6 +394,18 @@ impl SisImportOps {
         Ok((rows, total))
     }
 
+    /// Lists SIS imports only after the route has proved campus scope.
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        target: Option<SisImportTarget>,
+        _scope: SisCampusReadScope,
+    ) -> Result<(Vec<SisImportRecord>, i64)> {
+        Self::list(pool, tenant_id, page, per_page, target).await
+    }
+
     pub async fn get(pool: &PgPool, tenant_id: Uuid, id: Uuid) -> Result<Option<SisImportRecord>> {
         sqlx::query_as::<_, SisImportRecord>(&format!(
             "{} WHERE import.tenant_id = $1 AND import.module_key = 'sis' AND import.id = $2",
@@ -402,6 +416,16 @@ impl SisImportOps {
         .fetch_optional(pool)
         .await
         .context("Failed to load SIS import")
+    }
+
+    /// Reads import metadata only after the route has proved campus scope.
+    pub(crate) async fn get_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        _scope: SisCampusReadScope,
+    ) -> Result<Option<SisImportRecord>> {
+        Self::get(pool, tenant_id, id).await
     }
 
     pub async fn retained_source(
@@ -631,6 +655,18 @@ impl SisImportOps {
             rows,
             total_rows,
         }))
+    }
+
+    /// Reads preview rows only after the route has proved campus scope.
+    pub(crate) async fn preview_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        import_id: Uuid,
+        page: i64,
+        per_page: i64,
+        _scope: SisCampusReadScope,
+    ) -> Result<Option<SisImportPreview>> {
+        Self::preview(pool, tenant_id, import_id, page, per_page).await
     }
 
     pub async fn commit(

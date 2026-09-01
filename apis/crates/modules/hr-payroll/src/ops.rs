@@ -8,6 +8,8 @@
 
 use anyhow::{Context, Result, anyhow, bail};
 use chrono::{DateTime, NaiveDate, Utc};
+use cp_audit::AuditActor;
+use cp_common::{AccessContext, EffectiveRecordScope, RecordScopeFamilyKey, RecordScopeGrants};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -31,6 +33,114 @@ pub enum DeleteOutcome {
     Deleted,
     NotFound,
     InUse,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HrRecordVisibility {
+    Campus,
+    SelfAccount(Uuid),
+}
+
+impl HrRecordVisibility {
+    const fn account_filter(self) -> Option<Uuid> {
+        match self {
+            Self::Campus => None,
+            Self::SelfAccount(account_id) => Some(account_id),
+        }
+    }
+}
+
+/// Proof that the current request may read HR employee records.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EmployeeReadScope(HrRecordVisibility);
+
+impl EmployeeReadScope {
+    /// Refines current request authority for the exact `hr.employees` family.
+    pub fn from_authority(
+        access: &AccessContext,
+        grants: &RecordScopeGrants,
+        actor: AuditActor,
+    ) -> Option<Self> {
+        employee_visibility(access, grants, actor, "hr.employees").map(Self)
+    }
+
+    const fn account_filter(self) -> Option<Uuid> {
+        self.0.account_filter()
+    }
+}
+
+/// Proof that the current request may read HR employment engagements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EmploymentEngagementReadScope(HrRecordVisibility);
+
+impl EmploymentEngagementReadScope {
+    /// Refines current request authority for the exact `hr.engagements` family.
+    pub fn from_authority(
+        access: &AccessContext,
+        grants: &RecordScopeGrants,
+        actor: AuditActor,
+    ) -> Option<Self> {
+        employee_visibility(access, grants, actor, "hr.engagements").map(Self)
+    }
+
+    const fn account_filter(self) -> Option<Uuid> {
+        self.0.account_filter()
+    }
+}
+
+/// Proof that the current request may read HR availability periods.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EmployeeAvailabilityReadScope(HrRecordVisibility);
+
+impl EmployeeAvailabilityReadScope {
+    /// Refines current request authority for the exact `hr.availability` family.
+    pub fn from_authority(
+        access: &AccessContext,
+        grants: &RecordScopeGrants,
+        actor: AuditActor,
+    ) -> Option<Self> {
+        employee_visibility(access, grants, actor, "hr.availability").map(Self)
+    }
+
+    const fn account_filter(self) -> Option<Uuid> {
+        self.0.account_filter()
+    }
+}
+
+/// Proof that the current request has campus-wide HR import visibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HrImportReadScope(());
+
+impl HrImportReadScope {
+    /// Refines current request authority for the campus-only `hr.imports` family.
+    pub fn from_authority(access: &AccessContext, grants: &RecordScopeGrants) -> Option<Self> {
+        if access.has_permission("*") {
+            return Some(Self(()));
+        }
+        let family = RecordScopeFamilyKey::parse("hr.imports").ok()?;
+        matches!(
+            grants.effective_scope(&family),
+            Some(EffectiveRecordScope::Campus)
+        )
+        .then_some(Self(()))
+    }
+}
+
+fn employee_visibility(
+    access: &AccessContext,
+    grants: &RecordScopeGrants,
+    actor: AuditActor,
+    family: &str,
+) -> Option<HrRecordVisibility> {
+    if access.has_permission("*") {
+        return Some(HrRecordVisibility::Campus);
+    }
+    let family = RecordScopeFamilyKey::parse(family).ok()?;
+    match grants.effective_scope(&family)? {
+        EffectiveRecordScope::Campus => Some(HrRecordVisibility::Campus),
+        EffectiveRecordScope::SelfRecord => actor.user_id().map(HrRecordVisibility::SelfAccount),
+        EffectiveRecordScope::Assigned | EffectiveRecordScope::SelfAndAssigned => None,
+    }
 }
 
 /// Typed HR boundary for department-based communication audiences.
@@ -566,6 +676,63 @@ impl EmployeeOps {
         position_id: Option<Uuid>,
         account_linked: Option<bool>,
     ) -> Result<(Vec<EmployeeWithDetails>, i64)> {
+        Self::list_with_account_scope(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            status,
+            department_id,
+            position_id,
+            account_linked,
+            None,
+        )
+        .await
+    }
+
+    /// Lists only employee records visible through the refined request scope.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn list_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        scope: EmployeeReadScope,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        department_id: Option<Uuid>,
+        position_id: Option<Uuid>,
+        account_linked: Option<bool>,
+    ) -> Result<(Vec<EmployeeWithDetails>, i64)> {
+        Self::list_with_account_scope(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            status,
+            department_id,
+            position_id,
+            account_linked,
+            scope.account_filter(),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn list_with_account_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        department_id: Option<Uuid>,
+        position_id: Option<Uuid>,
+        account_linked: Option<bool>,
+        actor_account_id: Option<Uuid>,
+    ) -> Result<(Vec<EmployeeWithDetails>, i64)> {
         let search = search.map(|value| format!("%{value}%"));
         let offset = (page - 1) * per_page;
         let employees = sqlx::query_as::<_, EmployeeWithDetails>(
@@ -598,8 +765,9 @@ impl EmployeeOps {
               AND ($6::BOOLEAN IS NULL
                    OR ($6 = TRUE AND employee.account_id IS NOT NULL)
                    OR ($6 = FALSE AND employee.account_id IS NULL))
+              AND ($7::UUID IS NULL OR employee.account_id = $7)
             ORDER BY employee.display_name, employee.employee_number
-            LIMIT $7 OFFSET $8
+            LIMIT $8 OFFSET $9
             "#,
         )
         .bind(tenant_id)
@@ -608,6 +776,7 @@ impl EmployeeOps {
         .bind(department_id)
         .bind(position_id)
         .bind(account_linked)
+        .bind(actor_account_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -626,6 +795,7 @@ impl EmployeeOps {
               AND ($6::BOOLEAN IS NULL
                    OR ($6 = TRUE AND account_id IS NOT NULL)
                    OR ($6 = FALSE AND account_id IS NULL))
+              AND ($7::UUID IS NULL OR account_id = $7)
             "#,
         )
         .bind(tenant_id)
@@ -634,6 +804,7 @@ impl EmployeeOps {
         .bind(department_id)
         .bind(position_id)
         .bind(account_linked)
+        .bind(actor_account_id)
         .fetch_one(pool)
         .await
         .context("Failed to count employees")?;
@@ -645,35 +816,17 @@ impl EmployeeOps {
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<EmployeeWithDetails>> {
-        sqlx::query_as::<_, EmployeeWithDetails>(
-            r#"
-            SELECT employee.id, employee.tenant_id, employee.account_id,
-                   account.email AS account_email, employee.employee_number,
-                   employee.display_name, employee.first_names, employee.surname,
-                   employee.work_email, employee.phone, employee.department_id,
-                   department.name AS department_name, employee.position_id,
-                   position.title AS position_title, employee.employment_status,
-                   employee.hire_date, employee.end_date,
-                   employee.created_at, employee.updated_at
-            FROM employees AS employee
-            LEFT JOIN users AS account
-              ON account.id = employee.account_id AND account.tenant_id = employee.tenant_id
-            LEFT JOIN departments AS department
-              ON department.id = employee.department_id
-             AND department.tenant_id = employee.tenant_id
-             AND department.deleted_at IS NULL
-            LEFT JOIN positions AS position
-              ON position.id = employee.position_id
-             AND position.tenant_id = employee.tenant_id
-             AND position.deleted_at IS NULL
-            WHERE employee.tenant_id = $1 AND employee.id = $2 AND employee.deleted_at IS NULL
-            "#,
-        )
-        .bind(tenant_id)
-        .bind(id)
-        .fetch_optional(pool)
-        .await
-        .context("Failed to load employee")
+        load_employee(pool, tenant_id, id, None).await
+    }
+
+    /// Loads one employee only when it is visible through the refined request scope.
+    pub async fn get_by_id_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        scope: EmployeeReadScope,
+        id: Uuid,
+    ) -> Result<Option<EmployeeWithDetails>> {
+        load_employee(pool, tenant_id, id, scope.account_filter()).await
     }
 
     pub async fn create(
@@ -1059,6 +1212,59 @@ impl EmploymentEngagementOps {
         status: Option<&str>,
         employment_type: Option<&str>,
     ) -> Result<(Vec<EmploymentEngagementWithDetails>, i64)> {
+        Self::list_with_account_scope(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            employee_id,
+            status,
+            employment_type,
+            None,
+        )
+        .await
+    }
+
+    /// Lists only engagements visible through the refined request scope.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn list_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        scope: EmploymentEngagementReadScope,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        employee_id: Option<Uuid>,
+        status: Option<&str>,
+        employment_type: Option<&str>,
+    ) -> Result<(Vec<EmploymentEngagementWithDetails>, i64)> {
+        Self::list_with_account_scope(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            employee_id,
+            status,
+            employment_type,
+            scope.account_filter(),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn list_with_account_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        employee_id: Option<Uuid>,
+        status: Option<&str>,
+        employment_type: Option<&str>,
+        actor_account_id: Option<Uuid>,
+    ) -> Result<(Vec<EmploymentEngagementWithDetails>, i64)> {
         let search = search.map(|value| format!("%{value}%"));
         let offset = (page - 1) * per_page;
         let rows = sqlx::query_as::<_, EmploymentEngagementWithDetails>(
@@ -1090,8 +1296,9 @@ impl EmploymentEngagementOps {
               AND ($3::UUID IS NULL OR engagement.employee_id = $3)
               AND ($4::TEXT IS NULL OR engagement.status = $4)
               AND ($5::TEXT IS NULL OR engagement.employment_type = $5)
+              AND ($6::UUID IS NULL OR employee.account_id = $6)
             ORDER BY engagement.start_date DESC NULLS LAST, employee.display_name, engagement.created_at DESC
-            LIMIT $6 OFFSET $7
+            LIMIT $7 OFFSET $8
             "#,
         )
         .bind(tenant_id)
@@ -1099,6 +1306,7 @@ impl EmploymentEngagementOps {
         .bind(employee_id)
         .bind(status)
         .bind(employment_type)
+        .bind(actor_account_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -1118,6 +1326,7 @@ impl EmploymentEngagementOps {
               AND ($3::UUID IS NULL OR engagement.employee_id = $3)
               AND ($4::TEXT IS NULL OR engagement.status = $4)
               AND ($5::TEXT IS NULL OR engagement.employment_type = $5)
+              AND ($6::UUID IS NULL OR employee.account_id = $6)
             "#,
         )
         .bind(tenant_id)
@@ -1125,6 +1334,7 @@ impl EmploymentEngagementOps {
         .bind(employee_id)
         .bind(status)
         .bind(employment_type)
+        .bind(actor_account_id)
         .fetch_one(pool)
         .await
         .context("Failed to count employment engagements")?;
@@ -1136,7 +1346,17 @@ impl EmploymentEngagementOps {
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<EmploymentEngagementWithDetails>> {
-        load_engagement(pool, tenant_id, id).await
+        load_engagement(pool, tenant_id, id, None).await
+    }
+
+    /// Loads one engagement only when it is visible through the refined request scope.
+    pub async fn get_by_id_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        scope: EmploymentEngagementReadScope,
+        id: Uuid,
+    ) -> Result<Option<EmploymentEngagementWithDetails>> {
+        load_engagement(pool, tenant_id, id, scope.account_filter()).await
     }
 
     pub async fn create(
@@ -1409,6 +1629,67 @@ impl EmployeeAvailabilityOps {
         from: Option<DateTime<Utc>>,
         to: Option<DateTime<Utc>>,
     ) -> Result<(Vec<EmployeeAvailabilityWithDetails>, i64)> {
+        Self::list_with_account_scope(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            employee_id,
+            status,
+            kind,
+            from,
+            to,
+            None,
+        )
+        .await
+    }
+
+    /// Lists only availability periods visible through the refined request scope.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn list_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        scope: EmployeeAvailabilityReadScope,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        employee_id: Option<Uuid>,
+        status: Option<&str>,
+        kind: Option<&str>,
+        from: Option<DateTime<Utc>>,
+        to: Option<DateTime<Utc>>,
+    ) -> Result<(Vec<EmployeeAvailabilityWithDetails>, i64)> {
+        Self::list_with_account_scope(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            employee_id,
+            status,
+            kind,
+            from,
+            to,
+            scope.account_filter(),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn list_with_account_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        employee_id: Option<Uuid>,
+        status: Option<&str>,
+        kind: Option<&str>,
+        from: Option<DateTime<Utc>>,
+        to: Option<DateTime<Utc>>,
+        actor_account_id: Option<Uuid>,
+    ) -> Result<(Vec<EmployeeAvailabilityWithDetails>, i64)> {
         if let (Some(from), Some(to)) = (from, to)
             && to < from
         {
@@ -1440,8 +1721,9 @@ impl EmployeeAvailabilityOps {
               AND ($5::TEXT IS NULL OR availability.kind = $5)
               AND ($6::TIMESTAMPTZ IS NULL OR availability.ends_at >= $6)
               AND ($7::TIMESTAMPTZ IS NULL OR availability.starts_at <= $7)
+              AND ($8::UUID IS NULL OR employee.account_id = $8)
             ORDER BY availability.starts_at DESC, employee.display_name
-            LIMIT $8 OFFSET $9
+            LIMIT $9 OFFSET $10
             "#,
         )
         .bind(tenant_id)
@@ -1451,6 +1733,7 @@ impl EmployeeAvailabilityOps {
         .bind(kind)
         .bind(from)
         .bind(to)
+        .bind(actor_account_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -1472,6 +1755,7 @@ impl EmployeeAvailabilityOps {
               AND ($5::TEXT IS NULL OR availability.kind = $5)
               AND ($6::TIMESTAMPTZ IS NULL OR availability.ends_at >= $6)
               AND ($7::TIMESTAMPTZ IS NULL OR availability.starts_at <= $7)
+              AND ($8::UUID IS NULL OR employee.account_id = $8)
             "#,
         )
         .bind(tenant_id)
@@ -1481,6 +1765,7 @@ impl EmployeeAvailabilityOps {
         .bind(kind)
         .bind(from)
         .bind(to)
+        .bind(actor_account_id)
         .fetch_one(pool)
         .await
         .context("Failed to count employee availability")?;
@@ -1492,7 +1777,17 @@ impl EmployeeAvailabilityOps {
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<EmployeeAvailabilityWithDetails>> {
-        load_availability(pool, tenant_id, id).await
+        load_availability(pool, tenant_id, id, None).await
+    }
+
+    /// Loads one availability period only when visible through the refined request scope.
+    pub async fn get_by_id_for_scope(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        scope: EmployeeAvailabilityReadScope,
+        id: Uuid,
+    ) -> Result<Option<EmployeeAvailabilityWithDetails>> {
+        load_availability(pool, tenant_id, id, scope.account_filter()).await
     }
 
     pub async fn create(
@@ -1651,10 +1946,50 @@ impl EmployeeAvailabilityOps {
     }
 }
 
+async fn load_employee(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    id: Uuid,
+    actor_account_id: Option<Uuid>,
+) -> Result<Option<EmployeeWithDetails>> {
+    sqlx::query_as::<_, EmployeeWithDetails>(
+        r#"
+        SELECT employee.id, employee.tenant_id, employee.account_id,
+               account.email AS account_email, employee.employee_number,
+               employee.display_name, employee.first_names, employee.surname,
+               employee.work_email, employee.phone, employee.department_id,
+               department.name AS department_name, employee.position_id,
+               position.title AS position_title, employee.employment_status,
+               employee.hire_date, employee.end_date,
+               employee.created_at, employee.updated_at
+        FROM employees AS employee
+        LEFT JOIN users AS account
+          ON account.id = employee.account_id AND account.tenant_id = employee.tenant_id
+        LEFT JOIN departments AS department
+          ON department.id = employee.department_id
+         AND department.tenant_id = employee.tenant_id
+         AND department.deleted_at IS NULL
+        LEFT JOIN positions AS position
+          ON position.id = employee.position_id
+         AND position.tenant_id = employee.tenant_id
+         AND position.deleted_at IS NULL
+        WHERE employee.tenant_id = $1 AND employee.id = $2 AND employee.deleted_at IS NULL
+          AND ($3::UUID IS NULL OR employee.account_id = $3)
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(id)
+    .bind(actor_account_id)
+    .fetch_optional(pool)
+    .await
+    .context("Failed to load employee")
+}
+
 async fn load_engagement(
     pool: &PgPool,
     tenant_id: Uuid,
     id: Uuid,
+    actor_account_id: Option<Uuid>,
 ) -> Result<Option<EmploymentEngagementWithDetails>> {
     sqlx::query_as::<_, EmploymentEngagementWithDetails>(
         r#"
@@ -1681,10 +2016,12 @@ async fn load_engagement(
          AND position.deleted_at IS NULL
         WHERE engagement.tenant_id = $1 AND engagement.id = $2
           AND engagement.deleted_at IS NULL
+          AND ($3::UUID IS NULL OR employee.account_id = $3)
         "#,
     )
     .bind(tenant_id)
     .bind(id)
+    .bind(actor_account_id)
     .fetch_optional(pool)
     .await
     .context("Failed to load employment engagement")
@@ -1694,6 +2031,7 @@ async fn load_availability(
     pool: &PgPool,
     tenant_id: Uuid,
     id: Uuid,
+    actor_account_id: Option<Uuid>,
 ) -> Result<Option<EmployeeAvailabilityWithDetails>> {
     sqlx::query_as::<_, EmployeeAvailabilityWithDetails>(
         r#"
@@ -1713,10 +2051,12 @@ async fn load_availability(
          AND decision_user.tenant_id = availability.tenant_id
         WHERE availability.tenant_id = $1 AND availability.id = $2
           AND availability.deleted_at IS NULL
+          AND ($3::UUID IS NULL OR employee.account_id = $3)
         "#,
     )
     .bind(tenant_id)
     .bind(id)
+    .bind(actor_account_id)
     .fetch_optional(pool)
     .await
     .context("Failed to load employee availability")
@@ -1994,11 +2334,38 @@ fn validate_employment_dates(
 #[cfg(test)]
 mod tests {
     use chrono::{NaiveDate, TimeZone, Utc};
+    use cp_audit::AuditActor;
+    use cp_common::{
+        AccessContext, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
+        RecordScopeFamilyKey, RecordScopeGrant, RecordScopeGrants, RecordScopeKind,
+    };
+    use uuid::Uuid;
 
     use super::{
-        DeleteOutcome, validate_availability_times, validate_availability_transition,
-        validate_employment_dates, validate_engagement, validate_engagement_transition,
+        DeleteOutcome, EmployeeAvailabilityReadScope, EmployeeReadScope,
+        EmploymentEngagementReadScope, HrImportReadScope, validate_availability_times,
+        validate_availability_transition, validate_employment_dates, validate_engagement,
+        validate_engagement_transition,
     };
+
+    fn access(permissions: &[&str]) -> AccessContext {
+        AccessContext {
+            role_keys: Vec::new(),
+            permissions: permissions.iter().map(|value| value.to_string()).collect(),
+            enabled_modules: vec!["hr_payroll".to_string()],
+            entitlements: EntitlementSnapshot::new(
+                LeaseLifecycle::Legacy,
+                vec![("hr_payroll".to_string(), ModuleEntitlementState::Enabled)],
+                Vec::new(),
+            )
+            .unwrap_or_else(|_| unreachable!()),
+        }
+    }
+
+    fn grants(family: &str, kind: RecordScopeKind) -> RecordScopeGrants {
+        let family = RecordScopeFamilyKey::parse(family).unwrap_or_else(|_| unreachable!());
+        RecordScopeGrants::from_grants([RecordScopeGrant::new(family, kind)])
+    }
 
     #[test]
     fn employment_dates_reject_reverse_ranges() {
@@ -2039,5 +2406,110 @@ mod tests {
             .unwrap_or_else(|| unreachable!());
         assert!(validate_availability_times(start, end).is_ok());
         assert!(validate_availability_times(end, start).is_err());
+    }
+
+    #[test]
+    fn self_read_scopes_bind_every_hr_family_to_the_actor_account() {
+        let actor_id = Uuid::new_v4();
+        let actor = AuditActor::person(actor_id);
+        let access = access(&["hr_payroll:view"]);
+
+        let employees = EmployeeReadScope::from_authority(
+            &access,
+            &grants("hr.employees", RecordScopeKind::SelfRecord),
+            actor,
+        )
+        .unwrap_or_else(|| unreachable!());
+        let engagements = EmploymentEngagementReadScope::from_authority(
+            &access,
+            &grants("hr.engagements", RecordScopeKind::SelfRecord),
+            actor,
+        )
+        .unwrap_or_else(|| unreachable!());
+        let availability = EmployeeAvailabilityReadScope::from_authority(
+            &access,
+            &grants("hr.availability", RecordScopeKind::SelfRecord),
+            actor,
+        )
+        .unwrap_or_else(|| unreachable!());
+
+        assert_eq!(employees.account_filter(), Some(actor_id));
+        assert_eq!(engagements.account_filter(), Some(actor_id));
+        assert_eq!(availability.account_filter(), Some(actor_id));
+    }
+
+    #[test]
+    fn campus_and_wildcard_authority_keep_campus_visibility() {
+        let actor = AuditActor::person(Uuid::new_v4());
+        let campus = access(&["hr_payroll:view"]);
+        let wildcard = access(&["*"]);
+
+        let employees = EmployeeReadScope::from_authority(
+            &campus,
+            &grants("hr.employees", RecordScopeKind::Campus),
+            actor,
+        )
+        .unwrap_or_else(|| unreachable!());
+        let wildcard_availability = EmployeeAvailabilityReadScope::from_authority(
+            &wildcard,
+            &RecordScopeGrants::empty(),
+            actor,
+        )
+        .unwrap_or_else(|| unreachable!());
+
+        assert_eq!(employees.account_filter(), None);
+        assert_eq!(wildcard_availability.account_filter(), None);
+        assert!(
+            HrImportReadScope::from_authority(
+                &campus,
+                &grants("hr.imports", RecordScopeKind::Campus),
+            )
+            .is_some()
+        );
+        assert!(
+            HrImportReadScope::from_authority(&wildcard, &RecordScopeGrants::empty()).is_some()
+        );
+    }
+
+    #[test]
+    fn missing_mismatched_and_unsupported_hr_scopes_fail_closed() {
+        let actor = AuditActor::person(Uuid::new_v4());
+        let access = access(&["hr_payroll:view"]);
+
+        assert!(
+            EmployeeReadScope::from_authority(&access, &RecordScopeGrants::empty(), actor)
+                .is_none()
+        );
+        assert!(
+            EmploymentEngagementReadScope::from_authority(
+                &access,
+                &grants("hr.employees", RecordScopeKind::Campus),
+                actor,
+            )
+            .is_none()
+        );
+        assert!(
+            EmployeeAvailabilityReadScope::from_authority(
+                &access,
+                &grants("hr.availability", RecordScopeKind::Assigned),
+                actor,
+            )
+            .is_none()
+        );
+        assert!(
+            EmployeeReadScope::from_authority(
+                &access,
+                &grants("hr.employees", RecordScopeKind::SelfRecord),
+                AuditActor::system(),
+            )
+            .is_none()
+        );
+        assert!(
+            HrImportReadScope::from_authority(
+                &access,
+                &grants("hr.imports", RecordScopeKind::SelfRecord),
+            )
+            .is_none()
+        );
     }
 }

@@ -34,6 +34,142 @@ pub enum DeleteOutcome {
     InUse,
 }
 
+/// Request-scoped proof describing which SIS records one authenticated account
+/// may read. Construction stays inside the SIS transport boundary so raw IDs
+/// and client input cannot manufacture broader visibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SisRecordScope {
+    Campus,
+    SelfRecords(Uuid),
+    AssignedTo(Uuid),
+    SelfAndAssigned(Uuid),
+}
+
+impl SisRecordScope {
+    #[must_use]
+    pub(crate) const fn mode(self) -> &'static str {
+        match self {
+            Self::Campus => "campus",
+            Self::SelfRecords(_) => "self",
+            Self::AssignedTo(_) => "assigned",
+            Self::SelfAndAssigned(_) => "self_and_assigned",
+        }
+    }
+
+    #[must_use]
+    pub(crate) const fn account_id(self) -> Option<Uuid> {
+        match self {
+            Self::Campus => None,
+            Self::SelfRecords(account_id)
+            | Self::AssignedTo(account_id)
+            | Self::SelfAndAssigned(account_id) => Some(account_id),
+        }
+    }
+
+    const fn includes_self(self) -> bool {
+        matches!(self, Self::SelfRecords(_) | Self::SelfAndAssigned(_))
+    }
+
+    const fn includes_assigned(self) -> bool {
+        matches!(self, Self::AssignedTo(_) | Self::SelfAndAssigned(_))
+    }
+}
+
+/// Proof that an authenticated request has campus visibility for SIS imports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SisCampusReadScope;
+
+#[derive(Debug)]
+struct ResolvedLearnerVisibility {
+    campus: bool,
+    learner_ids: Vec<Uuid>,
+}
+
+async fn resolve_learner_visibility(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    scope: SisRecordScope,
+) -> Result<ResolvedLearnerVisibility> {
+    if scope == SisRecordScope::Campus {
+        return Ok(ResolvedLearnerVisibility {
+            campus: true,
+            learner_ids: Vec::new(),
+        });
+    }
+    let account_id = scope
+        .account_id()
+        .context("A non-campus SIS record scope requires an account")?;
+    let learner_ids = sqlx::query_scalar::<_, Uuid>(
+        r#"
+        SELECT learner.id
+        FROM learners AS learner
+        WHERE $3::BOOLEAN
+          AND learner.tenant_id = $1
+          AND learner.account_id = $2
+          AND learner.deleted_at IS NULL
+        UNION
+        SELECT relationship.learner_id
+        FROM guardians AS guardian
+        JOIN learner_guardian_relationships AS relationship
+          ON relationship.guardian_id = guardian.id
+         AND relationship.tenant_id = guardian.tenant_id
+         AND relationship.status = 'active'
+         AND relationship.deleted_at IS NULL
+        JOIN learners AS learner
+          ON learner.id = relationship.learner_id
+         AND learner.tenant_id = relationship.tenant_id
+         AND learner.deleted_at IS NULL
+        WHERE $3::BOOLEAN
+          AND guardian.tenant_id = $1
+          AND guardian.account_id = $2
+          AND guardian.status = 'active'
+          AND guardian.deleted_at IS NULL
+        UNION
+        SELECT scoped_enrolment.learner_id
+        FROM enrolments AS scoped_enrolment
+        JOIN learners AS learner
+          ON learner.id = scoped_enrolment.learner_id
+         AND learner.tenant_id = scoped_enrolment.tenant_id
+         AND learner.deleted_at IS NULL
+        JOIN teaching_assignments AS assignment
+          ON assignment.tenant_id = scoped_enrolment.tenant_id
+         AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+         AND assignment.class_group_id = scoped_enrolment.class_group_id
+         AND assignment.status = 'active'
+         AND assignment.deleted_at IS NULL
+        JOIN teacher_profiles AS teacher
+          ON teacher.id = assignment.teacher_profile_id
+         AND teacher.tenant_id = assignment.tenant_id
+         AND teacher.status = 'active'
+         AND teacher.deleted_at IS NULL
+        JOIN employees AS employee
+          ON employee.id = teacher.employee_id
+         AND employee.tenant_id = teacher.tenant_id
+         AND employee.account_id = $2
+         AND employee.employment_status = 'active'
+         AND employee.deleted_at IS NULL
+        WHERE $4::BOOLEAN
+          AND scoped_enrolment.tenant_id = $1
+          AND scoped_enrolment.status = 'active'
+          AND scoped_enrolment.starts_on <= CURRENT_DATE
+          AND (scoped_enrolment.ends_on IS NULL OR scoped_enrolment.ends_on >= CURRENT_DATE)
+          AND scoped_enrolment.deleted_at IS NULL
+        ORDER BY 1
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(account_id)
+    .bind(scope.includes_self())
+    .bind(scope.includes_assigned())
+    .fetch_all(pool)
+    .await
+    .context("Failed to resolve SIS learner visibility")?;
+    Ok(ResolvedLearnerVisibility {
+        campus: false,
+        learner_ids,
+    })
+}
+
 pub struct AccountCandidateOps;
 
 /// Typed SIS boundary for learner and opted-in guardian communication.
@@ -560,6 +696,177 @@ impl LearnerOps {
         Ok((learners, total))
     }
 
+    /// Lists learner records after applying the caller's exact SIS visibility
+    /// before pagination and counting.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        scope: SisRecordScope,
+    ) -> Result<(Vec<LearnerWithAccount>, i64)> {
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let learners = sqlx::query_as::<_, LearnerWithAccount>(
+            r#"
+            SELECT learner.id, learner.tenant_id, learner.account_id,
+                   account.email AS account_email, learner.learner_number,
+                   learner.display_name, learner.first_names, learner.surname,
+                   learner.date_of_birth, learner.email, learner.phone, learner.status,
+                   learner.created_at, learner.updated_at
+            FROM learners AS learner
+            LEFT JOIN users AS account
+              ON account.id = learner.account_id AND account.tenant_id = learner.tenant_id
+            WHERE learner.tenant_id = $1 AND learner.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR learner.learner_number ILIKE $2
+                   OR learner.display_name ILIKE $2 OR learner.email ILIKE $2)
+              AND ($3::TEXT IS NULL OR learner.status = $3)
+              AND (
+                    $4::TEXT = 'campus'
+                    OR (
+                        $4 IN ('self', 'self_and_assigned')
+                        AND (
+                            learner.account_id = $5
+                            OR EXISTS (
+                                SELECT 1
+                                FROM learner_guardian_relationships AS relationship
+                                JOIN guardians AS guardian
+                                  ON guardian.id = relationship.guardian_id
+                                 AND guardian.tenant_id = relationship.tenant_id
+                                 AND guardian.account_id = $5
+                                 AND guardian.status = 'active'
+                                 AND guardian.deleted_at IS NULL
+                                WHERE relationship.tenant_id = learner.tenant_id
+                                  AND relationship.learner_id = learner.id
+                                  AND relationship.status = 'active'
+                                  AND relationship.deleted_at IS NULL
+                            )
+                        )
+                    )
+                    OR (
+                        $4 IN ('assigned', 'self_and_assigned')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM enrolments AS scoped_enrolment
+                            JOIN teaching_assignments AS assignment
+                              ON assignment.tenant_id = scoped_enrolment.tenant_id
+                             AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+                             AND assignment.class_group_id = scoped_enrolment.class_group_id
+                             AND assignment.status = 'active'
+                             AND assignment.deleted_at IS NULL
+                            JOIN teacher_profiles AS teacher
+                              ON teacher.id = assignment.teacher_profile_id
+                             AND teacher.tenant_id = assignment.tenant_id
+                             AND teacher.status = 'active'
+                             AND teacher.deleted_at IS NULL
+                            JOIN employees AS employee
+                              ON employee.id = teacher.employee_id
+                             AND employee.tenant_id = teacher.tenant_id
+                             AND employee.account_id = $5
+                             AND employee.employment_status = 'active'
+                             AND employee.deleted_at IS NULL
+                            WHERE scoped_enrolment.tenant_id = learner.tenant_id
+                              AND scoped_enrolment.learner_id = learner.id
+                              AND scoped_enrolment.status = 'active'
+                              AND scoped_enrolment.starts_on <= CURRENT_DATE
+                              AND (scoped_enrolment.ends_on IS NULL
+                                   OR scoped_enrolment.ends_on >= CURRENT_DATE)
+                              AND scoped_enrolment.deleted_at IS NULL
+                        )
+                    )
+              )
+            ORDER BY learner.display_name, learner.learner_number
+            LIMIT $6 OFFSET $7
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(scope.mode())
+        .bind(scope.account_id())
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list scoped learners")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM learners AS learner
+            WHERE learner.tenant_id = $1 AND learner.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR learner.learner_number ILIKE $2
+                   OR learner.display_name ILIKE $2 OR learner.email ILIKE $2)
+              AND ($3::TEXT IS NULL OR learner.status = $3)
+              AND (
+                    $4::TEXT = 'campus'
+                    OR (
+                        $4 IN ('self', 'self_and_assigned')
+                        AND (
+                            learner.account_id = $5
+                            OR EXISTS (
+                                SELECT 1
+                                FROM learner_guardian_relationships AS relationship
+                                JOIN guardians AS guardian
+                                  ON guardian.id = relationship.guardian_id
+                                 AND guardian.tenant_id = relationship.tenant_id
+                                 AND guardian.account_id = $5
+                                 AND guardian.status = 'active'
+                                 AND guardian.deleted_at IS NULL
+                                WHERE relationship.tenant_id = learner.tenant_id
+                                  AND relationship.learner_id = learner.id
+                                  AND relationship.status = 'active'
+                                  AND relationship.deleted_at IS NULL
+                            )
+                        )
+                    )
+                    OR (
+                        $4 IN ('assigned', 'self_and_assigned')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM enrolments AS scoped_enrolment
+                            JOIN teaching_assignments AS assignment
+                              ON assignment.tenant_id = scoped_enrolment.tenant_id
+                             AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+                             AND assignment.class_group_id = scoped_enrolment.class_group_id
+                             AND assignment.status = 'active'
+                             AND assignment.deleted_at IS NULL
+                            JOIN teacher_profiles AS teacher
+                              ON teacher.id = assignment.teacher_profile_id
+                             AND teacher.tenant_id = assignment.tenant_id
+                             AND teacher.status = 'active'
+                             AND teacher.deleted_at IS NULL
+                            JOIN employees AS employee
+                              ON employee.id = teacher.employee_id
+                             AND employee.tenant_id = teacher.tenant_id
+                             AND employee.account_id = $5
+                             AND employee.employment_status = 'active'
+                             AND employee.deleted_at IS NULL
+                            WHERE scoped_enrolment.tenant_id = learner.tenant_id
+                              AND scoped_enrolment.learner_id = learner.id
+                              AND scoped_enrolment.status = 'active'
+                              AND scoped_enrolment.starts_on <= CURRENT_DATE
+                              AND (scoped_enrolment.ends_on IS NULL
+                                   OR scoped_enrolment.ends_on >= CURRENT_DATE)
+                              AND scoped_enrolment.deleted_at IS NULL
+                        )
+                    )
+              )
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(scope.mode())
+        .bind(scope.account_id())
+        .fetch_one(pool)
+        .await
+        .context("Failed to count scoped learners")?;
+        Ok((learners, total))
+    }
+
     pub async fn get_by_id(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -583,6 +890,88 @@ impl LearnerOps {
         .fetch_optional(pool)
         .await
         .context("Failed to load learner")
+    }
+
+    /// Reads one learner only when the current scope can see that record.
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: SisRecordScope,
+    ) -> Result<Option<LearnerWithAccount>> {
+        sqlx::query_as::<_, LearnerWithAccount>(
+            r#"
+            SELECT learner.id, learner.tenant_id, learner.account_id,
+                   account.email AS account_email, learner.learner_number,
+                   learner.display_name, learner.first_names, learner.surname,
+                   learner.date_of_birth, learner.email, learner.phone, learner.status,
+                   learner.created_at, learner.updated_at
+            FROM learners AS learner
+            LEFT JOIN users AS account
+              ON account.id = learner.account_id AND account.tenant_id = learner.tenant_id
+            WHERE learner.tenant_id = $1 AND learner.id = $2 AND learner.deleted_at IS NULL
+              AND learner.id IN (
+                    SELECT visible.id
+                    FROM learners AS visible
+                    WHERE visible.tenant_id = $1 AND visible.deleted_at IS NULL
+                      AND (
+                            $3::TEXT = 'campus'
+                            OR ($3 IN ('self', 'self_and_assigned') AND (
+                                visible.account_id = $4
+                                OR EXISTS (
+                                    SELECT 1
+                                    FROM learner_guardian_relationships AS relationship
+                                    JOIN guardians AS guardian
+                                      ON guardian.id = relationship.guardian_id
+                                     AND guardian.tenant_id = relationship.tenant_id
+                                     AND guardian.account_id = $4
+                                     AND guardian.status = 'active'
+                                     AND guardian.deleted_at IS NULL
+                                    WHERE relationship.tenant_id = visible.tenant_id
+                                      AND relationship.learner_id = visible.id
+                                      AND relationship.status = 'active'
+                                      AND relationship.deleted_at IS NULL
+                                )
+                            ))
+                            OR ($3 IN ('assigned', 'self_and_assigned') AND EXISTS (
+                                SELECT 1
+                                FROM enrolments AS scoped_enrolment
+                                JOIN teaching_assignments AS assignment
+                                  ON assignment.tenant_id = scoped_enrolment.tenant_id
+                                 AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+                                 AND assignment.class_group_id = scoped_enrolment.class_group_id
+                                 AND assignment.status = 'active'
+                                 AND assignment.deleted_at IS NULL
+                                JOIN teacher_profiles AS teacher
+                                  ON teacher.id = assignment.teacher_profile_id
+                                 AND teacher.tenant_id = assignment.tenant_id
+                                 AND teacher.status = 'active'
+                                 AND teacher.deleted_at IS NULL
+                                JOIN employees AS employee
+                                  ON employee.id = teacher.employee_id
+                                 AND employee.tenant_id = teacher.tenant_id
+                                 AND employee.account_id = $4
+                                 AND employee.employment_status = 'active'
+                                 AND employee.deleted_at IS NULL
+                                WHERE scoped_enrolment.tenant_id = visible.tenant_id
+                                  AND scoped_enrolment.learner_id = visible.id
+                                  AND scoped_enrolment.status = 'active'
+                                  AND scoped_enrolment.starts_on <= CURRENT_DATE
+                                  AND (scoped_enrolment.ends_on IS NULL
+                                       OR scoped_enrolment.ends_on >= CURRENT_DATE)
+                                  AND scoped_enrolment.deleted_at IS NULL
+                            ))
+                      )
+              )
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(scope.mode())
+        .bind(scope.account_id())
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load scoped learner")
     }
 
     pub async fn create(
@@ -779,6 +1168,172 @@ impl GuardianOps {
         Ok((guardians, total))
     }
 
+    /// Lists guardian records visible through self linkage or a currently
+    /// assigned learner before applying pagination.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        scope: SisRecordScope,
+    ) -> Result<(Vec<GuardianWithAccount>, i64)> {
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let guardians = sqlx::query_as::<_, GuardianWithAccount>(
+            r#"
+            SELECT guardian.id, guardian.tenant_id, guardian.account_id,
+                   account.email AS account_email, guardian.display_name,
+                   guardian.first_names, guardian.surname, guardian.email,
+                   guardian.phone, guardian.status, guardian.created_at, guardian.updated_at
+            FROM guardians AS guardian
+            LEFT JOIN users AS account
+              ON account.id = guardian.account_id AND account.tenant_id = guardian.tenant_id
+            WHERE guardian.tenant_id = $1 AND guardian.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR guardian.display_name ILIKE $2
+                   OR guardian.email ILIKE $2 OR guardian.phone ILIKE $2)
+              AND ($3::TEXT IS NULL OR guardian.status = $3)
+              AND (
+                    $4::TEXT = 'campus'
+                    OR ($4 IN ('self', 'self_and_assigned') AND (
+                        guardian.account_id = $5
+                        OR EXISTS (
+                            SELECT 1
+                            FROM learner_guardian_relationships AS relationship
+                            JOIN learners AS learner
+                              ON learner.id = relationship.learner_id
+                             AND learner.tenant_id = relationship.tenant_id
+                             AND learner.account_id = $5
+                             AND learner.deleted_at IS NULL
+                            WHERE relationship.tenant_id = guardian.tenant_id
+                              AND relationship.guardian_id = guardian.id
+                              AND relationship.status = 'active'
+                              AND relationship.deleted_at IS NULL
+                        )
+                    ))
+                    OR ($4 IN ('assigned', 'self_and_assigned') AND EXISTS (
+                        SELECT 1
+                        FROM learner_guardian_relationships AS relationship
+                        JOIN enrolments AS scoped_enrolment
+                          ON scoped_enrolment.learner_id = relationship.learner_id
+                         AND scoped_enrolment.tenant_id = relationship.tenant_id
+                         AND scoped_enrolment.status = 'active'
+                         AND scoped_enrolment.starts_on <= CURRENT_DATE
+                         AND (scoped_enrolment.ends_on IS NULL
+                              OR scoped_enrolment.ends_on >= CURRENT_DATE)
+                         AND scoped_enrolment.deleted_at IS NULL
+                        JOIN teaching_assignments AS assignment
+                          ON assignment.tenant_id = scoped_enrolment.tenant_id
+                         AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+                         AND assignment.class_group_id = scoped_enrolment.class_group_id
+                         AND assignment.status = 'active'
+                         AND assignment.deleted_at IS NULL
+                        JOIN teacher_profiles AS teacher
+                          ON teacher.id = assignment.teacher_profile_id
+                         AND teacher.tenant_id = assignment.tenant_id
+                         AND teacher.status = 'active'
+                         AND teacher.deleted_at IS NULL
+                        JOIN employees AS employee
+                          ON employee.id = teacher.employee_id
+                         AND employee.tenant_id = teacher.tenant_id
+                         AND employee.account_id = $5
+                         AND employee.employment_status = 'active'
+                         AND employee.deleted_at IS NULL
+                        WHERE relationship.tenant_id = guardian.tenant_id
+                          AND relationship.guardian_id = guardian.id
+                          AND relationship.status = 'active'
+                          AND relationship.deleted_at IS NULL
+                    ))
+              )
+            ORDER BY guardian.display_name
+            LIMIT $6 OFFSET $7
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(scope.mode())
+        .bind(scope.account_id())
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list scoped guardians")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM guardians AS guardian
+            WHERE guardian.tenant_id = $1 AND guardian.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR guardian.display_name ILIKE $2
+                   OR guardian.email ILIKE $2 OR guardian.phone ILIKE $2)
+              AND ($3::TEXT IS NULL OR guardian.status = $3)
+              AND (
+                    $4::TEXT = 'campus'
+                    OR ($4 IN ('self', 'self_and_assigned') AND (
+                        guardian.account_id = $5
+                        OR EXISTS (
+                            SELECT 1
+                            FROM learner_guardian_relationships AS relationship
+                            JOIN learners AS learner
+                              ON learner.id = relationship.learner_id
+                             AND learner.tenant_id = relationship.tenant_id
+                             AND learner.account_id = $5
+                             AND learner.deleted_at IS NULL
+                            WHERE relationship.tenant_id = guardian.tenant_id
+                              AND relationship.guardian_id = guardian.id
+                              AND relationship.status = 'active'
+                              AND relationship.deleted_at IS NULL
+                        )
+                    ))
+                    OR ($4 IN ('assigned', 'self_and_assigned') AND EXISTS (
+                        SELECT 1
+                        FROM learner_guardian_relationships AS relationship
+                        JOIN enrolments AS scoped_enrolment
+                          ON scoped_enrolment.learner_id = relationship.learner_id
+                         AND scoped_enrolment.tenant_id = relationship.tenant_id
+                         AND scoped_enrolment.status = 'active'
+                         AND scoped_enrolment.starts_on <= CURRENT_DATE
+                         AND (scoped_enrolment.ends_on IS NULL
+                              OR scoped_enrolment.ends_on >= CURRENT_DATE)
+                         AND scoped_enrolment.deleted_at IS NULL
+                        JOIN teaching_assignments AS assignment
+                          ON assignment.tenant_id = scoped_enrolment.tenant_id
+                         AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+                         AND assignment.class_group_id = scoped_enrolment.class_group_id
+                         AND assignment.status = 'active'
+                         AND assignment.deleted_at IS NULL
+                        JOIN teacher_profiles AS teacher
+                          ON teacher.id = assignment.teacher_profile_id
+                         AND teacher.tenant_id = assignment.tenant_id
+                         AND teacher.status = 'active'
+                         AND teacher.deleted_at IS NULL
+                        JOIN employees AS employee
+                          ON employee.id = teacher.employee_id
+                         AND employee.tenant_id = teacher.tenant_id
+                         AND employee.account_id = $5
+                         AND employee.employment_status = 'active'
+                         AND employee.deleted_at IS NULL
+                        WHERE relationship.tenant_id = guardian.tenant_id
+                          AND relationship.guardian_id = guardian.id
+                          AND relationship.status = 'active'
+                          AND relationship.deleted_at IS NULL
+                    ))
+              )
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(scope.mode())
+        .bind(scope.account_id())
+        .fetch_one(pool)
+        .await
+        .context("Failed to count scoped guardians")?;
+        Ok((guardians, total))
+    }
+
     pub async fn get_by_id(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -801,6 +1356,86 @@ impl GuardianOps {
         .fetch_optional(pool)
         .await
         .context("Failed to load guardian")
+    }
+
+    /// Reads one guardian only when self or assigned-learner linkage is current.
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: SisRecordScope,
+    ) -> Result<Option<GuardianWithAccount>> {
+        sqlx::query_as::<_, GuardianWithAccount>(
+            r#"
+            SELECT guardian.id, guardian.tenant_id, guardian.account_id,
+                   account.email AS account_email, guardian.display_name,
+                   guardian.first_names, guardian.surname, guardian.email,
+                   guardian.phone, guardian.status, guardian.created_at, guardian.updated_at
+            FROM guardians AS guardian
+            LEFT JOIN users AS account
+              ON account.id = guardian.account_id AND account.tenant_id = guardian.tenant_id
+            WHERE guardian.tenant_id = $1 AND guardian.id = $2 AND guardian.deleted_at IS NULL
+              AND (
+                    $3::TEXT = 'campus'
+                    OR ($3 IN ('self', 'self_and_assigned') AND (
+                        guardian.account_id = $4
+                        OR EXISTS (
+                            SELECT 1
+                            FROM learner_guardian_relationships AS relationship
+                            JOIN learners AS learner
+                              ON learner.id = relationship.learner_id
+                             AND learner.tenant_id = relationship.tenant_id
+                             AND learner.account_id = $4
+                             AND learner.deleted_at IS NULL
+                            WHERE relationship.tenant_id = guardian.tenant_id
+                              AND relationship.guardian_id = guardian.id
+                              AND relationship.status = 'active'
+                              AND relationship.deleted_at IS NULL
+                        )
+                    ))
+                    OR ($3 IN ('assigned', 'self_and_assigned') AND EXISTS (
+                        SELECT 1
+                        FROM learner_guardian_relationships AS relationship
+                        JOIN enrolments AS scoped_enrolment
+                          ON scoped_enrolment.learner_id = relationship.learner_id
+                         AND scoped_enrolment.tenant_id = relationship.tenant_id
+                         AND scoped_enrolment.status = 'active'
+                         AND scoped_enrolment.starts_on <= CURRENT_DATE
+                         AND (scoped_enrolment.ends_on IS NULL
+                              OR scoped_enrolment.ends_on >= CURRENT_DATE)
+                         AND scoped_enrolment.deleted_at IS NULL
+                        JOIN teaching_assignments AS assignment
+                          ON assignment.tenant_id = scoped_enrolment.tenant_id
+                         AND assignment.academic_year_id = scoped_enrolment.academic_year_id
+                         AND assignment.class_group_id = scoped_enrolment.class_group_id
+                         AND assignment.status = 'active'
+                         AND assignment.deleted_at IS NULL
+                        JOIN teacher_profiles AS teacher
+                          ON teacher.id = assignment.teacher_profile_id
+                         AND teacher.tenant_id = assignment.tenant_id
+                         AND teacher.status = 'active'
+                         AND teacher.deleted_at IS NULL
+                        JOIN employees AS employee
+                          ON employee.id = teacher.employee_id
+                         AND employee.tenant_id = teacher.tenant_id
+                         AND employee.account_id = $4
+                         AND employee.employment_status = 'active'
+                         AND employee.deleted_at IS NULL
+                        WHERE relationship.tenant_id = guardian.tenant_id
+                          AND relationship.guardian_id = guardian.id
+                          AND relationship.status = 'active'
+                          AND relationship.deleted_at IS NULL
+                    ))
+              )
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(scope.mode())
+        .bind(scope.account_id())
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load scoped guardian")
     }
 
     pub async fn create(
@@ -994,6 +1629,91 @@ impl GuardianRelationshipOps {
         Ok((rows, total))
     }
 
+    /// Lists only relationships whose learner is self-linked or currently in
+    /// a class assigned to the authenticated teacher.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        learner_id: Option<Uuid>,
+        guardian_id: Option<Uuid>,
+        scope: SisRecordScope,
+    ) -> Result<(Vec<GuardianRelationshipWithDetails>, i64)> {
+        let visibility = resolve_learner_visibility(pool, tenant_id, scope).await?;
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let rows = sqlx::query_as::<_, GuardianRelationshipWithDetails>(
+            r#"
+            SELECT relationship.id, relationship.tenant_id, relationship.learner_id,
+                   learner.display_name AS learner_name, learner.learner_number,
+                   relationship.guardian_id, guardian.display_name AS guardian_name,
+                   relationship.relationship_type, relationship.is_primary,
+                   relationship.can_collect, relationship.receives_communications,
+                   relationship.status, relationship.created_at, relationship.updated_at
+            FROM learner_guardian_relationships AS relationship
+            JOIN learners AS learner
+              ON learner.id = relationship.learner_id AND learner.tenant_id = relationship.tenant_id
+            JOIN guardians AS guardian
+              ON guardian.id = relationship.guardian_id AND guardian.tenant_id = relationship.tenant_id
+            WHERE relationship.tenant_id = $1 AND relationship.deleted_at IS NULL
+              AND learner.deleted_at IS NULL AND guardian.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR learner.display_name ILIKE $2
+                   OR learner.learner_number ILIKE $2 OR guardian.display_name ILIKE $2)
+              AND ($3::TEXT IS NULL OR relationship.status = $3)
+              AND ($4::UUID IS NULL OR relationship.learner_id = $4)
+              AND ($5::UUID IS NULL OR relationship.guardian_id = $5)
+              AND ($6::BOOLEAN OR relationship.learner_id = ANY($7))
+            ORDER BY learner.display_name, relationship.is_primary DESC, guardian.display_name
+            LIMIT $8 OFFSET $9
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(learner_id)
+        .bind(guardian_id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list scoped guardian relationships")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM learner_guardian_relationships AS relationship
+            JOIN learners AS learner
+              ON learner.id = relationship.learner_id AND learner.tenant_id = relationship.tenant_id
+            JOIN guardians AS guardian
+              ON guardian.id = relationship.guardian_id AND guardian.tenant_id = relationship.tenant_id
+            WHERE relationship.tenant_id = $1 AND relationship.deleted_at IS NULL
+              AND learner.deleted_at IS NULL AND guardian.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR learner.display_name ILIKE $2
+                   OR learner.learner_number ILIKE $2 OR guardian.display_name ILIKE $2)
+              AND ($3::TEXT IS NULL OR relationship.status = $3)
+              AND ($4::UUID IS NULL OR relationship.learner_id = $4)
+              AND ($5::UUID IS NULL OR relationship.guardian_id = $5)
+              AND ($6::BOOLEAN OR relationship.learner_id = ANY($7))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(learner_id)
+        .bind(guardian_id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count scoped guardian relationships")?;
+        Ok((rows, total))
+    }
+
     pub async fn get_by_id(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -1022,6 +1742,42 @@ impl GuardianRelationshipOps {
         .fetch_optional(pool)
         .await
         .context("Failed to load guardian relationship")
+    }
+
+    /// Reads one relationship only through its visible learner.
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: SisRecordScope,
+    ) -> Result<Option<GuardianRelationshipWithDetails>> {
+        let visibility = resolve_learner_visibility(pool, tenant_id, scope).await?;
+        sqlx::query_as::<_, GuardianRelationshipWithDetails>(
+            r#"
+            SELECT relationship.id, relationship.tenant_id, relationship.learner_id,
+                   learner.display_name AS learner_name, learner.learner_number,
+                   relationship.guardian_id, guardian.display_name AS guardian_name,
+                   relationship.relationship_type, relationship.is_primary,
+                   relationship.can_collect, relationship.receives_communications,
+                   relationship.status, relationship.created_at, relationship.updated_at
+            FROM learner_guardian_relationships AS relationship
+            JOIN learners AS learner
+              ON learner.id = relationship.learner_id AND learner.tenant_id = relationship.tenant_id
+            JOIN guardians AS guardian
+              ON guardian.id = relationship.guardian_id AND guardian.tenant_id = relationship.tenant_id
+            WHERE relationship.tenant_id = $1 AND relationship.id = $2
+              AND relationship.deleted_at IS NULL
+              AND learner.deleted_at IS NULL AND guardian.deleted_at IS NULL
+              AND ($3::BOOLEAN OR relationship.learner_id = ANY($4))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load scoped guardian relationship")
     }
 
     pub async fn create(
@@ -1183,12 +1939,126 @@ impl ApplicationOps {
         Ok((hydrate_applications(pool, tenant_id, rows).await?, total))
     }
 
+    /// Lists admissions applications only for learners in the current scope.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        academic_year_id: Option<Uuid>,
+        target_grade_level_id: Option<Uuid>,
+        learner_id: Option<Uuid>,
+        scope: SisRecordScope,
+    ) -> Result<(Vec<ApplicationWithDetails>, i64)> {
+        let visibility = resolve_learner_visibility(pool, tenant_id, scope).await?;
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let rows = sqlx::query_as::<_, Application>(
+            r#"
+            SELECT application.id, application.tenant_id, application.application_number,
+                   application.learner_id, application.academic_year_id,
+                   application.target_grade_level_id, application.submitted_on,
+                   application.status, application.notes, application.created_at,
+                   application.updated_at
+            FROM applications AS application
+            JOIN learners AS learner
+              ON learner.id = application.learner_id AND learner.tenant_id = application.tenant_id
+            WHERE application.tenant_id = $1 AND application.deleted_at IS NULL
+              AND learner.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR application.application_number ILIKE $2
+                   OR learner.display_name ILIKE $2 OR learner.learner_number ILIKE $2)
+              AND ($3::TEXT IS NULL OR application.status = $3)
+              AND ($4::UUID IS NULL OR application.academic_year_id = $4)
+              AND ($5::UUID IS NULL OR application.target_grade_level_id = $5)
+              AND ($6::UUID IS NULL OR application.learner_id = $6)
+              AND ($7::BOOLEAN OR application.learner_id = ANY($8))
+            ORDER BY application.created_at DESC, application.application_number
+            LIMIT $9 OFFSET $10
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(academic_year_id)
+        .bind(target_grade_level_id)
+        .bind(learner_id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list scoped applications")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM applications AS application
+            JOIN learners AS learner
+              ON learner.id = application.learner_id AND learner.tenant_id = application.tenant_id
+            WHERE application.tenant_id = $1 AND application.deleted_at IS NULL
+              AND learner.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR application.application_number ILIKE $2
+                   OR learner.display_name ILIKE $2 OR learner.learner_number ILIKE $2)
+              AND ($3::TEXT IS NULL OR application.status = $3)
+              AND ($4::UUID IS NULL OR application.academic_year_id = $4)
+              AND ($5::UUID IS NULL OR application.target_grade_level_id = $5)
+              AND ($6::UUID IS NULL OR application.learner_id = $6)
+              AND ($7::BOOLEAN OR application.learner_id = ANY($8))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(academic_year_id)
+        .bind(target_grade_level_id)
+        .bind(learner_id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count scoped applications")?;
+        Ok((hydrate_applications(pool, tenant_id, rows).await?, total))
+    }
+
     pub async fn get_by_id(
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<ApplicationWithDetails>> {
         match Self::get_record_by_id(pool, tenant_id, id).await? {
+            Some(row) => Ok(Some(hydrate_application(pool, tenant_id, row).await?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Reads one application only when its learner is in the current scope.
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: SisRecordScope,
+    ) -> Result<Option<ApplicationWithDetails>> {
+        let visibility = resolve_learner_visibility(pool, tenant_id, scope).await?;
+        let row = sqlx::query_as::<_, Application>(
+            r#"
+            SELECT id, tenant_id, application_number, learner_id, academic_year_id,
+                   target_grade_level_id, submitted_on, status, notes, created_at, updated_at
+            FROM applications
+            WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+              AND ($3::BOOLEAN OR learner_id = ANY($4))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load scoped application")?;
+        match row {
             Some(row) => Ok(Some(hydrate_application(pool, tenant_id, row).await?)),
             None => Ok(None),
         }
@@ -1648,12 +2518,127 @@ impl EnrolmentOps {
         Ok((hydrate_enrolments(pool, tenant_id, rows).await?, total))
     }
 
+    /// Lists enrolments only for learners in the current self or active
+    /// assigned-class visibility set.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        academic_year_id: Option<Uuid>,
+        class_group_id: Option<Uuid>,
+        learner_id: Option<Uuid>,
+        scope: SisRecordScope,
+    ) -> Result<(Vec<EnrolmentWithDetails>, i64)> {
+        let visibility = resolve_learner_visibility(pool, tenant_id, scope).await?;
+        let search = search.map(|value| format!("%{value}%"));
+        let offset = (page - 1) * per_page;
+        let rows = sqlx::query_as::<_, Enrolment>(
+            r#"
+            SELECT enrolment.id, enrolment.tenant_id, enrolment.learner_id,
+                   enrolment.academic_year_id, enrolment.class_group_id,
+                   enrolment.source_application_id, enrolment.starts_on,
+                   enrolment.ends_on, enrolment.status, enrolment.created_at,
+                   enrolment.updated_at
+            FROM enrolments AS enrolment
+            JOIN learners AS learner
+              ON learner.id = enrolment.learner_id AND learner.tenant_id = enrolment.tenant_id
+            WHERE enrolment.tenant_id = $1 AND enrolment.deleted_at IS NULL
+              AND learner.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR learner.display_name ILIKE $2
+                   OR learner.learner_number ILIKE $2)
+              AND ($3::TEXT IS NULL OR enrolment.status = $3)
+              AND ($4::UUID IS NULL OR enrolment.academic_year_id = $4)
+              AND ($5::UUID IS NULL OR enrolment.class_group_id = $5)
+              AND ($6::UUID IS NULL OR enrolment.learner_id = $6)
+              AND ($7::BOOLEAN OR enrolment.learner_id = ANY($8))
+            ORDER BY enrolment.starts_on DESC, learner.display_name
+            LIMIT $9 OFFSET $10
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(academic_year_id)
+        .bind(class_group_id)
+        .bind(learner_id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list scoped enrolments")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+            FROM enrolments AS enrolment
+            JOIN learners AS learner
+              ON learner.id = enrolment.learner_id AND learner.tenant_id = enrolment.tenant_id
+            WHERE enrolment.tenant_id = $1 AND enrolment.deleted_at IS NULL
+              AND learner.deleted_at IS NULL
+              AND ($2::TEXT IS NULL OR learner.display_name ILIKE $2
+                   OR learner.learner_number ILIKE $2)
+              AND ($3::TEXT IS NULL OR enrolment.status = $3)
+              AND ($4::UUID IS NULL OR enrolment.academic_year_id = $4)
+              AND ($5::UUID IS NULL OR enrolment.class_group_id = $5)
+              AND ($6::UUID IS NULL OR enrolment.learner_id = $6)
+              AND ($7::BOOLEAN OR enrolment.learner_id = ANY($8))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(&search)
+        .bind(status)
+        .bind(academic_year_id)
+        .bind(class_group_id)
+        .bind(learner_id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count scoped enrolments")?;
+        Ok((hydrate_enrolments(pool, tenant_id, rows).await?, total))
+    }
+
     pub async fn get_by_id(
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<EnrolmentWithDetails>> {
         let row = Self::get_record_by_id(pool, tenant_id, id).await?;
+        match row {
+            Some(row) => Ok(Some(hydrate_enrolment(pool, tenant_id, row).await?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Reads one enrolment only when its learner is in the current scope.
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: SisRecordScope,
+    ) -> Result<Option<EnrolmentWithDetails>> {
+        let visibility = resolve_learner_visibility(pool, tenant_id, scope).await?;
+        let row = sqlx::query_as::<_, Enrolment>(
+            r#"
+            SELECT id, tenant_id, learner_id, academic_year_id, class_group_id,
+                   source_application_id, starts_on, ends_on, status, created_at, updated_at
+            FROM enrolments
+            WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+              AND ($3::BOOLEAN OR learner_id = ANY($4))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(visibility.campus)
+        .bind(&visibility.learner_ids)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load scoped enrolment")?;
         match row {
             Some(row) => Ok(Some(hydrate_enrolment(pool, tenant_id, row).await?)),
             None => Ok(None),
@@ -2121,9 +3106,15 @@ fn normalized_email(value: Option<&str>) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use sqlx::PgPool;
+    use uuid::Uuid;
+
     use crate::dtos::ApplicationStatus;
 
-    use super::{validate_application_transition, validate_new_application_status};
+    use super::{
+        ApplicationOps, EnrolmentOps, GuardianOps, GuardianRelationshipOps, LearnerOps,
+        SisRecordScope, validate_application_transition, validate_new_application_status,
+    };
 
     #[test]
     fn new_applications_start_as_draft_or_submitted() {
@@ -2153,5 +3144,215 @@ mod tests {
         assert!(
             validate_application_transition("withdrawn", ApplicationStatus::Submitted).is_err()
         );
+    }
+
+    #[sqlx::test(migrations = false)]
+    async fn assigned_teacher_queries_exclude_unassigned_sis_records(
+        pool: PgPool,
+    ) -> anyhow::Result<()> {
+        sqlx::raw_sql(include_str!("../../../../migrations/functions.sql"))
+            .execute(&pool)
+            .await?;
+        sqlx::migrate!("../../../migrations").run(&pool).await?;
+
+        let tenant_id = Uuid::new_v4();
+        let teacher_account_id = Uuid::new_v4();
+        let employee_id = Uuid::new_v4();
+        let teacher_profile_id = Uuid::new_v4();
+        let academic_year_id = Uuid::new_v4();
+        let grade_level_id = Uuid::new_v4();
+        let assigned_class_id = Uuid::new_v4();
+        let other_class_id = Uuid::new_v4();
+        let subject_id = Uuid::new_v4();
+        let assigned_learner_id = Uuid::new_v4();
+        let other_learner_id = Uuid::new_v4();
+        let assigned_guardian_id = Uuid::new_v4();
+        let other_guardian_id = Uuid::new_v4();
+
+        sqlx::query("INSERT INTO tenants (id, slug, name) VALUES ($1, $2, 'SIS scope test')")
+            .bind(tenant_id)
+            .bind(format!("sis-scope-{tenant_id}"))
+            .execute(&pool)
+            .await?;
+        sqlx::query(
+            "INSERT INTO users (id, tenant_id, email, password_hash, full_name) VALUES ($1, $2, $3, 'test', 'Assigned Teacher')",
+        )
+        .bind(teacher_account_id)
+        .bind(tenant_id)
+        .bind(format!("teacher-{teacher_account_id}@example.test"))
+        .execute(&pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO employees (id, tenant_id, account_id, employee_number, display_name) VALUES ($1, $2, $3, 'EMP-1', 'Assigned Teacher')",
+        )
+        .bind(employee_id)
+        .bind(tenant_id)
+        .bind(teacher_account_id)
+        .execute(&pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO teacher_profiles (id, tenant_id, employee_id) VALUES ($1, $2, $3)",
+        )
+        .bind(teacher_profile_id)
+        .bind(tenant_id)
+        .bind(employee_id)
+        .execute(&pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO academic_years (id, tenant_id, name, starts_on, ends_on, status) VALUES ($1, $2, 'Current', CURRENT_DATE - 30, CURRENT_DATE + 30, 'active')",
+        )
+        .bind(academic_year_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO academic_grade_levels (id, tenant_id, code, name, sequence_number) VALUES ($1, $2, 'G1', 'Grade 1', 1)",
+        )
+        .bind(grade_level_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await?;
+        for (id, code, name) in [
+            (assigned_class_id, "1A", "Assigned Class"),
+            (other_class_id, "1B", "Other Class"),
+        ] {
+            sqlx::query(
+                "INSERT INTO class_groups (id, tenant_id, academic_year_id, grade_level_id, code, name) VALUES ($1, $2, $3, $4, $5, $6)",
+            )
+            .bind(id)
+            .bind(tenant_id)
+            .bind(academic_year_id)
+            .bind(grade_level_id)
+            .bind(code)
+            .bind(name)
+            .execute(&pool)
+            .await?;
+        }
+        sqlx::query(
+            "INSERT INTO subjects (id, tenant_id, code, name) VALUES ($1, $2, 'MAT', 'Mathematics')",
+        )
+        .bind(subject_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO teaching_assignments (tenant_id, academic_year_id, class_group_id, subject_id, teacher_profile_id, periods_per_cycle) VALUES ($1, $2, $3, $4, $5, 5)",
+        )
+        .bind(tenant_id)
+        .bind(academic_year_id)
+        .bind(assigned_class_id)
+        .bind(subject_id)
+        .bind(teacher_profile_id)
+        .execute(&pool)
+        .await?;
+        for (id, number, name) in [
+            (assigned_learner_id, "L-1", "Assigned Learner"),
+            (other_learner_id, "L-2", "Other Learner"),
+        ] {
+            sqlx::query(
+                "INSERT INTO learners (id, tenant_id, learner_number, display_name, date_of_birth, status) VALUES ($1, $2, $3, $4, DATE '2012-01-01', 'active')",
+            )
+            .bind(id)
+            .bind(tenant_id)
+            .bind(number)
+            .bind(name)
+            .execute(&pool)
+            .await?;
+        }
+        for (learner_id, class_group_id) in [
+            (assigned_learner_id, assigned_class_id),
+            (other_learner_id, other_class_id),
+        ] {
+            sqlx::query(
+                "INSERT INTO enrolments (tenant_id, learner_id, academic_year_id, class_group_id, starts_on, status) VALUES ($1, $2, $3, $4, CURRENT_DATE - 1, 'active')",
+            )
+            .bind(tenant_id)
+            .bind(learner_id)
+            .bind(academic_year_id)
+            .bind(class_group_id)
+            .execute(&pool)
+            .await?;
+        }
+        for (id, name, email, learner_id) in [
+            (
+                assigned_guardian_id,
+                "Assigned Guardian",
+                "assigned-guardian@example.test",
+                assigned_learner_id,
+            ),
+            (
+                other_guardian_id,
+                "Other Guardian",
+                "other-guardian@example.test",
+                other_learner_id,
+            ),
+        ] {
+            sqlx::query(
+                "INSERT INTO guardians (id, tenant_id, display_name, email) VALUES ($1, $2, $3, $4)",
+            )
+            .bind(id)
+            .bind(tenant_id)
+            .bind(name)
+            .bind(email)
+            .execute(&pool)
+            .await?;
+            sqlx::query(
+                "INSERT INTO learner_guardian_relationships (tenant_id, learner_id, guardian_id, relationship_type) VALUES ($1, $2, $3, 'guardian')",
+            )
+            .bind(tenant_id)
+            .bind(learner_id)
+            .bind(id)
+            .execute(&pool)
+            .await?;
+            sqlx::query(
+                "INSERT INTO applications (tenant_id, application_number, learner_id, academic_year_id, target_grade_level_id) VALUES ($1, $2, $3, $4, $5)",
+            )
+            .bind(tenant_id)
+            .bind(format!("APP-{learner_id}"))
+            .bind(learner_id)
+            .bind(academic_year_id)
+            .bind(grade_level_id)
+            .execute(&pool)
+            .await?;
+        }
+
+        let scope = SisRecordScope::AssignedTo(teacher_account_id);
+        let (learners, learner_total) =
+            LearnerOps::list_scoped(&pool, tenant_id, 1, 25, None, None, scope).await?;
+        assert_eq!(learner_total, 1);
+        assert_eq!(learners[0].id, assigned_learner_id);
+        assert!(
+            LearnerOps::get_by_id_scoped(&pool, tenant_id, other_learner_id, scope)
+                .await?
+                .is_none()
+        );
+
+        let (guardians, guardian_total) =
+            GuardianOps::list_scoped(&pool, tenant_id, 1, 25, None, None, scope).await?;
+        assert_eq!(guardian_total, 1);
+        assert_eq!(guardians[0].id, assigned_guardian_id);
+        let (relationships, relationship_total) = GuardianRelationshipOps::list_scoped(
+            &pool, tenant_id, 1, 25, None, None, None, None, scope,
+        )
+        .await?;
+        assert_eq!(relationship_total, 1);
+        assert_eq!(relationships[0].learner_id, assigned_learner_id);
+        let (applications, application_total) = ApplicationOps::list_scoped(
+            &pool, tenant_id, 1, 25, None, None, None, None, None, scope,
+        )
+        .await?;
+        assert_eq!(application_total, 1);
+        assert_eq!(applications[0].learner_id, assigned_learner_id);
+        let (enrolments, enrolment_total) =
+            EnrolmentOps::list_scoped(&pool, tenant_id, 1, 25, None, None, None, None, None, scope)
+                .await?;
+        assert_eq!(enrolment_total, 1);
+        assert_eq!(enrolments[0].learner_id, assigned_learner_id);
+
+        let (_, campus_total) =
+            LearnerOps::list_scoped(&pool, tenant_id, 1, 25, None, None, SisRecordScope::Campus)
+                .await?;
+        assert_eq!(campus_total, 2);
+        Ok(())
     }
 }

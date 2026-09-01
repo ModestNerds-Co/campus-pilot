@@ -676,7 +676,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/sis/account-candidates",
             "sis.account_candidates.list",
             "sis",
-            "sis:view",
+            "sis:edit",
             OperationEffect::Read,
             true,
         ),
@@ -3145,7 +3145,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/timetabling/configuration",
             "timetabling.configuration.read",
             "timetabling",
-            "timetabling:view",
+            "timetabling:edit",
             OperationEffect::Read,
             true,
         ),
@@ -3181,7 +3181,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/timetabling/runs",
             "timetabling.runs.list",
             "timetabling",
-            "timetabling:view",
+            "timetabling:edit",
             OperationEffect::Read,
             true,
         ),
@@ -3190,7 +3190,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/timetabling/runs/{id}",
             "timetabling.runs.read",
             "timetabling",
-            "timetabling:view",
+            "timetabling:edit",
             OperationEffect::Read,
             true,
         ),
@@ -3199,7 +3199,7 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "/api/1.0/timetabling/runs/{id}/publish",
             "timetabling.runs.publish",
             "timetabling",
-            "timetabling:edit",
+            "timetabling:manage",
             OperationEffect::External,
             true,
         ),
@@ -6760,7 +6760,9 @@ mod tests {
             "messaging:create",
             "library:view",
         ];
-        assert!(allowed("timetabling.configuration.read", &teacher));
+        assert!(!allowed("timetabling.configuration.read", &teacher));
+        assert!(!allowed("timetabling.runs.list", &teacher));
+        assert!(!allowed("timetabling.runs.read", &teacher));
         assert!(allowed("academics.gradebook.mark_sheets.create", &teacher));
         assert!(allowed(
             "academics.gradebook.mark_sheets.marks.update",
@@ -6771,9 +6773,12 @@ mod tests {
         assert!(!allowed("academics.teachers.update", &teacher));
         assert!(!allowed("academics.grade_levels.create", &teacher));
         assert!(!allowed("academics.grade_levels.update", &teacher));
+        assert!(!allowed("sis.account_candidates.list", &teacher));
         assert!(!allowed("administration.users.create", &teacher));
         assert!(!allowed("administration.roles.create", &teacher));
         assert!(!allowed("timetabling.runs.generate", &teacher));
+        assert!(!allowed("timetabling.runs.publish", &["timetabling:edit"]));
+        assert!(allowed("timetabling.runs.publish", &["timetabling:manage"]));
         assert!(!allowed("administration.users.list", &teacher));
 
         let student = [

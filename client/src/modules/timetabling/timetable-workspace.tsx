@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 import type { ModuleDefinition } from "@/modules/platform/types";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -49,17 +50,23 @@ const registryLabels: Record<RegistryKind, { singular: string; plural: string }>
 };
 
 const standardDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const HR_AVAILABILITY_ADMINISTRATION_PERMISSIONS = ["hr_payroll:create", "hr_payroll:edit", "hr_payroll:delete"] as const;
 
 export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ module }) => {
   const user = useAuthStore((state) => state.user);
   const permissions = user?.permissions ?? [];
+  const modules = user?.modules ?? [];
   const canEdit = permissions.includes("*") || permissions.includes("timetabling:edit");
   const canGenerate = permissions.includes("*") || permissions.includes("timetabling:create");
+  const canPublish = permissions.includes("*") || permissions.includes("timetabling:manage");
+  const canAdminister = canEdit;
+  const canManageAcademics = modules.includes("academics") && (permissions.includes("*") || ACADEMIC_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission)));
+  const canManageHrAvailability = modules.includes("hr_payroll") && (permissions.includes("*") || HR_AVAILABILITY_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission)));
   const [configuration, setConfiguration] = useState<TimetableConfiguration | null>(null);
   const [latestRun, setLatestRun] = useState<TimetableRun | null>(null);
   const [runHistory, setRunHistory] = useState<TimetableRunSummary[]>([]);
   const [drawer, setDrawer] = useState<DrawerState>(null);
-  const [activeView, setActiveView] = useState<"setup" | "review" | "history">("setup");
+  const [activeView, setActiveView] = useState<"setup" | "review" | "history">(() => canAdminister ? "setup" : "review");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,18 +76,37 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   const [isDirty, setIsDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const loadRequestRef = useRef(0);
 
   usePageChrome("Overview");
 
   const load = useCallback(async () => {
+    const requestId = ++loadRequestRef.current;
     setIsLoading(true);
     setLoadError(null);
     try {
+      if (!canAdminister) {
+        const runResponse = await timetablingService.getLatestRun();
+        if (loadRequestRef.current !== requestId) return;
+        if (!runResponse.success) {
+          setLoadError(runResponse.message || "The published timetable could not be loaded.");
+          return;
+        }
+        const publishedRun = runResponse.data?.status === "published" ? runResponse.data : null;
+        setConfiguration(null);
+        setLatestRun(publishedRun);
+        setRunHistory([]);
+        setHistoryError(null);
+        setSelectedClassId(publishedRun?.configuration.classes[0]?.id ?? null);
+        setIsDirty(false);
+        return;
+      }
       const [configResponse, runResponse, historyResponse] = await Promise.all([
         timetablingService.getConfiguration(),
         timetablingService.getLatestRun(),
         timetablingService.listRuns(),
       ]);
+      if (loadRequestRef.current !== requestId) return;
       if (!configResponse.success || !configResponse.data) {
         setLoadError(configResponse.message || "The timetable configuration could not be loaded.");
         return;
@@ -92,15 +118,23 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
       setSelectedClassId(runResponse.data?.configuration.classes[0]?.id ?? configResponse.data.classes[0]?.id ?? null);
       setIsDirty(false);
     } catch {
+      if (loadRequestRef.current !== requestId) return;
       setLoadError("Campus Pilot could not reach the timetabling service.");
     } finally {
-      setIsLoading(false);
+      if (loadRequestRef.current === requestId) setIsLoading(false);
     }
-  }, []);
+  }, [canAdminister]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!canAdminister) {
+      setActiveView("review");
+      setDrawer(null);
+    }
+  }, [canAdminister]);
 
   const updateConfiguration = (next: TimetableConfiguration) => {
+    if (!canEdit) return;
     setConfiguration(next);
     setIsDirty(true);
   };
@@ -118,7 +152,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   const readyToGenerate = readiness.length > 0 && readiness.every((item) => item.ready);
 
   const save = async (quiet = false) => {
-    if (!configuration || isSaving) return false;
+    if (!canEdit || !configuration || isSaving) return false;
     setIsSaving(true);
     try {
       const response = await timetablingService.saveConfiguration(configuration);
@@ -139,7 +173,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   };
 
   const generate = async () => {
-    if (!configuration || isGenerating || !readyToGenerate) return;
+    if (!canGenerate || !configuration || isGenerating || !readyToGenerate) return;
     setIsGenerating(true);
     try {
       if (isDirty && !(await save(true))) return;
@@ -162,7 +196,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   };
 
   const publish = async () => {
-    if (!latestRun || isPublishing || latestRun.unresolved.length > 0) return;
+    if (!canPublish || !latestRun || isPublishing || latestRun.unresolved.length > 0) return;
     setIsPublishing(true);
     try {
       const response = await timetablingService.publish(latestRun.id);
@@ -182,7 +216,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   };
 
   const openRun = async (runId: string) => {
-    if (isOpeningRun) return;
+    if (!canAdminister || isOpeningRun) return;
     setIsOpeningRun(runId);
     try {
       const response = await timetablingService.getRun(runId);
@@ -201,7 +235,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
   };
 
   if (isLoading) return <div className="h-72 animate-pulse bg-[var(--surface-sunken)]" />;
-  if (loadError || !configuration) {
+  if (loadError || (canAdminister && !configuration)) {
     return <StateMessage title="Timetabling could not be opened" description={loadError ?? "No timetable configuration was returned."} action={<Button onClick={() => void load()} variant="secondary">Try again</Button>} />;
   }
 
@@ -213,7 +247,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-highlight)]"><CheckCircle2 className="size-3.5" />Available</div>
             <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{module.label}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">Set scheduling rules, generate a draft, and publish after reviewing conflicts.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">{canAdminister ? "Set scheduling rules, generate a draft, and publish after reviewing conflicts." : "View the latest published class timetable."}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             {canEdit ? <Button disabled={!isDirty || isSaving} onClick={() => void save()} variant="secondary">{isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}Save setup</Button> : null}
@@ -223,12 +257,12 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
       </section>
 
       <div className="flex gap-1 border-b border-[var(--border)]" role="tablist" aria-label="Timetable workflow">
-        <ViewTab active={activeView === "setup"} label="Rules and setup" onClick={() => setActiveView("setup")} />
-        <ViewTab active={activeView === "review"} label={latestRun ? "Review draft" : "Review"} onClick={() => setActiveView("review")} />
-        <ViewTab active={activeView === "history"} label="Run history" onClick={() => setActiveView("history")} />
+        {canAdminister ? <ViewTab active={activeView === "setup"} label="Rules and setup" onClick={() => setActiveView("setup")} /> : null}
+        <ViewTab active={activeView === "review"} label={latestRun?.status === "published" || !canAdminister ? "Published timetable" : latestRun ? "Review draft" : "Review"} onClick={() => setActiveView("review")} />
+        {canAdminister ? <ViewTab active={activeView === "history"} label="Run history" onClick={() => setActiveView("history")} /> : null}
       </div>
 
-      {activeView === "setup" ? (
+      {activeView === "setup" && configuration ? (
         <div className="space-y-8">
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Generation readiness">
             {readiness.map((item) => (
@@ -267,7 +301,7 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
             </aside>
           </section>
 
-          <WorkforceConstraints configuration={configuration} />
+          <WorkforceConstraints configuration={configuration} showManageLink={canManageHrAvailability} />
 
           <section aria-labelledby="registries-heading">
             <div className="border-b border-[var(--border)] pb-3">
@@ -296,17 +330,20 @@ export const TimetableWorkspace: React.FC<{ module: ModuleDefinition }> = ({ mod
             canEdit={canEdit}
             configuration={configuration}
             onEdit={(item) => setDrawer({ kind: "lesson", item })}
+            showManageLink={canManageAcademics}
           />
         </div>
       ) : activeView === "review" ? (
-        <RunReview canPublish={canEdit} isPublishing={isPublishing} onPublish={() => void publish()} run={latestRun} selectedClassId={selectedClassId} setSelectedClassId={setSelectedClassId} />
+        <RunReview canAdminister={canAdminister} canPublish={canPublish} isPublishing={isPublishing} onPublish={() => void publish()} run={latestRun} selectedClassId={selectedClassId} setSelectedClassId={setSelectedClassId} />
       ) : (
         <RunHistory error={historyError} isOpeningRun={isOpeningRun} onOpen={(runId) => void openRun(runId)} runs={runHistory} />
       )}
 
-      <WeekDrawer configuration={configuration} onClose={() => setDrawer(null)} onSave={updateConfiguration} open={drawer?.kind === "week"} />
-      <RegistryDrawer configuration={configuration} drawer={drawer?.kind === "registry" ? drawer : null} onClose={() => setDrawer(null)} onSave={updateConfiguration} />
-      <LessonDrawer configuration={configuration} item={drawer?.kind === "lesson" ? drawer.item : undefined} onClose={() => setDrawer(null)} onSave={updateConfiguration} open={drawer?.kind === "lesson"} />
+      {canEdit && configuration ? <>
+        <WeekDrawer configuration={configuration} onClose={() => setDrawer(null)} onSave={updateConfiguration} open={drawer?.kind === "week"} />
+        <RegistryDrawer configuration={configuration} drawer={drawer?.kind === "registry" ? drawer : null} onClose={() => setDrawer(null)} onSave={updateConfiguration} />
+        <LessonDrawer configuration={configuration} item={drawer?.kind === "lesson" ? drawer.item : undefined} onClose={() => setDrawer(null)} onSave={updateConfiguration} open={drawer?.kind === "lesson"} />
+      </> : null}
     </div>
   );
 };
@@ -332,11 +369,11 @@ const RegistryCard: React.FC<{ canAdd: boolean; canEdit: boolean; canRemove: boo
   </div>
 );
 
-const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableConfiguration; onEdit: (item: LessonRequirement) => void }> = ({ canEdit, configuration, onEdit }) => (
+const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableConfiguration; onEdit: (item: LessonRequirement) => void; showManageLink: boolean }> = ({ canEdit, configuration, onEdit, showManageLink }) => (
   <section aria-labelledby="requirements-heading">
     <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-3 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">04 · Teaching load</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="requirements-heading">Teaching assignments</h2></div>
-      <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/academics/teaching-assignments">Manage in Academics</Link>
+      {showManageLink ? <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/academics/teaching-assignments">Manage in Academics</Link> : null}
     </div>
     {configuration.lesson_requirements.length === 0 ? (
       <StateMessage description="Add an active class, subject, and teacher assignment in Academics." title="No teaching assignments yet" />
@@ -355,14 +392,14 @@ const LessonRequirements: React.FC<{ canEdit: boolean; configuration: TimetableC
   </section>
 );
 
-const WorkforceConstraints: React.FC<{ configuration: TimetableConfiguration }> = ({ configuration }) => (
+const WorkforceConstraints: React.FC<{ configuration: TimetableConfiguration; showManageLink: boolean }> = ({ configuration, showManageLink }) => (
   <section aria-labelledby="workforce-constraints-heading">
     <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">02 · Workforce availability</p>
         <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="workforce-constraints-heading">Approved HR constraints</h2>
       </div>
-      <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/hr-payroll/availability">Manage in HR</Link>
+      {showManageLink ? <Link className="text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/hr-payroll/availability">Manage in HR</Link> : null}
     </div>
     <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">These dated records overlap the active term. They remain planning warnings; they are not converted into permanent weekly unavailable slots.</p>
     {configuration.workforce_constraints.length === 0 ? (
@@ -417,8 +454,8 @@ const RunHistory: React.FC<{
   );
 };
 
-const RunReview: React.FC<{ canPublish: boolean; isPublishing: boolean; onPublish: () => void; run: TimetableRun | null; selectedClassId: string | null; setSelectedClassId: (id: string | null) => void }> = ({ canPublish, isPublishing, onPublish, run, selectedClassId, setSelectedClassId }) => {
-  if (!run) return <StateMessage description="Complete the timetable setup, then generate a draft." title="No timetable draft yet" />;
+const RunReview: React.FC<{ canAdminister: boolean; canPublish: boolean; isPublishing: boolean; onPublish: () => void; run: TimetableRun | null; selectedClassId: string | null; setSelectedClassId: (id: string | null) => void }> = ({ canAdminister, canPublish, isPublishing, onPublish, run, selectedClassId, setSelectedClassId }) => {
+  if (!run) return <StateMessage description={canAdminister ? "Complete the timetable setup, then generate a draft." : "A timetable will appear here after it has been published."} title={canAdminister ? "No timetable draft yet" : "No published timetable yet"} />;
   const config = run.configuration;
   const selectedClass = selectedClassId ?? config.classes[0]?.id ?? null;
   return (

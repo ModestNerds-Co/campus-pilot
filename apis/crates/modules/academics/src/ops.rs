@@ -33,6 +33,57 @@ pub enum DeleteOutcome {
     InUse,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AcademicRecordVisibility {
+    Campus,
+    Account(Uuid),
+}
+
+impl AcademicRecordVisibility {
+    const fn account_filter(self) -> Option<Uuid> {
+        match self {
+            Self::Campus => None,
+            Self::Account(account_id) => Some(account_id),
+        }
+    }
+}
+
+/// Proof that a request may read teacher profiles at the represented scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TeacherProfileReadScope(AcademicRecordVisibility);
+
+impl TeacherProfileReadScope {
+    pub(crate) const fn campus() -> Self {
+        Self(AcademicRecordVisibility::Campus)
+    }
+
+    pub(crate) const fn account(account_id: Uuid) -> Self {
+        Self(AcademicRecordVisibility::Account(account_id))
+    }
+
+    const fn account_filter(self) -> Option<Uuid> {
+        self.0.account_filter()
+    }
+}
+
+/// Proof that a request may read teaching assignments at the represented scope.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TeachingAssignmentReadScope(AcademicRecordVisibility);
+
+impl TeachingAssignmentReadScope {
+    pub(crate) const fn campus() -> Self {
+        Self(AcademicRecordVisibility::Campus)
+    }
+
+    pub(crate) const fn account(account_id: Uuid) -> Self {
+        Self(AcademicRecordVisibility::Account(account_id))
+    }
+
+    const fn account_filter(self) -> Option<Uuid> {
+        self.0.account_filter()
+    }
+}
+
 /// Typed Academics boundary for class-based communication audiences.
 pub struct CommunicationAudienceOps;
 
@@ -900,6 +951,40 @@ impl TeacherProfileOps {
         search: Option<&str>,
         status: Option<&str>,
     ) -> Result<(Vec<TeacherProfileWithEmployee>, i64)> {
+        Self::list_with_account_filter(pool, tenant_id, page, per_page, search, status, None).await
+    }
+
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        scope: TeacherProfileReadScope,
+    ) -> Result<(Vec<TeacherProfileWithEmployee>, i64)> {
+        Self::list_with_account_filter(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            search,
+            status,
+            scope.account_filter(),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn list_with_account_filter(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        search: Option<&str>,
+        status: Option<&str>,
+        account_id: Option<Uuid>,
+    ) -> Result<(Vec<TeacherProfileWithEmployee>, i64)> {
         let employee_ids = match search {
             Some(value) => EmployeeOps::search_reference_ids(pool, tenant_id, value).await?,
             None => Vec::new(),
@@ -912,14 +997,22 @@ impl TeacherProfileOps {
             WHERE tenant_id = $1 AND deleted_at IS NULL
               AND ($2::TEXT IS NULL OR employee_id = ANY($3))
               AND ($4::TEXT IS NULL OR status = $4)
+              AND ($5::UUID IS NULL OR EXISTS (
+                    SELECT 1 FROM employees AS employee
+                    WHERE employee.tenant_id = teacher_profiles.tenant_id
+                      AND employee.id = teacher_profiles.employee_id
+                      AND employee.account_id = $5
+                      AND employee.deleted_at IS NULL
+              ))
             ORDER BY created_at DESC
-            LIMIT $5 OFFSET $6
+            LIMIT $6 OFFSET $7
             "#,
         )
         .bind(tenant_id)
         .bind(search)
         .bind(&employee_ids)
         .bind(status)
+        .bind(account_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -931,12 +1024,20 @@ impl TeacherProfileOps {
             WHERE tenant_id = $1 AND deleted_at IS NULL
               AND ($2::TEXT IS NULL OR employee_id = ANY($3))
               AND ($4::TEXT IS NULL OR status = $4)
+              AND ($5::UUID IS NULL OR EXISTS (
+                    SELECT 1 FROM employees AS employee
+                    WHERE employee.tenant_id = teacher_profiles.tenant_id
+                      AND employee.id = teacher_profiles.employee_id
+                      AND employee.account_id = $5
+                      AND employee.deleted_at IS NULL
+              ))
             "#,
         )
         .bind(tenant_id)
         .bind(search)
         .bind(&employee_ids)
         .bind(status)
+        .bind(account_id)
         .fetch_one(pool)
         .await
         .context("Failed to count teacher profiles")?;
@@ -948,15 +1049,41 @@ impl TeacherProfileOps {
         tenant_id: Uuid,
         id: Uuid,
     ) -> Result<Option<TeacherProfileWithEmployee>> {
+        Self::get_by_id_with_account_filter(pool, tenant_id, id, None).await
+    }
+
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: TeacherProfileReadScope,
+    ) -> Result<Option<TeacherProfileWithEmployee>> {
+        Self::get_by_id_with_account_filter(pool, tenant_id, id, scope.account_filter()).await
+    }
+
+    async fn get_by_id_with_account_filter(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        account_id: Option<Uuid>,
+    ) -> Result<Option<TeacherProfileWithEmployee>> {
         let profile = sqlx::query_as::<_, TeacherProfile>(
             r#"
             SELECT id, tenant_id, employee_id, status, created_at, updated_at, deleted_at
             FROM teacher_profiles
             WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+              AND ($3::UUID IS NULL OR EXISTS (
+                    SELECT 1 FROM employees AS employee
+                    WHERE employee.tenant_id = teacher_profiles.tenant_id
+                      AND employee.id = teacher_profiles.employee_id
+                      AND employee.account_id = $3
+                      AND employee.deleted_at IS NULL
+              ))
             "#,
         )
         .bind(tenant_id)
         .bind(id)
+        .bind(account_id)
         .fetch_optional(pool)
         .await
         .context("Failed to load teacher profile")?;
@@ -1361,6 +1488,58 @@ impl TeachingAssignmentOps {
         class_group_id: Option<Uuid>,
         teacher_profile_id: Option<Uuid>,
     ) -> Result<(Vec<TeachingAssignmentWithDetails>, i64)> {
+        Self::list_with_account_filter(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            status,
+            academic_year_id,
+            class_group_id,
+            teacher_profile_id,
+            None,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn list_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        status: Option<&str>,
+        academic_year_id: Option<Uuid>,
+        class_group_id: Option<Uuid>,
+        teacher_profile_id: Option<Uuid>,
+        scope: TeachingAssignmentReadScope,
+    ) -> Result<(Vec<TeachingAssignmentWithDetails>, i64)> {
+        Self::list_with_account_filter(
+            pool,
+            tenant_id,
+            page,
+            per_page,
+            status,
+            academic_year_id,
+            class_group_id,
+            teacher_profile_id,
+            scope.account_filter(),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn list_with_account_filter(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        page: i64,
+        per_page: i64,
+        status: Option<&str>,
+        academic_year_id: Option<Uuid>,
+        class_group_id: Option<Uuid>,
+        teacher_profile_id: Option<Uuid>,
+        account_id: Option<Uuid>,
+    ) -> Result<(Vec<TeachingAssignmentWithDetails>, i64)> {
         let offset = (page - 1) * per_page;
         let rows = sqlx::query_as::<_, TeachingAssignmentRow>(
             r#"
@@ -1389,8 +1568,15 @@ impl TeachingAssignmentOps {
               AND ($3::UUID IS NULL OR assignment.academic_year_id = $3)
               AND ($4::UUID IS NULL OR assignment.class_group_id = $4)
               AND ($5::UUID IS NULL OR assignment.teacher_profile_id = $5)
+              AND ($6::UUID IS NULL OR EXISTS (
+                    SELECT 1 FROM employees AS employee
+                    WHERE employee.tenant_id = assignment.tenant_id
+                      AND employee.id = teacher.employee_id
+                      AND employee.account_id = $6
+                      AND employee.deleted_at IS NULL
+              ))
             ORDER BY class_group.name, subject.name, assignment.created_at
-            LIMIT $6 OFFSET $7
+            LIMIT $7 OFFSET $8
             "#,
         )
         .bind(tenant_id)
@@ -1398,6 +1584,7 @@ impl TeachingAssignmentOps {
         .bind(academic_year_id)
         .bind(class_group_id)
         .bind(teacher_profile_id)
+        .bind(account_id)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -1411,6 +1598,18 @@ impl TeachingAssignmentOps {
               AND ($3::UUID IS NULL OR academic_year_id = $3)
               AND ($4::UUID IS NULL OR class_group_id = $4)
               AND ($5::UUID IS NULL OR teacher_profile_id = $5)
+              AND ($6::UUID IS NULL OR EXISTS (
+                    SELECT 1
+                    FROM teacher_profiles AS teacher
+                    JOIN employees AS employee
+                      ON employee.tenant_id = teacher.tenant_id
+                     AND employee.id = teacher.employee_id
+                     AND employee.deleted_at IS NULL
+                    WHERE teacher.tenant_id = teaching_assignments.tenant_id
+                      AND teacher.id = teaching_assignments.teacher_profile_id
+                      AND teacher.deleted_at IS NULL
+                      AND employee.account_id = $6
+              ))
             "#,
         )
         .bind(tenant_id)
@@ -1418,6 +1617,7 @@ impl TeachingAssignmentOps {
         .bind(academic_year_id)
         .bind(class_group_id)
         .bind(teacher_profile_id)
+        .bind(account_id)
         .fetch_one(pool)
         .await
         .context("Failed to count teaching assignments")?;
@@ -1428,6 +1628,24 @@ impl TeachingAssignmentOps {
         pool: &PgPool,
         tenant_id: Uuid,
         id: Uuid,
+    ) -> Result<Option<TeachingAssignmentWithDetails>> {
+        Self::get_by_id_with_account_filter(pool, tenant_id, id, None).await
+    }
+
+    pub(crate) async fn get_by_id_scoped(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        scope: TeachingAssignmentReadScope,
+    ) -> Result<Option<TeachingAssignmentWithDetails>> {
+        Self::get_by_id_with_account_filter(pool, tenant_id, id, scope.account_filter()).await
+    }
+
+    async fn get_by_id_with_account_filter(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        account_id: Option<Uuid>,
     ) -> Result<Option<TeachingAssignmentWithDetails>> {
         let row = sqlx::query_as::<_, TeachingAssignmentRow>(
             r#"
@@ -1453,10 +1671,18 @@ impl TeachingAssignmentOps {
              AND teacher.tenant_id = assignment.tenant_id
             WHERE assignment.tenant_id = $1 AND assignment.id = $2
               AND assignment.deleted_at IS NULL
+              AND ($3::UUID IS NULL OR EXISTS (
+                    SELECT 1 FROM employees AS employee
+                    WHERE employee.tenant_id = assignment.tenant_id
+                      AND employee.id = teacher.employee_id
+                      AND employee.account_id = $3
+                      AND employee.deleted_at IS NULL
+              ))
             "#,
         )
         .bind(tenant_id)
         .bind(id)
+        .bind(account_id)
         .fetch_optional(pool)
         .await
         .context("Failed to load teaching assignment")?;

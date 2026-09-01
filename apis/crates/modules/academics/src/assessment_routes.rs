@@ -2,7 +2,11 @@
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, delete, get, post, put, web};
-use cp_common::{ApiResponse, PaginationMeta, TenantId, flatten_validation_errors};
+use cp_audit::AuditActor;
+use cp_common::{
+    AccessContext, ApiResponse, EffectiveRecordScope, PaginationMeta, RecordScopeFamilyKey,
+    RecordScopeGrants, TenantId, flatten_validation_errors,
+};
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -10,13 +14,20 @@ use validator::Validate;
 
 use crate::{
     assessments::{
-        AssessmentComponentListQuery, AssessmentComponentOps, AssessmentCycleListQuery,
-        AssessmentCycleOps, CreateAssessmentComponentRequest, CreateAssessmentCycleRequest,
-        PaginatedAssessmentComponentsResponse, PaginatedAssessmentCyclesResponse,
-        UpdateAssessmentComponentRequest, UpdateAssessmentCycleRequest,
+        AssessmentComponentListQuery, AssessmentComponentOps, AssessmentComponentReadScope,
+        AssessmentCycleListQuery, AssessmentCycleOps, CreateAssessmentComponentRequest,
+        CreateAssessmentCycleRequest, PaginatedAssessmentComponentsResponse,
+        PaginatedAssessmentCyclesResponse, UpdateAssessmentComponentRequest,
+        UpdateAssessmentCycleRequest,
     },
     ops::DeleteOutcome,
 };
+
+type AssessmentAuthority = (
+    web::ReqData<AuditActor>,
+    web::ReqData<AccessContext>,
+    web::ReqData<RecordScopeGrants>,
+);
 
 #[get("/assessment-cycles")]
 async fn list_assessment_cycles(
@@ -111,11 +122,15 @@ async fn delete_assessment_cycle(
 async fn list_assessment_components(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: AssessmentAuthority,
     path: web::Path<Uuid>,
     query: web::Query<AssessmentComponentListQuery>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let Some(scope) = assessment_component_read_scope(authority) else {
+        return Ok(forbidden());
+    };
     let (page, per_page) = bounded_page(query.page, query.per_page);
-    let (assessment_components, total) = AssessmentComponentOps::list(
+    let (assessment_components, total) = AssessmentComponentOps::list_scoped(
         pool.get_ref(),
         tenant_id(tenant),
         path.into_inner(),
@@ -123,6 +138,7 @@ async fn list_assessment_components(
         per_page,
         query.status.map(|value| value.as_str()),
         query.teaching_assignment_id,
+        scope,
     )
     .await
     .map_err(actix_web::error::ErrorInternalServerError)?;
@@ -140,12 +156,20 @@ async fn list_assessment_components(
 async fn read_assessment_component(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
+    authority: AssessmentAuthority,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let record =
-        AssessmentComponentOps::get_by_id(pool.get_ref(), tenant_id(tenant), path.into_inner())
-            .await
-            .map_err(actix_web::error::ErrorInternalServerError)?;
+    let Some(scope) = assessment_component_read_scope(authority) else {
+        return Ok(forbidden());
+    };
+    let record = AssessmentComponentOps::get_by_id_scoped(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+    )
+    .await
+    .map_err(actix_web::error::ErrorInternalServerError)?;
     Ok(found(record, "Assessment component"))
 }
 
@@ -202,6 +226,24 @@ async fn delete_assessment_component(
     )
 }
 
+fn assessment_component_read_scope(
+    authority: AssessmentAuthority,
+) -> Option<AssessmentComponentReadScope> {
+    let (actor, access, grants) = authority;
+    if access.has_permission("*") || access.has_permission("academics:manage") {
+        return Some(AssessmentComponentReadScope::campus());
+    }
+    let family = RecordScopeFamilyKey::parse("academics.assessment_components").ok()?;
+    match grants.effective_scope(&family)? {
+        EffectiveRecordScope::Campus => Some(AssessmentComponentReadScope::campus()),
+        EffectiveRecordScope::SelfRecord
+        | EffectiveRecordScope::Assigned
+        | EffectiveRecordScope::SelfAndAssigned => {
+            actor.user_id().map(AssessmentComponentReadScope::account)
+        }
+    }
+}
+
 fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
@@ -250,6 +292,16 @@ fn not_found(label: &str) -> HttpResponse {
         StatusCode::NOT_FOUND,
         None::<()>,
         Some(vec![format!("{label} not found")]),
+    ))
+}
+
+fn forbidden() -> HttpResponse {
+    HttpResponse::Forbidden().json(ApiResponse::from_status(
+        StatusCode::FORBIDDEN,
+        None::<()>,
+        Some(vec![
+            "Academics record scope is unavailable for this operation".to_string(),
+        ]),
     ))
 }
 

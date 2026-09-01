@@ -25,6 +25,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
+import { SIS_ADMINISTRATION_PERMISSIONS } from "./access";
 import { SisAccountDrawer, SisPersonDrawer } from "./people-list";
 import { responseMessage, sisService } from "./service";
 import type { Application, Enrolment, GuardianRelationship, Learner } from "./types";
@@ -44,6 +45,7 @@ const noRelatedErrors: RelatedErrors = {
 export function LearnerRecord({ learnerId }: { learnerId: string }) {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const canEdit = permissions.includes("*") || permissions.includes("sis:edit");
+  const canAccessApplications = permissions.includes("*") || SIS_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission));
   const requestVersion = useRef(0);
   const [learner, setLearner] = useState<Learner | null>(null);
   const [relationships, setRelationships] = useState<GuardianRelationship[]>([]);
@@ -82,7 +84,7 @@ export function LearnerRecord({ learnerId }: { learnerId: string }) {
 
       const [guardianResult, applicationResult, enrolmentResult] = await Promise.allSettled([
         sisService.listGuardianRelationships({ learner_id: learnerId, per_page: 100 }),
-        sisService.listApplications({ learner_id: learnerId, per_page: 100 }),
+        canAccessApplications ? sisService.listApplications({ learner_id: learnerId, per_page: 100 }) : Promise.resolve(null),
         sisService.listEnrolments({ learner_id: learnerId, per_page: 100 }),
       ]);
       if (version !== requestVersion.current) return;
@@ -94,11 +96,13 @@ export function LearnerRecord({ learnerId }: { learnerId: string }) {
         setRelationships([]);
         nextErrors.guardians = relatedFailure(guardianResult, "Guardian relationships could not be loaded");
       }
-      if (applicationResult.status === "fulfilled" && applicationResult.value.success && applicationResult.value.data) {
+      if (!canAccessApplications) {
+        setApplications([]);
+      } else if (applicationResult.status === "fulfilled" && applicationResult.value?.success && applicationResult.value.data) {
         setApplications(applicationResult.value.data.applications);
       } else {
         setApplications([]);
-        nextErrors.applications = relatedFailure(applicationResult, "Applications could not be loaded");
+        nextErrors.applications = relatedFailure(applicationResult as PromiseSettledResult<{ success: boolean; message: string | null; issues: Array<string | { detail?: string }> | null }>, "Applications could not be loaded");
       }
       if (enrolmentResult.status === "fulfilled" && enrolmentResult.value.success && enrolmentResult.value.data) {
         setEnrolments(enrolmentResult.value.data.enrolments);
@@ -115,7 +119,7 @@ export function LearnerRecord({ learnerId }: { learnerId: string }) {
       setLoading(false);
       setRelatedLoading(false);
     }
-  }, [learnerId]);
+  }, [canAccessApplications, learnerId]);
 
   useEffect(() => {
     void load();
@@ -163,7 +167,7 @@ export function LearnerRecord({ learnerId }: { learnerId: string }) {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <RecordSection actionLabel="Manage relationships" actionTo="/modules/sis/guardian-relationships" count={relationships.length} icon={<UsersRound />} title="Guardians">
+        <RecordSection actionLabel={canEdit ? "Manage relationships" : "View relationships"} actionTo="/modules/sis/guardian-relationships" count={relationships.length} icon={<UsersRound />} title="Guardians">
           {relatedLoading ? <SectionLoading label="Loading guardians…" /> : relatedErrors.guardians ? <SectionError message={relatedErrors.guardians} onRetry={() => void load()} /> : relationships.length === 0 ? <SectionEmpty description="No guardian relationship is recorded for this learner." /> : (
             <div className="divide-y divide-[var(--border-subtle)]">
               {relationships.map((relationship) => (
@@ -183,7 +187,7 @@ export function LearnerRecord({ learnerId }: { learnerId: string }) {
           )}
         </RecordSection>
 
-        <RecordSection actionLabel="Manage applications" actionTo="/modules/sis/applications" count={applications.length} icon={<ClipboardList />} title="Applications">
+        {canAccessApplications ? <RecordSection actionLabel="Manage applications" actionTo="/modules/sis/applications" count={applications.length} icon={<ClipboardList />} title="Applications">
           {relatedLoading ? <SectionLoading label="Loading applications…" /> : relatedErrors.applications ? <SectionError message={relatedErrors.applications} onRetry={() => void load()} /> : applications.length === 0 ? <SectionEmpty description="No application is recorded for this learner." /> : (
             <div className="divide-y divide-[var(--border-subtle)]">
               {applications.map((application) => (
@@ -197,10 +201,10 @@ export function LearnerRecord({ learnerId }: { learnerId: string }) {
               ))}
             </div>
           )}
-        </RecordSection>
+        </RecordSection> : null}
       </div>
 
-      <RecordSection actionLabel="Manage enrolments" actionTo="/modules/sis/enrolments" count={enrolments.length} icon={<School />} title="Enrolment history">
+      <RecordSection actionLabel={canEdit ? "Manage enrolments" : "View enrolments"} actionTo="/modules/sis/enrolments" count={enrolments.length} icon={<School />} title="Enrolment history">
         {relatedLoading ? <SectionLoading label="Loading enrolments…" /> : relatedErrors.enrolments ? <SectionError message={relatedErrors.enrolments} onRetry={() => void load()} /> : enrolments.length === 0 ? <SectionEmpty description="No class enrolment is recorded for this learner." /> : (
           <div className="grid gap-px bg-[var(--border-subtle)] md:grid-cols-2 xl:grid-cols-3">
             {enrolments.map((enrolment) => (

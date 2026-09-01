@@ -214,24 +214,16 @@ async fn read_request(
 }
 
 #[post("/requests/{id}/cancel")]
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Actix extractors keep authorization, audit, route, and body inputs explicit"
-)]
 async fn cancel_request(
     pool: web::Data<PgPool>,
     tenant: web::ReqData<TenantId>,
     access: web::ReqData<AccessContext>,
-    grants: web::ReqData<RecordScopeGrants>,
     actor: web::ReqData<AuditActor>,
     context: web::ReqData<RequestContext>,
     path: web::Path<Uuid>,
     body: web::Json<FacilityTransitionRequest>,
 ) -> HttpResponse {
-    if !authorised(&access, "facilities:request") {
-        return forbidden("cancel Facilities service requests");
-    }
-    let Some(scope) = request_scope(&access, &grants, *actor) else {
+    let Some(scope) = request_cancellation_scope(&access, *actor) else {
         return forbidden("cancel Facilities service requests");
     };
     if let Some(response) = validation_response(&body.0) {
@@ -559,6 +551,20 @@ fn request_scope(
     }
 }
 
+/// Keeps campus request visibility from becoming cancellation authority.
+fn request_cancellation_scope(
+    access: &AccessContext,
+    actor: AuditActor,
+) -> Option<FacilitiesRequestScope> {
+    if authorised(access, "facilities:manage") {
+        return Some(FacilitiesRequestScope::Campus);
+    }
+    if authorised(access, "facilities:request") {
+        return actor.user_id().map(FacilitiesRequestScope::SelfRecord);
+    }
+    None
+}
+
 fn work_order_scope(
     access: &AccessContext,
     grants: &RecordScopeGrants,
@@ -725,7 +731,7 @@ mod tests {
     };
     use uuid::Uuid;
 
-    use super::{request_scope, work_order_scope};
+    use super::{request_cancellation_scope, request_scope, work_order_scope};
     use crate::{FacilitiesRequestScope, FacilitiesWorkOrderScope};
 
     fn access(permissions: &[&str]) -> AccessContext {
@@ -787,6 +793,42 @@ mod tests {
                 AuditActor::person(Uuid::new_v4()),
             ),
             None
+        );
+    }
+
+    #[test]
+    fn officer_cancellation_stays_self_scoped_despite_campus_visibility() {
+        let user_id = Uuid::new_v4();
+        let officer_access = access(&[
+            "facilities:view",
+            "facilities:request",
+            "facilities:operate",
+        ]);
+        let campus_grants = grants("facilities.requests", RecordScopeKind::Campus);
+
+        assert_eq!(
+            request_scope(&officer_access, &campus_grants, AuditActor::person(user_id)),
+            Some(FacilitiesRequestScope::Campus)
+        );
+        assert_eq!(
+            request_cancellation_scope(&officer_access, AuditActor::person(user_id)),
+            Some(FacilitiesRequestScope::SelfRecord(user_id))
+        );
+    }
+
+    #[test]
+    fn manager_cancellation_has_campus_scope() {
+        assert_eq!(
+            request_cancellation_scope(
+                &access(&[
+                    "facilities:view",
+                    "facilities:request",
+                    "facilities:operate",
+                    "facilities:manage",
+                ]),
+                AuditActor::person(Uuid::new_v4()),
+            ),
+            Some(FacilitiesRequestScope::Campus)
         );
     }
 }

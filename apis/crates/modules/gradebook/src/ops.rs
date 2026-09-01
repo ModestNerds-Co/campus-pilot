@@ -253,7 +253,8 @@ impl GradebookOps {
         let (rows, total) = match access_scope {
             GradebookAccessScope::Campus => {
                 let rows = sqlx::query_as::<_, MarkSheetSummaryRow>(&summary_select(
-                    "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL AND ($2::TEXT IS NULL OR sheet.status = $2) ORDER BY sheet.roster_on DESC, sheet.created_at DESC, sheet.id LIMIT $3 OFFSET $4",
+                    "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL AND ($2::TEXT IS NULL OR sheet.status = $2)",
+                    "ORDER BY sheet.roster_on DESC, sheet.created_at DESC, sheet.id LIMIT $3 OFFSET $4",
                 ))
                 .bind(tenant_id)
                 .bind(status)
@@ -267,7 +268,8 @@ impl GradebookOps {
             }
             GradebookAccessScope::AssignedTo(user_id) => {
                 let rows = sqlx::query_as::<_, MarkSheetSummaryRow>(&summary_select(
-                    "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL AND ($2::TEXT IS NULL OR sheet.status = $2) AND employee.account_id = $3 ORDER BY sheet.roster_on DESC, sheet.created_at DESC, sheet.id LIMIT $4 OFFSET $5",
+                    "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL AND ($2::TEXT IS NULL OR sheet.status = $2) AND employee.account_id = $3",
+                    "ORDER BY sheet.roster_on DESC, sheet.created_at DESC, sheet.id LIMIT $4 OFFSET $5",
                 ))
                 .bind(tenant_id)
                 .bind(status)
@@ -1007,7 +1009,7 @@ async fn hydrate_summary(
     })
 }
 
-fn summary_select(predicate: &str) -> String {
+fn summary_select(predicate: &str, trailing_clause: &str) -> String {
     format!(
         r#"
         SELECT sheet.id, sheet.assessment_component_id, sheet.roster_on,
@@ -1050,6 +1052,7 @@ fn summary_select(predicate: &str) -> String {
            AND mark.deleted_at IS NULL
          WHERE {predicate}
          GROUP BY sheet.id, component.maximum_marks
+         {trailing_clause}
         "#
     )
 }
@@ -1111,6 +1114,7 @@ async fn summary_row_by_id(
 ) -> Result<Option<MarkSheetSummaryRow>> {
     sqlx::query_as::<_, MarkSheetSummaryRow>(&summary_select(
         "sheet.tenant_id = $1 AND sheet.id = $2 AND sheet.deleted_at IS NULL",
+        "",
     ))
     .bind(tenant_id)
     .bind(mark_sheet_id)
@@ -1469,7 +1473,7 @@ fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {
 mod tests {
     use super::{
         GradebookMarkInput, GradebookMarkStatus, mark_counts, parse_marks, percentage_basis_points,
-        weighted_score_basis_points,
+        summary_select, weighted_score_basis_points,
     };
     use uuid::Uuid;
 
@@ -1526,5 +1530,25 @@ mod tests {
         assert_eq!(counts["absent"], 1);
         assert_eq!(counts["exempt"], 1);
         assert_eq!(counts["unmarked"], 1);
+    }
+
+    #[test]
+    fn summary_query_groups_before_ordering_and_pagination() {
+        let query = summary_select(
+            "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL",
+            "ORDER BY sheet.created_at DESC LIMIT $2 OFFSET $3",
+        );
+        let group_position = query
+            .find("GROUP BY")
+            .expect("summary query must aggregate mark rows");
+        let order_position = query
+            .find("ORDER BY")
+            .expect("summary query must retain the caller's stable ordering");
+        let limit_position = query
+            .find("LIMIT")
+            .expect("summary query must retain pagination");
+
+        assert!(group_position < order_position);
+        assert!(order_position < limit_position);
     }
 }

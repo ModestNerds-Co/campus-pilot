@@ -5,5 +5,5 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { LearnerNumberingPolicyPage } from "@/modules/sis";
 
 export const Route = createFileRoute("/modules/sis/settings")({
-  component: () => <ProtectedRoute requiredModule="sis" requiredPermission="sis:view"><LearnerNumberingPolicyPage /></ProtectedRoute>,
+  component: () => <ProtectedRoute requiredModule="sis" requiredPermission="sis:edit"><LearnerNumberingPolicyPage /></ProtectedRoute>,
 });
