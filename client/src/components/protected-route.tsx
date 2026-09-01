@@ -11,12 +11,14 @@ import { Loader2 } from "lucide-react";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermission?: string;
+  requiredAnyPermissions?: readonly string[];
   requiredModule?: string;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredPermission,
+  requiredAnyPermissions,
   requiredModule,
 }) => {
   const navigate = useNavigate();
@@ -45,9 +47,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         !requiredPermission ||
         currentUser?.permissions?.includes("*") ||
         currentUser?.permissions?.includes(requiredPermission);
+      const hasAnyPermission =
+        !requiredAnyPermissions?.length ||
+        currentUser?.permissions?.includes("*") ||
+        requiredAnyPermissions.some((permission) => currentUser?.permissions?.includes(permission));
       const hasModule = !requiredModule || currentUser?.modules?.includes(requiredModule);
 
-      if (!hasPermission || !hasModule) {
+      if (!hasPermission || !hasAnyPermission || !hasModule) {
         navigate({ to: "/home", replace: true });
         return;
       }
@@ -59,7 +65,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return () => {
       active = false;
     };
-  }, [isAuthenticated, accessToken, checkAuth, navigate, requiredPermission, requiredModule]);
+  }, [isAuthenticated, accessToken, checkAuth, navigate, requiredAnyPermissions, requiredPermission, requiredModule]);
 
   if (isChecking) {
     return (

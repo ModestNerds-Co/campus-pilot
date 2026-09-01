@@ -55,6 +55,7 @@ import { ThemeToggle } from "@/lib/theme";
 import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
 import { AgentWidget } from "@/modules/agent";
+import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 import { useAuthStore } from "@/stores/auth-store";
 
 import {
@@ -79,13 +80,6 @@ type LocalNavItem = {
   anyPermissions?: string[];
   requiredModule?: string;
 };
-
-const academicAdministrationPermissions = [
-  "academics:create",
-  "academics:edit",
-  "academics:delete",
-  "academics:manage",
-];
 
 const moduleLabels: Record<string, string> = {
   agent: "Agent",
@@ -164,39 +158,39 @@ const academicsNavigation: LocalNavItem[] = [
     label: "Academic years",
     path: "/modules/academics/academic-years",
     icon: CalendarRange,
-    anyPermissions: academicAdministrationPermissions,
+    anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS],
   },
   {
     label: "Academic terms",
     path: "/modules/academics/terms",
     icon: CalendarDays,
-    anyPermissions: academicAdministrationPermissions,
+    anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS],
   },
   {
     label: "Grade levels",
     path: "/modules/academics/grade-levels",
     icon: ListOrdered,
-    anyPermissions: academicAdministrationPermissions,
+    anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS],
   },
-  { label: "Subjects", path: "/modules/academics/subjects", icon: BookOpen, anyPermissions: academicAdministrationPermissions },
+  { label: "Subjects", path: "/modules/academics/subjects", icon: BookOpen, anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS] },
   {
     label: "Teachers",
     path: "/modules/academics/teachers",
     icon: UserRoundCheck,
-    anyPermissions: academicAdministrationPermissions,
+    anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS],
   },
-  { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap, anyPermissions: academicAdministrationPermissions },
+  { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap, anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS] },
   {
     label: "Teaching assignments",
     path: "/modules/academics/teaching-assignments",
     icon: ClipboardList,
-    anyPermissions: academicAdministrationPermissions,
+    anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS],
   },
   {
     label: "Assessments",
     path: "/modules/academics/assessments",
     icon: FileCheck2,
-    anyPermissions: academicAdministrationPermissions,
+    anyPermissions: [...ACADEMIC_ADMINISTRATION_PERMISSIONS],
   },
   {
     label: "Gradebook",

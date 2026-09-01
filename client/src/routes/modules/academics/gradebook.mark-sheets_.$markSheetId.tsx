@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ProtectedRoute } from "@/components/protected-route";
+import { ACADEMIC_TEACHING_PERMISSIONS } from "@/modules/academics/access";
 import { MarkSheetWorkspace } from "@/modules/gradebook";
 
 export const Route = createFileRoute("/modules/academics/gradebook/mark-sheets_/$markSheetId")({
@@ -10,5 +11,5 @@ export const Route = createFileRoute("/modules/academics/gradebook/mark-sheets_/
 
 function MarkSheetRoute() {
   const { markSheetId } = Route.useParams();
-  return <ProtectedRoute requiredModule="academics" requiredPermission="academics:view"><MarkSheetWorkspace markSheetId={markSheetId} /></ProtectedRoute>;
+  return <ProtectedRoute requiredAnyPermissions={ACADEMIC_TEACHING_PERMISSIONS} requiredModule="academics"><MarkSheetWorkspace markSheetId={markSheetId} /></ProtectedRoute>;
 }

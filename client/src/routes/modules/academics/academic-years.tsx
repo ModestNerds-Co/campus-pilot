@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/protected-route";
 import { AcademicDirectoryList } from "@/modules/academics";
+import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 
 export const Route = createFileRoute("/modules/academics/academic-years")({
-  component: () => <ProtectedRoute requiredModule="academics" requiredPermission="academics:view"><AcademicDirectoryList kind="academic-year" /></ProtectedRoute>,
+  component: () => <ProtectedRoute requiredAnyPermissions={ACADEMIC_ADMINISTRATION_PERMISSIONS} requiredModule="academics"><AcademicDirectoryList kind="academic-year" /></ProtectedRoute>,
 });

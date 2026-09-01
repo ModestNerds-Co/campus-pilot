@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, CircleDashed } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/protected-route";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 
 import { accessService } from "./access-service";
 import {
@@ -183,12 +184,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   }
 
   if (module.key === "academics") {
-    const canAdministerAcademics = permissions.includes("*") || [
-      "academics:create",
-      "academics:edit",
-      "academics:delete",
-      "academics:manage",
-    ].some((permission) => permissions.includes(permission));
+    const canAdministerAcademics = permissions.includes("*") || ACADEMIC_ADMINISTRATION_PERMISSIONS.some((permission) => permissions.includes(permission));
     const canTeach = permissions.includes("*") || permissions.includes("academics:teach") || permissions.includes("academics:manage");
     return (
       <div className="space-y-8">

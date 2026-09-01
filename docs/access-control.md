@@ -21,6 +21,7 @@ This is the canonical product and engineering reference for sign-in, roles, perm
 - An assigned custom role must be removed from every user before deletion. Role names are unique per campus without regard to case, while immutable role keys preserve assignments across renames.
 - User and role drawers mirror these rules by hiding unavailable actions, but every mutation is authorized again by the API. Deactivation and deletion revoke refresh sessions; access tokens are rejected immediately because every request reloads the active user record.
 - Module navigation is persona-aware. Academic setup areas such as years, terms, grade levels, subjects, teacher profiles, classes, teaching assignments, and assessment structures are shown only to academic administrators. Teachers enter assigned marks and comments through Gradebook and Progress and reporting; the seeded Teacher role never receives academic setup permissions.
+- Academic setup routes enforce that same administrative boundary on direct navigation. Broad academic read access is not enough to open setup workspaces, even though the API separately authorizes every underlying read and write.
 - Authorization uses stable permission keys controlled by the application, never labels, URL paths, or substring matching.
 - A permission is `<namespace>:<action>`, for example `users:view`, `fleet:create`, or `timetabling:manage`.
 - `*` grants all permissions inside modules enabled for the campus. It does not bypass licensing.

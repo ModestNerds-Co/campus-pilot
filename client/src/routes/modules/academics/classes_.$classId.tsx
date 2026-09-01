@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { ProtectedRoute } from "@/components/protected-route";
 import { AcademicClassRecord } from "@/modules/academics";
+import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 
 export const Route = createFileRoute("/modules/academics/classes_/$classId")({
   component: AcademicClassRecordRoute,
@@ -10,5 +11,5 @@ export const Route = createFileRoute("/modules/academics/classes_/$classId")({
 
 function AcademicClassRecordRoute() {
   const { classId } = Route.useParams();
-  return <ProtectedRoute requiredModule="academics" requiredPermission="academics:view"><AcademicClassRecord classId={classId} /></ProtectedRoute>;
+  return <ProtectedRoute requiredAnyPermissions={ACADEMIC_ADMINISTRATION_PERMISSIONS} requiredModule="academics"><AcademicClassRecord classId={classId} /></ProtectedRoute>;
 }
