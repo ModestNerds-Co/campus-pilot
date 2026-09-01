@@ -18,10 +18,11 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::dtos::{
-    AttendanceClassReference, AttendanceMarkInput, AttendanceMarkResponse, AttendanceMarkStatus,
-    AttendanceReferenceData, AttendanceRegisterListQuery, AttendanceRegisterResponse,
-    AttendanceRegisterSummary, AttendanceTermReference, CreateAttendanceRegisterRequest,
-    ReopenAttendanceRegisterRequest, UpdateAttendanceMarksRequest,
+    AttendanceClassReference, AttendanceLearnerSummary, AttendanceMarkInput,
+    AttendanceMarkResponse, AttendanceMarkStatus, AttendanceReferenceData,
+    AttendanceRegisterListQuery, AttendanceRegisterResponse, AttendanceRegisterSummary,
+    AttendanceTermReference, CreateAttendanceRegisterRequest, ReopenAttendanceRegisterRequest,
+    UpdateAttendanceMarksRequest,
 };
 use crate::models::{AttendanceMarkRow, AttendanceRegisterRow, AttendanceRegisterSummaryRow};
 
@@ -33,6 +34,46 @@ const MAX_PER_PAGE: i64 = 100;
 pub struct AttendanceOps;
 
 impl AttendanceOps {
+    /// Aggregates submitted class attendance within one inclusive term range.
+    /// Draft registers never enter academic reports.
+    pub async fn submitted_summaries_for_class(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        class_group_id: Uuid,
+        starts_on: chrono::NaiveDate,
+        ends_on: chrono::NaiveDate,
+    ) -> Result<Vec<AttendanceLearnerSummary>> {
+        sqlx::query_as::<_, AttendanceLearnerSummary>(
+            r#"
+            SELECT mark.enrolment_id,
+                   mark.learner_id,
+                   COUNT(*) FILTER (WHERE mark.mark_status = 'present') AS present_count,
+                   COUNT(*) FILTER (WHERE mark.mark_status = 'absent') AS absent_count,
+                   COUNT(*) FILTER (WHERE mark.mark_status = 'late') AS late_count,
+                   COUNT(*) FILTER (WHERE mark.mark_status = 'excused') AS excused_count
+              FROM attendance_registers AS register
+              JOIN attendance_marks AS mark
+                ON mark.attendance_register_id = register.id
+               AND mark.tenant_id = register.tenant_id
+               AND mark.deleted_at IS NULL
+             WHERE register.tenant_id = $1
+               AND register.class_group_id = $2
+               AND register.attendance_date BETWEEN $3 AND $4
+               AND register.status = 'submitted'
+               AND register.deleted_at IS NULL
+             GROUP BY mark.enrolment_id, mark.learner_id
+             ORDER BY mark.learner_id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(class_group_id)
+        .bind(starts_on)
+        .bind(ends_on)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load submitted attendance summaries")
+    }
+
     /// Returns the active term and active classes that may own a register.
     pub async fn reference_data(
         pool: &PgPool,

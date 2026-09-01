@@ -305,6 +305,10 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: ACADEMICS,
     },
     ExactRoute {
+        path: "/modules/academics/reporting",
+        access: ACADEMICS,
+    },
+    ExactRoute {
         path: "/modules/academics/subjects",
         access: ACADEMICS,
     },
@@ -503,6 +507,14 @@ const EXACT_ROUTES: &[ExactRoute] = &[
 ];
 
 const UUID_ROUTES: &[UuidRoute] = &[
+    UuidRoute {
+        prefix: "/modules/academics/reporting/report-batches/",
+        access: ACADEMICS,
+    },
+    UuidRoute {
+        prefix: "/modules/academics/reporting/transcripts/",
+        access: ACADEMICS,
+    },
     UuidRoute {
         prefix: "/modules/academics/gradebook/mark-sheets/",
         access: ACADEMICS,

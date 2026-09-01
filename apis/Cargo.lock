@@ -1410,6 +1410,7 @@ dependencies = [
  "aws-sdk-s3",
  "base64 0.21.7",
  "chrono",
+ "cp-academic-reporting",
  "cp-academics",
  "cp-agent",
  "cp-agent-runtime",
@@ -1630,6 +1631,27 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+
+[[package]]
+name = "cp-academic-reporting"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-academics",
+ "cp-attendance",
+ "cp-audit",
+ "cp-common",
+ "cp-gradebook",
+ "cp-sis",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "uuid",
+ "validator",
+]
 
 [[package]]
 name = "cp-academics"

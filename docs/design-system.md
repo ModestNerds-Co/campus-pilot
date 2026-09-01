@@ -94,6 +94,7 @@ The current shared implementation is `client/src/components/ui/dialog.tsx`; its 
 - Long provider or operational option sets should use searchable dropdowns rather than raw HTML selects; short fixed enums may use the shared `Select`.
 - Status is communicated with text and, when useful, an icon or dot—not color alone.
 - Multi-stage operational work such as timetable generation keeps setup and review in the page, with focused create/edit actions in drawers. A drawer must not become an entire module inside an overlay.
+- Academic report batches and learner transcripts are full-page workspaces. Grading-scheme editing, report generation, remarks, progression review, lifecycle transitions, and confirmations use right-side drawers.
 
 ## 6. Responsive and accessible behavior
 

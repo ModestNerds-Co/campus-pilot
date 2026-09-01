@@ -1,6 +1,7 @@
 //! Assembles production Agent capability adapters over existing domain services.
 
 mod academic_assessments;
+mod academic_reporting;
 mod academics;
 mod administration;
 mod administration_access;
@@ -40,6 +41,10 @@ use crate::services::ai_routing::selectors::{
 use academic_assessments::{
     AssessmentComponentReadCapability, AssessmentComponentsListCapability,
     AssessmentCycleReadCapability, AssessmentCyclesListCapability,
+};
+use academic_reporting::{
+    GradingSchemeReadCapability, GradingSchemesListCapability, ReportBatchReadCapability,
+    ReportBatchesListCapability, ReportingReferencesCapability, TranscriptReadCapability,
 };
 use academics::{
     AcademicsListCapability, AcademicsListKind, AcademicsReadCapability, AcademicsReadKind,
@@ -284,6 +289,24 @@ pub fn build_capability_registry(
     registry
         .register(GradebookMarkSheetReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Gradebook mark-sheet read capability: {error}"));
+    registry
+        .register(ReportingReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid reporting references capability: {error}"));
+    registry
+        .register(GradingSchemesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid grading-schemes list capability: {error}"));
+    registry
+        .register(GradingSchemeReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid grading-scheme read capability: {error}"));
+    registry
+        .register(ReportBatchesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid report-batches list capability: {error}"));
+    registry
+        .register(ReportBatchReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid report-batch read capability: {error}"));
+    registry
+        .register(TranscriptReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid transcript read capability: {error}"));
     registry
         .register(AttendanceReferencesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Attendance references capability: {error}"));
@@ -806,6 +829,12 @@ mod tests {
                 "academics.gradebook.mark_sheets.list",
                 "academics.gradebook.mark_sheets.read",
                 "academics.gradebook.references.read",
+                "academics.reporting.grading_schemes.list",
+                "academics.reporting.grading_schemes.read",
+                "academics.reporting.references.read",
+                "academics.reporting.report_batches.list",
+                "academics.reporting.report_batches.read",
+                "academics.reporting.transcripts.read",
                 "academics.subjects.list",
                 "academics.subjects.read",
                 "academics.teacher_candidates.list",

@@ -1457,6 +1457,160 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // Academic progress and reporting: grading policy, report lifecycle, and transcripts.
+        route(
+            Method::GET,
+            "/api/1.0/academics/reporting/references",
+            "academics.reporting.references.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/reporting/grading-schemes",
+            "academics.reporting.grading_schemes.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/reporting/grading-schemes",
+            "academics.reporting.grading_schemes.create",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/reporting/grading-schemes/{id}",
+            "academics.reporting.grading_schemes.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/reporting/grading-schemes/{id}",
+            "academics.reporting.grading_schemes.update",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/reporting/grading-schemes/{id}/retire",
+            "academics.reporting.grading_schemes.retire",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/reporting/grading-schemes/{id}",
+            "academics.reporting.grading_schemes.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/reporting/report-batches",
+            "academics.reporting.report_batches.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/reporting/report-batches",
+            "academics.reporting.report_batches.generate",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/reporting/report-batches/{id}",
+            "academics.reporting.report_batches.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/reporting/report-cards/{id}/teacher-comment",
+            "academics.reporting.report_cards.teacher_comment.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/reporting/report-cards/{id}/review",
+            "academics.reporting.report_cards.review.update",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/reporting/report-batches/{id}/review",
+            "academics.reporting.report_batches.review",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/reporting/report-batches/{id}/publish",
+            "academics.reporting.report_batches.publish",
+            "academics",
+            "academics:manage",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/reporting/report-batches/{id}/reopen",
+            "academics.reporting.report_batches.reopen",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/reporting/report-batches/{id}",
+            "academics.reporting.report_batches.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/reporting/learners/{id}/transcript",
+            "academics.reporting.transcripts.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
         // Finance: currencies and chart-of-account structure.
         route(
             Method::GET,
@@ -3156,6 +3310,12 @@ fn route(
         operation.requiring_modules(["agent".to_string()])
     } else if key.starts_with("sis.") && !key.starts_with("sis.learner_numbering.") {
         operation.requiring_modules(["academics".to_string()])
+    } else if key.starts_with("academics.reporting.") {
+        operation.requiring_modules([
+            "attendance".to_string(),
+            "hr_payroll".to_string(),
+            "sis".to_string(),
+        ])
     } else if key.starts_with("academics.gradebook.") {
         operation.requiring_modules(["sis".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("academics.teacher")
@@ -3266,6 +3426,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.gradebook.references.read"
         | "academics.gradebook.mark_sheets.list"
         | "academics.gradebook.mark_sheets.read"
+        | "academics.reporting.references.read"
+        | "academics.reporting.grading_schemes.list"
+        | "academics.reporting.grading_schemes.read"
+        | "academics.reporting.report_batches.list"
+        | "academics.reporting.report_batches.read"
+        | "academics.reporting.transcripts.read"
         | "finance.currencies.list"
         | "finance.currencies.read"
         | "finance.accounts.list"
@@ -3406,6 +3572,17 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.gradebook.mark_sheets.publish"
         | "academics.gradebook.mark_sheets.reopen"
         | "academics.gradebook.mark_sheets.delete"
+        | "academics.reporting.grading_schemes.create"
+        | "academics.reporting.grading_schemes.update"
+        | "academics.reporting.grading_schemes.retire"
+        | "academics.reporting.grading_schemes.delete"
+        | "academics.reporting.report_batches.generate"
+        | "academics.reporting.report_cards.teacher_comment.update"
+        | "academics.reporting.report_cards.review.update"
+        | "academics.reporting.report_batches.review"
+        | "academics.reporting.report_batches.publish"
+        | "academics.reporting.report_batches.reopen"
+        | "academics.reporting.report_batches.delete"
         | "finance.currencies.create"
         | "finance.currencies.update"
         | "finance.currencies.delete"
@@ -3645,7 +3822,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 333);
+        assert_eq!(operation_catalog().len(), 350);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -3697,7 +3874,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [126, 177, 18, 12]);
+        assert_eq!(counts, [132, 188, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

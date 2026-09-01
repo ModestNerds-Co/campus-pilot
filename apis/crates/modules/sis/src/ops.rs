@@ -989,6 +989,45 @@ impl ApplicationOps {
 pub struct EnrolmentOps;
 
 impl EnrolmentOps {
+    /// Resolves learners the authenticated account may view as self-service.
+    ///
+    /// A direct learner account and active guardian relationships contribute to
+    /// the same bounded identity set; callers still enforce their own domain
+    /// record scope.
+    pub async fn learner_ids_for_account(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+    ) -> Result<Vec<Uuid>> {
+        sqlx::query_scalar::<_, Uuid>(
+            r#"
+            SELECT learner.id
+              FROM learners AS learner
+             WHERE learner.tenant_id = $1
+               AND learner.account_id = $2
+               AND learner.deleted_at IS NULL
+            UNION
+            SELECT relationship.learner_id
+              FROM guardians AS guardian
+              JOIN learner_guardian_relationships AS relationship
+                ON relationship.guardian_id = guardian.id
+               AND relationship.tenant_id = guardian.tenant_id
+               AND relationship.status = 'active'
+               AND relationship.deleted_at IS NULL
+             WHERE guardian.tenant_id = $1
+               AND guardian.account_id = $2
+               AND guardian.status = 'active'
+               AND guardian.deleted_at IS NULL
+             ORDER BY 1
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(account_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve self-service learners")
+    }
+
     /// Returns the date-effective SIS roster for one Academics-owned class.
     pub async fn class_roster_on(
         pool: &PgPool,

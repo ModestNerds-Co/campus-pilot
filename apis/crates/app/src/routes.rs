@@ -84,6 +84,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_gradebook::routes::routes),
             )
             .service(
+                scope("/academics/reporting")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_academic_reporting::routes::routes),
+            )
+            .service(
                 scope("/academics")
                     .wrap(AuthMiddleware)
                     .configure(cp_academics::routes::routes),
@@ -354,6 +359,112 @@ mod route_wiring_tests {
                 format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}?expected_version=1"),
                 "/api/1.0/academics/gradebook/mark-sheets/{id}",
                 "academics.gradebook.mark_sheets.delete",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/academics/reporting/references".to_string(),
+                "/api/1.0/academics/reporting/references",
+                "academics.reporting.references.read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/academics/reporting/grading-schemes".to_string(),
+                "/api/1.0/academics/reporting/grading-schemes",
+                "academics.reporting.grading_schemes.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/academics/reporting/grading-schemes".to_string(),
+                "/api/1.0/academics/reporting/grading-schemes",
+                "academics.reporting.grading_schemes.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/academics/reporting/grading-schemes/{record_id}"),
+                "/api/1.0/academics/reporting/grading-schemes/{id}",
+                "academics.reporting.grading_schemes.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/academics/reporting/grading-schemes/{record_id}"),
+                "/api/1.0/academics/reporting/grading-schemes/{id}",
+                "academics.reporting.grading_schemes.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/reporting/grading-schemes/{record_id}/retire"),
+                "/api/1.0/academics/reporting/grading-schemes/{id}/retire",
+                "academics.reporting.grading_schemes.retire",
+            ),
+            (
+                Method::DELETE,
+                format!(
+                    "/api/1.0/academics/reporting/grading-schemes/{record_id}?expected_version=1"
+                ),
+                "/api/1.0/academics/reporting/grading-schemes/{id}",
+                "academics.reporting.grading_schemes.delete",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/academics/reporting/report-batches".to_string(),
+                "/api/1.0/academics/reporting/report-batches",
+                "academics.reporting.report_batches.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/academics/reporting/report-batches".to_string(),
+                "/api/1.0/academics/reporting/report-batches",
+                "academics.reporting.report_batches.generate",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/academics/reporting/report-batches/{record_id}"),
+                "/api/1.0/academics/reporting/report-batches/{id}",
+                "academics.reporting.report_batches.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/academics/reporting/report-cards/{record_id}/teacher-comment"),
+                "/api/1.0/academics/reporting/report-cards/{id}/teacher-comment",
+                "academics.reporting.report_cards.teacher_comment.update",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/academics/reporting/report-cards/{record_id}/review"),
+                "/api/1.0/academics/reporting/report-cards/{id}/review",
+                "academics.reporting.report_cards.review.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/reporting/report-batches/{record_id}/review"),
+                "/api/1.0/academics/reporting/report-batches/{id}/review",
+                "academics.reporting.report_batches.review",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/reporting/report-batches/{record_id}/publish"),
+                "/api/1.0/academics/reporting/report-batches/{id}/publish",
+                "academics.reporting.report_batches.publish",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/reporting/report-batches/{record_id}/reopen"),
+                "/api/1.0/academics/reporting/report-batches/{id}/reopen",
+                "academics.reporting.report_batches.reopen",
+            ),
+            (
+                Method::DELETE,
+                format!(
+                    "/api/1.0/academics/reporting/report-batches/{record_id}?expected_version=1"
+                ),
+                "/api/1.0/academics/reporting/report-batches/{id}",
+                "academics.reporting.report_batches.delete",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/academics/reporting/learners/{record_id}/transcript"),
+                "/api/1.0/academics/reporting/learners/{id}/transcript",
+                "academics.reporting.transcripts.read",
             ),
             (
                 Method::GET,

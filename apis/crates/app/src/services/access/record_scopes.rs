@@ -64,6 +64,7 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("academics.teaching_assignments", CAMPUS_ASSIGNED),
     definition("academics.assessment_components", CAMPUS_ASSIGNED),
     definition("academics.gradebook", CAMPUS_ASSIGNED),
+    definition("academics.reporting", CAMPUS_SELF_ASSIGNED),
     definition("fees.billing", CAMPUS_SELF),
     definition("fees.learner_candidates", CAMPUS_ONLY),
     definition("fees.imports", CAMPUS_ONLY),
@@ -284,7 +285,7 @@ mod tests {
 
     #[test]
     fn catalogue_keys_are_unique_and_parse_safe() {
-        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 25);
+        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 26);
         let mut keys = BTreeSet::new();
         for definition in RECORD_SCOPE_FAMILIES {
             assert!(keys.insert(definition.key()), "duplicate family key");

@@ -706,7 +706,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 16);
             } else if module_key == "academics" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 22);
+                assert_eq!(module.executable_capabilities(), 28);
             } else if module_key == "attendance" {
                 assert!(module.release_ready());
                 assert_eq!(module.routed_operations(), 8);

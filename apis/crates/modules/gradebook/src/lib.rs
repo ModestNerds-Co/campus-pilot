@@ -10,9 +10,9 @@ pub mod routes;
 
 pub use dtos::{
     CreateMarkSheetRequest, DeleteMarkSheetQuery, GradebookComponentReference, GradebookMarkInput,
-    GradebookMarkResponse, GradebookMarkStatus, GradebookReferenceData, GradebookSheetListQuery,
-    GradebookSheetResponse, GradebookSheetStatus, GradebookSheetSummary,
-    PaginatedGradebookSheetsResponse, ReopenMarkSheetRequest, TransitionMarkSheetRequest,
-    UpdateGradebookMarksRequest,
+    GradebookMarkResponse, GradebookMarkStatus, GradebookReferenceData, GradebookReportingSource,
+    GradebookSheetListQuery, GradebookSheetResponse, GradebookSheetStatus, GradebookSheetSummary,
+    PaginatedGradebookSheetsResponse, PublishedAssessmentMark, ReopenMarkSheetRequest,
+    TransitionMarkSheetRequest, UpdateGradebookMarksRequest,
 };
 pub use ops::{GradebookAccessScope, GradebookOps};

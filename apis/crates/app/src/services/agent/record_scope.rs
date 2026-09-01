@@ -119,6 +119,12 @@ pub const WITHHELD_RECORD_SCOPED_OPERATION_KEYS: &[&str] = &[
     "academics.gradebook.references.read",
     "academics.gradebook.mark_sheets.list",
     "academics.gradebook.mark_sheets.read",
+    "academics.reporting.references.read",
+    "academics.reporting.grading_schemes.list",
+    "academics.reporting.grading_schemes.read",
+    "academics.reporting.report_batches.list",
+    "academics.reporting.report_batches.read",
+    "academics.reporting.transcripts.read",
     "fees.learner_candidates.list",
     "fees.imports.list",
     "fees.imports.read",
@@ -323,6 +329,9 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "academics.subjects.list"
         | "academics.gradebook.references.read"
         | "academics.gradebook.mark_sheets.list"
+        | "academics.reporting.references.read"
+        | "academics.reporting.grading_schemes.list"
+        | "academics.reporting.report_batches.list"
         | "finance.currencies.list"
         | "finance.accounts.list"
         | "finance.fiscal_years.list"
@@ -361,6 +370,15 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         }
         "academics.gradebook.mark_sheets.read" => {
             Some(OperationScopePolicy::OneResource("assessment_mark_sheet"))
+        }
+        "academics.reporting.grading_schemes.read" => {
+            Some(OperationScopePolicy::OneResource("academic_grading_scheme"))
+        }
+        "academics.reporting.report_batches.read" => {
+            Some(OperationScopePolicy::OneResource("academic_report_batch"))
+        }
+        "academics.reporting.transcripts.read" => {
+            Some(OperationScopePolicy::OneResource("learner"))
         }
         "finance.currencies.read" => Some(OperationScopePolicy::OneResource("finance_currency")),
         "finance.accounts.read" => Some(OperationScopePolicy::OneResource("finance_account")),
@@ -502,6 +520,15 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "assessment_mark_sheet" => Some(
             "SELECT EXISTS(SELECT 1 FROM assessment_mark_sheets WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "academic_grading_scheme" => Some(
+            "SELECT EXISTS(SELECT 1 FROM academic_grading_schemes WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "academic_report_batch" => Some(
+            "SELECT EXISTS(SELECT 1 FROM academic_report_batches WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "learner" => Some(
+            "SELECT EXISTS(SELECT 1 FROM learners WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         "finance_currency" => Some(
             "SELECT EXISTS(SELECT 1 FROM finance_currencies WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
@@ -636,7 +663,7 @@ mod tests {
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
         assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 64);
-        assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 62);
+        assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
             .iter()
@@ -655,7 +682,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 126);
+        assert_eq!(exposed.len(), 132);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

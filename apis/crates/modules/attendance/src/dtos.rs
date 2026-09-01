@@ -8,6 +8,17 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
+/// Submitted attendance totals consumed by academic reporting.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct AttendanceLearnerSummary {
+    pub enrolment_id: Uuid,
+    pub learner_id: Uuid,
+    pub present_count: i64,
+    pub absent_count: i64,
+    pub late_count: i64,
+    pub excused_count: i64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AttendancePeriod {

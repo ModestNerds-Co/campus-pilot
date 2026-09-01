@@ -540,7 +540,7 @@ impl AssessmentComponentOps {
                    assignment.class_group_id, class_group.name AS class_group_name,
                    assignment.subject_id, subject.name AS subject_name,
                    assignment.teacher_profile_id, employee.display_name AS teacher_name,
-                   employee.user_id AS teacher_account_id
+                   employee.account_id AS teacher_account_id
               FROM assessment_components AS component
               JOIN assessment_cycles AS cycle
                 ON cycle.id = component.assessment_cycle_id

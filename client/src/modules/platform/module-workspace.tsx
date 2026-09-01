@@ -97,6 +97,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
             <AcademicLink description="Connect each class, subject, and teacher for timetabling." label="Teaching assignments" to="/modules/academics/teaching-assignments" />
             <AcademicLink description="Define term assessment cycles and weighted components." label="Assessments" to="/modules/academics/assessments" />
             <AcademicLink description="Capture, submit, and publish learner marks." label="Gradebook" to="/modules/academics/gradebook" />
+            <AcademicLink description="Prepare report cards and published transcripts." label="Progress & reporting" to="/modules/academics/reporting" />
           </div>
         </section>
       </div>
@@ -277,7 +278,7 @@ const HrLink: React.FC<{ description: string; label: string; to: "/modules/hr-pa
   </Link>
 );
 
-const AcademicLink: React.FC<{ description: string; label: string; to: "/modules/academics/academic-years" | "/modules/academics/terms" | "/modules/academics/grade-levels" | "/modules/academics/subjects" | "/modules/academics/teachers" | "/modules/academics/classes" | "/modules/academics/teaching-assignments" | "/modules/academics/assessments" | "/modules/academics/gradebook" }> = ({ description, label, to }) => (
+const AcademicLink: React.FC<{ description: string; label: string; to: "/modules/academics/academic-years" | "/modules/academics/terms" | "/modules/academics/grade-levels" | "/modules/academics/subjects" | "/modules/academics/teachers" | "/modules/academics/classes" | "/modules/academics/teaching-assignments" | "/modules/academics/assessments" | "/modules/academics/gradebook" | "/modules/academics/reporting" }> = ({ description, label, to }) => (
   <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to={to}>
     <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">{label}</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
     <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">{description}</span>

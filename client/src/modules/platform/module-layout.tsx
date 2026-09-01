@@ -106,6 +106,7 @@ const academicsNavigation: LocalNavItem[] = [
   { label: "Teaching assignments", path: "/modules/academics/teaching-assignments", icon: ClipboardList },
   { label: "Assessments", path: "/modules/academics/assessments", icon: FileCheck2 },
   { label: "Gradebook", path: "/modules/academics/gradebook", icon: BookOpenCheck },
+  { label: "Reports", path: "/modules/academics/reporting", icon: BarChart3 },
 ];
 
 const attendanceNavigation: LocalNavItem[] = [
@@ -320,6 +321,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, 
   if (item.path === "/modules/academics/teaching-assignments") return <Link className={navClass(active)} to="/modules/academics/teaching-assignments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/assessments") return <Link className={navClass(active)} to="/modules/academics/assessments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/academics/gradebook") return <Link className={navClass(active)} to="/modules/academics/gradebook"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/academics/reporting") return <Link className={navClass(active)} to="/modules/academics/reporting"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/currencies") return <Link className={navClass(active)} to="/modules/finance/currencies"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/chart-of-accounts") return <Link className={navClass(active)} to="/modules/finance/chart-of-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/finance/accounting-periods") return <Link className={navClass(active)} to="/modules/finance/accounting-periods"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;

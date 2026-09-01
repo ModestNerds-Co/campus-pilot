@@ -4669,6 +4669,246 @@
       ]
     },
     {
+      "name": "Progress and Reporting",
+      "description": "Grading schemes, report-card snapshots, progression review, publication, and learner transcripts.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get Reporting References",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/reporting/references",
+            "description": "Returns report-ready closed assessment cycles and classes, active grading schemes, and grade levels visible to the caller."
+          }
+        },
+        {
+          "name": "List Grading Schemes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/reporting/grading-schemes"
+          }
+        },
+        {
+          "name": "Create Grading Scheme",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Campus grading scheme\",\n  \"description\": null,\n  \"is_default\": true,\n  \"bands\": [\n    { \"code\": \"P\", \"label\": \"Pass\", \"minimum_basis_points\": 5000, \"is_pass\": true },\n    { \"code\": \"N\", \"label\": \"Not passed\", \"minimum_basis_points\": 0, \"is_pass\": false }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/grading-schemes"
+          }
+        },
+        {
+          "name": "Get Grading Scheme",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/reporting/grading-schemes/{{grading_scheme_id}}"
+          }
+        },
+        {
+          "name": "Update Grading Scheme",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"name\": \"Campus grading scheme\",\n  \"description\": null,\n  \"is_default\": true,\n  \"bands\": [\n    { \"code\": \"P\", \"label\": \"Pass\", \"minimum_basis_points\": 5000, \"is_pass\": true },\n    { \"code\": \"N\", \"label\": \"Not passed\", \"minimum_basis_points\": 0, \"is_pass\": false }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/grading-schemes/{{grading_scheme_id}}"
+          }
+        },
+        {
+          "name": "Retire Grading Scheme",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/grading-schemes/{{grading_scheme_id}}/retire"
+          }
+        },
+        {
+          "name": "Delete Unused Grading Scheme",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/reporting/grading-schemes/{{grading_scheme_id}}?expected_version=1"
+          }
+        },
+        {
+          "name": "List Report Batches",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/reporting/report-batches?page=1&per_page=25"
+          }
+        },
+        {
+          "name": "Generate Report Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment_cycle_id\": \"{{assessment_cycle_id}}\",\n  \"class_group_id\": \"{{class_group_id}}\",\n  \"grading_scheme_id\": \"{{grading_scheme_id}}\",\n  \"idempotency_key\": \"00000000-0000-4000-8000-000000000001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/report-batches",
+            "description": "Creates immutable result and attendance snapshots from published Gradebook marks, submitted Attendance registers, and the term-end SIS roster."
+          }
+        },
+        {
+          "name": "Get Report Batch",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/reporting/report-batches/{{report_batch_id}}"
+          }
+        },
+        {
+          "name": "Save Teacher Comment",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"teacher_comment\": \"Consistent progress this term.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/report-cards/{{report_card_id}}/teacher-comment"
+          }
+        },
+        {
+          "name": "Save Progression Review",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"reviewer_comment\": null,\n  \"progression_outcome\": \"promoted\",\n  \"target_grade_level_id\": \"{{target_grade_level_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/report-cards/{{report_card_id}}/review"
+          }
+        },
+        {
+          "name": "Complete Report Review",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/report-batches/{{report_batch_id}}/review"
+          }
+        },
+        {
+          "name": "Publish Report Batch",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/report-batches/{{report_batch_id}}/publish"
+          }
+        },
+        {
+          "name": "Reopen Report Batch",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3,\n  \"reason\": \"Correct the recorded progression decision\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/reporting/report-batches/{{report_batch_id}}/reopen"
+          }
+        },
+        {
+          "name": "Delete Draft Report Batch",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/reporting/report-batches/{{report_batch_id}}?expected_version=1"
+          }
+        },
+        {
+          "name": "Get Learner Transcript",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/reporting/learners/{{report_learner_id}}/transcript",
+            "description": "Returns only published report periods visible under the caller's campus, assigned, or self record scope."
+          }
+        }
+      ]
+    },
+    {
       "name": "Attendance",
       "description": "Dated class registers built from Academics classes and date-effective SIS enrolments.",
       "auth": {

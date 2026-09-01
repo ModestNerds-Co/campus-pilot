@@ -5,6 +5,7 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -212,4 +213,47 @@ pub struct GradebookSheetResponse {
 #[derive(Debug, Serialize)]
 pub struct PaginatedGradebookSheetsResponse {
     pub mark_sheets: Vec<GradebookSheetSummary>,
+}
+
+/// One closed-cycle class that can feed an academic report batch.
+///
+/// Teacher account identifiers are request-authority evidence for assigned
+/// scope consumers and never form part of browser or Agent responses.
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct GradebookReportingSource {
+    pub assessment_cycle_id: Uuid,
+    pub assessment_cycle_name: String,
+    pub academic_term_id: Uuid,
+    pub academic_term_name: String,
+    pub academic_term_starts_on: NaiveDate,
+    pub academic_term_ends_on: NaiveDate,
+    pub academic_year_id: Uuid,
+    pub academic_year_name: String,
+    pub class_group_id: Uuid,
+    pub class_group_name: String,
+    pub component_count: i64,
+    pub published_sheet_count: i64,
+    #[serde(skip_serializing)]
+    pub teacher_account_ids: Vec<Uuid>,
+}
+
+/// Exact published Gradebook evidence consumed by academic reporting.
+///
+/// Reporting calculates snapshots from these stable identifiers and integer
+/// values; it does not issue private SQL against Gradebook tables.
+#[derive(Debug, Clone, FromRow)]
+pub struct PublishedAssessmentMark {
+    pub mark_sheet_id: Uuid,
+    pub mark_sheet_version: i32,
+    pub assessment_component_id: Uuid,
+    pub teaching_assignment_id: Uuid,
+    pub subject_id: Uuid,
+    pub subject_name: String,
+    pub class_group_id: Uuid,
+    pub enrolment_id: Uuid,
+    pub learner_id: Uuid,
+    pub mark_status: String,
+    pub marks_awarded_hundredths: Option<i64>,
+    pub maximum_marks: i32,
+    pub weight_basis_points: i16,
 }

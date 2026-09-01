@@ -21,9 +21,9 @@ use uuid::Uuid;
 
 use crate::dtos::{
     CreateMarkSheetRequest, GradebookComponentReference, GradebookMarkInput, GradebookMarkResponse,
-    GradebookMarkStatus, GradebookReferenceData, GradebookSheetListQuery, GradebookSheetResponse,
-    GradebookSheetSummary, PaginatedGradebookSheetsResponse, ReopenMarkSheetRequest,
-    UpdateGradebookMarksRequest,
+    GradebookMarkStatus, GradebookReferenceData, GradebookReportingSource, GradebookSheetListQuery,
+    GradebookSheetResponse, GradebookSheetSummary, PaginatedGradebookSheetsResponse,
+    PublishedAssessmentMark, ReopenMarkSheetRequest, UpdateGradebookMarksRequest,
 };
 use crate::models::{MarkRow, MarkSheetRow, MarkSheetSummaryRow};
 
@@ -41,6 +41,143 @@ pub enum GradebookAccessScope {
 pub struct GradebookOps;
 
 impl GradebookOps {
+    /// Lists closed assessment-cycle classes whose active components all have
+    /// published sheets. A reporting batch may only use these exact sources.
+    pub async fn reporting_sources(
+        pool: &PgPool,
+        tenant_id: Uuid,
+    ) -> Result<Vec<GradebookReportingSource>> {
+        sqlx::query_as::<_, GradebookReportingSource>(
+            r#"
+            SELECT cycle.id AS assessment_cycle_id,
+                   cycle.name AS assessment_cycle_name,
+                   term.id AS academic_term_id,
+                   term.name AS academic_term_name,
+                   term.starts_on AS academic_term_starts_on,
+                   term.ends_on AS academic_term_ends_on,
+                   academic_year.id AS academic_year_id,
+                   academic_year.name AS academic_year_name,
+                   class_group.id AS class_group_id,
+                   class_group.name AS class_group_name,
+                   COUNT(DISTINCT component.id) AS component_count,
+                   COUNT(DISTINCT sheet.id) AS published_sheet_count,
+                   COALESCE(
+                       ARRAY_AGG(DISTINCT employee.account_id)
+                           FILTER (WHERE employee.account_id IS NOT NULL),
+                       ARRAY[]::UUID[]
+                   ) AS teacher_account_ids
+              FROM assessment_cycles AS cycle
+              JOIN academic_terms AS term
+                ON term.id = cycle.academic_term_id
+               AND term.tenant_id = cycle.tenant_id
+               AND term.deleted_at IS NULL
+              JOIN academic_years AS academic_year
+                ON academic_year.id = term.academic_year_id
+               AND academic_year.tenant_id = term.tenant_id
+               AND academic_year.deleted_at IS NULL
+              JOIN assessment_components AS component
+                ON component.assessment_cycle_id = cycle.id
+               AND component.tenant_id = cycle.tenant_id
+               AND component.status = 'active'
+               AND component.deleted_at IS NULL
+              JOIN teaching_assignments AS assignment
+                ON assignment.id = component.teaching_assignment_id
+               AND assignment.tenant_id = component.tenant_id
+               AND assignment.deleted_at IS NULL
+              JOIN class_groups AS class_group
+                ON class_group.id = assignment.class_group_id
+               AND class_group.tenant_id = assignment.tenant_id
+               AND class_group.deleted_at IS NULL
+              JOIN teacher_profiles AS teacher
+                ON teacher.id = assignment.teacher_profile_id
+               AND teacher.tenant_id = assignment.tenant_id
+               AND teacher.deleted_at IS NULL
+              JOIN employees AS employee
+                ON employee.id = teacher.employee_id
+               AND employee.tenant_id = teacher.tenant_id
+               AND employee.deleted_at IS NULL
+              LEFT JOIN assessment_mark_sheets AS sheet
+                ON sheet.assessment_component_id = component.id
+               AND sheet.tenant_id = component.tenant_id
+               AND sheet.status = 'published'
+               AND sheet.deleted_at IS NULL
+             WHERE cycle.tenant_id = $1
+               AND cycle.status = 'closed'
+               AND cycle.deleted_at IS NULL
+             GROUP BY cycle.id, cycle.name, term.id, term.name,
+                      term.starts_on, term.ends_on, academic_year.id,
+                      academic_year.name, class_group.id, class_group.name
+            HAVING COUNT(DISTINCT component.id) = COUNT(DISTINCT sheet.id)
+             ORDER BY term.ends_on DESC, cycle.name, class_group.name
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load Gradebook reporting sources")
+    }
+
+    /// Loads exact published marks for one closed-cycle class.
+    pub async fn published_results_for_cycle_class(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assessment_cycle_id: Uuid,
+        class_group_id: Uuid,
+    ) -> Result<Vec<PublishedAssessmentMark>> {
+        sqlx::query_as::<_, PublishedAssessmentMark>(
+            r#"
+            SELECT sheet.id AS mark_sheet_id,
+                   sheet.version AS mark_sheet_version,
+                   component.id AS assessment_component_id,
+                   assignment.id AS teaching_assignment_id,
+                   assignment.subject_id,
+                   subject.name AS subject_name,
+                   assignment.class_group_id,
+                   mark.enrolment_id,
+                   mark.learner_id,
+                   mark.mark_status,
+                   mark.marks_awarded_hundredths,
+                   component.maximum_marks,
+                   component.weight_basis_points
+              FROM assessment_cycles AS cycle
+              JOIN assessment_components AS component
+                ON component.assessment_cycle_id = cycle.id
+               AND component.tenant_id = cycle.tenant_id
+               AND component.status = 'active'
+               AND component.deleted_at IS NULL
+              JOIN teaching_assignments AS assignment
+                ON assignment.id = component.teaching_assignment_id
+               AND assignment.tenant_id = component.tenant_id
+               AND assignment.deleted_at IS NULL
+              JOIN subjects AS subject
+                ON subject.id = assignment.subject_id
+               AND subject.tenant_id = assignment.tenant_id
+               AND subject.deleted_at IS NULL
+              JOIN assessment_mark_sheets AS sheet
+                ON sheet.assessment_component_id = component.id
+               AND sheet.tenant_id = component.tenant_id
+               AND sheet.status = 'published'
+               AND sheet.deleted_at IS NULL
+              JOIN assessment_marks AS mark
+                ON mark.mark_sheet_id = sheet.id
+               AND mark.tenant_id = sheet.tenant_id
+               AND mark.deleted_at IS NULL
+             WHERE cycle.tenant_id = $1
+               AND cycle.id = $2
+               AND cycle.status = 'closed'
+               AND cycle.deleted_at IS NULL
+               AND assignment.class_group_id = $3
+             ORDER BY mark.learner_id, assignment.subject_id, component.id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(assessment_cycle_id)
+        .bind(class_group_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load published Gradebook results")
+    }
+
     /// Returns open and closed assessment components with current mark-sheet state.
     pub async fn reference_data(
         pool: &PgPool,
@@ -130,7 +267,7 @@ impl GradebookOps {
             }
             GradebookAccessScope::AssignedTo(user_id) => {
                 let rows = sqlx::query_as::<_, MarkSheetSummaryRow>(&summary_select(
-                    "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL AND ($2::TEXT IS NULL OR sheet.status = $2) AND employee.user_id = $3 ORDER BY sheet.roster_on DESC, sheet.created_at DESC, sheet.id LIMIT $4 OFFSET $5",
+                    "sheet.tenant_id = $1 AND sheet.deleted_at IS NULL AND ($2::TEXT IS NULL OR sheet.status = $2) AND employee.account_id = $3 ORDER BY sheet.roster_on DESC, sheet.created_at DESC, sheet.id LIMIT $4 OFFSET $5",
                 ))
                 .bind(tenant_id)
                 .bind(status)
@@ -946,7 +1083,7 @@ async fn count_sheets(
          WHERE sheet.tenant_id = $1
            AND sheet.deleted_at IS NULL
            AND ($2::TEXT IS NULL OR sheet.status = $2)
-           AND ($3::UUID IS NULL OR employee.user_id = $3)
+           AND ($3::UUID IS NULL OR employee.account_id = $3)
         "#,
     )
     .bind(tenant_id)
