@@ -21,6 +21,7 @@ export function GradebookWorkspace() {
   const navigate = useNavigate();
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const canCreate = permissions.includes("*") || permissions.includes("academics:teach");
+  const canManage = permissions.includes("*") || permissions.includes("academics:manage");
   const [components, setComponents] = useState<GradebookComponentReference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function GradebookWorkspace() {
   }), [components, cycleId, query, status]);
 
   return <div className="space-y-6">
-    <p className="text-sm text-[var(--text-muted)]">Capture and publish learner marks for assessment components.</p>
+    <p className="text-sm text-[var(--text-muted)]">{canManage ? "Capture, review, and publish learner marks." : "Capture and submit marks for your assigned assessment components."}</p>
 
     <TableControlsBar>
       <div className="relative min-w-0 flex-1 sm:min-w-64 sm:max-w-md"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-subtle)]" /><Input aria-label="Search gradebook" className="pl-9" onChange={(event) => setQuery(event.target.value)} placeholder="Search subject, class, teacher, or component" value={query} /></div>
@@ -63,7 +64,7 @@ export function GradebookWorkspace() {
     </TableControlsBar>
 
     <TableWrap>
-      {loading ? <TableLoading columns={7} label="Loading gradebook…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : filtered.length === 0 ? <TableEmpty description={components.length === 0 ? "Open an assessment cycle and add active components first." : "Change the current filters."} icon={<BookOpenCheck />} title={components.length === 0 ? "No assessment components are ready" : "No components match these filters"} /> : <TableScroll><Table className="min-w-[1020px]"><THead><tr><TH>Assessment</TH><TH>Class</TH><TH>Subject</TH><TH>Teacher</TH><TH>Weight</TH><TH>Status</TH><TH className="w-36">Action</TH></tr></THead><TBody>
+      {loading ? <TableLoading columns={7} label="Loading gradebook…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : filtered.length === 0 ? <TableEmpty description={components.length === 0 ? (canManage ? "Open an assessment cycle and add active components first." : "No assessment components are currently assigned to you.") : "Change the current filters."} icon={<BookOpenCheck />} title={components.length === 0 ? "No assessment components are ready" : "No components match these filters"} /> : <TableScroll><Table className="min-w-[1020px]"><THead><tr><TH>Assessment</TH><TH>Class</TH><TH>Subject</TH><TH>Teacher</TH><TH>Weight</TH><TH>Status</TH><TH className="w-36">Action</TH></tr></THead><TBody>
         {filtered.map((component) => <TR key={component.assessment_component_id}>
           <TD><p className="font-medium text-[var(--text-strong)]">{component.assessment_component_name}</p><p className="mt-1 text-xs text-[var(--text-muted)]">{component.assessment_cycle_name} · {component.assessment_component_code} · {component.maximum_marks} marks</p></TD>
           <TD className="text-[var(--text-body)]">{component.class_group_name}</TD>
