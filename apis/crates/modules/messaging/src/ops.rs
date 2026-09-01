@@ -680,7 +680,8 @@ impl CommunicationOps {
         let unread = query.unread_only.unwrap_or(false);
         let messages = sqlx::query_as::<_, InboxItem>(r#"SELECT delivery.id AS delivery_id,
             announcement.id AS announcement_id, announcement.title, announcement.body,
-            announcement.priority, creator.full_name AS sender_name,
+            announcement.priority, announcement.status AS announcement_status,
+            announcement.cancellation_reason, creator.full_name AS sender_name,
             announcement.published_at AS published_at, delivery.read_at
             FROM communication_deliveries AS delivery
             JOIN communication_announcements AS announcement ON announcement.id = delivery.announcement_id
@@ -714,7 +715,8 @@ impl CommunicationOps {
     ) -> Result<Option<InboxItem>> {
         sqlx::query_as::<_, InboxItem>(r#"SELECT delivery.id AS delivery_id,
             announcement.id AS announcement_id, announcement.title, announcement.body,
-            announcement.priority, creator.full_name AS sender_name,
+            announcement.priority, announcement.status AS announcement_status,
+            announcement.cancellation_reason, creator.full_name AS sender_name,
             announcement.published_at AS published_at, delivery.read_at
             FROM communication_deliveries AS delivery
             JOIN communication_announcements AS announcement ON announcement.id = delivery.announcement_id
@@ -737,7 +739,7 @@ impl CommunicationOps {
         let updated = sqlx::query(
             r#"UPDATE communication_deliveries SET read_at = COALESCE(read_at, NOW())
             WHERE tenant_id = $1 AND recipient_user_id = $2 AND id = $3
-              AND status = 'delivered' AND deleted_at IS NULL"#,
+              AND status = 'delivered' AND read_at IS NULL AND deleted_at IS NULL"#,
         )
         .bind(tenant_id)
         .bind(user_id)
@@ -747,7 +749,7 @@ impl CommunicationOps {
         .context("Failed to record read receipt")?
         .rows_affected();
         if updated == 0 {
-            return Ok(None);
+            return Self::inbox_message(pool, tenant_id, user_id, delivery_id).await;
         }
         append_communication_audit(
             &mut transaction,
@@ -1180,4 +1182,81 @@ async fn append_communication_audit(
     .await
     .context("Failed to append communication audit event")?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        CommunicationAccessScope, LockedAnnouncement, UserReference, bounded_page,
+        ensure_can_manage, ensure_managed_record, ensure_status, ensure_version,
+        recipient_fingerprint, required, scope_allows_announcement,
+    };
+    use uuid::Uuid;
+
+    #[test]
+    fn announcement_scope_never_turns_self_access_into_authoring_access() {
+        let author = Uuid::new_v4();
+        let other = Uuid::new_v4();
+        assert!(scope_allows_announcement(
+            CommunicationAccessScope::Campus,
+            author
+        ));
+        assert!(scope_allows_announcement(
+            CommunicationAccessScope::AssignedTo(author),
+            author
+        ));
+        assert!(!scope_allows_announcement(
+            CommunicationAccessScope::AssignedTo(other),
+            author
+        ));
+        assert!(!scope_allows_announcement(
+            CommunicationAccessScope::SelfFor(author),
+            author
+        ));
+        assert!(ensure_can_manage(CommunicationAccessScope::AssignedTo(author), author).is_ok());
+        assert!(ensure_can_manage(CommunicationAccessScope::SelfFor(author), author).is_err());
+        assert!(
+            ensure_managed_record(CommunicationAccessScope::AssignedTo(other), other, author,)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn stale_or_wrong_lifecycle_state_is_rejected() {
+        let current = LockedAnnouncement {
+            status: "draft".to_string(),
+            version: 3,
+            created_by: Uuid::new_v4(),
+        };
+        assert!(ensure_status(&current, "draft").is_ok());
+        assert!(ensure_status(&current, "submitted").is_err());
+        assert!(ensure_version(&current, 3).is_ok());
+        assert!(ensure_version(&current, 2).is_err());
+    }
+
+    #[test]
+    fn pagination_and_required_text_are_normalized() {
+        assert_eq!(bounded_page(None, None), (1, 25));
+        assert_eq!(bounded_page(Some(-4), Some(900)), (1, 100));
+        assert_eq!(required("  notice  ", "Message").unwrap(), "notice");
+        assert!(required("   ", "Message").is_err());
+    }
+
+    #[test]
+    fn recipient_fingerprint_is_deterministic_for_the_frozen_order() {
+        let first = UserReference {
+            id: Uuid::new_v4(),
+            full_name: "First".to_string(),
+            email: "first@example.test".to_string(),
+        };
+        let second = UserReference {
+            id: Uuid::new_v4(),
+            full_name: "Second".to_string(),
+            email: "second@example.test".to_string(),
+        };
+        let recipients = vec![first, second];
+        let fingerprint = recipient_fingerprint(&recipients);
+        assert_eq!(fingerprint.len(), 64);
+        assert_eq!(fingerprint, recipient_fingerprint(&recipients));
+    }
 }

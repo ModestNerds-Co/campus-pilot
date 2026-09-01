@@ -545,3 +545,68 @@ fn internal_error() -> HttpResponse {
         ]),
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{campus_scope, communication_scope};
+    use crate::CommunicationAccessScope;
+    use cp_audit::AuditActor;
+    use cp_common::{
+        AccessContext, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
+        RecordScopeFamilyKey, RecordScopeGrant, RecordScopeGrants, RecordScopeKind,
+    };
+    use uuid::Uuid;
+
+    fn access(permissions: &[&str]) -> AccessContext {
+        AccessContext {
+            role_keys: Vec::new(),
+            permissions: permissions.iter().map(|value| value.to_string()).collect(),
+            enabled_modules: vec!["messaging".to_string()],
+            entitlements: EntitlementSnapshot::new(
+                LeaseLifecycle::Active,
+                vec![("messaging".to_string(), ModuleEntitlementState::Enabled)],
+                Vec::<String>::new(),
+            )
+            .unwrap(),
+        }
+    }
+
+    fn grants(kind: RecordScopeKind) -> RecordScopeGrants {
+        RecordScopeGrants::from_grants([RecordScopeGrant::new(
+            RecordScopeFamilyKey::parse("messaging.announcements").unwrap(),
+            kind,
+        )])
+    }
+
+    #[test]
+    fn communication_scope_preserves_author_and_inbox_boundaries() {
+        let user_id = Uuid::new_v4();
+        let actor = AuditActor::person(user_id);
+        assert_eq!(
+            communication_scope(
+                &access(&["messaging:view", "messaging:create"]),
+                &grants(RecordScopeKind::Assigned),
+                actor,
+            ),
+            Ok(CommunicationAccessScope::AssignedTo(user_id))
+        );
+        assert_eq!(
+            communication_scope(
+                &access(&["messaging:view"]),
+                &grants(RecordScopeKind::SelfRecord),
+                actor,
+            ),
+            Ok(CommunicationAccessScope::SelfFor(user_id))
+        );
+        assert!(!campus_scope(
+            &access(&["messaging:view", "messaging:create"]),
+            &grants(RecordScopeKind::Assigned),
+            actor,
+        ));
+        assert!(campus_scope(
+            &access(&["*"]),
+            &RecordScopeGrants::empty(),
+            actor,
+        ));
+    }
+}

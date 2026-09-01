@@ -231,6 +231,8 @@ pub struct InboxItem {
     pub title: String,
     pub body: String,
     pub priority: String,
+    pub announcement_status: String,
+    pub cancellation_reason: Option<String>,
     pub sender_name: String,
     pub published_at: DateTime<Utc>,
     pub read_at: Option<DateTime<Utc>>,
@@ -248,4 +250,66 @@ pub struct InboxPage {
 pub struct AudiencePreview {
     pub recipient_count: i64,
     pub recipients: Vec<UserReference>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AudienceKind, AudienceTargetInput};
+    use uuid::Uuid;
+    use validator::Validate;
+
+    fn target(
+        kind: AudienceKind,
+        target_id: Option<Uuid>,
+        target_key: Option<&str>,
+    ) -> AudienceTargetInput {
+        AudienceTargetInput {
+            kind,
+            target_id,
+            target_key: target_key.map(str::to_string),
+            label: "Audience".to_string(),
+        }
+    }
+
+    #[test]
+    fn audience_shapes_are_closed_by_kind() {
+        let id = Uuid::new_v4();
+        assert!(target(AudienceKind::Campus, None, None).validate().is_ok());
+        assert!(
+            target(AudienceKind::Role, None, Some("teacher"))
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            target(AudienceKind::ClassGroup, Some(id), None)
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            target(AudienceKind::Department, Some(id), None)
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            target(AudienceKind::Individual, Some(id), None)
+                .validate()
+                .is_ok()
+        );
+
+        assert!(
+            target(AudienceKind::Campus, Some(id), None)
+                .validate()
+                .is_err()
+        );
+        assert!(
+            target(AudienceKind::Role, None, Some(" "))
+                .validate()
+                .is_err()
+        );
+        assert!(
+            target(AudienceKind::Individual, None, Some("teacher"))
+                .validate()
+                .is_err()
+        );
+    }
 }
