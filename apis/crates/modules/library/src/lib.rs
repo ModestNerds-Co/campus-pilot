@@ -1,12 +1,20 @@
-//
-//  cp-library
-//  lib.rs
-//
-//  Created by Ngonidzashe Mangudya on 2026/08/21.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
-//  Scaffolded module: Library. Wired into routing and the client nav so the
-//  full ERP module map is visible end-to-end; schema and business logic
-//  land in a future pass.
+//! Owns catalogue, copy, membership, circulation, reservation, and fine state.
+//!
+//! Learner and employee identity remains in SIS and HR. Currency and billing
+//! references are resolved through Finance and Fees typed operations.
 
+pub mod catalogue;
+pub mod circulation;
+pub mod dtos;
+pub mod fines;
+pub mod members;
+mod models;
 pub mod routes;
+pub mod settings;
+
+pub use catalogue::LibraryCatalogueOps;
+pub use circulation::LibraryCirculationOps;
+pub use dtos::*;
+pub use fines::LibraryFineOps;
+pub use members::LibraryMemberOps;
+pub use settings::LibrarySettingsOps;

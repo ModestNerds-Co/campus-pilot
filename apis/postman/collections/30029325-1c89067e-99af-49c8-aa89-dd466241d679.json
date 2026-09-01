@@ -5272,6 +5272,173 @@
       ]
     },
     {
+      "name": "Library",
+      "description": "Catalogue, automatically numbered copies, SIS/HR-backed memberships, circulation, holds, and Fees-bound fine requests.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get Library Settings",
+          "request": { "method": "GET", "url": "{{base_url}}/library/settings" }
+        },
+        {
+          "name": "Update Library Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"accession_prefix\": \"LIB\",\n  \"accession_next_sequence\": 1,\n  \"accession_padding\": 6,\n  \"learner_loan_days\": 14,\n  \"employee_loan_days\": 30,\n  \"default_loan_limit\": 5,\n  \"maximum_renewals\": 2,\n  \"fine_currency_id\": \"{{library_currency_id}}\",\n  \"overdue_fine_minor\": 100\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/library/settings"
+          }
+        },
+        {
+          "name": "Get Library References",
+          "request": { "method": "GET", "url": "{{base_url}}/library/references" }
+        },
+        {
+          "name": "List Titles",
+          "request": { "method": "GET", "url": "{{base_url}}/library/titles?page=1&per_page=25&status=active" }
+        },
+        {
+          "name": "Create Title",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Things Fall Apart\",\n  \"subtitle\": null,\n  \"authors\": [\"Chinua Achebe\"],\n  \"isbn\": \"9780385474542\",\n  \"publisher\": \"Anchor Books\",\n  \"publication_year\": 1994,\n  \"edition\": null,\n  \"language_code\": \"eng\",\n  \"subject\": \"Literature\",\n  \"replacement_cost_minor\": 2500,\n  \"replacement_currency_id\": \"{{library_currency_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/library/titles"
+          }
+        },
+        {
+          "name": "Get Title",
+          "request": { "method": "GET", "url": "{{base_url}}/library/titles/{{library_title_id}}" }
+        },
+        {
+          "name": "Update Title",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"title\": \"Things Fall Apart\",\n  \"subtitle\": null,\n  \"authors\": [\"Chinua Achebe\"],\n  \"isbn\": \"9780385474542\",\n  \"publisher\": \"Anchor Books\",\n  \"publication_year\": 1994,\n  \"edition\": null,\n  \"language_code\": \"eng\",\n  \"subject\": \"Literature\",\n  \"replacement_cost_minor\": 2500,\n  \"replacement_currency_id\": \"{{library_currency_id}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{base_url}}/library/titles/{{library_title_id}}"
+          }
+        },
+        {
+          "name": "Retire Title",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1 }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/titles/{{library_title_id}}/retire" }
+        },
+        {
+          "name": "List Copies",
+          "request": { "method": "GET", "url": "{{base_url}}/library/titles/{{library_title_id}}/copies?page=1&per_page=25" }
+        },
+        {
+          "name": "Create Copy",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"barcode\": null,\n  \"location\": \"Main Library · A1\",\n  \"condition\": \"good\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/titles/{{library_title_id}}/copies" }
+        },
+        {
+          "name": "Get Copy",
+          "request": { "method": "GET", "url": "{{base_url}}/library/copies/{{library_copy_id}}" }
+        },
+        {
+          "name": "Update Copy",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"barcode\": null,\n  \"location\": \"Main Library · A1\",\n  \"condition\": \"good\",\n  \"status\": \"available\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/copies/{{library_copy_id}}" }
+        },
+        {
+          "name": "Retire Copy",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1 }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/copies/{{library_copy_id}}/retire" }
+        },
+        {
+          "name": "List Members",
+          "request": { "method": "GET", "url": "{{base_url}}/library/members?page=1&per_page=25&status=active" }
+        },
+        {
+          "name": "Create Learner Membership",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"borrower_kind\": \"learner\",\n  \"borrower_id\": \"{{library_borrower_id}}\",\n  \"loan_limit\": 5\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/members" }
+        },
+        {
+          "name": "Get Member",
+          "request": { "method": "GET", "url": "{{base_url}}/library/members/{{library_membership_id}}" }
+        },
+        {
+          "name": "Update Member",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"status\": \"active\",\n  \"loan_limit\": 5\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/members/{{library_membership_id}}" }
+        },
+        {
+          "name": "List Loans",
+          "request": { "method": "GET", "url": "{{base_url}}/library/loans?page=1&per_page=25&status=active" }
+        },
+        {
+          "name": "Check Out Copy",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"copy_id\": \"{{library_copy_id}}\",\n  \"membership_id\": \"{{library_membership_id}}\",\n  \"fulfilled_hold_id\": null,\n  \"checked_out_on\": \"2026-09-01\",\n  \"notes\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/loans" }
+        },
+        {
+          "name": "Get Loan",
+          "request": { "method": "GET", "url": "{{base_url}}/library/loans/{{library_loan_id}}" }
+        },
+        {
+          "name": "Renew Loan",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"due_on\": null }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/loans/{{library_loan_id}}/renew" }
+        },
+        {
+          "name": "Return Loan",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"returned_on\": \"2026-09-10\",\n  \"copy_condition\": \"good\",\n  \"notes\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/loans/{{library_loan_id}}/return" }
+        },
+        {
+          "name": "Mark Loan Lost",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"reason\": \"Copy reported lost by borrower\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/loans/{{library_loan_id}}/lost" }
+        },
+        {
+          "name": "List Holds",
+          "request": { "method": "GET", "url": "{{base_url}}/library/holds?page=1&per_page=25" }
+        },
+        {
+          "name": "Place Hold",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"title_id\": \"{{library_title_id}}\",\n  \"membership_id\": \"{{library_membership_id}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/holds" }
+        },
+        {
+          "name": "Get Hold",
+          "request": { "method": "GET", "url": "{{base_url}}/library/holds/{{library_hold_id}}" }
+        },
+        {
+          "name": "Mark Hold Ready",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"copy_id\": \"{{library_copy_id}}\",\n  \"expires_at\": \"2026-09-03T12:00:00Z\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/holds/{{library_hold_id}}/ready" }
+        },
+        {
+          "name": "Cancel Hold",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"reason\": \"No longer required\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/holds/{{library_hold_id}}/cancel" }
+        },
+        {
+          "name": "Expire Hold",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 2, \"reason\": \"Pickup window elapsed\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/holds/{{library_hold_id}}/expire" }
+        },
+        {
+          "name": "List Fines",
+          "request": { "method": "GET", "url": "{{base_url}}/library/fines?page=1&per_page=25" }
+        },
+        {
+          "name": "Get Fine",
+          "request": { "method": "GET", "url": "{{base_url}}/library/fines/{{library_fine_id}}" }
+        },
+        {
+          "name": "Assess Loan Fine",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"kind\": \"overdue\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/loans/{{library_loan_id}}/fines" }
+        },
+        {
+          "name": "Submit Fine to Fees",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"billing_account_id\": \"{{library_billing_account_id}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/fines/{{library_fine_id}}/submit-to-fees" }
+        },
+        {
+          "name": "Waive Fine",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"reason\": \"Waived by approved campus policy\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/library/fines/{{library_fine_id}}/waive" }
+        }
+      ]
+    },
+    {
       "name": "SIS",
       "description": "Canonical learners and guardians, explicit guardian relationships, applications, and Academics-backed enrolments.",
       "auth": {
@@ -6248,6 +6415,51 @@
     },
     {
       "key": "attendance_learner_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_title_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_copy_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_borrower_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_membership_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_loan_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_hold_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_fine_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_currency_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "library_billing_account_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }

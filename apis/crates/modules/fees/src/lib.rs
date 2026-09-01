@@ -8,6 +8,7 @@
 //  Fees owns learner billing accounts and billing source records. Finance owns
 //  the accounting ledger and receives only typed, balanced posting requests.
 
+pub mod charge_requests;
 pub mod foundation;
 pub mod imports;
 pub mod invoices;

@@ -3405,6 +3405,313 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Library: catalogue, canonical members, circulation, holds, and fines.
+        route(
+            Method::GET,
+            "/api/1.0/library/settings",
+            "library.settings.read",
+            "library",
+            "library:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/library/settings",
+            "library.settings.update",
+            "library",
+            "library:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/references",
+            "library.references.read",
+            "library",
+            "library:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/titles",
+            "library.titles.list",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/titles",
+            "library.titles.create",
+            "library",
+            "library:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/titles/{id}",
+            "library.titles.read",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/library/titles/{id}",
+            "library.titles.update",
+            "library",
+            "library:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/titles/{id}/retire",
+            "library.titles.retire",
+            "library",
+            "library:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/titles/{id}/copies",
+            "library.copies.list",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/titles/{id}/copies",
+            "library.copies.create",
+            "library",
+            "library:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/copies/{id}",
+            "library.copies.read",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/library/copies/{id}",
+            "library.copies.update",
+            "library",
+            "library:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/copies/{id}/retire",
+            "library.copies.retire",
+            "library",
+            "library:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/members",
+            "library.members.list",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/members",
+            "library.members.create",
+            "library",
+            "library:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/members/{id}",
+            "library.members.read",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/library/members/{id}",
+            "library.members.update",
+            "library",
+            "library:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/loans",
+            "library.loans.list",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/loans",
+            "library.loans.checkout",
+            "library",
+            "library:circulate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/loans/{id}",
+            "library.loans.read",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/loans/{id}/renew",
+            "library.loans.renew",
+            "library",
+            "library:borrow",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/loans/{id}/return",
+            "library.loans.return",
+            "library",
+            "library:circulate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/loans/{id}/lost",
+            "library.loans.mark_lost",
+            "library",
+            "library:circulate",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/loans/{id}/fines",
+            "library.fines.assess",
+            "library",
+            "library:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/holds",
+            "library.holds.list",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/holds",
+            "library.holds.place",
+            "library",
+            "library:borrow",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/holds/{id}",
+            "library.holds.read",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/holds/{id}/ready",
+            "library.holds.ready",
+            "library",
+            "library:circulate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/holds/{id}/cancel",
+            "library.holds.cancel",
+            "library",
+            "library:borrow",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/holds/{id}/expire",
+            "library.holds.expire",
+            "library",
+            "library:circulate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/fines",
+            "library.fines.list",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/library/fines/{id}",
+            "library.fines.read",
+            "library",
+            "library:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/fines/{id}/submit-to-fees",
+            "library.fines.submit_to_fees",
+            "library",
+            "library:manage",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/library/fines/{id}/waive",
+            "library.fines.waive",
+            "library",
+            "library:manage",
+            OperationEffect::Write,
+            true,
+        ),
     ]
 }
 
@@ -3476,6 +3783,40 @@ fn route(
             "sis".to_string(),
             "hr_payroll".to_string(),
         ])
+    } else if key == "library.fines.submit_to_fees" {
+        operation.requiring_modules([
+            "fees".to_string(),
+            "finance".to_string(),
+            "hr_payroll".to_string(),
+            "sis".to_string(),
+        ])
+    } else if key.starts_with("library.fines.") {
+        operation.requiring_modules([
+            "finance".to_string(),
+            "hr_payroll".to_string(),
+            "sis".to_string(),
+        ])
+    } else if key == "library.references.read" {
+        operation.requiring_modules([
+            "fees".to_string(),
+            "finance".to_string(),
+            "hr_payroll".to_string(),
+            "sis".to_string(),
+        ])
+    } else if matches!(
+        key,
+        "library.settings.read"
+            | "library.settings.update"
+            | "library.titles.read"
+            | "library.titles.create"
+            | "library.titles.update"
+    ) {
+        operation.requiring_modules(["finance".to_string()])
+    } else if key.starts_with("library.members.")
+        || key.starts_with("library.loans.")
+        || key.starts_with("library.holds.")
+    {
+        operation.requiring_modules(["hr_payroll".to_string(), "sis".to_string()])
     } else if key.starts_with("fees.") {
         operation.requiring_modules([
             "sis".to_string(),
@@ -3660,7 +4001,21 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "messaging.announcements.audience_preview.read"
         | "messaging.deliveries.list"
         | "messaging.inbox.list"
-        | "messaging.inbox.read" => AgentExposure::Exposed,
+        | "messaging.inbox.read"
+        | "library.settings.read"
+        | "library.references.read"
+        | "library.titles.list"
+        | "library.titles.read"
+        | "library.copies.list"
+        | "library.copies.read"
+        | "library.members.list"
+        | "library.members.read"
+        | "library.loans.list"
+        | "library.loans.read"
+        | "library.holds.list"
+        | "library.holds.read"
+        | "library.fines.list"
+        | "library.fines.read" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
         | "administration.ai_providers.connections.update"
@@ -3856,7 +4211,27 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "messaging.announcements.publish"
         | "messaging.announcements.cancel"
         | "messaging.announcements.delete"
-        | "messaging.inbox.mark_read" => AgentExposure::ApprovalRequired,
+        | "messaging.inbox.mark_read"
+        | "library.settings.update"
+        | "library.titles.create"
+        | "library.titles.update"
+        | "library.titles.retire"
+        | "library.copies.create"
+        | "library.copies.update"
+        | "library.copies.retire"
+        | "library.members.create"
+        | "library.members.update"
+        | "library.loans.checkout"
+        | "library.loans.renew"
+        | "library.loans.return"
+        | "library.loans.mark_lost"
+        | "library.holds.place"
+        | "library.holds.ready"
+        | "library.holds.cancel"
+        | "library.holds.expire"
+        | "library.fines.assess"
+        | "library.fines.submit_to_fees"
+        | "library.fines.waive" => AgentExposure::ApprovalRequired,
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -3952,6 +4327,7 @@ mod tests {
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("messaging".to_string(), ModuleEntitlementState::Enabled),
+                ("library".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
@@ -3987,7 +4363,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 365);
+        assert_eq!(operation_catalog().len(), 399);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -4039,7 +4415,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [139, 196, 18, 12]);
+        assert_eq!(counts, [153, 216, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -4217,6 +4593,49 @@ mod tests {
             update.agent_exposure(),
             AgentExposure::ApprovalRequired
         ));
+    }
+
+    #[test]
+    fn library_operations_are_fully_governed_and_dependency_typed() {
+        let operations = operation_catalog()
+            .iter()
+            .filter(|entry| entry.operation().key().starts_with("library."))
+            .collect::<Vec<_>>();
+        assert_eq!(operations.len(), 34);
+        for entry in operations {
+            let operation = entry.operation();
+            assert_eq!(operation.module_key(), "library", "{}", operation.key());
+            assert!(operation.license_required(), "{}", operation.key());
+        }
+
+        assert_eq!(
+            operation("library.references.read")
+                .required_modules()
+                .collect::<Vec<_>>(),
+            vec!["fees", "finance", "hr_payroll", "sis"]
+        );
+        assert_eq!(
+            operation("library.fines.submit_to_fees")
+                .required_modules()
+                .collect::<Vec<_>>(),
+            vec!["fees", "finance", "hr_payroll", "sis"]
+        );
+        assert_eq!(
+            operation("library.loans.renew").permission(),
+            "library:borrow"
+        );
+        assert_eq!(
+            operation("library.loans.checkout").permission(),
+            "library:circulate"
+        );
+        assert_eq!(
+            operation("library.titles.list").agent_exposure(),
+            AgentExposure::Exposed
+        );
+        assert_eq!(
+            operation("library.titles.create").agent_exposure(),
+            AgentExposure::ApprovalRequired
+        );
     }
 
     #[test]

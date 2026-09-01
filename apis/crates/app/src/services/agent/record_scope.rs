@@ -93,6 +93,20 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "hr_payroll.positions.read",
     "fleet.vehicles.list",
     "fleet.vehicles.read",
+    "library.settings.read",
+    "library.references.read",
+    "library.titles.list",
+    "library.titles.read",
+    "library.copies.list",
+    "library.copies.read",
+    "library.members.list",
+    "library.members.read",
+    "library.loans.list",
+    "library.loans.read",
+    "library.holds.list",
+    "library.holds.read",
+    "library.fines.list",
+    "library.fines.read",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -358,7 +372,14 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "messaging.inbox.list"
         | "hr_payroll.departments.list"
         | "hr_payroll.positions.list"
-        | "fleet.vehicles.list" => Some(OperationScopePolicy::Dataset),
+        | "fleet.vehicles.list"
+        | "library.settings.read"
+        | "library.references.read"
+        | "library.titles.list"
+        | "library.members.list"
+        | "library.loans.list"
+        | "library.holds.list"
+        | "library.fines.list" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -430,6 +451,12 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "hr_payroll.departments.read" => Some(OperationScopePolicy::OneResource("department")),
         "hr_payroll.positions.read" => Some(OperationScopePolicy::OneResource("position")),
         "fleet.vehicles.read" => Some(OperationScopePolicy::OneResource("vehicle")),
+        "library.titles.read" => Some(OperationScopePolicy::OneResource("library_title")),
+        "library.copies.read" => Some(OperationScopePolicy::OneResource("library_copy")),
+        "library.members.read" => Some(OperationScopePolicy::OneResource("library_membership")),
+        "library.loans.read" => Some(OperationScopePolicy::OneResource("library_loan")),
+        "library.holds.read" => Some(OperationScopePolicy::OneResource("library_hold")),
+        "library.fines.read" => Some(OperationScopePolicy::OneResource("library_fine")),
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
                 allowed_kinds: &["academic_year"],
@@ -461,6 +488,10 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "assets_inventory.stock_requests.list" => Some(OperationScopePolicy::DatasetOrResources {
             allowed_kinds: &["hr_employee", "hr_department"],
             maximum: 2,
+        }),
+        "library.copies.list" => Some(OperationScopePolicy::DatasetOrResources {
+            allowed_kinds: &["library_title"],
+            maximum: 1,
         }),
         _ => None,
     }
@@ -605,6 +636,24 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "communication_delivery" => Some(
             "SELECT EXISTS(SELECT 1 FROM communication_deliveries WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "library_title" => Some(
+            "SELECT EXISTS(SELECT 1 FROM library_titles WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "library_copy" => Some(
+            "SELECT EXISTS(SELECT 1 FROM library_copies WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "library_membership" => Some(
+            "SELECT EXISTS(SELECT 1 FROM library_memberships WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "library_loan" => {
+            Some("SELECT EXISTS(SELECT 1 FROM library_loans WHERE tenant_id = $1 AND id = $2)")
+        }
+        "library_hold" => {
+            Some("SELECT EXISTS(SELECT 1 FROM library_holds WHERE tenant_id = $1 AND id = $2)")
+        }
+        "library_fine" => {
+            Some("SELECT EXISTS(SELECT 1 FROM library_fines WHERE tenant_id = $1 AND id = $2)")
+        }
         _ => None,
     }
 }
@@ -684,7 +733,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 71);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 85);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -704,7 +753,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 139);
+        assert_eq!(exposed.len(), 153);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

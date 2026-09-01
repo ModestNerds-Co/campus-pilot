@@ -35,6 +35,16 @@ pub struct LearnerBillingReference {
     pub status: String,
 }
 
+/// Minimum SIS-owned learner identity used by Library membership workflows.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LibraryLearnerReference {
+    pub id: Uuid,
+    pub account_id: Option<Uuid>,
+    pub learner_number: String,
+    pub display_name: String,
+    pub status: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct GuardianWithAccount {
     pub id: Uuid,

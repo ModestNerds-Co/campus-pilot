@@ -16,6 +16,7 @@ import {
   BarChart3,
   ClipboardList,
   Coins,
+  CircleDollarSign,
   GraduationCap,
   FileUp,
   FileCheck2,
@@ -33,6 +34,7 @@ import {
   RadioTower,
   School,
   Settings2,
+  Clock3,
   ShoppingCart,
   Truck,
   UserRoundCheck,
@@ -49,8 +51,15 @@ import type { SchoolConfiguration } from "@/modules/configs/types";
 import { AgentWidget } from "@/modules/agent";
 import { useAuthStore } from "@/stores/auth-store";
 
-import { defaultModuleVisual, moduleRouteKey, moduleVisuals } from "./module-registry";
-import { PageChromeProvider, usePageChromeContext } from "@/modules/admin/layouts/page-chrome";
+import {
+  defaultModuleVisual,
+  moduleRouteKey,
+  moduleVisuals,
+} from "./module-registry";
+import {
+  PageChromeProvider,
+  usePageChromeContext,
+} from "@/modules/admin/layouts/page-chrome";
 
 interface ModuleLayoutProps {
   children: React.ReactNode;
@@ -87,83 +96,249 @@ const moduleLabels: Record<string, string> = {
 const fleetNavigation: LocalNavItem[] = [
   { label: "Vehicles", path: "/modules/fleet/vehicles", icon: Truck },
   { label: "Drivers", path: "/modules/fleet/drivers", icon: ClipboardList },
-  { label: "Daily vehicle log", path: "/modules/fleet/daily-log", icon: ReceiptText },
+  {
+    label: "Daily vehicle log",
+    path: "/modules/fleet/daily-log",
+    icon: ReceiptText,
+  },
 ];
 
 const hrNavigation: LocalNavItem[] = [
-  { label: "Employees", path: "/modules/hr-payroll/employees", icon: UsersRound },
-  { label: "Employee imports", path: "/modules/hr-payroll/imports", icon: FileUp },
-  { label: "Employment", path: "/modules/hr-payroll/employment", icon: BriefcaseBusiness },
-  { label: "Availability", path: "/modules/hr-payroll/availability", icon: CalendarClock },
-  { label: "Departments", path: "/modules/hr-payroll/departments", icon: Building2 },
-  { label: "Positions", path: "/modules/hr-payroll/positions", icon: BriefcaseBusiness },
+  {
+    label: "Employees",
+    path: "/modules/hr-payroll/employees",
+    icon: UsersRound,
+  },
+  {
+    label: "Employee imports",
+    path: "/modules/hr-payroll/imports",
+    icon: FileUp,
+  },
+  {
+    label: "Employment",
+    path: "/modules/hr-payroll/employment",
+    icon: BriefcaseBusiness,
+  },
+  {
+    label: "Availability",
+    path: "/modules/hr-payroll/availability",
+    icon: CalendarClock,
+  },
+  {
+    label: "Departments",
+    path: "/modules/hr-payroll/departments",
+    icon: Building2,
+  },
+  {
+    label: "Positions",
+    path: "/modules/hr-payroll/positions",
+    icon: BriefcaseBusiness,
+  },
 ];
 
 const academicsNavigation: LocalNavItem[] = [
-  { label: "Academic years", path: "/modules/academics/academic-years", icon: CalendarRange },
-  { label: "Academic terms", path: "/modules/academics/terms", icon: CalendarDays },
-  { label: "Grade levels", path: "/modules/academics/grade-levels", icon: ListOrdered },
+  {
+    label: "Academic years",
+    path: "/modules/academics/academic-years",
+    icon: CalendarRange,
+  },
+  {
+    label: "Academic terms",
+    path: "/modules/academics/terms",
+    icon: CalendarDays,
+  },
+  {
+    label: "Grade levels",
+    path: "/modules/academics/grade-levels",
+    icon: ListOrdered,
+  },
   { label: "Subjects", path: "/modules/academics/subjects", icon: BookOpen },
-  { label: "Teachers", path: "/modules/academics/teachers", icon: UserRoundCheck },
+  {
+    label: "Teachers",
+    path: "/modules/academics/teachers",
+    icon: UserRoundCheck,
+  },
   { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap },
-  { label: "Teaching assignments", path: "/modules/academics/teaching-assignments", icon: ClipboardList },
-  { label: "Assessments", path: "/modules/academics/assessments", icon: FileCheck2 },
-  { label: "Gradebook", path: "/modules/academics/gradebook", icon: BookOpenCheck },
+  {
+    label: "Teaching assignments",
+    path: "/modules/academics/teaching-assignments",
+    icon: ClipboardList,
+  },
+  {
+    label: "Assessments",
+    path: "/modules/academics/assessments",
+    icon: FileCheck2,
+  },
+  {
+    label: "Gradebook",
+    path: "/modules/academics/gradebook",
+    icon: BookOpenCheck,
+  },
   { label: "Reports", path: "/modules/academics/reporting", icon: BarChart3 },
 ];
 
 const attendanceNavigation: LocalNavItem[] = [
-  { label: "Registers", path: "/modules/attendance/registers", icon: CalendarCheck2 },
+  {
+    label: "Registers",
+    path: "/modules/attendance/registers",
+    icon: CalendarCheck2,
+  },
+];
+
+const libraryNavigation: LocalNavItem[] = [
+  {
+    label: "Circulation",
+    path: "/modules/library/circulation",
+    icon: BookOpenCheck,
+  },
+  { label: "Holds", path: "/modules/library/holds", icon: Clock3 },
+  { label: "Members", path: "/modules/library/members", icon: UsersRound },
+  { label: "Fines", path: "/modules/library/fines", icon: CircleDollarSign },
+  {
+    label: "Settings",
+    path: "/modules/library/settings",
+    icon: Settings2,
+    permission: "library:manage",
+  },
 ];
 
 const messagingNavigation: LocalNavItem[] = [
-  { label: "Inbox", path: "/modules/messaging/inbox", icon: Inbox, permission: "messaging:view" },
-  { label: "Delivery history", path: "/modules/messaging/delivery-history", icon: RadioTower, permission: "messaging:send" },
+  {
+    label: "Inbox",
+    path: "/modules/messaging/inbox",
+    icon: Inbox,
+    permission: "messaging:view",
+  },
+  {
+    label: "Delivery history",
+    path: "/modules/messaging/delivery-history",
+    icon: RadioTower,
+    permission: "messaging:send",
+  },
 ];
 
 const sisNavigation: LocalNavItem[] = [
   { label: "Learners", path: "/modules/sis/learners", icon: GraduationCap },
   { label: "Guardians", path: "/modules/sis/guardians", icon: UsersRound },
-  { label: "Guardian relationships", path: "/modules/sis/guardian-relationships", icon: UserRoundCheck },
-  { label: "Applications", path: "/modules/sis/applications", icon: ClipboardList },
+  {
+    label: "Guardian relationships",
+    path: "/modules/sis/guardian-relationships",
+    icon: UserRoundCheck,
+  },
+  {
+    label: "Applications",
+    path: "/modules/sis/applications",
+    icon: ClipboardList,
+  },
   { label: "Enrolments", path: "/modules/sis/enrolments", icon: School },
   { label: "Data imports", path: "/modules/sis/imports", icon: FileUp },
   { label: "Settings", path: "/modules/sis/settings", icon: Settings2 },
 ];
 
 const financeNavigation: LocalNavItem[] = [
-  { label: "Posting requests", path: "/modules/finance/posting-requests", icon: FileInput },
+  {
+    label: "Posting requests",
+    path: "/modules/finance/posting-requests",
+    icon: FileInput,
+  },
   { label: "Journals", path: "/modules/finance/journals", icon: FileCheck2 },
   { label: "Currencies", path: "/modules/finance/currencies", icon: Coins },
-  { label: "Chart of accounts", path: "/modules/finance/chart-of-accounts", icon: Landmark },
-  { label: "Fiscal years and periods", path: "/modules/finance/accounting-periods", icon: CalendarRange },
+  {
+    label: "Chart of accounts",
+    path: "/modules/finance/chart-of-accounts",
+    icon: Landmark,
+  },
+  {
+    label: "Fiscal years and periods",
+    path: "/modules/finance/accounting-periods",
+    icon: CalendarRange,
+  },
 ];
 
 const feesNavigation: LocalNavItem[] = [
   { label: "Invoices", path: "/modules/fees/invoices", icon: FileCheck2 },
-  { label: "Billing accounts", path: "/modules/fees/billing-accounts", icon: UsersRound },
-  { label: "Fee structures", path: "/modules/fees/fee-structures", icon: ReceiptText },
-  { label: "Data imports", path: "/modules/fees/imports", icon: FileUp, permission: "fees:create" },
+  {
+    label: "Billing accounts",
+    path: "/modules/fees/billing-accounts",
+    icon: UsersRound,
+  },
+  {
+    label: "Fee structures",
+    path: "/modules/fees/fee-structures",
+    icon: ReceiptText,
+  },
+  {
+    label: "Data imports",
+    path: "/modules/fees/imports",
+    icon: FileUp,
+    permission: "fees:create",
+  },
 ];
 
 const procurementNavigation: LocalNavItem[] = [
-  { label: "Requisitions", path: "/modules/procurement/requisitions", icon: ClipboardList },
-  { label: "Purchase orders", path: "/modules/procurement/purchase-orders", icon: ShoppingCart },
-  { label: "Goods receipts", path: "/modules/procurement/goods-receipts", icon: PackageCheck },
-  { label: "Suppliers", path: "/modules/procurement/suppliers", icon: PackageSearch },
+  {
+    label: "Requisitions",
+    path: "/modules/procurement/requisitions",
+    icon: ClipboardList,
+  },
+  {
+    label: "Purchase orders",
+    path: "/modules/procurement/purchase-orders",
+    icon: ShoppingCart,
+  },
+  {
+    label: "Goods receipts",
+    path: "/modules/procurement/goods-receipts",
+    icon: PackageCheck,
+  },
+  {
+    label: "Suppliers",
+    path: "/modules/procurement/suppliers",
+    icon: PackageSearch,
+  },
 ];
 
 const assetsInventoryNavigation: LocalNavItem[] = [
-  { label: "Stock", path: "/modules/assets-inventory/stock", icon: Boxes, permission: "assets_inventory:view" },
-  { label: "Requests", path: "/modules/assets-inventory/requests", icon: ClipboardList, permission: "assets_inventory:view" },
-  { label: "Movements", path: "/modules/assets-inventory/movements", icon: ArrowLeftRight, permission: "assets_inventory:view" },
-  { label: "Procurement receipts", path: "/modules/assets-inventory/procurement-receipts", icon: PackageCheck, permission: "assets_inventory:receive", requiredModule: "procurement" },
+  {
+    label: "Stock",
+    path: "/modules/assets-inventory/stock",
+    icon: Boxes,
+    permission: "assets_inventory:view",
+  },
+  {
+    label: "Requests",
+    path: "/modules/assets-inventory/requests",
+    icon: ClipboardList,
+    permission: "assets_inventory:view",
+  },
+  {
+    label: "Movements",
+    path: "/modules/assets-inventory/movements",
+    icon: ArrowLeftRight,
+    permission: "assets_inventory:view",
+  },
+  {
+    label: "Procurement receipts",
+    path: "/modules/assets-inventory/procurement-receipts",
+    icon: PackageCheck,
+    permission: "assets_inventory:receive",
+    requiredModule: "procurement",
+  },
   { label: "Items", path: "/modules/assets-inventory/items", icon: Boxes },
-  { label: "Stores", path: "/modules/assets-inventory/stores", icon: Warehouse },
+  {
+    label: "Stores",
+    path: "/modules/assets-inventory/stores",
+    icon: Warehouse,
+  },
 ];
 
 const agentNavigation: LocalNavItem[] = [
-  { label: "Personal usage", path: "/modules/agent/usage", icon: BarChart3, permission: "agent:view" },
+  {
+    label: "Personal usage",
+    path: "/modules/agent/usage",
+    icon: BarChart3,
+    permission: "agent:view",
+  },
 ];
 
 export const ModuleLayout: React.FC<ModuleLayoutProps> = ({ children }) => (
@@ -188,15 +363,49 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = (moduleKey === "agent" ? agentNavigation : moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "attendance" ? attendanceNavigation : moduleKey === "messaging" ? messagingNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
-    .filter((item) => (!item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission)) && (!item.requiredModule || user?.modules.includes(item.requiredModule)));
+  const localNavigation = (
+    moduleKey === "agent"
+      ? agentNavigation
+      : moduleKey === "fleet"
+        ? fleetNavigation
+        : moduleKey === "hr_payroll"
+          ? hrNavigation
+          : moduleKey === "academics"
+            ? academicsNavigation
+            : moduleKey === "attendance"
+              ? attendanceNavigation
+              : moduleKey === "library"
+                ? libraryNavigation
+                : moduleKey === "messaging"
+                  ? messagingNavigation
+                  : moduleKey === "sis"
+                    ? sisNavigation
+                    : moduleKey === "finance"
+                      ? financeNavigation
+                      : moduleKey === "fees"
+                        ? feesNavigation
+                        : moduleKey === "procurement"
+                          ? procurementNavigation
+                          : moduleKey === "assets_inventory"
+                            ? assetsInventoryNavigation
+                            : []
+  ).filter(
+    (item) =>
+      (!item.permission ||
+        user?.permissions.includes("*") ||
+        user?.permissions.includes(item.permission)) &&
+      (!item.requiredModule || user?.modules.includes(item.requiredModule)),
+  );
 
   useEffect(() => {
     let active = true;
     void bootstrapService.checkStatus().then((response) => {
-      if (active && response.success && response.data?.school) setSchool(response.data.school);
+      if (active && response.success && response.data?.school)
+        setSchool(response.data.school);
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => setSidebarOpen(false), [location.pathname]);
@@ -212,7 +421,9 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-[100dvh] bg-[var(--canvas)]">
-      <a className="cp-skip-link" href="#main-content">Skip to main content</a>
+      <a className="cp-skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <aside
         aria-label={`${moduleLabel} navigation`}
         aria-hidden={!desktopNavigation && !sidebarOpen}
@@ -221,72 +432,156 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
         ref={sidebarRef}
       >
         <div className="relative border-b border-[var(--sidebar-border)] px-5 pb-5 pt-6">
-          <div aria-hidden="true" className="campus-grid-pattern absolute inset-0 opacity-40" />
+          <div
+            aria-hidden="true"
+            className="campus-grid-pattern absolute inset-0 opacity-40"
+          />
           <div className="relative flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[var(--brand-highlight)] text-[var(--sidebar-active-fg)]">
               <ModuleIcon className="size-[18px]" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold tracking-[-0.025em]">{moduleLabel}</p>
-              <p className="truncate text-[11px] font-medium text-[var(--sidebar-muted)]">{school?.name || "Campus workspace"}</p>
+              <p className="truncate text-[15px] font-bold tracking-[-0.025em]">
+                {moduleLabel}
+              </p>
+              <p className="truncate text-[11px] font-medium text-[var(--sidebar-muted)]">
+                {school?.name || "Campus workspace"}
+              </p>
             </div>
-            <button aria-label="Close navigation" className="ml-auto inline-flex size-10 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] lg:hidden" onClick={() => setSidebarOpen(false)} type="button">
+            <button
+              aria-label="Close navigation"
+              className="ml-auto inline-flex size-10 items-center justify-center rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)] lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+              type="button"
+            >
               <X className="size-5" />
             </button>
           </div>
-          <Link className="relative mt-5 flex min-h-10 items-center gap-2 rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]" to="/home">
+          <Link
+            className="relative mt-5 flex min-h-10 items-center gap-2 rounded-[8px] border border-[var(--sidebar-border)] bg-white/5 px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)]"
+            to="/home"
+          >
             <ChevronLeft className="size-4" />
             All modules
           </Link>
         </div>
 
-        <nav className="cp-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Module navigation">
+        <nav
+          className="cp-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4"
+          aria-label="Module navigation"
+        >
           <section aria-labelledby="module-workspace-nav">
-            <h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]" id="module-workspace-nav">Workspace</h2>
+            <h2
+              className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]"
+              id="module-workspace-nav"
+            >
+              Workspace
+            </h2>
             <div className="space-y-1">
-              <LocalOverviewLink active={isModuleOverview(location.pathname) || (moduleKey === "agent" && location.pathname.startsWith("/modules/agent/sessions/"))} moduleKey={moduleKey} />
-              {localNavigation.map((item) => <LocalLink active={location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)} item={item} key={item.path} />)}
+              <LocalOverviewLink
+                active={
+                  isModuleOverview(location.pathname) ||
+                  (moduleKey === "agent" &&
+                    location.pathname.startsWith("/modules/agent/sessions/"))
+                }
+                moduleKey={moduleKey}
+              />
+              {localNavigation.map((item) => (
+                <LocalLink
+                  active={
+                    location.pathname === item.path ||
+                    location.pathname.startsWith(`${item.path}/`)
+                  }
+                  item={item}
+                  key={item.path}
+                />
+              ))}
             </div>
           </section>
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] p-3">
-          {moduleKey !== "agent" ? <AgentWidget context={{ label: moduleLabel, moduleKey, route: location.pathname }} /> : null}
+          {moduleKey !== "agent" ? (
+            <AgentWidget
+              context={{
+                label: moduleLabel,
+                moduleKey,
+                route: location.pathname,
+              }}
+            />
+          ) : null}
           <ThemeToggle className="w-full" variant="sidebar" />
           <div className="mt-3 flex items-center gap-3 px-2">
-            <span className="flex size-9 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold">{initials(userName)}</span>
+            <span className="flex size-9 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-white/10 text-xs font-semibold">
+              {initials(userName)}
+            </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold">{userName}</p>
-              <p className="truncate text-[11px] text-[var(--sidebar-muted)]">{userRole}</p>
+              <p className="truncate text-[11px] text-[var(--sidebar-muted)]">
+                {userRole}
+              </p>
             </div>
           </div>
-          <button className="mt-2 flex min-h-10 w-full items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]" onClick={() => void handleLogout()} type="button">
+          <button
+            className="mt-2 flex min-h-10 w-full items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-highlight)]"
+            onClick={() => void handleLogout()}
+            type="button"
+          >
             <LogOut className="size-[17px]" /> Sign out
           </button>
         </div>
       </aside>
 
-      {sidebarOpen ? <button aria-label="Close navigation" className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] lg:hidden" onClick={() => setSidebarOpen(false)} type="button" /> : null}
+      {sidebarOpen ? (
+        <button
+          aria-label="Close navigation"
+          className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          type="button"
+        />
+      ) : null}
 
       <div className="min-w-0 lg:pl-[var(--sidebar-w)]">
         <header className="fixed inset-x-0 top-0 z-[var(--z-nav)] flex h-[var(--app-bar-h)] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-4 backdrop-blur-md lg:left-[var(--sidebar-w)] lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <button aria-controls="module-navigation" aria-expanded={sidebarOpen} aria-hidden={sidebarOpen} aria-label="Open navigation" className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] lg:hidden ${sidebarOpen ? "invisible pointer-events-none" : ""}`} onClick={() => setSidebarOpen(true)} ref={menuButtonRef} tabIndex={sidebarOpen ? -1 : 0} type="button">
+            <button
+              aria-controls="module-navigation"
+              aria-expanded={sidebarOpen}
+              aria-hidden={sidebarOpen}
+              aria-label="Open navigation"
+              className={`inline-flex size-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] lg:hidden ${sidebarOpen ? "invisible pointer-events-none" : ""}`}
+              onClick={() => setSidebarOpen(true)}
+              ref={menuButtonRef}
+              tabIndex={sidebarOpen ? -1 : 0}
+              type="button"
+            >
               <Menu className="size-5" />
             </button>
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-semibold text-[var(--text-strong)]">{pageTitle || moduleLabel}</p>
-              <p className="hidden truncate text-[12px] text-[var(--text-muted)] sm:block">{school?.name || "Campus workspace"}</p>
+              <p className="truncate text-[14px] font-semibold text-[var(--text-strong)]">
+                {pageTitle || moduleLabel}
+              </p>
+              <p className="hidden truncate text-[12px] text-[var(--text-muted)] sm:block">
+                {school?.name || "Campus workspace"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {pageAction ? <div className="hidden sm:block">{pageAction}</div> : null}
+            {pageAction ? (
+              <div className="hidden sm:block">{pageAction}</div>
+            ) : null}
             <ThemeToggle className="lg:hidden" />
           </div>
         </header>
-        <main className="min-h-[100dvh] pt-[var(--app-bar-h)]" id="main-content" tabIndex={-1}>
+        <main
+          className="min-h-[100dvh] pt-[var(--app-bar-h)]"
+          id="main-content"
+          tabIndex={-1}
+        >
           <div className="campus-page-enter mx-auto max-w-[1480px] p-4 sm:p-6 lg:p-8">
-            {pageAction ? <div className="mb-4 sm:hidden">{pageAction}</div> : null}
+            {pageAction ? (
+              <div className="mb-4 sm:hidden">{pageAction}</div>
+            ) : null}
             {children}
           </div>
         </main>
@@ -295,7 +590,10 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   );
 };
 
-const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({ active, moduleKey }) => (
+const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
+  active,
+  moduleKey,
+}) => (
   <Link
     aria-current={active ? "page" : undefined}
     className={navClass(active)}
@@ -303,62 +601,485 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({ a
     to="/modules/$moduleKey"
   >
     <LayoutDashboard className="size-[17px]" />
-    <span className="flex-1">{moduleKey === "agent" ? "Sessions" : moduleKey === "messaging" ? "Announcements" : "Overview"}</span>
+    <span className="flex-1">
+      {moduleKey === "agent"
+        ? "Sessions"
+        : moduleKey === "messaging"
+          ? "Announcements"
+          : moduleKey === "library"
+            ? "Catalogue"
+            : "Overview"}
+    </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
   </Link>
 );
 
-const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({ active, item }) => {
+const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
+  active,
+  item,
+}) => {
   const Icon = item.icon;
-  if (item.path === "/modules/agent/usage") return <Link className={navClass(active)} to="/modules/agent/usage"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fleet/vehicles") return <Link className={navClass(active)} to="/modules/fleet/vehicles"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fleet/drivers") return <Link className={navClass(active)} to="/modules/fleet/drivers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fleet/daily-log") return <Link className={navClass(active)} to="/modules/fleet/daily-log"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/hr-payroll/employees") return <Link className={navClass(active)} to="/modules/hr-payroll/employees"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/hr-payroll/imports") return <Link className={navClass(active)} to="/modules/hr-payroll/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/hr-payroll/employment") return <Link className={navClass(active)} to="/modules/hr-payroll/employment"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/hr-payroll/availability") return <Link className={navClass(active)} to="/modules/hr-payroll/availability"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/hr-payroll/departments") return <Link className={navClass(active)} to="/modules/hr-payroll/departments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/hr-payroll/positions") return <Link className={navClass(active)} to="/modules/hr-payroll/positions"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/academic-years") return <Link className={navClass(active)} to="/modules/academics/academic-years"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/terms") return <Link className={navClass(active)} to="/modules/academics/terms"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/grade-levels") return <Link className={navClass(active)} to="/modules/academics/grade-levels"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/subjects") return <Link className={navClass(active)} to="/modules/academics/subjects"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/teachers") return <Link className={navClass(active)} to="/modules/academics/teachers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/classes") return <Link className={navClass(active)} to="/modules/academics/classes"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/teaching-assignments") return <Link className={navClass(active)} to="/modules/academics/teaching-assignments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/assessments") return <Link className={navClass(active)} to="/modules/academics/assessments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/gradebook") return <Link className={navClass(active)} to="/modules/academics/gradebook"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/academics/reporting") return <Link className={navClass(active)} to="/modules/academics/reporting"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/finance/currencies") return <Link className={navClass(active)} to="/modules/finance/currencies"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/finance/chart-of-accounts") return <Link className={navClass(active)} to="/modules/finance/chart-of-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/finance/accounting-periods") return <Link className={navClass(active)} to="/modules/finance/accounting-periods"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/finance/journals") return <Link className={navClass(active)} to="/modules/finance/journals"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/finance/posting-requests") return <Link className={navClass(active)} to="/modules/finance/posting-requests"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fees/billing-accounts") return <Link className={navClass(active)} to="/modules/fees/billing-accounts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fees/fee-structures") return <Link className={navClass(active)} to="/modules/fees/fee-structures"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fees/invoices") return <Link className={navClass(active)} to="/modules/fees/invoices"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/fees/imports") return <Link className={navClass(active)} to="/modules/fees/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/procurement/requisitions") return <Link className={navClass(active)} to="/modules/procurement/requisitions"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/procurement/purchase-orders") return <Link className={navClass(active)} to="/modules/procurement/purchase-orders"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/procurement/goods-receipts") return <Link className={navClass(active)} to="/modules/procurement/goods-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/procurement/suppliers") return <Link className={navClass(active)} to="/modules/procurement/suppliers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/assets-inventory/stock") return <Link className={navClass(active)} to="/modules/assets-inventory/stock"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/assets-inventory/requests") return <Link className={navClass(active)} to="/modules/assets-inventory/requests"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/assets-inventory/movements") return <Link className={navClass(active)} to="/modules/assets-inventory/movements"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/assets-inventory/procurement-receipts") return <Link className={navClass(active)} to="/modules/assets-inventory/procurement-receipts"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/assets-inventory/items") return <Link className={navClass(active)} to="/modules/assets-inventory/items"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/assets-inventory/stores") return <Link className={navClass(active)} to="/modules/assets-inventory/stores"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/attendance/registers") return <Link className={navClass(active)} to="/modules/attendance/registers"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/messaging/inbox") return <Link className={navClass(active)} to="/modules/messaging/inbox"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/messaging/delivery-history") return <Link className={navClass(active)} to="/modules/messaging/delivery-history"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/sis/learners") return <Link className={navClass(active)} to="/modules/sis/learners"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/sis/guardians") return <Link className={navClass(active)} to="/modules/sis/guardians"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/sis/guardian-relationships") return <Link className={navClass(active)} to="/modules/sis/guardian-relationships"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/sis/applications") return <Link className={navClass(active)} to="/modules/sis/applications"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/sis/imports") return <Link className={navClass(active)} to="/modules/sis/imports"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  if (item.path === "/modules/sis/settings") return <Link className={navClass(active)} to="/modules/sis/settings"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
-  return <Link className={navClass(active)} to="/modules/sis/enrolments"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/agent/usage")
+    return (
+      <Link className={navClass(active)} to="/modules/agent/usage">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fleet/vehicles")
+    return (
+      <Link className={navClass(active)} to="/modules/fleet/vehicles">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fleet/drivers")
+    return (
+      <Link className={navClass(active)} to="/modules/fleet/drivers">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fleet/daily-log")
+    return (
+      <Link className={navClass(active)} to="/modules/fleet/daily-log">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hr-payroll/employees")
+    return (
+      <Link className={navClass(active)} to="/modules/hr-payroll/employees">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hr-payroll/imports")
+    return (
+      <Link className={navClass(active)} to="/modules/hr-payroll/imports">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hr-payroll/employment")
+    return (
+      <Link className={navClass(active)} to="/modules/hr-payroll/employment">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hr-payroll/availability")
+    return (
+      <Link className={navClass(active)} to="/modules/hr-payroll/availability">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hr-payroll/departments")
+    return (
+      <Link className={navClass(active)} to="/modules/hr-payroll/departments">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hr-payroll/positions")
+    return (
+      <Link className={navClass(active)} to="/modules/hr-payroll/positions">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/academic-years")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/academic-years">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/terms")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/terms">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/grade-levels")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/grade-levels">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/subjects")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/subjects">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/teachers")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/teachers">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/classes")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/classes">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/teaching-assignments")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/academics/teaching-assignments"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/assessments")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/assessments">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/gradebook")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/gradebook">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/academics/reporting")
+    return (
+      <Link className={navClass(active)} to="/modules/academics/reporting">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/finance/currencies")
+    return (
+      <Link className={navClass(active)} to="/modules/finance/currencies">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/finance/chart-of-accounts")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/finance/chart-of-accounts"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/finance/accounting-periods")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/finance/accounting-periods"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/finance/journals")
+    return (
+      <Link className={navClass(active)} to="/modules/finance/journals">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/finance/posting-requests")
+    return (
+      <Link className={navClass(active)} to="/modules/finance/posting-requests">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fees/billing-accounts")
+    return (
+      <Link className={navClass(active)} to="/modules/fees/billing-accounts">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fees/fee-structures")
+    return (
+      <Link className={navClass(active)} to="/modules/fees/fee-structures">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fees/invoices")
+    return (
+      <Link className={navClass(active)} to="/modules/fees/invoices">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/fees/imports")
+    return (
+      <Link className={navClass(active)} to="/modules/fees/imports">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/procurement/requisitions")
+    return (
+      <Link className={navClass(active)} to="/modules/procurement/requisitions">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/procurement/purchase-orders")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/procurement/purchase-orders"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/procurement/goods-receipts")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/procurement/goods-receipts"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/procurement/suppliers")
+    return (
+      <Link className={navClass(active)} to="/modules/procurement/suppliers">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/assets-inventory/stock")
+    return (
+      <Link className={navClass(active)} to="/modules/assets-inventory/stock">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/assets-inventory/requests")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/assets-inventory/requests"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/assets-inventory/movements")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/assets-inventory/movements"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/assets-inventory/procurement-receipts")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/assets-inventory/procurement-receipts"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/assets-inventory/items")
+    return (
+      <Link className={navClass(active)} to="/modules/assets-inventory/items">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/assets-inventory/stores")
+    return (
+      <Link className={navClass(active)} to="/modules/assets-inventory/stores">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/attendance/registers")
+    return (
+      <Link className={navClass(active)} to="/modules/attendance/registers">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/library/circulation")
+    return (
+      <Link className={navClass(active)} to="/modules/library/circulation">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/library/holds")
+    return (
+      <Link className={navClass(active)} to="/modules/library/holds">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/library/members")
+    return (
+      <Link className={navClass(active)} to="/modules/library/members">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/library/fines")
+    return (
+      <Link className={navClass(active)} to="/modules/library/fines">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/library/settings")
+    return (
+      <Link className={navClass(active)} to="/modules/library/settings">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/messaging/inbox")
+    return (
+      <Link className={navClass(active)} to="/modules/messaging/inbox">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/messaging/delivery-history")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/messaging/delivery-history"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/sis/learners")
+    return (
+      <Link className={navClass(active)} to="/modules/sis/learners">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/sis/guardians")
+    return (
+      <Link className={navClass(active)} to="/modules/sis/guardians">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/sis/guardian-relationships")
+    return (
+      <Link
+        className={navClass(active)}
+        to="/modules/sis/guardian-relationships"
+      >
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/sis/applications")
+    return (
+      <Link className={navClass(active)} to="/modules/sis/applications">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/sis/imports")
+    return (
+      <Link className={navClass(active)} to="/modules/sis/imports">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/sis/settings")
+    return (
+      <Link className={navClass(active)} to="/modules/sis/settings">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  return (
+    <Link className={navClass(active)} to="/modules/sis/enrolments">
+      <Icon className="size-[17px]" />
+      <span className="flex-1">{item.label}</span>
+      {active ? <ChevronRight className="size-3.5" /> : null}
+    </Link>
+  );
 };
 
 function navClass(active: boolean) {
@@ -375,5 +1096,10 @@ function isModuleOverview(pathname: string) {
 }
 
 function initials(name: string) {
-  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() || "").join("");
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
 }

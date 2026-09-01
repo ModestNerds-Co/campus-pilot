@@ -79,6 +79,8 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("fleet.vehicle_logs", CAMPUS_SELF),
     definition("timetabling.snapshots", CAMPUS_ONLY),
     definition("messaging.announcements", CAMPUS_SELF_ASSIGNED),
+    definition("library.members", CAMPUS_SELF),
+    definition("library.borrowing", CAMPUS_SELF),
 ];
 
 const fn definition(
@@ -286,7 +288,7 @@ mod tests {
 
     #[test]
     fn catalogue_keys_are_unique_and_parse_safe() {
-        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 27);
+        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 29);
         let mut keys = BTreeSet::new();
         for definition in RECORD_SCOPE_FAMILIES {
             assert!(keys.insert(definition.key()), "duplicate family key");

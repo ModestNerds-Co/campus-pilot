@@ -55,6 +55,11 @@ import { Route as ModulesProcurementPurchaseOrdersRouteImport } from './routes/m
 import { Route as ModulesProcurementGoodsReceiptsRouteImport } from './routes/modules/procurement/goods-receipts'
 import { Route as ModulesMessagingInboxRouteImport } from './routes/modules/messaging.inbox'
 import { Route as ModulesMessagingDeliveryHistoryRouteImport } from './routes/modules/messaging.delivery-history'
+import { Route as ModulesLibrarySettingsRouteImport } from './routes/modules/library/settings'
+import { Route as ModulesLibraryMembersRouteImport } from './routes/modules/library/members'
+import { Route as ModulesLibraryHoldsRouteImport } from './routes/modules/library/holds'
+import { Route as ModulesLibraryFinesRouteImport } from './routes/modules/library/fines'
+import { Route as ModulesLibraryCirculationRouteImport } from './routes/modules/library/circulation'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
 import { Route as ModulesHrPayrollImportsRouteImport } from './routes/modules/hr-payroll/imports'
 import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
@@ -347,6 +352,32 @@ const ModulesMessagingDeliveryHistoryRoute =
     id: '/delivery-history',
     path: '/delivery-history',
     getParentRoute: () => ModulesMessagingRoute,
+  } as any)
+const ModulesLibrarySettingsRoute = ModulesLibrarySettingsRouteImport.update({
+  id: '/library/settings',
+  path: '/library/settings',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesLibraryMembersRoute = ModulesLibraryMembersRouteImport.update({
+  id: '/library/members',
+  path: '/library/members',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesLibraryHoldsRoute = ModulesLibraryHoldsRouteImport.update({
+  id: '/library/holds',
+  path: '/library/holds',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesLibraryFinesRoute = ModulesLibraryFinesRouteImport.update({
+  id: '/library/fines',
+  path: '/library/fines',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesLibraryCirculationRoute =
+  ModulesLibraryCirculationRouteImport.update({
+    id: '/library/circulation',
+    path: '/library/circulation',
+    getParentRoute: () => ModulesRoute,
   } as any)
 const ModulesHrPayrollPositionsRoute =
   ModulesHrPayrollPositionsRouteImport.update({
@@ -742,6 +773,11 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
+  '/modules/library/fines': typeof ModulesLibraryFinesRoute
+  '/modules/library/holds': typeof ModulesLibraryHoldsRoute
+  '/modules/library/members': typeof ModulesLibraryMembersRoute
+  '/modules/library/settings': typeof ModulesLibrarySettingsRoute
   '/modules/messaging/delivery-history': typeof ModulesMessagingDeliveryHistoryRoute
   '/modules/messaging/inbox': typeof ModulesMessagingInboxRoute
   '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
@@ -845,6 +881,11 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
+  '/modules/library/fines': typeof ModulesLibraryFinesRoute
+  '/modules/library/holds': typeof ModulesLibraryHoldsRoute
+  '/modules/library/members': typeof ModulesLibraryMembersRoute
+  '/modules/library/settings': typeof ModulesLibrarySettingsRoute
   '/modules/messaging/delivery-history': typeof ModulesMessagingDeliveryHistoryRoute
   '/modules/messaging/inbox': typeof ModulesMessagingInboxRoute
   '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
@@ -950,6 +991,11 @@ export interface FileRoutesById {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
+  '/modules/library/fines': typeof ModulesLibraryFinesRoute
+  '/modules/library/holds': typeof ModulesLibraryHoldsRoute
+  '/modules/library/members': typeof ModulesLibraryMembersRoute
+  '/modules/library/settings': typeof ModulesLibrarySettingsRoute
   '/modules/messaging/delivery-history': typeof ModulesMessagingDeliveryHistoryRoute
   '/modules/messaging/inbox': typeof ModulesMessagingInboxRoute
   '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
@@ -1056,6 +1102,11 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/library/circulation'
+    | '/modules/library/fines'
+    | '/modules/library/holds'
+    | '/modules/library/members'
+    | '/modules/library/settings'
     | '/modules/messaging/delivery-history'
     | '/modules/messaging/inbox'
     | '/modules/procurement/goods-receipts'
@@ -1159,6 +1210,11 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/library/circulation'
+    | '/modules/library/fines'
+    | '/modules/library/holds'
+    | '/modules/library/members'
+    | '/modules/library/settings'
     | '/modules/messaging/delivery-history'
     | '/modules/messaging/inbox'
     | '/modules/procurement/goods-receipts'
@@ -1263,6 +1319,11 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/library/circulation'
+    | '/modules/library/fines'
+    | '/modules/library/holds'
+    | '/modules/library/members'
+    | '/modules/library/settings'
     | '/modules/messaging/delivery-history'
     | '/modules/messaging/inbox'
     | '/modules/procurement/goods-receipts'
@@ -1630,6 +1691,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/modules/messaging/delivery-history'
       preLoaderRoute: typeof ModulesMessagingDeliveryHistoryRouteImport
       parentRoute: typeof ModulesMessagingRoute
+    }
+    '/modules/library/settings': {
+      id: '/modules/library/settings'
+      path: '/library/settings'
+      fullPath: '/modules/library/settings'
+      preLoaderRoute: typeof ModulesLibrarySettingsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/library/members': {
+      id: '/modules/library/members'
+      path: '/library/members'
+      fullPath: '/modules/library/members'
+      preLoaderRoute: typeof ModulesLibraryMembersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/library/holds': {
+      id: '/modules/library/holds'
+      path: '/library/holds'
+      fullPath: '/modules/library/holds'
+      preLoaderRoute: typeof ModulesLibraryHoldsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/library/fines': {
+      id: '/modules/library/fines'
+      path: '/library/fines'
+      fullPath: '/modules/library/fines'
+      preLoaderRoute: typeof ModulesLibraryFinesRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/library/circulation': {
+      id: '/modules/library/circulation'
+      path: '/library/circulation'
+      fullPath: '/modules/library/circulation'
+      preLoaderRoute: typeof ModulesLibraryCirculationRouteImport
+      parentRoute: typeof ModulesRoute
     }
     '/modules/hr-payroll/positions': {
       id: '/modules/hr-payroll/positions'
@@ -2176,6 +2272,11 @@ interface ModulesRouteChildren {
   ModulesHrPayrollEmploymentRoute: typeof ModulesHrPayrollEmploymentRoute
   ModulesHrPayrollImportsRoute: typeof ModulesHrPayrollImportsRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
+  ModulesLibraryCirculationRoute: typeof ModulesLibraryCirculationRoute
+  ModulesLibraryFinesRoute: typeof ModulesLibraryFinesRoute
+  ModulesLibraryHoldsRoute: typeof ModulesLibraryHoldsRoute
+  ModulesLibraryMembersRoute: typeof ModulesLibraryMembersRoute
+  ModulesLibrarySettingsRoute: typeof ModulesLibrarySettingsRoute
   ModulesProcurementGoodsReceiptsRoute: typeof ModulesProcurementGoodsReceiptsRoute
   ModulesProcurementPurchaseOrdersRoute: typeof ModulesProcurementPurchaseOrdersRoute
   ModulesProcurementRequisitionsRoute: typeof ModulesProcurementRequisitionsRoute
@@ -2240,6 +2341,11 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHrPayrollEmploymentRoute: ModulesHrPayrollEmploymentRoute,
   ModulesHrPayrollImportsRoute: ModulesHrPayrollImportsRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
+  ModulesLibraryCirculationRoute: ModulesLibraryCirculationRoute,
+  ModulesLibraryFinesRoute: ModulesLibraryFinesRoute,
+  ModulesLibraryHoldsRoute: ModulesLibraryHoldsRoute,
+  ModulesLibraryMembersRoute: ModulesLibraryMembersRoute,
+  ModulesLibrarySettingsRoute: ModulesLibrarySettingsRoute,
   ModulesProcurementGoodsReceiptsRoute: ModulesProcurementGoodsReceiptsRoute,
   ModulesProcurementPurchaseOrdersRoute: ModulesProcurementPurchaseOrdersRoute,
   ModulesProcurementRequisitionsRoute: ModulesProcurementRequisitionsRoute,

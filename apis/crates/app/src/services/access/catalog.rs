@@ -127,8 +127,16 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/library",
             "library",
             false,
-            "foundation",
-            &["view", "create", "edit", "delete"],
+            "available",
+            &[
+                "view",
+                "borrow",
+                "create",
+                "edit",
+                "delete",
+                "circulate",
+                "manage",
+            ],
         ),
         module(
             "hr_payroll",

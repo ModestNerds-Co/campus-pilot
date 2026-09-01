@@ -16,6 +16,7 @@ mod fleet;
 pub mod governance;
 mod gradebook;
 mod hr;
+mod library;
 mod messaging;
 mod origin;
 mod procurement;
@@ -103,6 +104,10 @@ use hr::{
     HrEmploymentEngagementReadCapability, HrEmploymentEngagementsListCapability,
     HrImportPreviewCapability, HrImportReadCapability, HrImportsListCapability,
     HrPositionReadCapability, HrPositionsListCapability,
+};
+use library::{
+    LibraryCopiesCapability, LibraryListCapability, LibraryListKind, LibraryReadCapability,
+    LibraryReadKind, LibraryReferencesCapability, LibrarySettingsCapability,
 };
 use messaging::{
     CommunicationAnnouncementReadCapability, CommunicationAnnouncementsListCapability,
@@ -555,6 +560,38 @@ pub fn build_capability_registry(
         .register(FleetVehicleLogReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fleet vehicle-log-read capability: {error}"));
     registry
+        .register(LibrarySettingsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Library settings capability: {error}"));
+    registry
+        .register(LibraryReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Library references capability: {error}"));
+    registry
+        .register(LibraryCopiesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Library copies-list capability: {error}"));
+    for kind in [
+        LibraryListKind::Titles,
+        LibraryListKind::Members,
+        LibraryListKind::Loans,
+        LibraryListKind::Holds,
+        LibraryListKind::Fines,
+    ] {
+        registry
+            .register(LibraryListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [
+        LibraryReadKind::Title,
+        LibraryReadKind::Copy,
+        LibraryReadKind::Member,
+        LibraryReadKind::Loan,
+        LibraryReadKind::Hold,
+        LibraryReadKind::Fine,
+    ] {
+        registry
+            .register(LibraryReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
         .register(TimetableConfigurationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
     registry
@@ -953,6 +990,20 @@ mod tests {
                 "hr_payroll.imports.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
+                "library.copies.list",
+                "library.copies.read",
+                "library.fines.list",
+                "library.fines.read",
+                "library.holds.list",
+                "library.holds.read",
+                "library.loans.list",
+                "library.loans.read",
+                "library.members.list",
+                "library.members.read",
+                "library.references.read",
+                "library.settings.read",
+                "library.titles.list",
+                "library.titles.read",
                 "messaging.announcements.audience_preview.read",
                 "messaging.announcements.list",
                 "messaging.announcements.read",

@@ -119,6 +119,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_fees::routes::routes),
             )
             .service(
+                scope("/library")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_library::routes::routes),
+            )
+            .service(
                 scope("/hr-payroll")
                     .wrap(AuthMiddleware)
                     .configure(cp_hr_payroll::routes::routes),
