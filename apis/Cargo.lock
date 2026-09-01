@@ -1928,8 +1928,19 @@ name = "cp-messaging"
 version = "1.0.0"
 dependencies = [
  "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-academics",
+ "cp-audit",
  "cp-common",
+ "cp-hr-payroll",
+ "cp-sis",
+ "serde",
  "serde_json",
+ "sha2",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]

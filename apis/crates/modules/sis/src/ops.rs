@@ -18,8 +18,9 @@ use crate::{
     },
     models::{
         AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry,
-        ClassRosterEntry, Enrolment, EnrolmentWithDetails, GuardianRelationshipWithDetails,
-        GuardianWithAccount, LearnerBillingReference, LearnerWithAccount,
+        ClassRosterEntry, CommunicationRecipientReference, Enrolment, EnrolmentWithDetails,
+        GuardianRelationshipWithDetails, GuardianWithAccount, LearnerBillingReference,
+        LearnerWithAccount,
     },
     numbering::allocate_learner_number,
 };
@@ -32,6 +33,63 @@ pub enum DeleteOutcome {
 }
 
 pub struct AccountCandidateOps;
+
+/// Typed SIS boundary for learner and opted-in guardian communication.
+pub struct CommunicationAudienceOps;
+
+impl CommunicationAudienceOps {
+    /// Resolves active learner accounts and linked active guardian accounts
+    /// whose relationship permits communication for one class.
+    pub async fn class_recipient_accounts(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        class_group_id: Uuid,
+    ) -> Result<Vec<CommunicationRecipientReference>> {
+        sqlx::query_as::<_, CommunicationRecipientReference>(
+            r#"
+            SELECT DISTINCT recipient.account_id
+              FROM (
+                    SELECT learner.account_id
+                      FROM enrolments AS enrolment
+                      JOIN learners AS learner
+                        ON learner.id = enrolment.learner_id
+                       AND learner.tenant_id = enrolment.tenant_id
+                       AND learner.deleted_at IS NULL
+                     WHERE enrolment.tenant_id = $1
+                       AND enrolment.class_group_id = $2
+                       AND enrolment.status = 'active'
+                       AND enrolment.deleted_at IS NULL
+                       AND learner.account_id IS NOT NULL
+                    UNION
+                    SELECT guardian.account_id
+                      FROM enrolments AS enrolment
+                      JOIN learner_guardian_relationships AS relationship
+                        ON relationship.learner_id = enrolment.learner_id
+                       AND relationship.tenant_id = enrolment.tenant_id
+                       AND relationship.status = 'active'
+                       AND relationship.receives_communications
+                       AND relationship.deleted_at IS NULL
+                      JOIN guardians AS guardian
+                        ON guardian.id = relationship.guardian_id
+                       AND guardian.tenant_id = relationship.tenant_id
+                       AND guardian.status = 'active'
+                       AND guardian.deleted_at IS NULL
+                     WHERE enrolment.tenant_id = $1
+                       AND enrolment.class_group_id = $2
+                       AND enrolment.status = 'active'
+                       AND enrolment.deleted_at IS NULL
+                       AND guardian.account_id IS NOT NULL
+              ) AS recipient
+             ORDER BY recipient.account_id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(class_group_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve SIS communication recipients")
+    }
+}
 
 impl AccountCandidateOps {
     pub async fn list(

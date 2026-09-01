@@ -19,8 +19,9 @@ use crate::{
         UpdateEmploymentEngagementRequest, UpdatePositionRequest,
     },
     models::{
-        Department, EmployeeAvailabilityReference, EmployeeAvailabilityWithDetails,
-        EmployeeReference, EmployeeWithDetails, EmploymentEngagementWithDetails, Position,
+        CommunicationDepartmentReference, CommunicationEmployeeAccountReference, Department,
+        EmployeeAvailabilityReference, EmployeeAvailabilityWithDetails, EmployeeReference,
+        EmployeeWithDetails, EmploymentEngagementWithDetails, Position,
         StockRequestDepartmentReference, StockRequestEmployeeReference,
     },
 };
@@ -30,6 +31,54 @@ pub enum DeleteOutcome {
     Deleted,
     NotFound,
     InUse,
+}
+
+/// Typed HR boundary for department-based communication audiences.
+pub struct CommunicationAudienceOps;
+
+impl CommunicationAudienceOps {
+    pub async fn department_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+    ) -> Result<Vec<CommunicationDepartmentReference>> {
+        sqlx::query_as::<_, CommunicationDepartmentReference>(
+            r#"
+            SELECT id, code, name FROM departments
+             WHERE tenant_id = $1 AND status = 'active' AND deleted_at IS NULL
+             ORDER BY name, code
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list communication department references")
+    }
+
+    pub async fn department_recipient_accounts(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        department_id: Uuid,
+    ) -> Result<Vec<CommunicationEmployeeAccountReference>> {
+        sqlx::query_as::<_, CommunicationEmployeeAccountReference>(
+            r#"
+            SELECT DISTINCT employee.account_id
+              FROM employees AS employee
+              JOIN departments AS department
+                ON department.id = employee.department_id
+               AND department.tenant_id = employee.tenant_id
+               AND department.status = 'active' AND department.deleted_at IS NULL
+             WHERE employee.tenant_id = $1 AND employee.department_id = $2
+               AND employee.employment_status = 'active'
+               AND employee.deleted_at IS NULL AND employee.account_id IS NOT NULL
+             ORDER BY employee.account_id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(department_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve HR communication recipients")
+    }
 }
 
 pub struct DepartmentOps;
@@ -342,6 +391,48 @@ impl PositionOps {
 pub struct EmployeeOps;
 
 impl EmployeeOps {
+    /// Resolves the active employee linked to one authenticated account.
+    pub async fn active_reference_by_account(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+    ) -> Result<Option<EmployeeReference>> {
+        sqlx::query_as::<_, EmployeeWithDetails>(
+            r#"
+            SELECT employee.id, employee.tenant_id, employee.account_id,
+                   account.email AS account_email, employee.employee_number,
+                   employee.display_name, employee.first_names, employee.surname,
+                   employee.work_email, employee.phone, employee.department_id,
+                   department.name AS department_name, employee.position_id,
+                   position.title AS position_title, employee.employment_status,
+                   employee.hire_date, employee.end_date,
+                   employee.created_at, employee.updated_at
+              FROM employees AS employee
+              JOIN users AS account
+                ON account.id = employee.account_id
+               AND account.tenant_id = employee.tenant_id
+               AND account.deleted_at IS NULL AND account.is_active
+              LEFT JOIN departments AS department
+                ON department.id = employee.department_id
+               AND department.tenant_id = employee.tenant_id
+               AND department.deleted_at IS NULL
+              LEFT JOIN positions AS position
+                ON position.id = employee.position_id
+               AND position.tenant_id = employee.tenant_id
+               AND position.deleted_at IS NULL
+             WHERE employee.tenant_id = $1 AND employee.account_id = $2
+               AND employee.employment_status = 'active'
+               AND employee.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(account_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to resolve the active employee account")
+        .map(|employee| employee.map(EmployeeReference::from))
+    }
+
     /// Returns a bounded, minimal workforce directory for typed cross-module use.
     pub async fn list_references(
         pool: &PgPool,

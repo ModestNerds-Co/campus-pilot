@@ -16,7 +16,7 @@ Campus Pilot is structured like the multi-module council ERPs this platform draw
 | HR & Payroll | `cp-hr-payroll` | 🚧 Scaffolded | 060s |
 | Procurement & Stores | `cp-procurement` | 🚧 Scaffolded | 070s |
 | Library | `cp-library` | 🚧 Scaffolded | 080s |
-| Messaging & Comms | `cp-messaging` | 🚧 Scaffolded | 090s |
+| Communication | `cp-messaging` | ✅ Announcements, reviewed audiences, inbox, delivery history | 090s |
 | Hostel & Boarding | `cp-hostel` | 🚧 Scaffolded | 100s |
 | Health & Clinic | `cp-health` | 🚧 Scaffolded | 110s |
 

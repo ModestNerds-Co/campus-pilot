@@ -155,6 +155,12 @@ pub struct ClassRosterEntry {
 /// Backwards-compatible name retained for Attendance callers.
 pub type AttendanceRosterEntry = ClassRosterEntry;
 
+/// Minimum SIS-owned linked account reference used by Communication.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CommunicationRecipientReference {
+    pub account_id: Uuid,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AccountCandidate {
     pub id: Uuid,

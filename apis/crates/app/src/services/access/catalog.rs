@@ -94,8 +94,8 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/messaging",
             "messaging",
             false,
-            "foundation",
-            &["view", "create", "edit", "delete"],
+            "available",
+            &["view", "create", "edit", "delete", "send", "manage"],
         ),
         module(
             "finance",

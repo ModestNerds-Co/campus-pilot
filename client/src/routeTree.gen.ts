@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as SetupSchoolRouteImport } from './routes/setup.school'
 import { Route as SetupAdminRouteImport } from './routes/setup.admin'
+import { Route as ModulesMessagingRouteImport } from './routes/modules/messaging'
 import { Route as ModulesModuleKeyRouteImport } from './routes/modules/$moduleKey'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSubjectsRouteImport } from './routes/admin/subjects'
@@ -52,6 +53,8 @@ import { Route as ModulesProcurementSuppliersRouteImport } from './routes/module
 import { Route as ModulesProcurementRequisitionsRouteImport } from './routes/modules/procurement/requisitions'
 import { Route as ModulesProcurementPurchaseOrdersRouteImport } from './routes/modules/procurement/purchase-orders'
 import { Route as ModulesProcurementGoodsReceiptsRouteImport } from './routes/modules/procurement/goods-receipts'
+import { Route as ModulesMessagingInboxRouteImport } from './routes/modules/messaging.inbox'
+import { Route as ModulesMessagingDeliveryHistoryRouteImport } from './routes/modules/messaging.delivery-history'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
 import { Route as ModulesHrPayrollImportsRouteImport } from './routes/modules/hr-payroll/imports'
 import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
@@ -99,6 +102,7 @@ import { Route as ModulesSisLearnersLearnerIdRouteImport } from './routes/module
 import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './routes/modules/sis/applications_.$applicationId'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
+import { Route as ModulesMessagingAnnouncementsAnnouncementIdRouteImport } from './routes/modules/messaging.announcements_.$announcementId'
 import { Route as ModulesAttendanceRegistersRegisterIdRouteImport } from './routes/modules/attendance/registers_.$registerId'
 import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './routes/modules/assets-inventory/requests_.$requestId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
@@ -162,6 +166,11 @@ const SetupAdminRoute = SetupAdminRouteImport.update({
   id: '/setup/admin',
   path: '/setup/admin',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ModulesMessagingRoute = ModulesMessagingRouteImport.update({
+  id: '/messaging',
+  path: '/messaging',
+  getParentRoute: () => ModulesRoute,
 } as any)
 const ModulesModuleKeyRoute = ModulesModuleKeyRouteImport.update({
   id: '/$moduleKey',
@@ -327,6 +336,17 @@ const ModulesProcurementGoodsReceiptsRoute =
     id: '/procurement/goods-receipts',
     path: '/procurement/goods-receipts',
     getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesMessagingInboxRoute = ModulesMessagingInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => ModulesMessagingRoute,
+} as any)
+const ModulesMessagingDeliveryHistoryRoute =
+  ModulesMessagingDeliveryHistoryRouteImport.update({
+    id: '/delivery-history',
+    path: '/delivery-history',
+    getParentRoute: () => ModulesMessagingRoute,
   } as any)
 const ModulesHrPayrollPositionsRoute =
   ModulesHrPayrollPositionsRouteImport.update({
@@ -593,6 +613,12 @@ const ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute =
     path: '/procurement/purchase-orders/$purchaseOrderId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesMessagingAnnouncementsAnnouncementIdRoute =
+  ModulesMessagingAnnouncementsAnnouncementIdRouteImport.update({
+    id: '/announcements_/$announcementId',
+    path: '/announcements/$announcementId',
+    getParentRoute: () => ModulesMessagingRoute,
+  } as any)
 const ModulesAttendanceRegistersRegisterIdRoute =
   ModulesAttendanceRegistersRegisterIdRouteImport.update({
     id: '/attendance/registers_/$registerId',
@@ -669,6 +695,7 @@ export interface FileRoutesByFullPath {
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
   '/modules/$moduleKey': typeof ModulesModuleKeyRoute
+  '/modules/messaging': typeof ModulesMessagingRouteWithChildren
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
@@ -715,6 +742,8 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/messaging/delivery-history': typeof ModulesMessagingDeliveryHistoryRoute
+  '/modules/messaging/inbox': typeof ModulesMessagingInboxRoute
   '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
   '/modules/procurement/purchase-orders': typeof ModulesProcurementPurchaseOrdersRoute
   '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
@@ -734,6 +763,7 @@ export interface FileRoutesByFullPath {
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
+  '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -768,6 +798,7 @@ export interface FileRoutesByTo {
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
   '/modules/$moduleKey': typeof ModulesModuleKeyRoute
+  '/modules/messaging': typeof ModulesMessagingRouteWithChildren
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin': typeof AdminIndexRoute
@@ -814,6 +845,8 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/messaging/delivery-history': typeof ModulesMessagingDeliveryHistoryRoute
+  '/modules/messaging/inbox': typeof ModulesMessagingInboxRoute
   '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
   '/modules/procurement/purchase-orders': typeof ModulesProcurementPurchaseOrdersRoute
   '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
@@ -833,6 +866,7 @@ export interface FileRoutesByTo {
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
+  '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -869,6 +903,7 @@ export interface FileRoutesById {
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/users': typeof AdminUsersRoute
   '/modules/$moduleKey': typeof ModulesModuleKeyRoute
+  '/modules/messaging': typeof ModulesMessagingRouteWithChildren
   '/setup/admin': typeof SetupAdminRoute
   '/setup/school': typeof SetupSchoolRoute
   '/admin/': typeof AdminIndexRoute
@@ -915,6 +950,8 @@ export interface FileRoutesById {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/messaging/delivery-history': typeof ModulesMessagingDeliveryHistoryRoute
+  '/modules/messaging/inbox': typeof ModulesMessagingInboxRoute
   '/modules/procurement/goods-receipts': typeof ModulesProcurementGoodsReceiptsRoute
   '/modules/procurement/purchase-orders': typeof ModulesProcurementPurchaseOrdersRoute
   '/modules/procurement/requisitions': typeof ModulesProcurementRequisitionsRoute
@@ -934,6 +971,7 @@ export interface FileRoutesById {
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests_/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/attendance/registers_/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
+  '/modules/messaging/announcements_/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications_/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -971,6 +1009,7 @@ export interface FileRouteTypes {
     | '/admin/subjects'
     | '/admin/users'
     | '/modules/$moduleKey'
+    | '/modules/messaging'
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
@@ -1017,6 +1056,8 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/messaging/delivery-history'
+    | '/modules/messaging/inbox'
     | '/modules/procurement/goods-receipts'
     | '/modules/procurement/purchase-orders'
     | '/modules/procurement/requisitions'
@@ -1036,6 +1077,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
     | '/modules/attendance/registers/$registerId'
+    | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
@@ -1070,6 +1112,7 @@ export interface FileRouteTypes {
     | '/admin/subjects'
     | '/admin/users'
     | '/modules/$moduleKey'
+    | '/modules/messaging'
     | '/setup/admin'
     | '/setup/school'
     | '/admin'
@@ -1116,6 +1159,8 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/messaging/delivery-history'
+    | '/modules/messaging/inbox'
     | '/modules/procurement/goods-receipts'
     | '/modules/procurement/purchase-orders'
     | '/modules/procurement/requisitions'
@@ -1135,6 +1180,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
     | '/modules/attendance/registers/$registerId'
+    | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
@@ -1170,6 +1216,7 @@ export interface FileRouteTypes {
     | '/admin/subjects'
     | '/admin/users'
     | '/modules/$moduleKey'
+    | '/modules/messaging'
     | '/setup/admin'
     | '/setup/school'
     | '/admin/'
@@ -1216,6 +1263,8 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/messaging/delivery-history'
+    | '/modules/messaging/inbox'
     | '/modules/procurement/goods-receipts'
     | '/modules/procurement/purchase-orders'
     | '/modules/procurement/requisitions'
@@ -1235,6 +1284,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/assets-inventory/requests_/$requestId'
     | '/modules/attendance/registers_/$registerId'
+    | '/modules/messaging/announcements_/$announcementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
     | '/modules/sis/applications_/$applicationId'
@@ -1335,6 +1385,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/setup/admin'
       preLoaderRoute: typeof SetupAdminRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/modules/messaging': {
+      id: '/modules/messaging'
+      path: '/messaging'
+      fullPath: '/modules/messaging'
+      preLoaderRoute: typeof ModulesMessagingRouteImport
+      parentRoute: typeof ModulesRoute
     }
     '/modules/$moduleKey': {
       id: '/modules/$moduleKey'
@@ -1559,6 +1616,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/modules/procurement/goods-receipts'
       preLoaderRoute: typeof ModulesProcurementGoodsReceiptsRouteImport
       parentRoute: typeof ModulesRoute
+    }
+    '/modules/messaging/inbox': {
+      id: '/modules/messaging/inbox'
+      path: '/inbox'
+      fullPath: '/modules/messaging/inbox'
+      preLoaderRoute: typeof ModulesMessagingInboxRouteImport
+      parentRoute: typeof ModulesMessagingRoute
+    }
+    '/modules/messaging/delivery-history': {
+      id: '/modules/messaging/delivery-history'
+      path: '/delivery-history'
+      fullPath: '/modules/messaging/delivery-history'
+      preLoaderRoute: typeof ModulesMessagingDeliveryHistoryRouteImport
+      parentRoute: typeof ModulesMessagingRoute
     }
     '/modules/hr-payroll/positions': {
       id: '/modules/hr-payroll/positions'
@@ -1889,6 +1960,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/messaging/announcements_/$announcementId': {
+      id: '/modules/messaging/announcements_/$announcementId'
+      path: '/announcements/$announcementId'
+      fullPath: '/modules/messaging/announcements/$announcementId'
+      preLoaderRoute: typeof ModulesMessagingAnnouncementsAnnouncementIdRouteImport
+      parentRoute: typeof ModulesMessagingRoute
+    }
     '/modules/attendance/registers_/$registerId': {
       id: '/modules/attendance/registers_/$registerId'
       path: '/attendance/registers/$registerId'
@@ -2010,6 +2088,22 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ModulesMessagingRouteChildren {
+  ModulesMessagingDeliveryHistoryRoute: typeof ModulesMessagingDeliveryHistoryRoute
+  ModulesMessagingInboxRoute: typeof ModulesMessagingInboxRoute
+  ModulesMessagingAnnouncementsAnnouncementIdRoute: typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
+}
+
+const ModulesMessagingRouteChildren: ModulesMessagingRouteChildren = {
+  ModulesMessagingDeliveryHistoryRoute: ModulesMessagingDeliveryHistoryRoute,
+  ModulesMessagingInboxRoute: ModulesMessagingInboxRoute,
+  ModulesMessagingAnnouncementsAnnouncementIdRoute:
+    ModulesMessagingAnnouncementsAnnouncementIdRoute,
+}
+
+const ModulesMessagingRouteWithChildren =
+  ModulesMessagingRoute._addFileChildren(ModulesMessagingRouteChildren)
+
 interface ModulesAcademicsGradebookRouteChildren {
   ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute: typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
 }
@@ -2045,6 +2139,7 @@ const ModulesAcademicsReportingRouteWithChildren =
 
 interface ModulesRouteChildren {
   ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
+  ModulesMessagingRoute: typeof ModulesMessagingRouteWithChildren
   ModulesAcademicsAcademicYearsRoute: typeof ModulesAcademicsAcademicYearsRoute
   ModulesAcademicsAssessmentsRoute: typeof ModulesAcademicsAssessmentsRoute
   ModulesAcademicsClassesRoute: typeof ModulesAcademicsClassesRoute
@@ -2106,6 +2201,7 @@ interface ModulesRouteChildren {
 
 const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesModuleKeyRoute: ModulesModuleKeyRoute,
+  ModulesMessagingRoute: ModulesMessagingRouteWithChildren,
   ModulesAcademicsAcademicYearsRoute: ModulesAcademicsAcademicYearsRoute,
   ModulesAcademicsAssessmentsRoute: ModulesAcademicsAssessmentsRoute,
   ModulesAcademicsClassesRoute: ModulesAcademicsClassesRoute,

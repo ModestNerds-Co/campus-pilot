@@ -117,6 +117,8 @@ const ACADEMICS: OriginAccess = OriginAccess::module("academics", "academics:vie
 const ATTENDANCE: OriginAccess = OriginAccess::module("attendance", "attendance:view");
 const TIMETABLING: OriginAccess = OriginAccess::module("timetabling", "timetabling:view");
 const MESSAGING: OriginAccess = OriginAccess::module("messaging", "messaging:view");
+const MESSAGING_MANAGE: OriginAccess = OriginAccess::module("messaging", "messaging:create");
+const MESSAGING_SEND: OriginAccess = OriginAccess::module("messaging", "messaging:send");
 const FINANCE: OriginAccess = OriginAccess::module("finance", "finance:view");
 const FEES: OriginAccess = OriginAccess::module("fees", "fees:view");
 const FEES_IMPORTS: OriginAccess = OriginAccess::module("fees", "fees:create");
@@ -341,6 +343,14 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: MESSAGING,
     },
     ExactRoute {
+        path: "/modules/messaging/inbox",
+        access: MESSAGING,
+    },
+    ExactRoute {
+        path: "/modules/messaging/delivery-history",
+        access: MESSAGING_SEND,
+    },
+    ExactRoute {
         path: "/modules/finance",
         access: FINANCE,
     },
@@ -522,6 +532,10 @@ const UUID_ROUTES: &[UuidRoute] = &[
     UuidRoute {
         prefix: "/modules/attendance/registers/",
         access: ATTENDANCE,
+    },
+    UuidRoute {
+        prefix: "/modules/messaging/announcements/",
+        access: MESSAGING_MANAGE,
     },
     UuidRoute {
         prefix: "/modules/sis/applications/",

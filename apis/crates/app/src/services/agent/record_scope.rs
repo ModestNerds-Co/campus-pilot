@@ -80,6 +80,13 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "attendance.references.read",
     "attendance.registers.list",
     "attendance.registers.read",
+    "messaging.references.read",
+    "messaging.announcements.list",
+    "messaging.announcements.read",
+    "messaging.announcements.audience_preview.read",
+    "messaging.deliveries.list",
+    "messaging.inbox.list",
+    "messaging.inbox.read",
     "hr_payroll.departments.list",
     "hr_payroll.departments.read",
     "hr_payroll.positions.list",
@@ -346,6 +353,9 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "assets_inventory.department_candidates.list"
         | "attendance.references.read"
         | "attendance.registers.list"
+        | "messaging.references.read"
+        | "messaging.announcements.list"
+        | "messaging.inbox.list"
         | "hr_payroll.departments.list"
         | "hr_payroll.positions.list"
         | "fleet.vehicles.list" => Some(OperationScopePolicy::Dataset),
@@ -411,6 +421,12 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "attendance.registers.read" => {
             Some(OperationScopePolicy::OneResource("attendance_register"))
         }
+        "messaging.announcements.read"
+        | "messaging.announcements.audience_preview.read"
+        | "messaging.deliveries.list" => Some(OperationScopePolicy::OneResource(
+            "communication_announcement",
+        )),
+        "messaging.inbox.read" => Some(OperationScopePolicy::OneResource("communication_delivery")),
         "hr_payroll.departments.read" => Some(OperationScopePolicy::OneResource("department")),
         "hr_payroll.positions.read" => Some(OperationScopePolicy::OneResource("position")),
         "fleet.vehicles.read" => Some(OperationScopePolicy::OneResource("vehicle")),
@@ -583,6 +599,12 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "attendance_register" => Some(
             "SELECT EXISTS(SELECT 1 FROM attendance_registers WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "communication_announcement" => Some(
+            "SELECT EXISTS(SELECT 1 FROM communication_announcements WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "communication_delivery" => Some(
+            "SELECT EXISTS(SELECT 1 FROM communication_deliveries WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         _ => None,
     }
 }
@@ -662,7 +684,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 64);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 71);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -682,7 +704,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 132);
+        assert_eq!(exposed.len(), 139);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

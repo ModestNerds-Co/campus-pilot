@@ -3269,6 +3269,142 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // Communication: reviewed announcements and personal in-app inbox.
+        route(
+            Method::GET,
+            "/api/1.0/messaging/references",
+            "messaging.references.read",
+            "messaging",
+            "messaging:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/messaging/announcements",
+            "messaging.announcements.list",
+            "messaging",
+            "messaging:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/messaging/announcements",
+            "messaging.announcements.create",
+            "messaging",
+            "messaging:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/messaging/announcements/{id}",
+            "messaging.announcements.read",
+            "messaging",
+            "messaging:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/messaging/announcements/{id}",
+            "messaging.announcements.update",
+            "messaging",
+            "messaging:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/messaging/announcements/{id}/audience-preview",
+            "messaging.announcements.audience_preview.read",
+            "messaging",
+            "messaging:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/messaging/announcements/{id}/submit",
+            "messaging.announcements.submit",
+            "messaging",
+            "messaging:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/messaging/announcements/{id}/reopen",
+            "messaging.announcements.reopen",
+            "messaging",
+            "messaging:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/messaging/announcements/{id}/publish",
+            "messaging.announcements.publish",
+            "messaging",
+            "messaging:send",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/messaging/announcements/{id}/cancel",
+            "messaging.announcements.cancel",
+            "messaging",
+            "messaging:manage",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/messaging/announcements/{id}",
+            "messaging.announcements.delete",
+            "messaging",
+            "messaging:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/messaging/announcements/{id}/deliveries",
+            "messaging.deliveries.list",
+            "messaging",
+            "messaging:send",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/messaging/inbox",
+            "messaging.inbox.list",
+            "messaging",
+            "messaging:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/messaging/inbox/{id}",
+            "messaging.inbox.read",
+            "messaging",
+            "messaging:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/messaging/inbox/{id}/read",
+            "messaging.inbox.mark_read",
+            "messaging",
+            "messaging:view",
+            OperationEffect::Write,
+            true,
+        ),
     ]
 }
 
@@ -3327,6 +3463,19 @@ fn route(
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("attendance.") {
         operation.requiring_modules(["academics".to_string(), "sis".to_string()])
+    } else if matches!(
+        key,
+        "messaging.references.read"
+            | "messaging.announcements.create"
+            | "messaging.announcements.update"
+            | "messaging.announcements.audience_preview.read"
+            | "messaging.announcements.submit"
+    ) {
+        operation.requiring_modules([
+            "academics".to_string(),
+            "sis".to_string(),
+            "hr_payroll".to_string(),
+        ])
     } else if key.starts_with("fees.") {
         operation.requiring_modules([
             "sis".to_string(),
@@ -3504,7 +3653,14 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "timetabling.runs.read_latest"
         | "attendance.references.read"
         | "attendance.registers.list"
-        | "attendance.registers.read" => AgentExposure::Exposed,
+        | "attendance.registers.read"
+        | "messaging.references.read"
+        | "messaging.announcements.list"
+        | "messaging.announcements.read"
+        | "messaging.announcements.audience_preview.read"
+        | "messaging.deliveries.list"
+        | "messaging.inbox.list"
+        | "messaging.inbox.read" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
         | "administration.ai_providers.connections.update"
@@ -3692,7 +3848,15 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.registers.marks.update"
         | "attendance.registers.submit"
         | "attendance.registers.reopen"
-        | "attendance.registers.delete" => AgentExposure::ApprovalRequired,
+        | "attendance.registers.delete"
+        | "messaging.announcements.create"
+        | "messaging.announcements.update"
+        | "messaging.announcements.submit"
+        | "messaging.announcements.reopen"
+        | "messaging.announcements.publish"
+        | "messaging.announcements.cancel"
+        | "messaging.announcements.delete"
+        | "messaging.inbox.mark_read" => AgentExposure::ApprovalRequired,
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -3787,6 +3951,7 @@ mod tests {
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
+                ("messaging".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
@@ -3822,7 +3987,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 350);
+        assert_eq!(operation_catalog().len(), 365);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -3874,7 +4039,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [132, 188, 18, 12]);
+        assert_eq!(counts, [139, 196, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

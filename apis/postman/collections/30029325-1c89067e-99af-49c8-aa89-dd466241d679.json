@@ -5051,6 +5051,227 @@
       ]
     },
     {
+      "name": "Communication",
+      "description": "Scoped announcements and in-app delivery using canonical campus, role, class, department, and account audiences.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get Communication References",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/references",
+            "description": "Returns only the typed audiences visible to the current account."
+          }
+        },
+        {
+          "name": "List Announcements",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/announcements?page=1&per_page=25"
+          }
+        },
+        {
+          "name": "Create Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"School closes at 13:00\",\n  \"body\": \"Learners should be collected from the main gate.\",\n  \"priority\": \"important\",\n  \"targets\": [\n    {\n      \"kind\": \"campus\",\n      \"target_id\": null,\n      \"target_key\": null,\n      \"label\": \"Entire campus\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/messaging/announcements"
+          }
+        },
+        {
+          "name": "Get Announcement",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}"
+          }
+        },
+        {
+          "name": "Update Announcement",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"title\": \"School closes at 13:00\",\n  \"body\": \"Learners should be collected from the main gate.\",\n  \"priority\": \"urgent\",\n  \"targets\": [\n    {\n      \"kind\": \"campus\",\n      \"target_id\": null,\n      \"target_key\": null,\n      \"label\": \"Entire campus\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}"
+          }
+        },
+        {
+          "name": "Preview Announcement Audience",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}/audience-preview",
+            "description": "Resolves and deduplicates active canonical user accounts without freezing a delivery snapshot."
+          }
+        },
+        {
+          "name": "Submit Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}/submit",
+            "description": "Freezes a deduplicated recipient snapshot for review."
+          }
+        },
+        {
+          "name": "Reopen Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3,\n  \"reason\": \"Correct the collection point\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}/reopen"
+          }
+        },
+        {
+          "name": "Publish Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}/publish",
+            "description": "Publishes the reviewed recipient snapshot to the in-app inbox."
+          }
+        },
+        {
+          "name": "Cancel Published Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 4,\n  \"reason\": \"School closure has been withdrawn\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}/cancel"
+          }
+        },
+        {
+          "name": "Delete Draft Announcement",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}?expected_version=1"
+          }
+        },
+        {
+          "name": "Get Announcement Deliveries",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/announcements/{{communication_announcement_id}}/deliveries"
+          }
+        },
+        {
+          "name": "List Inbox",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/inbox?page=1&per_page=25"
+          }
+        },
+        {
+          "name": "Get Inbox Message",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/messaging/inbox/{{communication_delivery_id}}"
+          }
+        },
+        {
+          "name": "Mark Inbox Message Read",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/messaging/inbox/{{communication_delivery_id}}/read"
+          }
+        }
+      ]
+    },
+    {
       "name": "SIS",
       "description": "Canonical learners and guardians, explicit guardian relationships, applications, and Academics-backed enrolments.",
       "auth": {

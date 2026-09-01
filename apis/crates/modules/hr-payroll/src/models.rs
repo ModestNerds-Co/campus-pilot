@@ -96,6 +96,20 @@ pub struct StockRequestDepartmentReference {
     pub name: String,
 }
 
+/// Minimum HR-owned department identity used by Communication audiences.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CommunicationDepartmentReference {
+    pub id: Uuid,
+    pub code: String,
+    pub name: String,
+}
+
+/// Minimum HR-owned linked account reference used by Communication.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CommunicationEmployeeAccountReference {
+    pub account_id: Uuid,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EmploymentEngagementWithDetails {
     pub id: Uuid,

@@ -12,11 +12,12 @@ use uuid::Uuid;
 
 use crate::{
     dtos::{
-        CreateAcademicGradeLevelRequest, CreateAcademicTermRequest, CreateAcademicYearRequest,
-        CreateClassGroupRequest, CreateSubjectRequest, CreateTeacherProfileRequest,
-        CreateTeachingAssignmentRequest, UpdateAcademicGradeLevelRequest,
-        UpdateAcademicTermRequest, UpdateAcademicYearRequest, UpdateClassGroupRequest,
-        UpdateSubjectRequest, UpdateTeacherProfileRequest, UpdateTeachingAssignmentRequest,
+        CommunicationClassReference, CreateAcademicGradeLevelRequest, CreateAcademicTermRequest,
+        CreateAcademicYearRequest, CreateClassGroupRequest, CreateSubjectRequest,
+        CreateTeacherProfileRequest, CreateTeachingAssignmentRequest,
+        UpdateAcademicGradeLevelRequest, UpdateAcademicTermRequest, UpdateAcademicYearRequest,
+        UpdateClassGroupRequest, UpdateSubjectRequest, UpdateTeacherProfileRequest,
+        UpdateTeachingAssignmentRequest,
     },
     models::{
         AcademicGradeLevel, AcademicTerm, AcademicYear, ClassGroupWithYear, Subject,
@@ -30,6 +31,70 @@ pub enum DeleteOutcome {
     Deleted,
     NotFound,
     InUse,
+}
+
+/// Typed Academics boundary for class-based communication audiences.
+pub struct CommunicationAudienceOps;
+
+impl CommunicationAudienceOps {
+    /// Lists active classes. When an account is supplied, only classes with a
+    /// current teaching assignment linked to that employee account are shown.
+    pub async fn class_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assigned_account_id: Option<Uuid>,
+    ) -> Result<Vec<CommunicationClassReference>> {
+        let employee_id = if let Some(account_id) = assigned_account_id {
+            EmployeeOps::active_reference_by_account(pool, tenant_id, account_id)
+                .await?
+                .map(|employee| employee.id)
+        } else {
+            None
+        };
+        if assigned_account_id.is_some() && employee_id.is_none() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, CommunicationClassReference>(
+            r#"
+            SELECT DISTINCT class_group.id, class_group.code, class_group.name,
+                   grade_level.name AS grade_level
+              FROM class_groups AS class_group
+              JOIN academic_years AS academic_year
+                ON academic_year.id = class_group.academic_year_id
+               AND academic_year.tenant_id = class_group.tenant_id
+               AND academic_year.deleted_at IS NULL
+              LEFT JOIN academic_grade_levels AS grade_level
+                ON grade_level.id = class_group.grade_level_id
+               AND grade_level.tenant_id = class_group.tenant_id
+               AND grade_level.deleted_at IS NULL
+             WHERE class_group.tenant_id = $1
+               AND class_group.status = 'active'
+               AND class_group.deleted_at IS NULL
+               AND (
+                   $2::UUID IS NULL
+                   OR EXISTS (
+                       SELECT 1
+                         FROM teaching_assignments AS assignment
+                         JOIN teacher_profiles AS teacher
+                           ON teacher.id = assignment.teacher_profile_id
+                          AND teacher.tenant_id = assignment.tenant_id
+                          AND teacher.deleted_at IS NULL
+                        WHERE assignment.tenant_id = class_group.tenant_id
+                          AND assignment.class_group_id = class_group.id
+                          AND assignment.status = 'active'
+                          AND assignment.deleted_at IS NULL
+                          AND teacher.employee_id = $2
+                   )
+               )
+             ORDER BY class_group.name, class_group.code
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(employee_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list communication class references")
+    }
 }
 
 pub struct AcademicYearOps;

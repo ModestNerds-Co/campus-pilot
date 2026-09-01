@@ -16,6 +16,7 @@ mod fleet;
 pub mod governance;
 mod gradebook;
 mod hr;
+mod messaging;
 mod origin;
 mod procurement;
 mod record_scope;
@@ -102,6 +103,12 @@ use hr::{
     HrEmploymentEngagementReadCapability, HrEmploymentEngagementsListCapability,
     HrImportPreviewCapability, HrImportReadCapability, HrImportsListCapability,
     HrPositionReadCapability, HrPositionsListCapability,
+};
+use messaging::{
+    CommunicationAnnouncementReadCapability, CommunicationAnnouncementsListCapability,
+    CommunicationAudiencePreviewCapability, CommunicationDeliveriesCapability,
+    CommunicationInboxListCapability, CommunicationInboxReadCapability,
+    CommunicationReferencesCapability,
 };
 use procurement::{
     ProcurementGoodsReceiptsListCapability, ProcurementPurchaseOrdersListCapability,
@@ -316,6 +323,33 @@ pub fn build_capability_registry(
     registry
         .register(AttendanceRegisterReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Attendance register-read capability: {error}"));
+    registry
+        .register(CommunicationReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Communication references capability: {error}"));
+    registry
+        .register(CommunicationAnnouncementsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Communication announcements-list capability: {error}")
+        });
+    registry
+        .register(CommunicationAnnouncementReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Communication announcement-read capability: {error}")
+        });
+    registry
+        .register(CommunicationAudiencePreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Communication audience-preview capability: {error}")
+        });
+    registry
+        .register(CommunicationDeliveriesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Communication deliveries capability: {error}"));
+    registry
+        .register(CommunicationInboxListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Communication inbox-list capability: {error}"));
+    registry
+        .register(CommunicationInboxReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Communication inbox-read capability: {error}"));
     for kind in [
         FinanceListKind::Currencies,
         FinanceListKind::Accounts,
@@ -919,6 +953,13 @@ mod tests {
                 "hr_payroll.imports.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
+                "messaging.announcements.audience_preview.read",
+                "messaging.announcements.list",
+                "messaging.announcements.read",
+                "messaging.deliveries.list",
+                "messaging.inbox.list",
+                "messaging.inbox.read",
+                "messaging.references.read",
                 "procurement.goods_receipts.list",
                 "procurement.goods_receipts.read",
                 "procurement.purchase_orders.list",

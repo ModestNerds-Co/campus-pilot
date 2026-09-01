@@ -13,6 +13,15 @@ use crate::models::{
     TeacherProfileWithEmployee, TeachingAssignmentWithDetails,
 };
 
+/// Minimum Academics-owned class projection used by Communication audiences.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct CommunicationClassReference {
+    pub id: Uuid,
+    pub code: String,
+    pub name: String,
+    pub grade_level: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ActiveStatus {

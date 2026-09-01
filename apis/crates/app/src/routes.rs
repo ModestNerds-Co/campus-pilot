@@ -104,6 +104,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_attendance::routes::routes),
             )
             .service(
+                scope("/messaging")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_messaging::routes::routes),
+            )
+            .service(
                 scope("/finance")
                     .wrap(AuthMiddleware)
                     .configure(cp_finance::routes::routes),
@@ -873,6 +878,96 @@ mod route_wiring_tests {
                 format!("/api/1.0/agent/sessions/{record_id}/messages"),
                 "/api/1.0/agent/sessions/{session_id}/messages",
                 "agent.messages.submit",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/messaging/references".to_string(),
+                "/api/1.0/messaging/references",
+                "messaging.references.read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/messaging/announcements".to_string(),
+                "/api/1.0/messaging/announcements",
+                "messaging.announcements.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/messaging/announcements".to_string(),
+                "/api/1.0/messaging/announcements",
+                "messaging.announcements.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/messaging/announcements/{record_id}"),
+                "/api/1.0/messaging/announcements/{id}",
+                "messaging.announcements.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/messaging/announcements/{record_id}"),
+                "/api/1.0/messaging/announcements/{id}",
+                "messaging.announcements.update",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/messaging/announcements/{record_id}/audience-preview"),
+                "/api/1.0/messaging/announcements/{id}/audience-preview",
+                "messaging.announcements.audience_preview.read",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/messaging/announcements/{record_id}/submit"),
+                "/api/1.0/messaging/announcements/{id}/submit",
+                "messaging.announcements.submit",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/messaging/announcements/{record_id}/reopen"),
+                "/api/1.0/messaging/announcements/{id}/reopen",
+                "messaging.announcements.reopen",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/messaging/announcements/{record_id}/publish"),
+                "/api/1.0/messaging/announcements/{id}/publish",
+                "messaging.announcements.publish",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/messaging/announcements/{record_id}/cancel"),
+                "/api/1.0/messaging/announcements/{id}/cancel",
+                "messaging.announcements.cancel",
+            ),
+            (
+                Method::DELETE,
+                format!("/api/1.0/messaging/announcements/{record_id}"),
+                "/api/1.0/messaging/announcements/{id}",
+                "messaging.announcements.delete",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/messaging/announcements/{record_id}/deliveries"),
+                "/api/1.0/messaging/announcements/{id}/deliveries",
+                "messaging.deliveries.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/messaging/inbox".to_string(),
+                "/api/1.0/messaging/inbox",
+                "messaging.inbox.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/messaging/inbox/{record_id}"),
+                "/api/1.0/messaging/inbox/{id}",
+                "messaging.inbox.read",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/messaging/inbox/{record_id}/read"),
+                "/api/1.0/messaging/inbox/{id}/read",
+                "messaging.inbox.mark_read",
             ),
             (
                 Method::GET,

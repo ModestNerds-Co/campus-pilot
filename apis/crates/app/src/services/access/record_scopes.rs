@@ -78,6 +78,7 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("fleet.drivers", CAMPUS_SELF),
     definition("fleet.vehicle_logs", CAMPUS_SELF),
     definition("timetabling.snapshots", CAMPUS_ONLY),
+    definition("messaging.announcements", CAMPUS_SELF_ASSIGNED),
 ];
 
 const fn definition(
@@ -232,16 +233,16 @@ impl RoleRecordScopeOps {
 
         let rows = sqlx::query_as::<_, (String, String)>(
             r#"
-            SELECT grant.scope_family, grant.scope_kind
-            FROM role_record_scope_grants AS grant
+            SELECT scope_grant.scope_family, scope_grant.scope_kind
+            FROM role_record_scope_grants AS scope_grant
             INNER JOIN roles AS role
-                ON role.id = grant.role_id
-               AND role.tenant_id = grant.tenant_id
+                ON role.id = scope_grant.role_id
+               AND role.tenant_id = scope_grant.tenant_id
                AND role.deleted_at IS NULL
-            WHERE grant.tenant_id = $1
+            WHERE scope_grant.tenant_id = $1
               AND role.key = ANY($2)
-              AND grant.deleted_at IS NULL
-            ORDER BY grant.scope_family, grant.scope_kind
+              AND scope_grant.deleted_at IS NULL
+            ORDER BY scope_grant.scope_family, scope_grant.scope_kind
             "#,
         )
         .bind(tenant_id)
@@ -285,7 +286,7 @@ mod tests {
 
     #[test]
     fn catalogue_keys_are_unique_and_parse_safe() {
-        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 26);
+        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 27);
         let mut keys = BTreeSet::new();
         for definition in RECORD_SCOPE_FAMILIES {
             assert!(keys.insert(definition.key()), "duplicate family key");
