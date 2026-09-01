@@ -7,24 +7,28 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use anyhow::{Context, Result, anyhow, bail};
-use cp_academics::ops::{AcademicTermOps, AcademicYearOps, ClassGroupOps};
+use cp_academics::ops::{AcademicTermOps, AcademicYearOps, ClassGroupOps, TeachingAssignmentOps};
 use cp_audit::{
     AuditActor, AuditOutcome, AuditTarget, NewAuditEvent, RequestContext, append as append_audit,
 };
-use cp_sis::ops::EnrolmentOps;
+use cp_sis::ops::{EnrolmentOps, LearnerOps};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::dtos::{
-    AttendanceClassReference, AttendanceLearnerSummary, AttendanceMarkInput,
+    AttendanceAccessScope, AttendanceClassReference, AttendanceLearnerSummary, AttendanceMarkInput,
     AttendanceMarkResponse, AttendanceMarkStatus, AttendanceReferenceData,
     AttendanceRegisterListQuery, AttendanceRegisterResponse, AttendanceRegisterSummary,
-    AttendanceTermReference, CreateAttendanceRegisterRequest, ReopenAttendanceRegisterRequest,
-    UpdateAttendanceMarksRequest,
+    AttendanceTermReference, CreateAttendanceRegisterRequest, LearnerAttendanceHistoryEntry,
+    LearnerAttendanceHistoryQuery, LearnerAttendanceHistoryResponse,
+    ReopenAttendanceRegisterRequest, UpdateAttendanceMarksRequest,
 };
-use crate::models::{AttendanceMarkRow, AttendanceRegisterRow, AttendanceRegisterSummaryRow};
+use crate::models::{
+    AttendanceMarkRow, AttendanceRegisterRow, AttendanceRegisterSummaryRow,
+    LearnerAttendanceHistoryRow,
+};
 
 const DEFAULT_PAGE: i64 = 1;
 const DEFAULT_PER_PAGE: i64 = 25;
@@ -47,13 +51,13 @@ impl AttendanceOps {
             r#"
             SELECT mark.enrolment_id,
                    mark.learner_id,
-                   COUNT(*) FILTER (WHERE mark.mark_status = 'present') AS present_count,
-                   COUNT(*) FILTER (WHERE mark.mark_status = 'absent') AS absent_count,
-                   COUNT(*) FILTER (WHERE mark.mark_status = 'late') AS late_count,
-                   COUNT(*) FILTER (WHERE mark.mark_status = 'excused') AS excused_count
+                   COUNT(*) FILTER (WHERE mark.mark = 'present') AS present_count,
+                   COUNT(*) FILTER (WHERE mark.mark = 'absent') AS absent_count,
+                   COUNT(*) FILTER (WHERE mark.mark = 'late') AS late_count,
+                   COUNT(*) FILTER (WHERE mark.mark = 'excused') AS excused_count
               FROM attendance_registers AS register
               JOIN attendance_marks AS mark
-                ON mark.attendance_register_id = register.id
+                ON mark.register_id = register.id
                AND mark.tenant_id = register.tenant_id
                AND mark.deleted_at IS NULL
              WHERE register.tenant_id = $1
@@ -78,6 +82,7 @@ impl AttendanceOps {
     pub async fn reference_data(
         pool: &PgPool,
         tenant_id: Uuid,
+        scope: AttendanceAccessScope,
     ) -> Result<Option<AttendanceReferenceData>> {
         let Some(year) = AcademicYearOps::get_active(pool, tenant_id).await? else {
             return Ok(None);
@@ -97,6 +102,7 @@ impl AttendanceOps {
             None,
         )
         .await?;
+        let class_ids = scope_class_ids(pool, tenant_id, scope).await?;
         Ok(Some(AttendanceReferenceData {
             term: AttendanceTermReference {
                 id: term.id,
@@ -109,6 +115,7 @@ impl AttendanceOps {
             },
             classes: classes
                 .into_iter()
+                .filter(|class| class_ids.as_ref().is_none_or(|ids| ids.contains(&class.id)))
                 .map(|class| AttendanceClassReference {
                     id: class.id,
                     code: class.code,
@@ -123,6 +130,7 @@ impl AttendanceOps {
         pool: &PgPool,
         tenant_id: Uuid,
         query: &AttendanceRegisterListQuery,
+        scope: AttendanceAccessScope,
     ) -> Result<(Vec<AttendanceRegisterSummary>, i64)> {
         let (page, per_page) = bounded_page(query.page, query.per_page);
         if query
@@ -133,6 +141,9 @@ impl AttendanceOps {
             bail!("The attendance date range is invalid");
         }
         let offset = (page - 1) * per_page;
+        let class_ids = scope_class_ids(pool, tenant_id, scope).await?;
+        let campus_scope = class_ids.is_none();
+        let class_ids = class_ids.unwrap_or_default();
         let rows = sqlx::query_as::<_, AttendanceRegisterSummaryRow>(
             r#"
             SELECT register.id, register.academic_term_id, register.class_group_id,
@@ -155,9 +166,10 @@ impl AttendanceOps {
                AND ($4::UUID IS NULL OR register.class_group_id = $4)
                AND ($5::TEXT IS NULL OR register.period = $5)
                AND ($6::TEXT IS NULL OR register.status = $6)
+               AND ($7 OR register.class_group_id = ANY($8))
              GROUP BY register.id
              ORDER BY register.attendance_date DESC, register.created_at DESC, register.id
-             LIMIT $7 OFFSET $8
+             LIMIT $9 OFFSET $10
             "#,
         )
         .bind(tenant_id)
@@ -166,6 +178,8 @@ impl AttendanceOps {
         .bind(query.class_group_id)
         .bind(query.period.map(|period| period.as_str()))
         .bind(query.status.map(|status| status.as_str()))
+        .bind(campus_scope)
+        .bind(&class_ids)
         .bind(per_page)
         .bind(offset)
         .fetch_all(pool)
@@ -181,6 +195,7 @@ impl AttendanceOps {
                AND ($4::UUID IS NULL OR register.class_group_id = $4)
                AND ($5::TEXT IS NULL OR register.period = $5)
                AND ($6::TEXT IS NULL OR register.status = $6)
+               AND ($7 OR register.class_group_id = ANY($8))
             "#,
         )
         .bind(tenant_id)
@@ -189,6 +204,8 @@ impl AttendanceOps {
         .bind(query.class_group_id)
         .bind(query.period.map(|period| period.as_str()))
         .bind(query.status.map(|status| status.as_str()))
+        .bind(campus_scope)
+        .bind(&class_ids)
         .fetch_one(pool)
         .await
         .context("Failed to count attendance registers")?;
@@ -199,10 +216,14 @@ impl AttendanceOps {
         pool: &PgPool,
         tenant_id: Uuid,
         register_id: Uuid,
+        scope: AttendanceAccessScope,
     ) -> Result<Option<AttendanceRegisterResponse>> {
         let Some(register) = register_by_id(pool, tenant_id, register_id).await? else {
             return Ok(None);
         };
+        if !scope_allows_class(pool, tenant_id, register.class_group_id, scope).await? {
+            return Ok(None);
+        }
         let summary_row = summary_row_by_id(pool, tenant_id, register_id)
             .await?
             .context("Attendance register summary is unavailable")?;
@@ -265,8 +286,12 @@ impl AttendanceOps {
         actor: AuditActor,
         request_context: RequestContext,
         request: &CreateAttendanceRegisterRequest,
+        scope: AttendanceAccessScope,
     ) -> Result<AttendanceRegisterResponse> {
         let actor_id = person_actor_id(actor)?;
+        if !scope_allows_class(pool, tenant_id, request.class_group_id, scope).await? {
+            bail!("The selected class is not available to this account");
+        }
         let idempotency_key = trimmed_required(&request.idempotency_key, "Idempotency key")?;
         let fingerprint = create_fingerprint(request);
         if let Some((existing_id, existing_fingerprint)) =
@@ -275,7 +300,7 @@ impl AttendanceOps {
             if existing_fingerprint != fingerprint {
                 bail!("This idempotency key was already used for another attendance register");
             }
-            return Self::get(pool, tenant_id, existing_id)
+            return Self::get(pool, tenant_id, existing_id, scope)
                 .await?
                 .context("The existing attendance register is unavailable");
         }
@@ -367,7 +392,7 @@ impl AttendanceOps {
             .commit()
             .await
             .context("Failed to commit attendance register")?;
-        Self::get(pool, tenant_id, register_id)
+        Self::get(pool, tenant_id, register_id, scope)
             .await?
             .context("Created attendance register could not be reloaded")
     }
@@ -379,6 +404,7 @@ impl AttendanceOps {
         actor: AuditActor,
         request_context: RequestContext,
         request: &UpdateAttendanceMarksRequest,
+        scope: AttendanceAccessScope,
     ) -> Result<Option<AttendanceRegisterResponse>> {
         let actor_id = person_actor_id(actor)?;
         let parsed = parse_marks(&request.marks)?;
@@ -389,6 +415,9 @@ impl AttendanceOps {
         let Some(register) = lock_register(&mut transaction, tenant_id, register_id).await? else {
             return Ok(None);
         };
+        if !scope_allows_class(pool, tenant_id, register.class_group_id, scope).await? {
+            return Ok(None);
+        }
         ensure_draft(&register)?;
         ensure_version(&register, request.expected_version)?;
         let current_marks = sqlx::query_as::<_, AttendanceMarkRow>(
@@ -482,7 +511,7 @@ impl AttendanceOps {
             .commit()
             .await
             .context("Failed to commit attendance marks")?;
-        Self::get(pool, tenant_id, register_id).await
+        Self::get(pool, tenant_id, register_id, scope).await
     }
 
     pub async fn submit(
@@ -492,6 +521,7 @@ impl AttendanceOps {
         actor: AuditActor,
         request_context: RequestContext,
         expected_version: i32,
+        scope: AttendanceAccessScope,
     ) -> Result<Option<AttendanceRegisterResponse>> {
         let actor_id = person_actor_id(actor)?;
         let mut transaction = pool
@@ -501,6 +531,9 @@ impl AttendanceOps {
         let Some(register) = lock_register(&mut transaction, tenant_id, register_id).await? else {
             return Ok(None);
         };
+        if !scope_allows_class(pool, tenant_id, register.class_group_id, scope).await? {
+            return Ok(None);
+        }
         ensure_draft(&register)?;
         ensure_version(&register, expected_version)?;
         let (learner_count, unmarked_count) = sqlx::query_as::<_, (i64, i64)>(
@@ -537,6 +570,31 @@ impl AttendanceOps {
         .fetch_one(&mut *transaction)
         .await
         .context("Failed to submit attendance register")?;
+        sqlx::query(
+            r#"
+            INSERT INTO attendance_submission_mark_events (
+                tenant_id, register_id, enrolment_id, learner_id,
+                register_version, attendance_date, period, mark,
+                minutes_late, note, submitted_by, submitted_at
+            )
+            SELECT mark.tenant_id, mark.register_id, mark.enrolment_id, mark.learner_id,
+                   $3, register.attendance_date, register.period, mark.mark,
+                   mark.minutes_late, mark.note, $4, register.submitted_at
+              FROM attendance_marks AS mark
+              JOIN attendance_registers AS register
+                ON register.id = mark.register_id
+               AND register.tenant_id = mark.tenant_id
+             WHERE mark.tenant_id = $1 AND mark.register_id = $2
+               AND mark.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(register_id)
+        .bind(version)
+        .bind(actor_id)
+        .execute(&mut *transaction)
+        .await
+        .context("Failed to preserve submitted attendance marks")?;
         append_register_event(
             &mut transaction,
             RegisterEvent {
@@ -566,7 +624,7 @@ impl AttendanceOps {
             .commit()
             .await
             .context("Failed to commit attendance submission")?;
-        Self::get(pool, tenant_id, register_id).await
+        Self::get(pool, tenant_id, register_id, scope).await
     }
 
     pub async fn reopen(
@@ -576,6 +634,7 @@ impl AttendanceOps {
         actor: AuditActor,
         request_context: RequestContext,
         request: &ReopenAttendanceRegisterRequest,
+        scope: AttendanceAccessScope,
     ) -> Result<Option<AttendanceRegisterResponse>> {
         let actor_id = person_actor_id(actor)?;
         let reason = trimmed_required(&request.reason, "Reopen reason")?;
@@ -586,6 +645,9 @@ impl AttendanceOps {
         let Some(register) = lock_register(&mut transaction, tenant_id, register_id).await? else {
             return Ok(None);
         };
+        if !scope_allows_class(pool, tenant_id, register.class_group_id, scope).await? {
+            return Ok(None);
+        }
         if register.status != "submitted" {
             bail!("Only a submitted attendance register can be reopened");
         }
@@ -636,7 +698,7 @@ impl AttendanceOps {
             .commit()
             .await
             .context("Failed to commit attendance reopen")?;
-        Self::get(pool, tenant_id, register_id).await
+        Self::get(pool, tenant_id, register_id, scope).await
     }
 
     pub async fn delete(
@@ -646,6 +708,7 @@ impl AttendanceOps {
         actor: AuditActor,
         request_context: RequestContext,
         expected_version: i32,
+        scope: AttendanceAccessScope,
     ) -> Result<bool> {
         let actor_id = person_actor_id(actor)?;
         let mut transaction = pool
@@ -655,6 +718,9 @@ impl AttendanceOps {
         let Some(register) = lock_register(&mut transaction, tenant_id, register_id).await? else {
             return Ok(false);
         };
+        if !scope_allows_class(pool, tenant_id, register.class_group_id, scope).await? {
+            return Ok(false);
+        }
         ensure_draft(&register)?;
         ensure_version(&register, expected_version)?;
         append_register_event(
@@ -711,6 +777,175 @@ impl AttendanceOps {
             .await
             .context("Failed to commit attendance deletion")?;
         Ok(true)
+    }
+
+    /// Returns accepted submitted attendance for one learner. Reopened drafts
+    /// are excluded, and assigned visibility is applied before pagination.
+    pub async fn learner_history(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        learner_id: Uuid,
+        query: &LearnerAttendanceHistoryQuery,
+        scope: AttendanceAccessScope,
+    ) -> Result<Option<(LearnerAttendanceHistoryResponse, i64)>> {
+        if query
+            .date_from
+            .zip(query.date_to)
+            .is_some_and(|(from, to)| to < from)
+        {
+            bail!("The attendance date range is invalid");
+        }
+        let Some(learner) =
+            LearnerOps::attendance_reference_by_id(pool, tenant_id, learner_id).await?
+        else {
+            return Ok(None);
+        };
+        let (page, per_page) = bounded_page(query.page, query.per_page);
+        let offset = (page - 1) * per_page;
+        let class_ids = scope_class_ids(pool, tenant_id, scope).await?;
+        let campus_scope = class_ids.is_none();
+        let class_ids = class_ids.unwrap_or_default();
+        if !campus_scope {
+            let visible = sqlx::query_scalar::<_, bool>(
+                r#"
+                SELECT EXISTS(
+                    SELECT 1
+                      FROM attendance_submission_mark_events AS event
+                      JOIN attendance_registers AS register
+                        ON register.id = event.register_id
+                       AND register.tenant_id = event.tenant_id
+                       AND register.status = 'submitted'
+                       AND register.version = event.register_version
+                       AND register.deleted_at IS NULL
+                     WHERE event.tenant_id = $1 AND event.learner_id = $2
+                       AND register.class_group_id = ANY($3)
+                )
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(learner_id)
+            .bind(&class_ids)
+            .fetch_one(pool)
+            .await
+            .context("Failed to authorize learner attendance history")?;
+            if !visible {
+                return Ok(None);
+            }
+        }
+        let total = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT COUNT(*)
+              FROM attendance_submission_mark_events AS event
+              JOIN attendance_registers AS register
+                ON register.id = event.register_id
+               AND register.tenant_id = event.tenant_id
+               AND register.status = 'submitted'
+               AND register.version = event.register_version
+               AND register.deleted_at IS NULL
+             WHERE event.tenant_id = $1 AND event.learner_id = $2
+               AND ($3::DATE IS NULL OR event.attendance_date >= $3)
+               AND ($4::DATE IS NULL OR event.attendance_date <= $4)
+               AND ($5 OR register.class_group_id = ANY($6))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(learner_id)
+        .bind(query.date_from)
+        .bind(query.date_to)
+        .bind(campus_scope)
+        .bind(&class_ids)
+        .fetch_one(pool)
+        .await
+        .context("Failed to count learner attendance history")?;
+        let rows = sqlx::query_as::<_, LearnerAttendanceHistoryRow>(
+            r#"
+            SELECT event.register_id, register.class_group_id,
+                   event.attendance_date, event.period, event.mark,
+                   event.minutes_late, event.note, event.submitted_at
+              FROM attendance_submission_mark_events AS event
+              JOIN attendance_registers AS register
+                ON register.id = event.register_id
+               AND register.tenant_id = event.tenant_id
+               AND register.status = 'submitted'
+               AND register.version = event.register_version
+               AND register.deleted_at IS NULL
+             WHERE event.tenant_id = $1 AND event.learner_id = $2
+               AND ($3::DATE IS NULL OR event.attendance_date >= $3)
+               AND ($4::DATE IS NULL OR event.attendance_date <= $4)
+               AND ($5 OR register.class_group_id = ANY($6))
+             ORDER BY event.attendance_date DESC, event.submitted_at DESC, event.id
+             LIMIT $7 OFFSET $8
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(learner_id)
+        .bind(query.date_from)
+        .bind(query.date_to)
+        .bind(campus_scope)
+        .bind(&class_ids)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load learner attendance history")?;
+        let counts = sqlx::query_as::<_, (i64, i64, i64, i64)>(
+            r#"
+            SELECT COUNT(*) FILTER (WHERE event.mark = 'present')::BIGINT,
+                   COUNT(*) FILTER (WHERE event.mark = 'absent')::BIGINT,
+                   COUNT(*) FILTER (WHERE event.mark = 'late')::BIGINT,
+                   COUNT(*) FILTER (WHERE event.mark = 'excused')::BIGINT
+              FROM attendance_submission_mark_events AS event
+              JOIN attendance_registers AS register
+                ON register.id = event.register_id
+               AND register.tenant_id = event.tenant_id
+               AND register.status = 'submitted'
+               AND register.version = event.register_version
+               AND register.deleted_at IS NULL
+             WHERE event.tenant_id = $1 AND event.learner_id = $2
+               AND ($3::DATE IS NULL OR event.attendance_date >= $3)
+               AND ($4::DATE IS NULL OR event.attendance_date <= $4)
+               AND ($5 OR register.class_group_id = ANY($6))
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(learner_id)
+        .bind(query.date_from)
+        .bind(query.date_to)
+        .bind(campus_scope)
+        .bind(&class_ids)
+        .fetch_one(pool)
+        .await
+        .context("Failed to summarize learner attendance history")?;
+        let mut entries = Vec::with_capacity(rows.len());
+        for row in rows {
+            let class = ClassGroupOps::get_by_id(pool, tenant_id, row.class_group_id)
+                .await?
+                .context("The attendance history class is unavailable")?;
+            entries.push(LearnerAttendanceHistoryEntry {
+                register_id: row.register_id,
+                class_group_id: row.class_group_id,
+                class_group_name: class.name,
+                attendance_date: row.attendance_date,
+                period: row.period,
+                mark: row.mark,
+                minutes_late: row.minutes_late,
+                note: row.note,
+                submitted_at: row.submitted_at,
+            });
+        }
+        Ok(Some((
+            LearnerAttendanceHistoryResponse {
+                learner_id: learner.id,
+                learner_number: learner.learner_number,
+                learner_name: learner.display_name,
+                present_count: counts.0,
+                absent_count: counts.1,
+                late_count: counts.2,
+                excused_count: counts.3,
+                entries,
+            },
+            total,
+        )))
     }
 }
 
@@ -794,7 +1029,7 @@ async fn register_by_id(
 ) -> Result<Option<AttendanceRegisterRow>> {
     sqlx::query_as::<_, AttendanceRegisterRow>(
         r#"
-        SELECT status, version, reopened_at, reopen_reason
+        SELECT class_group_id, status, version, reopened_at, reopen_reason
           FROM attendance_registers
          WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
         "#,
@@ -846,7 +1081,7 @@ async fn lock_register(
 ) -> Result<Option<AttendanceRegisterRow>> {
     sqlx::query_as::<_, AttendanceRegisterRow>(
         r#"
-        SELECT status, version, reopened_at, reopen_reason
+        SELECT class_group_id, status, version, reopened_at, reopen_reason
           FROM attendance_registers
          WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
          FOR UPDATE
@@ -890,6 +1125,31 @@ fn ensure_version(register: &AttendanceRegisterRow, expected_version: i32) -> Re
         bail!("This attendance register changed. Reload it before continuing");
     }
     Ok(())
+}
+
+async fn scope_class_ids(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    scope: AttendanceAccessScope,
+) -> Result<Option<Vec<Uuid>>> {
+    match scope {
+        AttendanceAccessScope::Campus => Ok(None),
+        AttendanceAccessScope::AssignedTo(account_id) => Ok(Some(
+            TeachingAssignmentOps::active_class_ids_for_account(pool, tenant_id, account_id)
+                .await?,
+        )),
+    }
+}
+
+async fn scope_allows_class(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    class_group_id: Uuid,
+    scope: AttendanceAccessScope,
+) -> Result<bool> {
+    Ok(scope_class_ids(pool, tenant_id, scope)
+        .await?
+        .is_none_or(|ids| ids.contains(&class_group_id)))
 }
 
 #[derive(Debug)]

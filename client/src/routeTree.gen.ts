@@ -130,6 +130,7 @@ import { Route as ModulesInternalAuditEngagementsEngagementIdRouteImport } from 
 import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/modules/health/patients_.$patientId'
 import { Route as ModulesDocumentRegistryDocumentsDocumentIdRouteImport } from './routes/modules/document-registry/documents/$documentId'
 import { Route as ModulesAttendanceRegistersRegisterIdRouteImport } from './routes/modules/attendance/registers_.$registerId'
+import { Route as ModulesAttendanceLearnersLearnerIdRouteImport } from './routes/modules/attendance/learners_.$learnerId'
 import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './routes/modules/assets-inventory/requests_.$requestId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
@@ -795,6 +796,12 @@ const ModulesAttendanceRegistersRegisterIdRoute =
     path: '/attendance/registers/$registerId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAttendanceLearnersLearnerIdRoute =
+  ModulesAttendanceLearnersLearnerIdRouteImport.update({
+    id: '/attendance/learners_/$learnerId',
+    path: '/attendance/learners/$learnerId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryRequestsRequestIdRoute =
   ModulesAssetsInventoryRequestsRequestIdRouteImport.update({
     id: '/assets-inventory/requests_/$requestId',
@@ -954,6 +961,7 @@ export interface FileRoutesByFullPath {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/learners/$learnerId': typeof ModulesAttendanceLearnersLearnerIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
@@ -1083,6 +1091,7 @@ export interface FileRoutesByTo {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/learners/$learnerId': typeof ModulesAttendanceLearnersLearnerIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
@@ -1214,6 +1223,7 @@ export interface FileRoutesById {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests_/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/learners_/$learnerId': typeof ModulesAttendanceLearnersLearnerIdRoute
   '/modules/attendance/registers_/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients_/$patientId': typeof ModulesHealthPatientsPatientIdRoute
@@ -1346,6 +1356,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
+    | '/modules/attendance/learners/$learnerId'
     | '/modules/attendance/registers/$registerId'
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
@@ -1475,6 +1486,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
+    | '/modules/attendance/learners/$learnerId'
     | '/modules/attendance/registers/$registerId'
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
@@ -1605,6 +1617,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/assets-inventory/requests_/$requestId'
+    | '/modules/attendance/learners_/$learnerId'
     | '/modules/attendance/registers_/$registerId'
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients_/$patientId'
@@ -2482,6 +2495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAttendanceRegistersRegisterIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/attendance/learners_/$learnerId': {
+      id: '/modules/attendance/learners_/$learnerId'
+      path: '/attendance/learners/$learnerId'
+      fullPath: '/modules/attendance/learners/$learnerId'
+      preLoaderRoute: typeof ModulesAttendanceLearnersLearnerIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/requests_/$requestId': {
       id: '/modules/assets-inventory/requests_/$requestId'
       path: '/assets-inventory/requests/$requestId'
@@ -2737,6 +2757,7 @@ interface ModulesRouteChildren {
   ModulesAgentSessionsSessionIdRoute: typeof ModulesAgentSessionsSessionIdRoute
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesAssetsInventoryRequestsRequestIdRoute: typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  ModulesAttendanceLearnersLearnerIdRoute: typeof ModulesAttendanceLearnersLearnerIdRoute
   ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
   ModulesDocumentRegistryDocumentsDocumentIdRoute: typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   ModulesHealthPatientsPatientIdRoute: typeof ModulesHealthPatientsPatientIdRoute
@@ -2830,6 +2851,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
     ModulesAssetsInventoryMovementsMovementIdRoute,
   ModulesAssetsInventoryRequestsRequestIdRoute:
     ModulesAssetsInventoryRequestsRequestIdRoute,
+  ModulesAttendanceLearnersLearnerIdRoute:
+    ModulesAttendanceLearnersLearnerIdRoute,
   ModulesAttendanceRegistersRegisterIdRoute:
     ModulesAttendanceRegistersRegisterIdRoute,
   ModulesDocumentRegistryDocumentsDocumentIdRoute:

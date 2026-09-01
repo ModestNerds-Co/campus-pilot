@@ -81,8 +81,8 @@ use assets_inventory::{
     StockRequestsListCapability,
 };
 use attendance::{
-    AttendanceReferencesCapability, AttendanceRegisterReadCapability,
-    AttendanceRegistersListCapability,
+    AttendanceLearnerHistoryCapability, AttendanceReferencesCapability,
+    AttendanceRegisterReadCapability, AttendanceRegistersListCapability,
 };
 use document_registry::{RegistryReadCapability, RegistryReadKind};
 use fees::{
@@ -347,6 +347,9 @@ pub fn build_capability_registry(
     registry
         .register(AttendanceRegisterReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Attendance register-read capability: {error}"));
+    registry
+        .register(AttendanceLearnerHistoryCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Attendance learner-history capability: {error}"));
     registry
         .register(LearningSettingsCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid E-learning settings capability: {error}"));
@@ -1056,6 +1059,7 @@ mod tests {
                 "assets_inventory.stock_requests.read",
                 "assets_inventory.stores.list",
                 "assets_inventory.stores.read",
+                "attendance.learners.history.read",
                 "attendance.references.read",
                 "attendance.registers.list",
                 "attendance.registers.read",

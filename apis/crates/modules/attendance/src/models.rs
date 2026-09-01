@@ -6,10 +6,23 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, FromRow)]
 pub(crate) struct AttendanceRegisterRow {
+    pub class_group_id: Uuid,
     pub status: String,
     pub version: i32,
     pub reopened_at: Option<DateTime<Utc>>,
     pub reopen_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub(crate) struct LearnerAttendanceHistoryRow {
+    pub register_id: Uuid,
+    pub class_group_id: Uuid,
+    pub attendance_date: NaiveDate,
+    pub period: String,
+    pub mark: String,
+    pub minutes_late: Option<i32>,
+    pub note: Option<String>,
+    pub submitted_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, FromRow)]

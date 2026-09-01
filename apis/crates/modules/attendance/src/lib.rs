@@ -9,10 +9,11 @@ pub mod ops;
 pub mod routes;
 
 pub use dtos::{
-    AttendanceClassReference, AttendanceLearnerSummary, AttendanceMarkInput,
+    AttendanceAccessScope, AttendanceClassReference, AttendanceLearnerSummary, AttendanceMarkInput,
     AttendanceMarkResponse, AttendanceMarkStatus, AttendancePeriod, AttendanceReferenceData,
     AttendanceRegisterListQuery, AttendanceRegisterResponse, AttendanceRegisterStatus,
     AttendanceRegisterSummary, CreateAttendanceRegisterRequest, DeleteAttendanceRegisterQuery,
+    LearnerAttendanceHistoryEntry, LearnerAttendanceHistoryQuery, LearnerAttendanceHistoryResponse,
     PaginatedAttendanceRegistersResponse, ReopenAttendanceRegisterRequest,
     SubmitAttendanceRegisterRequest, UpdateAttendanceMarksRequest,
 };

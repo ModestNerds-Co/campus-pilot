@@ -12,6 +12,8 @@ import type {
   AttendanceRegisterInput,
   AttendanceRegisterListParams,
   AttendanceRegistersResponse,
+  LearnerAttendanceHistory,
+  LearnerAttendanceHistoryParams,
 } from "./types";
 
 const BASE_URL = "/api/1.0/attendance";
@@ -30,6 +32,7 @@ export const attendanceService = {
   listRegisters: (params?: AttendanceRegisterListParams) => request<AttendanceRegistersResponse>(() => httpClient.get(`${BASE_URL}/registers`, { params })),
   createRegister: (data: AttendanceRegisterInput) => request<AttendanceRegister>(() => httpClient.post(`${BASE_URL}/registers`, data)),
   readRegister: (id: string) => request<AttendanceRegister>(() => httpClient.get(`${BASE_URL}/registers/${id}`)),
+  learnerHistory: (id: string, params?: LearnerAttendanceHistoryParams) => request<LearnerAttendanceHistory>(() => httpClient.get(`${BASE_URL}/learners/${id}/history`, { params })),
   updateMarks: (id: string, expectedVersion: number, marks: AttendanceMarkInput[]) => request<AttendanceRegister>(() => httpClient.put(`${BASE_URL}/registers/${id}/marks`, { expected_version: expectedVersion, marks })),
   submitRegister: (id: string, expectedVersion: number) => request<AttendanceRegister>(() => httpClient.post(`${BASE_URL}/registers/${id}/submit`, { expected_version: expectedVersion })),
   reopenRegister: (id: string, expectedVersion: number, reason: string) => request<AttendanceRegister>(() => httpClient.post(`${BASE_URL}/registers/${id}/reopen`, { expected_version: expectedVersion, reason })),

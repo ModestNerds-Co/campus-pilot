@@ -110,3 +110,33 @@ export interface ApiEnvelope<T> {
 export interface AttendanceRegistersResponse {
   registers: AttendanceRegisterSummary[];
 }
+
+export interface LearnerAttendanceHistoryEntry {
+  register_id: string;
+  class_group_id: string;
+  class_group_name: string;
+  attendance_date: string;
+  period: AttendancePeriod;
+  mark: Exclude<AttendanceMarkStatus, "unmarked">;
+  minutes_late: number | null;
+  note: string | null;
+  submitted_at: string;
+}
+
+export interface LearnerAttendanceHistory {
+  learner_id: string;
+  learner_number: string;
+  learner_name: string;
+  present_count: number;
+  absent_count: number;
+  late_count: number;
+  excused_count: number;
+  entries: LearnerAttendanceHistoryEntry[];
+}
+
+export interface LearnerAttendanceHistoryParams {
+  page?: number;
+  per_page?: number;
+  date_from?: string;
+  date_to?: string;
+}

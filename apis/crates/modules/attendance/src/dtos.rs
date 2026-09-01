@@ -68,6 +68,13 @@ pub enum AttendanceRegisterStatus {
     Submitted,
 }
 
+/// Visibility derived from the current role record-scope grant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttendanceAccessScope {
+    Campus,
+    AssignedTo(Uuid),
+}
+
 impl AttendanceRegisterStatus {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -155,6 +162,14 @@ pub struct AttendanceRegisterListQuery {
     pub status: Option<AttendanceRegisterStatus>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct LearnerAttendanceHistoryQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AttendanceClassReference {
     pub id: Uuid,
@@ -227,4 +242,29 @@ pub struct AttendanceRegisterResponse {
 #[derive(Debug, Serialize)]
 pub struct PaginatedAttendanceRegistersResponse {
     pub registers: Vec<AttendanceRegisterSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearnerAttendanceHistoryEntry {
+    pub register_id: Uuid,
+    pub class_group_id: Uuid,
+    pub class_group_name: String,
+    pub attendance_date: NaiveDate,
+    pub period: String,
+    pub mark: String,
+    pub minutes_late: Option<i32>,
+    pub note: Option<String>,
+    pub submitted_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearnerAttendanceHistoryResponse {
+    pub learner_id: Uuid,
+    pub learner_number: String,
+    pub learner_name: String,
+    pub present_count: i64,
+    pub absent_count: i64,
+    pub late_count: i64,
+    pub excused_count: i64,
+    pub entries: Vec<LearnerAttendanceHistoryEntry>,
 }

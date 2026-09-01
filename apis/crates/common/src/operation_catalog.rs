@@ -3235,6 +3235,15 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         route(
+            Method::GET,
+            "/api/1.0/attendance/learners/{id}/history",
+            "attendance.learners.history.read",
+            "attendance",
+            "attendance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
             Method::PUT,
             "/api/1.0/attendance/registers/{id}/marks",
             "attendance.registers.marks.update",
@@ -4995,6 +5004,7 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.references.read"
         | "attendance.registers.list"
         | "attendance.registers.read"
+        | "attendance.learners.history.read"
         | "learning.settings.read"
         | "learning.references.read"
         | "learning.resource_files.list"
@@ -5491,7 +5501,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 508);
+        assert_eq!(operation_catalog().len(), 509);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -5543,7 +5553,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [195, 279, 22, 12]);
+        assert_eq!(counts, [196, 279, 22, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

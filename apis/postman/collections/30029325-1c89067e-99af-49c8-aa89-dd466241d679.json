@@ -4969,6 +4969,14 @@
           }
         },
         {
+          "name": "Get Learner Attendance History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/learners/{{attendance_learner_id}}/history?page=1&per_page=25",
+            "description": "Returns accepted submitted marks for one learner within the caller's campus or assigned-class scope."
+          }
+        },
+        {
           "name": "Save Attendance Marks",
           "request": {
             "method": "PUT",

@@ -1247,6 +1247,41 @@ impl ClassGroupOps {
 pub struct TeachingAssignmentOps;
 
 impl TeachingAssignmentOps {
+    /// Returns the distinct active classes taught by the employee linked to
+    /// one authenticated account. Attendance uses this typed boundary to
+    /// enforce assigned-class visibility before it queries or mutates data.
+    pub async fn active_class_ids_for_account(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+    ) -> Result<Vec<Uuid>> {
+        let Some(employee) =
+            EmployeeOps::active_reference_by_account(pool, tenant_id, account_id).await?
+        else {
+            return Ok(Vec::new());
+        };
+        sqlx::query_scalar::<_, Uuid>(
+            r#"
+            SELECT DISTINCT assignment.class_group_id
+              FROM teaching_assignments AS assignment
+              JOIN teacher_profiles AS teacher
+                ON teacher.id = assignment.teacher_profile_id
+               AND teacher.tenant_id = assignment.tenant_id
+               AND teacher.deleted_at IS NULL
+             WHERE assignment.tenant_id = $1
+               AND teacher.employee_id = $2
+               AND assignment.status = 'active'
+               AND assignment.deleted_at IS NULL
+             ORDER BY assignment.class_group_id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(employee.id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve assigned teaching classes")
+    }
+
     /// Returns active assignment identifiers owned by the employee linked to
     /// one authenticated account. Consumers use these identifiers to apply
     /// assigned-record scope before pagination.

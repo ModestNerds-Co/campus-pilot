@@ -17,11 +17,11 @@ use crate::{
         UpdateGuardianRequest, UpdateLearnerRequest,
     },
     models::{
-        AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry,
-        ClassRosterEntry, CommunicationRecipientReference, Enrolment, EnrolmentWithDetails,
-        GuardianRelationshipWithDetails, GuardianWithAccount, HealthGuardianContactReference,
-        HostelLearnerReference, LearnerBillingReference, LearnerWithAccount,
-        LibraryLearnerReference,
+        AccountCandidate, Application, ApplicationWithDetails, AttendanceLearnerReference,
+        AttendanceRosterEntry, ClassRosterEntry, CommunicationRecipientReference, Enrolment,
+        EnrolmentWithDetails, GuardianRelationshipWithDetails, GuardianWithAccount,
+        HealthGuardianContactReference, HostelLearnerReference, LearnerBillingReference,
+        LearnerWithAccount, LibraryLearnerReference,
     },
     numbering::allocate_learner_number,
 };
@@ -154,6 +154,27 @@ impl AccountCandidateOps {
 pub struct LearnerOps;
 
 impl LearnerOps {
+    /// Returns the minimum current learner identity Attendance needs for a
+    /// history page without exposing SIS persistence to that module.
+    pub async fn attendance_reference_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        learner_id: Uuid,
+    ) -> Result<Option<AttendanceLearnerReference>> {
+        sqlx::query_as::<_, AttendanceLearnerReference>(
+            r#"
+            SELECT id, learner_number, display_name, status
+              FROM learners
+             WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(learner_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to resolve learner attendance identity")
+    }
+
     /// Returns active SIS learner identities for authorised Hostel allocation work.
     pub async fn hostel_references(
         pool: &PgPool,
