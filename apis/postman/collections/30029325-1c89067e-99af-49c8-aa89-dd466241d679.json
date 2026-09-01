@@ -5439,6 +5439,36 @@
       ]
     },
     {
+      "name": "Hostel",
+      "description": "SIS-backed residences, rooms, learner allocations, occupancy, and pastoral records.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Get Hostel References", "request": { "method": "GET", "url": "{{base_url}}/hostel/references" } },
+        { "name": "List Residences", "request": { "method": "GET", "url": "{{base_url}}/hostel/residences?page=1&per_page=25" } },
+        { "name": "Create Residence", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"code\": \"NORTH\",\n  \"name\": \"North Residence\",\n  \"description\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/residences" } },
+        { "name": "Get Residence", "request": { "method": "GET", "url": "{{base_url}}/hostel/residences/{{hostel_residence_id}}" } },
+        { "name": "Update Residence", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"code\": \"NORTH\",\n  \"name\": \"North Residence\",\n  \"description\": null,\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/residences/{{hostel_residence_id}}" } },
+        { "name": "List Rooms", "request": { "method": "GET", "url": "{{base_url}}/hostel/rooms?page=1&per_page=25" } },
+        { "name": "Create Room", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"residence_id\": \"{{hostel_residence_id}}\",\n  \"code\": \"N-101\",\n  \"floor_label\": \"Ground floor\",\n  \"capacity\": 4\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/rooms" } },
+        { "name": "Get Room", "request": { "method": "GET", "url": "{{base_url}}/hostel/rooms/{{hostel_room_id}}" } },
+        { "name": "Update Room", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"code\": \"N-101\",\n  \"floor_label\": \"Ground floor\",\n  \"capacity\": 4,\n  \"status\": \"available\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/rooms/{{hostel_room_id}}" } },
+        { "name": "Preview Allocation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"learner_id\": \"{{hostel_learner_id}}\",\n  \"room_id\": \"{{hostel_room_id}}\",\n  \"starts_on\": \"2026-09-01\",\n  \"expected_end_on\": null,\n  \"replacing_allocation_id\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations/preview" } },
+        { "name": "List Allocations", "request": { "method": "GET", "url": "{{base_url}}/hostel/allocations?page=1&per_page=25" } },
+        { "name": "Create Allocation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"learner_id\": \"{{hostel_learner_id}}\",\n  \"room_id\": \"{{hostel_room_id}}\",\n  \"starts_on\": \"2026-09-01\",\n  \"expected_end_on\": null,\n  \"preview_fingerprint\": \"{{hostel_preview_fingerprint}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations" } },
+        { "name": "Get Allocation", "request": { "method": "GET", "url": "{{base_url}}/hostel/allocations/{{hostel_allocation_id}}" } },
+        { "name": "Activate Allocation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1 }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations/{{hostel_allocation_id}}/activate" } },
+        { "name": "End Allocation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"ended_on\": \"2026-09-30\", \"reason\": \"Approved checkout\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations/{{hostel_allocation_id}}/end" } },
+        { "name": "Cancel Allocation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"reason\": \"Placement withdrawn\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations/{{hostel_allocation_id}}/cancel" } },
+        { "name": "Preview Allocation Transfer", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"new_room_id\": \"{{hostel_new_room_id}}\", \"effective_on\": \"2026-09-15\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations/{{hostel_allocation_id}}/transfer-preview" } },
+        { "name": "Transfer Allocation", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"new_room_id\": \"{{hostel_new_room_id}}\",\n  \"effective_on\": \"2026-09-15\",\n  \"reason\": \"Approved room change\",\n  \"preview_fingerprint\": \"{{hostel_preview_fingerprint}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/allocations/{{hostel_allocation_id}}/transfer" } },
+        { "name": "List Pastoral Records", "request": { "method": "GET", "url": "{{base_url}}/hostel/pastoral-records?page=1&per_page=25" } },
+        { "name": "Create Pastoral Record", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"learner_id\": \"{{hostel_learner_id}}\",\n  \"allocation_id\": \"{{hostel_allocation_id}}\",\n  \"category\": \"wellbeing\",\n  \"severity\": \"moderate\",\n  \"subject\": \"Dormitory check-in\",\n  \"details\": \"Follow-up requested.\",\n  \"occurred_at\": \"2026-09-01T18:30:00Z\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/pastoral-records" } },
+        { "name": "Get Pastoral Record", "request": { "method": "GET", "url": "{{base_url}}/hostel/pastoral-records/{{hostel_pastoral_record_id}}" } },
+        { "name": "Update Pastoral Record", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"category\": \"wellbeing\",\n  \"severity\": \"moderate\",\n  \"subject\": \"Dormitory check-in\",\n  \"details\": \"Follow-up completed.\",\n  \"occurred_at\": \"2026-09-01T18:30:00Z\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/pastoral-records/{{hostel_pastoral_record_id}}" } },
+        { "name": "Resolve Pastoral Record", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"resolution\": \"Follow-up completed and recorded.\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/hostel/pastoral-records/{{hostel_pastoral_record_id}}/resolve" } }
+      ]
+    },
+    {
       "name": "Health services",
       "description": "SIS/HR-backed patients, clinic visits, medication administration, and follow-up.",
       "auth": {
@@ -6547,6 +6577,41 @@
     {
       "key": "library_billing_account_id",
       "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "hostel_residence_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "hostel_room_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "hostel_new_room_id",
+      "value": "00000000-0000-0000-0000-000000000001",
+      "type": "default"
+    },
+    {
+      "key": "hostel_learner_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "hostel_allocation_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "hostel_pastoral_record_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "hostel_preview_fingerprint",
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
       "type": "default"
     },
     {

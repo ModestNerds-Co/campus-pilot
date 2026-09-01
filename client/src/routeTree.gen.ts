@@ -66,6 +66,9 @@ import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules
 import { Route as ModulesHrPayrollEmployeesRouteImport } from './routes/modules/hr-payroll/employees'
 import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/modules/hr-payroll/departments'
 import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modules/hr-payroll/availability'
+import { Route as ModulesHostelRoomsRouteImport } from './routes/modules/hostel/rooms'
+import { Route as ModulesHostelPastoralRouteImport } from './routes/modules/hostel/pastoral'
+import { Route as ModulesHostelAllocationsRouteImport } from './routes/modules/hostel/allocations'
 import { Route as ModulesHealthVisitsRouteImport } from './routes/modules/health/visits'
 import { Route as ModulesHealthPatientsRouteImport } from './routes/modules/health/patients'
 import { Route as ModulesHealthMedicationRouteImport } from './routes/modules/health/medication'
@@ -417,6 +420,22 @@ const ModulesHrPayrollAvailabilityRoute =
   ModulesHrPayrollAvailabilityRouteImport.update({
     id: '/hr-payroll/availability',
     path: '/hr-payroll/availability',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesHostelRoomsRoute = ModulesHostelRoomsRouteImport.update({
+  id: '/hostel/rooms',
+  path: '/hostel/rooms',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesHostelPastoralRoute = ModulesHostelPastoralRouteImport.update({
+  id: '/hostel/pastoral',
+  path: '/hostel/pastoral',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesHostelAllocationsRoute =
+  ModulesHostelAllocationsRouteImport.update({
+    id: '/hostel/allocations',
+    path: '/hostel/allocations',
     getParentRoute: () => ModulesRoute,
   } as any)
 const ModulesHealthVisitsRoute = ModulesHealthVisitsRouteImport.update({
@@ -802,6 +821,9 @@ export interface FileRoutesByFullPath {
   '/modules/health/medication': typeof ModulesHealthMedicationRoute
   '/modules/health/patients': typeof ModulesHealthPatientsRoute
   '/modules/health/visits': typeof ModulesHealthVisitsRoute
+  '/modules/hostel/allocations': typeof ModulesHostelAllocationsRoute
+  '/modules/hostel/pastoral': typeof ModulesHostelPastoralRoute
+  '/modules/hostel/rooms': typeof ModulesHostelRoomsRoute
   '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
@@ -915,6 +937,9 @@ export interface FileRoutesByTo {
   '/modules/health/medication': typeof ModulesHealthMedicationRoute
   '/modules/health/patients': typeof ModulesHealthPatientsRoute
   '/modules/health/visits': typeof ModulesHealthVisitsRoute
+  '/modules/hostel/allocations': typeof ModulesHostelAllocationsRoute
+  '/modules/hostel/pastoral': typeof ModulesHostelPastoralRoute
+  '/modules/hostel/rooms': typeof ModulesHostelRoomsRoute
   '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
@@ -1030,6 +1055,9 @@ export interface FileRoutesById {
   '/modules/health/medication': typeof ModulesHealthMedicationRoute
   '/modules/health/patients': typeof ModulesHealthPatientsRoute
   '/modules/health/visits': typeof ModulesHealthVisitsRoute
+  '/modules/hostel/allocations': typeof ModulesHostelAllocationsRoute
+  '/modules/hostel/pastoral': typeof ModulesHostelPastoralRoute
+  '/modules/hostel/rooms': typeof ModulesHostelRoomsRoute
   '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
@@ -1146,6 +1174,9 @@ export interface FileRouteTypes {
     | '/modules/health/medication'
     | '/modules/health/patients'
     | '/modules/health/visits'
+    | '/modules/hostel/allocations'
+    | '/modules/hostel/pastoral'
+    | '/modules/hostel/rooms'
     | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
@@ -1259,6 +1290,9 @@ export interface FileRouteTypes {
     | '/modules/health/medication'
     | '/modules/health/patients'
     | '/modules/health/visits'
+    | '/modules/hostel/allocations'
+    | '/modules/hostel/pastoral'
+    | '/modules/hostel/rooms'
     | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
@@ -1373,6 +1407,9 @@ export interface FileRouteTypes {
     | '/modules/health/medication'
     | '/modules/health/patients'
     | '/modules/health/visits'
+    | '/modules/hostel/allocations'
+    | '/modules/hostel/pastoral'
+    | '/modules/hostel/rooms'
     | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
@@ -1828,6 +1865,27 @@ declare module '@tanstack/react-router' {
       path: '/hr-payroll/availability'
       fullPath: '/modules/hr-payroll/availability'
       preLoaderRoute: typeof ModulesHrPayrollAvailabilityRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/hostel/rooms': {
+      id: '/modules/hostel/rooms'
+      path: '/hostel/rooms'
+      fullPath: '/modules/hostel/rooms'
+      preLoaderRoute: typeof ModulesHostelRoomsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/hostel/pastoral': {
+      id: '/modules/hostel/pastoral'
+      path: '/hostel/pastoral'
+      fullPath: '/modules/hostel/pastoral'
+      preLoaderRoute: typeof ModulesHostelPastoralRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/hostel/allocations': {
+      id: '/modules/hostel/allocations'
+      path: '/hostel/allocations'
+      fullPath: '/modules/hostel/allocations'
+      preLoaderRoute: typeof ModulesHostelAllocationsRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/health/visits': {
@@ -2366,6 +2424,9 @@ interface ModulesRouteChildren {
   ModulesHealthMedicationRoute: typeof ModulesHealthMedicationRoute
   ModulesHealthPatientsRoute: typeof ModulesHealthPatientsRoute
   ModulesHealthVisitsRoute: typeof ModulesHealthVisitsRoute
+  ModulesHostelAllocationsRoute: typeof ModulesHostelAllocationsRoute
+  ModulesHostelPastoralRoute: typeof ModulesHostelPastoralRoute
+  ModulesHostelRoomsRoute: typeof ModulesHostelRoomsRoute
   ModulesHrPayrollAvailabilityRoute: typeof ModulesHrPayrollAvailabilityRoute
   ModulesHrPayrollDepartmentsRoute: typeof ModulesHrPayrollDepartmentsRoute
   ModulesHrPayrollEmployeesRoute: typeof ModulesHrPayrollEmployeesRoute
@@ -2440,6 +2501,9 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHealthMedicationRoute: ModulesHealthMedicationRoute,
   ModulesHealthPatientsRoute: ModulesHealthPatientsRoute,
   ModulesHealthVisitsRoute: ModulesHealthVisitsRoute,
+  ModulesHostelAllocationsRoute: ModulesHostelAllocationsRoute,
+  ModulesHostelPastoralRoute: ModulesHostelPastoralRoute,
+  ModulesHostelRoomsRoute: ModulesHostelRoomsRoute,
   ModulesHrPayrollAvailabilityRoute: ModulesHrPayrollAvailabilityRoute,
   ModulesHrPayrollDepartmentsRoute: ModulesHrPayrollDepartmentsRoute,
   ModulesHrPayrollEmployeesRoute: ModulesHrPayrollEmployeesRoute,

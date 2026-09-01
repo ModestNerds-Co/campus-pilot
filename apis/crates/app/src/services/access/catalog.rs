@@ -179,8 +179,8 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/hostel",
             "hostel",
             false,
-            "foundation",
-            &["view", "create", "edit", "delete"],
+            "available",
+            &["view", "create", "edit", "allocate", "pastoral", "manage"],
         ),
         module(
             "health",
@@ -428,6 +428,7 @@ pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
         "procurement" => &["finance", "hr_payroll"],
         "timetabling" => &["academics", "hr_payroll"],
         "attendance" => &["academics", "sis"],
+        "hostel" => &["sis"],
         _ => &[],
     }
 }
@@ -709,6 +710,10 @@ mod tests {
             "fees",
             "procurement",
             "assets_inventory",
+            "messaging",
+            "library",
+            "health",
+            "hostel",
         ] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -752,6 +757,30 @@ mod tests {
                 assert_eq!(module.exposed_operations(), 13);
                 assert_eq!(module.approval_required_operations(), 21);
                 assert_eq!(module.executable_capabilities(), 13);
+            } else if module_key == "messaging" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 15);
+                assert_eq!(module.exposed_operations(), 7);
+                assert_eq!(module.approval_required_operations(), 8);
+                assert_eq!(module.executable_capabilities(), 7);
+            } else if module_key == "library" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 34);
+                assert_eq!(module.exposed_operations(), 14);
+                assert_eq!(module.approval_required_operations(), 20);
+                assert_eq!(module.executable_capabilities(), 14);
+            } else if module_key == "health" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 19);
+                assert_eq!(module.exposed_operations(), 8);
+                assert_eq!(module.approval_required_operations(), 11);
+                assert_eq!(module.executable_capabilities(), 8);
+            } else if module_key == "hostel" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 23);
+                assert_eq!(module.exposed_operations(), 11);
+                assert_eq!(module.approval_required_operations(), 12);
+                assert_eq!(module.executable_capabilities(), 11);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

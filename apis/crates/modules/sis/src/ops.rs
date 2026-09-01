@@ -20,7 +20,8 @@ use crate::{
         AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry,
         ClassRosterEntry, CommunicationRecipientReference, Enrolment, EnrolmentWithDetails,
         GuardianRelationshipWithDetails, GuardianWithAccount, HealthGuardianContactReference,
-        LearnerBillingReference, LearnerWithAccount, LibraryLearnerReference,
+        HostelLearnerReference, LearnerBillingReference, LearnerWithAccount,
+        LibraryLearnerReference,
     },
     numbering::allocate_learner_number,
 };
@@ -153,6 +154,55 @@ impl AccountCandidateOps {
 pub struct LearnerOps;
 
 impl LearnerOps {
+    /// Returns active SIS learner identities for authorised Hostel allocation work.
+    pub async fn hostel_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<HostelLearnerReference>> {
+        let search = search.map(|value| format!("%{value}%"));
+        sqlx::query_as::<_, HostelLearnerReference>(
+            r#"
+            SELECT id, account_id, learner_number, display_name, status
+              FROM learners
+             WHERE tenant_id = $1 AND deleted_at IS NULL AND status = 'active'
+               AND ($2::TEXT IS NULL OR learner_number ILIKE $2 OR display_name ILIKE $2)
+             ORDER BY display_name, learner_number
+             LIMIT $3
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(pool)
+        .await
+        .context("Failed to list learner Hostel references")
+    }
+
+    /// Resolves exact SIS learner identities for Hostel response hydration.
+    pub async fn hostel_references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        ids: &[Uuid],
+    ) -> Result<Vec<HostelLearnerReference>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, HostelLearnerReference>(
+            r#"
+            SELECT id, account_id, learner_number, display_name, status
+              FROM learners
+             WHERE tenant_id = $1 AND id = ANY($2) AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load learner Hostel references")
+    }
+
     /// Returns a bounded learner directory for typed Library member lookup.
     pub async fn library_references(
         pool: &PgPool,

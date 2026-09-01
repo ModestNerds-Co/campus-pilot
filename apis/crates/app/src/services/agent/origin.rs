@@ -467,6 +467,22 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: HOSTEL,
     },
     ExactRoute {
+        path: "/modules/hostel/residences",
+        access: HOSTEL,
+    },
+    ExactRoute {
+        path: "/modules/hostel/rooms",
+        access: HOSTEL,
+    },
+    ExactRoute {
+        path: "/modules/hostel/allocations",
+        access: HOSTEL,
+    },
+    ExactRoute {
+        path: "/modules/hostel/pastoral",
+        access: HOSTEL,
+    },
+    ExactRoute {
         path: "/modules/health",
         access: HEALTH,
     },

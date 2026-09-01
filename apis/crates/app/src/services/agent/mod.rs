@@ -16,6 +16,7 @@ mod fleet;
 pub mod governance;
 mod gradebook;
 mod health;
+mod hostel;
 mod hr;
 mod library;
 mod messaging;
@@ -102,6 +103,10 @@ use gradebook::{
 use health::{
     HealthListCapability, HealthListKind, HealthReadCapability, HealthReadKind,
     HealthReferencesCapability,
+};
+use hostel::{
+    AllocationPreviewCapability, HostelListCapability, HostelListKind, HostelReadCapability,
+    HostelReadKind, HostelReferencesCapability, TransferPreviewCapability,
 };
 use hr::{
     HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeAvailabilityListCapability,
@@ -616,6 +621,35 @@ pub fn build_capability_registry(
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
     registry
+        .register(HostelReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Hostel references capability: {error}"));
+    for kind in [
+        HostelListKind::Residences,
+        HostelListKind::Rooms,
+        HostelListKind::Allocations,
+        HostelListKind::PastoralRecords,
+    ] {
+        registry
+            .register(HostelListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [
+        HostelReadKind::Residence,
+        HostelReadKind::Room,
+        HostelReadKind::Allocation,
+        HostelReadKind::PastoralRecord,
+    ] {
+        registry
+            .register(HostelReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
+        .register(AllocationPreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Hostel allocation-preview capability: {error}"));
+    registry
+        .register(TransferPreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Hostel transfer-preview capability: {error}"));
+    registry
         .register(TimetableConfigurationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
     registry
@@ -1009,6 +1043,17 @@ mod tests {
                 "health.references.read",
                 "health.visits.list",
                 "health.visits.read",
+                "hostel.allocations.list",
+                "hostel.allocations.preview",
+                "hostel.allocations.read",
+                "hostel.allocations.transfer_preview",
+                "hostel.pastoral_records.list",
+                "hostel.pastoral_records.read",
+                "hostel.references.read",
+                "hostel.residences.list",
+                "hostel.residences.read",
+                "hostel.rooms.list",
+                "hostel.rooms.read",
                 "hr_payroll.availability.list",
                 "hr_payroll.availability.read",
                 "hr_payroll.departments.list",

@@ -17,7 +17,9 @@ import {
   ClipboardList,
   Coins,
   CircleDollarSign,
+  DoorOpen,
   GraduationCap,
+  HeartHandshake,
   FileUp,
   FileCheck2,
   FileInput,
@@ -209,6 +211,12 @@ const healthNavigation: LocalNavItem[] = [
   { label: "Follow-ups", path: "/modules/health/follow-ups", icon: CalendarCheck2 },
 ];
 
+const hostelNavigation: LocalNavItem[] = [
+  { label: "Rooms & occupancy", path: "/modules/hostel/rooms", icon: DoorOpen },
+  { label: "Allocations", path: "/modules/hostel/allocations", icon: ClipboardList },
+  { label: "Pastoral records", path: "/modules/hostel/pastoral", icon: HeartHandshake, permission: "hostel:pastoral" },
+];
+
 const messagingNavigation: LocalNavItem[] = [
   {
     label: "Inbox",
@@ -385,7 +393,9 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                 ? libraryNavigation
                 : moduleKey === "health"
                   ? healthNavigation
-                  : moduleKey === "messaging"
+                  : moduleKey === "hostel"
+                    ? hostelNavigation
+                    : moduleKey === "messaging"
                     ? messagingNavigation
                     : moduleKey === "sis"
                       ? sisNavigation
@@ -621,6 +631,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
             ? "Catalogue"
             : moduleKey === "health"
               ? "Patients"
+              : moduleKey === "hostel"
+                ? "Residences"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1035,6 +1047,30 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
   if (item.path === "/modules/health/follow-ups")
     return (
       <Link className={navClass(active)} to="/modules/health/follow-ups">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hostel/rooms")
+    return (
+      <Link className={navClass(active)} to="/modules/hostel/rooms">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hostel/allocations")
+    return (
+      <Link className={navClass(active)} to="/modules/hostel/allocations">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/hostel/pastoral")
+    return (
+      <Link className={navClass(active)} to="/modules/hostel/pastoral">
         <Icon className="size-[17px]" />
         <span className="flex-1">{item.label}</span>
         {active ? <ChevronRight className="size-3.5" /> : null}

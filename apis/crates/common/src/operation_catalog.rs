@@ -3405,6 +3405,214 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Hostel: residences, rooms, previewed allocations, occupancy, and pastoral care.
+        route(
+            Method::GET,
+            "/api/1.0/hostel/references",
+            "hostel.references.read",
+            "hostel",
+            "hostel:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/residences",
+            "hostel.residences.list",
+            "hostel",
+            "hostel:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/residences",
+            "hostel.residences.create",
+            "hostel",
+            "hostel:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/residences/{id}",
+            "hostel.residences.read",
+            "hostel",
+            "hostel:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hostel/residences/{id}",
+            "hostel.residences.update",
+            "hostel",
+            "hostel:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/rooms",
+            "hostel.rooms.list",
+            "hostel",
+            "hostel:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/rooms",
+            "hostel.rooms.create",
+            "hostel",
+            "hostel:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/rooms/{id}",
+            "hostel.rooms.read",
+            "hostel",
+            "hostel:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hostel/rooms/{id}",
+            "hostel.rooms.update",
+            "hostel",
+            "hostel:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations/preview",
+            "hostel.allocations.preview",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/allocations",
+            "hostel.allocations.list",
+            "hostel",
+            "hostel:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations",
+            "hostel.allocations.create",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/allocations/{id}",
+            "hostel.allocations.read",
+            "hostel",
+            "hostel:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations/{id}/activate",
+            "hostel.allocations.activate",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations/{id}/end",
+            "hostel.allocations.end",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations/{id}/cancel",
+            "hostel.allocations.cancel",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations/{id}/transfer-preview",
+            "hostel.allocations.transfer_preview",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/allocations/{id}/transfer",
+            "hostel.allocations.transfer",
+            "hostel",
+            "hostel:allocate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/pastoral-records",
+            "hostel.pastoral_records.list",
+            "hostel",
+            "hostel:pastoral",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/pastoral-records",
+            "hostel.pastoral_records.create",
+            "hostel",
+            "hostel:pastoral",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/hostel/pastoral-records/{id}",
+            "hostel.pastoral_records.read",
+            "hostel",
+            "hostel:pastoral",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/hostel/pastoral-records/{id}",
+            "hostel.pastoral_records.update",
+            "hostel",
+            "hostel:pastoral",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/hostel/pastoral-records/{id}/resolve",
+            "hostel.pastoral_records.resolve",
+            "hostel",
+            "hostel:pastoral",
+            OperationEffect::Write,
+            true,
+        ),
         // Health services: canonical patients, care, visits, medication, and follow-up.
         route(
             Method::GET,
@@ -3942,6 +4150,8 @@ fn route(
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("attendance.") {
         operation.requiring_modules(["academics".to_string(), "sis".to_string()])
+    } else if key.starts_with("hostel.") {
+        operation.requiring_modules(["sis".to_string()])
     } else if key.starts_with("health.") {
         operation.requiring_modules(["hr_payroll".to_string(), "sis".to_string()])
     } else if matches!(
@@ -4198,6 +4408,17 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "health.medication_plans.list"
         | "health.medication_administrations.list"
         | "health.follow_ups.list" => AgentExposure::Exposed,
+        "hostel.references.read"
+        | "hostel.residences.list"
+        | "hostel.residences.read"
+        | "hostel.rooms.list"
+        | "hostel.rooms.read"
+        | "hostel.allocations.preview"
+        | "hostel.allocations.list"
+        | "hostel.allocations.read"
+        | "hostel.allocations.transfer_preview"
+        | "hostel.pastoral_records.list"
+        | "hostel.pastoral_records.read" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
         | "administration.ai_providers.connections.update"
@@ -4425,6 +4646,18 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "health.medication_administrations.create"
         | "health.follow_ups.create"
         | "health.follow_ups.update" => AgentExposure::ApprovalRequired,
+        "hostel.residences.create"
+        | "hostel.residences.update"
+        | "hostel.rooms.create"
+        | "hostel.rooms.update"
+        | "hostel.allocations.create"
+        | "hostel.allocations.activate"
+        | "hostel.allocations.end"
+        | "hostel.allocations.cancel"
+        | "hostel.allocations.transfer"
+        | "hostel.pastoral_records.create"
+        | "hostel.pastoral_records.update"
+        | "hostel.pastoral_records.resolve" => AgentExposure::ApprovalRequired,
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -4521,6 +4754,7 @@ mod tests {
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("messaging".to_string(), ModuleEntitlementState::Enabled),
                 ("library".to_string(), ModuleEntitlementState::Enabled),
+                ("hostel".to_string(), ModuleEntitlementState::Enabled),
                 ("health".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
@@ -4557,7 +4791,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 418);
+        assert_eq!(operation_catalog().len(), 441);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -4609,7 +4843,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [161, 227, 18, 12]);
+        assert_eq!(counts, [172, 239, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

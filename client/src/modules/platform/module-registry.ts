@@ -77,7 +77,7 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   },
   hostel: {
     icon: Building2,
-    highlights: ["Residences and rooms", "Allocation", "Occupancy records"],
+    highlights: ["Residences and rooms", "Learner allocations", "Pastoral records"],
   },
   health: {
     icon: HeartPulse,

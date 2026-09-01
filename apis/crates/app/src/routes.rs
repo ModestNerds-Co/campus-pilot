@@ -124,6 +124,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_library::routes::routes),
             )
             .service(
+                scope("/hostel")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_hostel::routes::routes),
+            )
+            .service(
                 scope("/health")
                     .wrap(AuthMiddleware)
                     .configure(cp_health::routes::routes),

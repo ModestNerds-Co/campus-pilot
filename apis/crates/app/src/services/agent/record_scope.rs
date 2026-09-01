@@ -115,6 +115,17 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "health.medication_plans.list",
     "health.medication_administrations.list",
     "health.follow_ups.list",
+    "hostel.references.read",
+    "hostel.residences.list",
+    "hostel.residences.read",
+    "hostel.rooms.list",
+    "hostel.rooms.read",
+    "hostel.allocations.preview",
+    "hostel.allocations.list",
+    "hostel.allocations.read",
+    "hostel.allocations.transfer_preview",
+    "hostel.pastoral_records.list",
+    "hostel.pastoral_records.read",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -388,7 +399,13 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "library.loans.list"
         | "library.holds.list"
         | "library.fines.list"
-        | "health.references.read" => Some(OperationScopePolicy::Dataset),
+        | "health.references.read"
+        | "hostel.references.read"
+        | "hostel.residences.list"
+        | "hostel.rooms.list"
+        | "hostel.allocations.preview"
+        | "hostel.allocations.list"
+        | "hostel.pastoral_records.list" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -468,6 +485,14 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "library.fines.read" => Some(OperationScopePolicy::OneResource("library_fine")),
         "health.patients.read" => Some(OperationScopePolicy::OneResource("health_patient")),
         "health.visits.read" => Some(OperationScopePolicy::OneResource("health_visit")),
+        "hostel.residences.read" => Some(OperationScopePolicy::OneResource("hostel_residence")),
+        "hostel.rooms.read" => Some(OperationScopePolicy::OneResource("hostel_room")),
+        "hostel.allocations.read" | "hostel.allocations.transfer_preview" => {
+            Some(OperationScopePolicy::OneResource("hostel_allocation"))
+        }
+        "hostel.pastoral_records.read" => {
+            Some(OperationScopePolicy::OneResource("hostel_pastoral_record"))
+        }
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
                 allowed_kinds: &["academic_year"],
@@ -679,6 +704,18 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "health_visit" => {
             Some("SELECT EXISTS(SELECT 1 FROM health_visits WHERE tenant_id = $1 AND id = $2)")
         }
+        "hostel_residence" => {
+            Some("SELECT EXISTS(SELECT 1 FROM hostel_residences WHERE tenant_id = $1 AND id = $2)")
+        }
+        "hostel_room" => {
+            Some("SELECT EXISTS(SELECT 1 FROM hostel_rooms WHERE tenant_id = $1 AND id = $2)")
+        }
+        "hostel_allocation" => {
+            Some("SELECT EXISTS(SELECT 1 FROM hostel_allocations WHERE tenant_id = $1 AND id = $2)")
+        }
+        "hostel_pastoral_record" => Some(
+            "SELECT EXISTS(SELECT 1 FROM hostel_pastoral_records WHERE tenant_id = $1 AND id = $2)",
+        ),
         _ => None,
     }
 }
@@ -758,7 +795,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 93);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 104);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -778,7 +815,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 161);
+        assert_eq!(exposed.len(), 172);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

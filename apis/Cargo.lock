@@ -1888,8 +1888,17 @@ name = "cp-hostel"
 version = "1.0.0"
 dependencies = [
  "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-audit",
  "cp-common",
+ "cp-sis",
+ "serde",
  "serde_json",
+ "sha2",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]
