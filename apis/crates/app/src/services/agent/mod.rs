@@ -15,6 +15,7 @@ mod finance;
 mod fleet;
 pub mod governance;
 mod gradebook;
+mod health;
 mod hr;
 mod library;
 mod messaging;
@@ -97,6 +98,10 @@ use fleet::{
 use gradebook::{
     GradebookMarkSheetReadCapability, GradebookMarkSheetsListCapability,
     GradebookReferencesCapability,
+};
+use health::{
+    HealthListCapability, HealthListKind, HealthReadCapability, HealthReadKind,
+    HealthReferencesCapability,
 };
 use hr::{
     HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeAvailabilityListCapability,
@@ -592,6 +597,25 @@ pub fn build_capability_registry(
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
     registry
+        .register(HealthReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Health references capability: {error}"));
+    for kind in [
+        HealthListKind::Patients,
+        HealthListKind::Visits,
+        HealthListKind::MedicationPlans,
+        HealthListKind::MedicationAdministrations,
+        HealthListKind::FollowUps,
+    ] {
+        registry
+            .register(HealthListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [HealthReadKind::Patient, HealthReadKind::Visit] {
+        registry
+            .register(HealthReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    registry
         .register(TimetableConfigurationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
     registry
@@ -977,6 +1001,14 @@ mod tests {
                 "fleet.vehicle_logs.read",
                 "fleet.vehicles.list",
                 "fleet.vehicles.read",
+                "health.follow_ups.list",
+                "health.medication_administrations.list",
+                "health.medication_plans.list",
+                "health.patients.list",
+                "health.patients.read",
+                "health.references.read",
+                "health.visits.list",
+                "health.visits.read",
                 "hr_payroll.availability.list",
                 "hr_payroll.availability.read",
                 "hr_payroll.departments.list",

@@ -190,8 +190,15 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/health",
             "health",
             false,
-            "foundation",
-            &["view", "create", "edit", "delete"],
+            "available",
+            &[
+                "view",
+                "create",
+                "edit",
+                "medication",
+                "follow_up",
+                "manage",
+            ],
         ),
         module(
             "assets_inventory",

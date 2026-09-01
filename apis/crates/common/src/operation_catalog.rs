@@ -3405,6 +3405,178 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Health services: canonical patients, care, visits, medication, and follow-up.
+        route(
+            Method::GET,
+            "/api/1.0/health/references",
+            "health.references.read",
+            "health",
+            "health:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/patients",
+            "health.patients.list",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/patients",
+            "health.patients.create",
+            "health",
+            "health:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/patients/{id}",
+            "health.patients.read",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/health/patients/{id}",
+            "health.patients.update",
+            "health",
+            "health:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/patients/{id}/care-items",
+            "health.care_items.create",
+            "health",
+            "health:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/health/care-items/{id}",
+            "health.care_items.update",
+            "health",
+            "health:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/visits",
+            "health.visits.list",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/visits",
+            "health.visits.create",
+            "health",
+            "health:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/visits/{id}",
+            "health.visits.read",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/visits/{id}/close",
+            "health.visits.close",
+            "health",
+            "health:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/medication-plans",
+            "health.medication_plans.list",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/medication-plans",
+            "health.medication_plans.create",
+            "health",
+            "health:medication",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/health/medication-plans/{id}",
+            "health.medication_plans.update",
+            "health",
+            "health:medication",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/medication-administrations",
+            "health.medication_administrations.list",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/medication-plans/{id}/administrations",
+            "health.medication_administrations.create",
+            "health",
+            "health:medication",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/health/follow-ups",
+            "health.follow_ups.list",
+            "health",
+            "health:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/health/follow-ups",
+            "health.follow_ups.create",
+            "health",
+            "health:follow_up",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/health/follow-ups/{id}",
+            "health.follow_ups.update",
+            "health",
+            "health:follow_up",
+            OperationEffect::Write,
+            true,
+        ),
         // Library: catalogue, canonical members, circulation, holds, and fines.
         route(
             Method::GET,
@@ -3770,6 +3942,8 @@ fn route(
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("attendance.") {
         operation.requiring_modules(["academics".to_string(), "sis".to_string()])
+    } else if key.starts_with("health.") {
+        operation.requiring_modules(["hr_payroll".to_string(), "sis".to_string()])
     } else if matches!(
         key,
         "messaging.references.read"
@@ -4015,7 +4189,15 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "library.holds.list"
         | "library.holds.read"
         | "library.fines.list"
-        | "library.fines.read" => AgentExposure::Exposed,
+        | "library.fines.read"
+        | "health.references.read"
+        | "health.patients.list"
+        | "health.patients.read"
+        | "health.visits.list"
+        | "health.visits.read"
+        | "health.medication_plans.list"
+        | "health.medication_administrations.list"
+        | "health.follow_ups.list" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
         | "administration.ai_providers.connections.update"
@@ -4231,7 +4413,18 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "library.holds.expire"
         | "library.fines.assess"
         | "library.fines.submit_to_fees"
-        | "library.fines.waive" => AgentExposure::ApprovalRequired,
+        | "library.fines.waive"
+        | "health.patients.create"
+        | "health.patients.update"
+        | "health.care_items.create"
+        | "health.care_items.update"
+        | "health.visits.create"
+        | "health.visits.close"
+        | "health.medication_plans.create"
+        | "health.medication_plans.update"
+        | "health.medication_administrations.create"
+        | "health.follow_ups.create"
+        | "health.follow_ups.update" => AgentExposure::ApprovalRequired,
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -4328,6 +4521,7 @@ mod tests {
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("messaging".to_string(), ModuleEntitlementState::Enabled),
                 ("library".to_string(), ModuleEntitlementState::Enabled),
+                ("health".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
@@ -4363,7 +4557,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 399);
+        assert_eq!(operation_catalog().len(), 418);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -4415,7 +4609,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [153, 216, 18, 12]);
+        assert_eq!(counts, [161, 227, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

@@ -5439,6 +5439,92 @@
       ]
     },
     {
+      "name": "Health services",
+      "description": "SIS/HR-backed patients, clinic visits, medication administration, and follow-up.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Get Health References",
+          "request": { "method": "GET", "url": "{{base_url}}/health/references" }
+        },
+        {
+          "name": "List Health Patients",
+          "request": { "method": "GET", "url": "{{base_url}}/health/patients?page=1&per_page=25&status=active" }
+        },
+        {
+          "name": "Create Learner Patient",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"person_kind\": \"learner\",\n  \"person_id\": \"{{health_person_id}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/patients" }
+        },
+        {
+          "name": "Get Health Patient",
+          "request": { "method": "GET", "url": "{{base_url}}/health/patients/{{health_patient_id}}" }
+        },
+        {
+          "name": "Update Health Patient",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{ \"expected_version\": 1, \"status\": \"active\" }", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/patients/{{health_patient_id}}" }
+        },
+        {
+          "name": "Create Care Item",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"kind\": \"allergy\",\n  \"title\": \"Peanut allergy\",\n  \"details\": \"Follow the recorded action plan.\",\n  \"severity\": \"high\",\n  \"reviewed_on\": \"2026-09-01\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/patients/{{health_patient_id}}/care-items" }
+        },
+        {
+          "name": "Update Care Item",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"kind\": \"allergy\",\n  \"title\": \"Peanut allergy\",\n  \"details\": \"Follow the recorded action plan.\",\n  \"severity\": \"high\",\n  \"reviewed_on\": \"2026-09-01\",\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/care-items/{{health_care_item_id}}" }
+        },
+        {
+          "name": "List Clinic Visits",
+          "request": { "method": "GET", "url": "{{base_url}}/health/visits?page=1&per_page=25" }
+        },
+        {
+          "name": "Create Clinic Visit",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"patient_id\": \"{{health_patient_id}}\",\n  \"checked_in_at\": \"2026-09-01T08:30:00Z\",\n  \"category\": \"illness\",\n  \"presenting_concern\": \"Headache\",\n  \"assessment\": null,\n  \"care_given\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/visits" }
+        },
+        {
+          "name": "Get Clinic Visit",
+          "request": { "method": "GET", "url": "{{base_url}}/health/visits/{{health_visit_id}}" }
+        },
+        {
+          "name": "Close Clinic Visit",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"disposition\": \"returned_to_class\",\n  \"assessment\": \"No urgent symptoms\",\n  \"care_given\": \"Rest and water\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/visits/{{health_visit_id}}/close" }
+        },
+        {
+          "name": "List Medication Plans",
+          "request": { "method": "GET", "url": "{{base_url}}/health/medication-plans?page=1&per_page=25&status=active" }
+        },
+        {
+          "name": "Create Medication Plan",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"patient_id\": \"{{health_patient_id}}\",\n  \"medication_name\": \"Example medicine\",\n  \"dosage\": \"5 ml\",\n  \"route\": \"oral\",\n  \"schedule\": \"12:00 on school days\",\n  \"instructions\": null,\n  \"authorization_reference\": \"AUTH-001\",\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/medication-plans" }
+        },
+        {
+          "name": "Update Medication Plan",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"medication_name\": \"Example medicine\",\n  \"dosage\": \"5 ml\",\n  \"route\": \"oral\",\n  \"schedule\": \"12:00 on school days\",\n  \"instructions\": null,\n  \"authorization_reference\": \"AUTH-001\",\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": null,\n  \"status\": \"active\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/medication-plans/{{health_medication_plan_id}}" }
+        },
+        {
+          "name": "List Medication Administrations",
+          "request": { "method": "GET", "url": "{{base_url}}/health/medication-administrations?page=1&per_page=25" }
+        },
+        {
+          "name": "Record Medication Administration",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"administered_at\": \"2026-09-01T10:00:00Z\",\n  \"dose\": \"5 ml\",\n  \"outcome\": \"given\",\n  \"note\": null\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/medication-plans/{{health_medication_plan_id}}/administrations" }
+        },
+        {
+          "name": "List Health Follow-ups",
+          "request": { "method": "GET", "url": "{{base_url}}/health/follow-ups?page=1&per_page=25&status=open" }
+        },
+        {
+          "name": "Create Health Follow-up",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"patient_id\": \"{{health_patient_id}}\",\n  \"visit_id\": \"{{health_visit_id}}\",\n  \"assigned_employee_id\": \"{{health_employee_id}}\",\n  \"due_on\": \"2026-09-02\",\n  \"purpose\": \"Confirm recovery\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/follow-ups" }
+        },
+        {
+          "name": "Update Health Follow-up",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"assigned_employee_id\": \"{{health_employee_id}}\",\n  \"due_on\": \"2026-09-02\",\n  \"purpose\": \"Confirm recovery\",\n  \"status\": \"completed\",\n  \"outcome\": \"Recovered\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{base_url}}/health/follow-ups/{{health_follow_up_id}}" }
+        }
+      ]
+    },
+    {
       "name": "SIS",
       "description": "Canonical learners and guardians, explicit guardian relationships, applications, and Academics-backed enrolments.",
       "auth": {
@@ -6460,6 +6546,41 @@
     },
     {
       "key": "library_billing_account_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_person_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_patient_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_care_item_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_visit_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_medication_plan_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_employee_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "health_follow_up_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }

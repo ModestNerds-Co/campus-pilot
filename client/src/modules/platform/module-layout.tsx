@@ -30,6 +30,7 @@ import {
   MessageSquareText,
   PackageSearch,
   PackageCheck,
+  Pill,
   ReceiptText,
   RadioTower,
   School,
@@ -200,6 +201,12 @@ const libraryNavigation: LocalNavItem[] = [
     icon: Settings2,
     permission: "library:manage",
   },
+];
+
+const healthNavigation: LocalNavItem[] = [
+  { label: "Clinic visits", path: "/modules/health/visits", icon: ClipboardList },
+  { label: "Medication", path: "/modules/health/medication", icon: Pill },
+  { label: "Follow-ups", path: "/modules/health/follow-ups", icon: CalendarCheck2 },
 ];
 
 const messagingNavigation: LocalNavItem[] = [
@@ -376,19 +383,21 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               ? attendanceNavigation
               : moduleKey === "library"
                 ? libraryNavigation
-                : moduleKey === "messaging"
-                  ? messagingNavigation
-                  : moduleKey === "sis"
-                    ? sisNavigation
-                    : moduleKey === "finance"
-                      ? financeNavigation
-                      : moduleKey === "fees"
-                        ? feesNavigation
-                        : moduleKey === "procurement"
-                          ? procurementNavigation
-                          : moduleKey === "assets_inventory"
-                            ? assetsInventoryNavigation
-                            : []
+                : moduleKey === "health"
+                  ? healthNavigation
+                  : moduleKey === "messaging"
+                    ? messagingNavigation
+                    : moduleKey === "sis"
+                      ? sisNavigation
+                      : moduleKey === "finance"
+                        ? financeNavigation
+                        : moduleKey === "fees"
+                          ? feesNavigation
+                          : moduleKey === "procurement"
+                            ? procurementNavigation
+                            : moduleKey === "assets_inventory"
+                              ? assetsInventoryNavigation
+                              : []
   ).filter(
     (item) =>
       (!item.permission ||
@@ -482,7 +491,9 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                 active={
                   isModuleOverview(location.pathname) ||
                   (moduleKey === "agent" &&
-                    location.pathname.startsWith("/modules/agent/sessions/"))
+                    location.pathname.startsWith("/modules/agent/sessions/")) ||
+                  (moduleKey === "health" &&
+                    location.pathname.startsWith("/modules/health/patients"))
                 }
                 moduleKey={moduleKey}
               />
@@ -608,6 +619,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
           ? "Announcements"
           : moduleKey === "library"
             ? "Catalogue"
+            : moduleKey === "health"
+              ? "Patients"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -998,6 +1011,30 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
   if (item.path === "/modules/library/settings")
     return (
       <Link className={navClass(active)} to="/modules/library/settings">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/health/visits")
+    return (
+      <Link className={navClass(active)} to="/modules/health/visits">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/health/medication")
+    return (
+      <Link className={navClass(active)} to="/modules/health/medication">
+        <Icon className="size-[17px]" />
+        <span className="flex-1">{item.label}</span>
+        {active ? <ChevronRight className="size-3.5" /> : null}
+      </Link>
+    );
+  if (item.path === "/modules/health/follow-ups")
+    return (
+      <Link className={navClass(active)} to="/modules/health/follow-ups">
         <Icon className="size-[17px]" />
         <span className="flex-1">{item.label}</span>
         {active ? <ChevronRight className="size-3.5" /> : null}

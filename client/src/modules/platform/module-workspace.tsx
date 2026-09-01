@@ -15,6 +15,7 @@ import type { ModuleDefinition } from "./types";
 import { TimetableWorkspace } from "@/modules/timetabling";
 import { useAuthStore } from "@/stores/auth-store";
 import { LibraryCatalogueWorkspace } from "@/modules/library";
+import { HealthPatientsWorkspace } from "@/modules/health";
 
 export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
   moduleKey,
@@ -58,6 +59,8 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
         <TimetableWorkspace module={module} />
       ) : module.key === "library" ? (
         <LibraryCatalogueWorkspace />
+      ) : module.key === "health" ? (
+        <HealthPatientsWorkspace />
       ) : (
         <ModuleFoundation module={module} />
       )}

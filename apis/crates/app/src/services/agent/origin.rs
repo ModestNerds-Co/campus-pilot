@@ -471,6 +471,22 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: HEALTH,
     },
     ExactRoute {
+        path: "/modules/health/patients",
+        access: HEALTH,
+    },
+    ExactRoute {
+        path: "/modules/health/visits",
+        access: HEALTH,
+    },
+    ExactRoute {
+        path: "/modules/health/medication",
+        access: HEALTH,
+    },
+    ExactRoute {
+        path: "/modules/health/follow-ups",
+        access: HEALTH,
+    },
+    ExactRoute {
         path: "/modules/assets-inventory",
         access: ASSETS_INVENTORY,
     },
@@ -544,6 +560,10 @@ const UUID_ROUTES: &[UuidRoute] = &[
     UuidRoute {
         prefix: "/modules/sis/learners/",
         access: SIS,
+    },
+    UuidRoute {
+        prefix: "/modules/health/patients/",
+        access: HEALTH,
     },
     UuidRoute {
         prefix: "/modules/academics/classes/",
@@ -719,6 +739,7 @@ mod tests {
             ("/modules/fleet/vehicles".to_owned(), "fleet"),
             ("/modules/fees/imports".to_owned(), "fees"),
             (format!("/modules/sis/learners/{identifier}"), "sis"),
+            (format!("/modules/health/patients/{identifier}"), "health"),
             (
                 format!("/modules/assets-inventory/requests/{identifier}"),
                 "assets_inventory",

@@ -1870,8 +1870,17 @@ name = "cp-health"
 version = "1.0.0"
 dependencies = [
  "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-audit",
  "cp-common",
+ "cp-hr-payroll",
+ "cp-sis",
+ "serde",
  "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]

@@ -5,5 +5,15 @@ edition = "2024"
 
 [dependencies]
 cp-common = { path = "../../common" }
+cp-audit = { path = "../../platform/audit" }
+cp-hr-payroll = { path = "../hr-payroll" }
+cp-sis = { path = "../sis" }
+
 actix-web = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+validator = { workspace = true }

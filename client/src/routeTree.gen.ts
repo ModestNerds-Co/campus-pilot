@@ -66,6 +66,10 @@ import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules
 import { Route as ModulesHrPayrollEmployeesRouteImport } from './routes/modules/hr-payroll/employees'
 import { Route as ModulesHrPayrollDepartmentsRouteImport } from './routes/modules/hr-payroll/departments'
 import { Route as ModulesHrPayrollAvailabilityRouteImport } from './routes/modules/hr-payroll/availability'
+import { Route as ModulesHealthVisitsRouteImport } from './routes/modules/health/visits'
+import { Route as ModulesHealthPatientsRouteImport } from './routes/modules/health/patients'
+import { Route as ModulesHealthMedicationRouteImport } from './routes/modules/health/medication'
+import { Route as ModulesHealthFollowUpsRouteImport } from './routes/modules/health/follow-ups'
 import { Route as ModulesFleetVehiclesRouteImport } from './routes/modules/fleet/vehicles'
 import { Route as ModulesFleetDriversRouteImport } from './routes/modules/fleet/drivers'
 import { Route as ModulesFleetDailyLogRouteImport } from './routes/modules/fleet/daily-log'
@@ -108,6 +112,7 @@ import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './route
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 import { Route as ModulesMessagingAnnouncementsAnnouncementIdRouteImport } from './routes/modules/messaging.announcements_.$announcementId'
+import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/modules/health/patients_.$patientId'
 import { Route as ModulesAttendanceRegistersRegisterIdRouteImport } from './routes/modules/attendance/registers_.$registerId'
 import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './routes/modules/assets-inventory/requests_.$requestId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
@@ -414,6 +419,26 @@ const ModulesHrPayrollAvailabilityRoute =
     path: '/hr-payroll/availability',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesHealthVisitsRoute = ModulesHealthVisitsRouteImport.update({
+  id: '/health/visits',
+  path: '/health/visits',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesHealthPatientsRoute = ModulesHealthPatientsRouteImport.update({
+  id: '/health/patients',
+  path: '/health/patients',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesHealthMedicationRoute = ModulesHealthMedicationRouteImport.update({
+  id: '/health/medication',
+  path: '/health/medication',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesHealthFollowUpsRoute = ModulesHealthFollowUpsRouteImport.update({
+  id: '/health/follow-ups',
+  path: '/health/follow-ups',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesFleetVehiclesRoute = ModulesFleetVehiclesRouteImport.update({
   id: '/fleet/vehicles',
   path: '/fleet/vehicles',
@@ -650,6 +675,12 @@ const ModulesMessagingAnnouncementsAnnouncementIdRoute =
     path: '/announcements/$announcementId',
     getParentRoute: () => ModulesMessagingRoute,
   } as any)
+const ModulesHealthPatientsPatientIdRoute =
+  ModulesHealthPatientsPatientIdRouteImport.update({
+    id: '/health/patients_/$patientId',
+    path: '/health/patients/$patientId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAttendanceRegistersRegisterIdRoute =
   ModulesAttendanceRegistersRegisterIdRouteImport.update({
     id: '/attendance/registers_/$registerId',
@@ -767,6 +798,10 @@ export interface FileRoutesByFullPath {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/health/follow-ups': typeof ModulesHealthFollowUpsRoute
+  '/modules/health/medication': typeof ModulesHealthMedicationRoute
+  '/modules/health/patients': typeof ModulesHealthPatientsRoute
+  '/modules/health/visits': typeof ModulesHealthVisitsRoute
   '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
@@ -799,6 +834,7 @@ export interface FileRoutesByFullPath {
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
+  '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -875,6 +911,10 @@ export interface FileRoutesByTo {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/health/follow-ups': typeof ModulesHealthFollowUpsRoute
+  '/modules/health/medication': typeof ModulesHealthMedicationRoute
+  '/modules/health/patients': typeof ModulesHealthPatientsRoute
+  '/modules/health/visits': typeof ModulesHealthVisitsRoute
   '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
@@ -907,6 +947,7 @@ export interface FileRoutesByTo {
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
+  '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -985,6 +1026,10 @@ export interface FileRoutesById {
   '/modules/fleet/daily-log': typeof ModulesFleetDailyLogRoute
   '/modules/fleet/drivers': typeof ModulesFleetDriversRoute
   '/modules/fleet/vehicles': typeof ModulesFleetVehiclesRoute
+  '/modules/health/follow-ups': typeof ModulesHealthFollowUpsRoute
+  '/modules/health/medication': typeof ModulesHealthMedicationRoute
+  '/modules/health/patients': typeof ModulesHealthPatientsRoute
+  '/modules/health/visits': typeof ModulesHealthVisitsRoute
   '/modules/hr-payroll/availability': typeof ModulesHrPayrollAvailabilityRoute
   '/modules/hr-payroll/departments': typeof ModulesHrPayrollDepartmentsRoute
   '/modules/hr-payroll/employees': typeof ModulesHrPayrollEmployeesRoute
@@ -1017,6 +1062,7 @@ export interface FileRoutesById {
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests_/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
   '/modules/attendance/registers_/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
+  '/modules/health/patients_/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/messaging/announcements_/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1096,6 +1142,10 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/health/follow-ups'
+    | '/modules/health/medication'
+    | '/modules/health/patients'
+    | '/modules/health/visits'
     | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
@@ -1128,6 +1178,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
     | '/modules/attendance/registers/$registerId'
+    | '/modules/health/patients/$patientId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1204,6 +1255,10 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/health/follow-ups'
+    | '/modules/health/medication'
+    | '/modules/health/patients'
+    | '/modules/health/visits'
     | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
@@ -1236,6 +1291,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
     | '/modules/attendance/registers/$registerId'
+    | '/modules/health/patients/$patientId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1313,6 +1369,10 @@ export interface FileRouteTypes {
     | '/modules/fleet/daily-log'
     | '/modules/fleet/drivers'
     | '/modules/fleet/vehicles'
+    | '/modules/health/follow-ups'
+    | '/modules/health/medication'
+    | '/modules/health/patients'
+    | '/modules/health/visits'
     | '/modules/hr-payroll/availability'
     | '/modules/hr-payroll/departments'
     | '/modules/hr-payroll/employees'
@@ -1345,6 +1405,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/assets-inventory/requests_/$requestId'
     | '/modules/attendance/registers_/$registerId'
+    | '/modules/health/patients_/$patientId'
     | '/modules/messaging/announcements_/$announcementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
@@ -1769,6 +1830,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesHrPayrollAvailabilityRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/health/visits': {
+      id: '/modules/health/visits'
+      path: '/health/visits'
+      fullPath: '/modules/health/visits'
+      preLoaderRoute: typeof ModulesHealthVisitsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/health/patients': {
+      id: '/modules/health/patients'
+      path: '/health/patients'
+      fullPath: '/modules/health/patients'
+      preLoaderRoute: typeof ModulesHealthPatientsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/health/medication': {
+      id: '/modules/health/medication'
+      path: '/health/medication'
+      fullPath: '/modules/health/medication'
+      preLoaderRoute: typeof ModulesHealthMedicationRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/health/follow-ups': {
+      id: '/modules/health/follow-ups'
+      path: '/health/follow-ups'
+      fullPath: '/modules/health/follow-ups'
+      preLoaderRoute: typeof ModulesHealthFollowUpsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/fleet/vehicles': {
       id: '/modules/fleet/vehicles'
       path: '/fleet/vehicles'
@@ -2063,6 +2152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesMessagingAnnouncementsAnnouncementIdRouteImport
       parentRoute: typeof ModulesMessagingRoute
     }
+    '/modules/health/patients_/$patientId': {
+      id: '/modules/health/patients_/$patientId'
+      path: '/health/patients/$patientId'
+      fullPath: '/modules/health/patients/$patientId'
+      preLoaderRoute: typeof ModulesHealthPatientsPatientIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/attendance/registers_/$registerId': {
       id: '/modules/attendance/registers_/$registerId'
       path: '/attendance/registers/$registerId'
@@ -2266,6 +2362,10 @@ interface ModulesRouteChildren {
   ModulesFleetDailyLogRoute: typeof ModulesFleetDailyLogRoute
   ModulesFleetDriversRoute: typeof ModulesFleetDriversRoute
   ModulesFleetVehiclesRoute: typeof ModulesFleetVehiclesRoute
+  ModulesHealthFollowUpsRoute: typeof ModulesHealthFollowUpsRoute
+  ModulesHealthMedicationRoute: typeof ModulesHealthMedicationRoute
+  ModulesHealthPatientsRoute: typeof ModulesHealthPatientsRoute
+  ModulesHealthVisitsRoute: typeof ModulesHealthVisitsRoute
   ModulesHrPayrollAvailabilityRoute: typeof ModulesHrPayrollAvailabilityRoute
   ModulesHrPayrollDepartmentsRoute: typeof ModulesHrPayrollDepartmentsRoute
   ModulesHrPayrollEmployeesRoute: typeof ModulesHrPayrollEmployeesRoute
@@ -2294,6 +2394,7 @@ interface ModulesRouteChildren {
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesAssetsInventoryRequestsRequestIdRoute: typeof ModulesAssetsInventoryRequestsRequestIdRoute
   ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
+  ModulesHealthPatientsPatientIdRoute: typeof ModulesHealthPatientsPatientIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
   ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
@@ -2335,6 +2436,10 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesFleetDailyLogRoute: ModulesFleetDailyLogRoute,
   ModulesFleetDriversRoute: ModulesFleetDriversRoute,
   ModulesFleetVehiclesRoute: ModulesFleetVehiclesRoute,
+  ModulesHealthFollowUpsRoute: ModulesHealthFollowUpsRoute,
+  ModulesHealthMedicationRoute: ModulesHealthMedicationRoute,
+  ModulesHealthPatientsRoute: ModulesHealthPatientsRoute,
+  ModulesHealthVisitsRoute: ModulesHealthVisitsRoute,
   ModulesHrPayrollAvailabilityRoute: ModulesHrPayrollAvailabilityRoute,
   ModulesHrPayrollDepartmentsRoute: ModulesHrPayrollDepartmentsRoute,
   ModulesHrPayrollEmployeesRoute: ModulesHrPayrollEmployeesRoute,
@@ -2366,6 +2471,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
     ModulesAssetsInventoryRequestsRequestIdRoute,
   ModulesAttendanceRegistersRegisterIdRoute:
     ModulesAttendanceRegistersRegisterIdRoute,
+  ModulesHealthPatientsPatientIdRoute: ModulesHealthPatientsPatientIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:

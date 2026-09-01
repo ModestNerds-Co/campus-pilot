@@ -107,6 +107,14 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "library.holds.read",
     "library.fines.list",
     "library.fines.read",
+    "health.references.read",
+    "health.patients.list",
+    "health.patients.read",
+    "health.visits.list",
+    "health.visits.read",
+    "health.medication_plans.list",
+    "health.medication_administrations.list",
+    "health.follow_ups.list",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -379,7 +387,8 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "library.members.list"
         | "library.loans.list"
         | "library.holds.list"
-        | "library.fines.list" => Some(OperationScopePolicy::Dataset),
+        | "library.fines.list"
+        | "health.references.read" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -457,6 +466,8 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "library.loans.read" => Some(OperationScopePolicy::OneResource("library_loan")),
         "library.holds.read" => Some(OperationScopePolicy::OneResource("library_hold")),
         "library.fines.read" => Some(OperationScopePolicy::OneResource("library_fine")),
+        "health.patients.read" => Some(OperationScopePolicy::OneResource("health_patient")),
+        "health.visits.read" => Some(OperationScopePolicy::OneResource("health_visit")),
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
                 allowed_kinds: &["academic_year"],
@@ -491,6 +502,14 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         }),
         "library.copies.list" => Some(OperationScopePolicy::DatasetOrResources {
             allowed_kinds: &["library_title"],
+            maximum: 1,
+        }),
+        "health.patients.list"
+        | "health.visits.list"
+        | "health.medication_plans.list"
+        | "health.medication_administrations.list"
+        | "health.follow_ups.list" => Some(OperationScopePolicy::DatasetOrResources {
+            allowed_kinds: &["health_patient"],
             maximum: 1,
         }),
         _ => None,
@@ -654,6 +673,12 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "library_fine" => {
             Some("SELECT EXISTS(SELECT 1 FROM library_fines WHERE tenant_id = $1 AND id = $2)")
         }
+        "health_patient" => {
+            Some("SELECT EXISTS(SELECT 1 FROM health_patients WHERE tenant_id = $1 AND id = $2)")
+        }
+        "health_visit" => {
+            Some("SELECT EXISTS(SELECT 1 FROM health_visits WHERE tenant_id = $1 AND id = $2)")
+        }
         _ => None,
     }
 }
@@ -733,7 +758,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 85);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 93);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -753,7 +778,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 153);
+        assert_eq!(exposed.len(), 161);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

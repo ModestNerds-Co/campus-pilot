@@ -19,8 +19,8 @@ use crate::{
     models::{
         AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry,
         ClassRosterEntry, CommunicationRecipientReference, Enrolment, EnrolmentWithDetails,
-        GuardianRelationshipWithDetails, GuardianWithAccount, LearnerBillingReference,
-        LearnerWithAccount, LibraryLearnerReference,
+        GuardianRelationshipWithDetails, GuardianWithAccount, HealthGuardianContactReference,
+        LearnerBillingReference, LearnerWithAccount, LibraryLearnerReference,
     },
     numbering::allocate_learner_number,
 };
@@ -201,6 +201,43 @@ impl LearnerOps {
         .fetch_all(pool)
         .await
         .context("Failed to load learner library references")
+    }
+
+    /// Resolves current guardian contacts for learner health records without
+    /// granting Health direct access to SIS persistence.
+    pub async fn health_guardian_contacts_by_learner_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        learner_ids: &[Uuid],
+    ) -> Result<Vec<HealthGuardianContactReference>> {
+        if learner_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, HealthGuardianContactReference>(
+            r#"
+            SELECT relationship.learner_id, guardian.id AS guardian_id,
+                   guardian.display_name, relationship.relationship_type,
+                   relationship.is_primary, relationship.can_collect,
+                   guardian.phone, guardian.email
+              FROM learner_guardian_relationships AS relationship
+              JOIN guardians AS guardian
+                ON guardian.id = relationship.guardian_id
+               AND guardian.tenant_id = relationship.tenant_id
+               AND guardian.deleted_at IS NULL
+               AND guardian.status = 'active'
+             WHERE relationship.tenant_id = $1
+               AND relationship.learner_id = ANY($2)
+               AND relationship.deleted_at IS NULL
+               AND relationship.status = 'active'
+             ORDER BY relationship.learner_id, relationship.is_primary DESC,
+                      guardian.display_name
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(learner_ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve learner health contacts")
     }
 
     /// Returns the minimum learner fields Fees needs to open or identify a

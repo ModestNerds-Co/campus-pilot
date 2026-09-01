@@ -45,6 +45,22 @@ pub struct LibraryLearnerReference {
     pub status: String,
 }
 
+/// Current SIS-owned emergency contact projection for school health workflows.
+///
+/// Health stores no guardian contact copy; this projection is resolved when a
+/// patient record is read so current SIS data remains authoritative.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct HealthGuardianContactReference {
+    pub learner_id: Uuid,
+    pub guardian_id: Uuid,
+    pub display_name: String,
+    pub relationship_type: String,
+    pub is_primary: bool,
+    pub can_collect: bool,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct GuardianWithAccount {
     pub id: Uuid,

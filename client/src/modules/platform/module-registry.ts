@@ -81,7 +81,7 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   },
   health: {
     icon: HeartPulse,
-    highlights: ["Clinic visits", "Care records", "Wellbeing follow-up"],
+    highlights: ["Patient care records", "Clinic visits", "Medication and follow-up"],
   },
   assets_inventory: {
     icon: Boxes,

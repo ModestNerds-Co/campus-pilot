@@ -1,12 +1,12 @@
-//
-//  cp-health
-//  lib.rs
-//
-//  Created by Ngonidzashe Mangudya on 2026/08/21.
-//  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
-//
-//  Scaffolded module: Health & Clinic. Wired into routing and the client nav so the
-//  full ERP module map is visible end-to-end; schema and business logic
-//  land in a future pass.
+//! Owns school health care state over SIS learner and HR employee identity.
+//!
+//! Health stores stable person references only. Current names, numbers, and
+//! guardian contacts are resolved through typed source-module operations.
 
+pub mod dtos;
+mod models;
+pub mod ops;
 pub mod routes;
+
+pub use dtos::*;
+pub use ops::HealthOps;
