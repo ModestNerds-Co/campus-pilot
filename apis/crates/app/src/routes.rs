@@ -114,6 +114,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_student_support::routes::routes),
             )
             .service(
+                scope("/transport")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_transport::routes::routes),
+            )
+            .service(
                 scope("/messaging")
                     .wrap(AuthMiddleware)
                     .configure(cp_messaging::routes::routes),

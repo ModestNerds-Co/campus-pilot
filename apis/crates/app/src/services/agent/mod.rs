@@ -32,6 +32,7 @@ mod sis;
 mod student_support;
 mod submission_gate;
 mod timetabling;
+mod transport;
 mod usage_dtos;
 pub mod usage_routes;
 mod worker_executor;
@@ -153,6 +154,10 @@ use student_support::{
 use timetabling::{
     LatestTimetableRunCapability, TimetableConfigurationCapability, TimetableRunReadCapability,
     TimetableRunsListCapability,
+};
+use transport::{
+    TransportRidersListCapability, TransportRouteReadCapability, TransportRoutesListCapability,
+    TransportRunReadCapability, TransportRunsListCapability,
 };
 
 pub use authority::AppAuthorityLoader;
@@ -379,6 +384,21 @@ pub fn build_capability_registry(
     registry
         .register(StudentSupportActionsListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Student Support actions-list capability: {error}"));
+    registry
+        .register(TransportRoutesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Transport routes-list capability: {error}"));
+    registry
+        .register(TransportRouteReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Transport route-read capability: {error}"));
+    registry
+        .register(TransportRidersListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Transport riders-list capability: {error}"));
+    registry
+        .register(TransportRunsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Transport runs-list capability: {error}"));
+    registry
+        .register(TransportRunReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Transport run-read capability: {error}"));
     registry
         .register(CommunicationReferencesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Communication references capability: {error}"));
@@ -1214,7 +1234,12 @@ mod tests {
                 "timetabling.configuration.read",
                 "timetabling.runs.list",
                 "timetabling.runs.read",
-                "timetabling.runs.read_latest"
+                "timetabling.runs.read_latest",
+                "transport.riders.list",
+                "transport.routes.list",
+                "transport.routes.read",
+                "transport.runs.list",
+                "transport.runs.read"
             ]
         );
         let broker = CapabilityBroker::new(
@@ -1239,7 +1264,7 @@ mod tests {
 
         assert_eq!(
             result.content()["modules"].as_array().map(Vec::len),
-            Some(20)
+            Some(21)
         );
         assert!(result.content()["administration_permissions"].is_array());
     }

@@ -76,3 +76,25 @@ impl Driver {
         }
     }
 }
+
+/// Fleet-owned vehicle facts required to plan one school transport run.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TransportVehicleReference {
+    pub id: Uuid,
+    pub registration_number: String,
+    pub make: String,
+    pub model: String,
+    pub capacity: i32,
+    pub status: String,
+}
+
+/// Fleet-owned driver facts required to allocate one school transport run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransportDriverReference {
+    pub id: Uuid,
+    pub employee_id: Uuid,
+    pub display_name: String,
+    pub license_number: String,
+    pub license_expiry: Option<NaiveDate>,
+    pub status: String,
+}

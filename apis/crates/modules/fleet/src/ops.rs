@@ -16,11 +16,61 @@ use uuid::Uuid;
 use super::dtos::{
     CreateDriverRequest, CreateVehicleRequest, UpdateDriverRequest, UpdateVehicleRequest,
 };
-use super::models::{Driver, DriverProfile, Vehicle};
+use super::models::{
+    Driver, DriverProfile, TransportDriverReference, TransportVehicleReference, Vehicle,
+};
 
 pub struct VehicleOps;
 
 impl VehicleOps {
+    /// Returns bounded active, positive-capacity vehicles for Transport allocation.
+    pub async fn transport_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> OpsResult<Vec<TransportVehicleReference>> {
+        let search = search.map(|value| format!("%{}%", value.trim()));
+        sqlx::query_as::<_, TransportVehicleReference>(
+            r#"
+            SELECT id, registration_number, make, model, capacity, status
+              FROM vehicles
+             WHERE tenant_id=$1 AND deleted_at IS NULL AND status='active'
+               AND capacity IS NOT NULL AND capacity > 0
+               AND ($2::TEXT IS NULL OR registration_number ILIKE $2 OR make ILIKE $2 OR model ILIKE $2)
+             ORDER BY registration_number, make, model
+             LIMIT $3
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(pool)
+        .await
+        .context("Failed to list Transport vehicle references")
+    }
+
+    /// Resolves exact current vehicle facts without exposing Fleet persistence.
+    pub async fn transport_reference_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> OpsResult<Option<TransportVehicleReference>> {
+        sqlx::query_as::<_, TransportVehicleReference>(
+            r#"
+            SELECT id, registration_number, make, model, capacity, status
+              FROM vehicles
+             WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL
+               AND capacity IS NOT NULL AND capacity > 0
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to resolve Transport vehicle reference")
+    }
+
     pub async fn references_by_ids(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -257,6 +307,39 @@ impl VehicleOps {
 pub struct DriverOps;
 
 impl DriverOps {
+    /// Returns bounded active employee-backed drivers for Transport allocation.
+    pub async fn transport_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> OpsResult<Vec<TransportDriverReference>> {
+        let (drivers, _) = Self::list(
+            pool,
+            tenant_id,
+            1,
+            limit.clamp(1, 100),
+            search,
+            Some("active"),
+        )
+        .await?;
+        Ok(drivers
+            .into_iter()
+            .map(transport_driver_reference)
+            .collect())
+    }
+
+    /// Resolves exact current driver facts through Fleet and HR ownership.
+    pub async fn transport_reference_by_id(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+    ) -> OpsResult<Option<TransportDriverReference>> {
+        Ok(Self::get_by_id(pool, tenant_id, id)
+            .await?
+            .map(transport_driver_reference))
+    }
+
     pub async fn list_candidates(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -509,6 +592,17 @@ impl DriverOps {
         .context("Failed to delete driver")?;
 
         Ok(result.rows_affected() > 0)
+    }
+}
+
+fn transport_driver_reference(driver: Driver) -> TransportDriverReference {
+    TransportDriverReference {
+        id: driver.id,
+        employee_id: driver.employee.id,
+        display_name: driver.employee.display_name,
+        license_number: driver.license_number,
+        license_expiry: driver.license_expiry,
+        status: driver.status,
     }
 }
 

@@ -118,6 +118,7 @@ const ATTENDANCE: OriginAccess = OriginAccess::module("attendance", "attendance:
 const LEARNING: OriginAccess = OriginAccess::module("learning", "learning:view");
 const STUDENT_SUPPORT: OriginAccess =
     OriginAccess::module("student_support", "student_support:view");
+const TRANSPORT: OriginAccess = OriginAccess::module("transport", "transport:view");
 const TIMETABLING: OriginAccess = OriginAccess::module("timetabling", "timetabling:view");
 const MESSAGING: OriginAccess = OriginAccess::module("messaging", "messaging:view");
 const MESSAGING_MANAGE: OriginAccess = OriginAccess::module("messaging", "messaging:create");
@@ -356,6 +357,22 @@ const EXACT_ROUTES: &[ExactRoute] = &[
     ExactRoute {
         path: "/modules/student-support/cases",
         access: STUDENT_SUPPORT,
+    },
+    ExactRoute {
+        path: "/modules/transport",
+        access: TRANSPORT,
+    },
+    ExactRoute {
+        path: "/modules/transport/routes",
+        access: TRANSPORT,
+    },
+    ExactRoute {
+        path: "/modules/transport/riders",
+        access: TRANSPORT,
+    },
+    ExactRoute {
+        path: "/modules/transport/runs",
+        access: TRANSPORT,
     },
     ExactRoute {
         path: "/modules/timetabling",
@@ -635,6 +652,14 @@ const UUID_ROUTES: &[UuidRoute] = &[
     UuidRoute {
         prefix: "/modules/student-support/cases/",
         access: STUDENT_SUPPORT,
+    },
+    UuidRoute {
+        prefix: "/modules/transport/routes/",
+        access: TRANSPORT,
+    },
+    UuidRoute {
+        prefix: "/modules/transport/runs/",
+        access: TRANSPORT,
     },
     UuidRoute {
         prefix: "/modules/messaging/announcements/",

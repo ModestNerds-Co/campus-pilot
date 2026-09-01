@@ -102,6 +102,7 @@ const moduleLabels: Record<string, string> = {
   hr_payroll: "HR and payroll",
   procurement: "Procurement",
   fleet: "Fleet",
+  transport: "Transport",
   hostel: "Hostel",
   health: "Health services",
   assets_inventory: "Assets and inventory",
@@ -117,6 +118,12 @@ const fleetNavigation: LocalNavItem[] = [
     path: "/modules/fleet/daily-log",
     icon: ReceiptText,
   },
+];
+
+const transportNavigation: LocalNavItem[] = [
+  { label: "Routes", path: "/modules/transport/routes", icon: ListOrdered },
+  { label: "Riders", path: "/modules/transport/riders", icon: UsersRound },
+  { label: "Runs", path: "/modules/transport/runs", icon: Truck },
 ];
 
 const hrNavigation: LocalNavItem[] = [
@@ -421,6 +428,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
       ? agentNavigation
       : moduleKey === "fleet"
         ? fleetNavigation
+        : moduleKey === "transport"
+          ? transportNavigation
         : moduleKey === "hr_payroll"
           ? hrNavigation
           : moduleKey === "academics"
@@ -690,6 +699,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
                 ? "Spaces"
               : moduleKey === "student_support"
                 ? "Cases"
+              : moduleKey === "transport"
+                ? "Routes"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1049,6 +1060,12 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return <Link className={navClass(active)} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/student-support/cases")
     return <Link className={navClass(active)} to="/modules/student-support/cases"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/transport/routes")
+    return <Link className={navClass(active)} to="/modules/transport/routes"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/transport/riders")
+    return <Link className={navClass(active)} to="/modules/transport/riders"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/transport/runs")
+    return <Link className={navClass(active)} to="/modules/transport/runs"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/learning/settings")
     return <Link className={navClass(active)} to="/modules/learning/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/library/circulation")

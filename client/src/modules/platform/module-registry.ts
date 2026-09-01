@@ -84,6 +84,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
     icon: Truck,
     highlights: ["Vehicles", "Drivers", "Daily vehicle log"],
   },
+  transport: {
+    icon: Truck,
+    highlights: ["Routes and stops", "Rider assignments", "Daily manifests"],
+  },
   hostel: {
     icon: Building2,
     highlights: ["Residences and rooms", "Learner allocations", "Pastoral records"],

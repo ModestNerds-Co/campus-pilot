@@ -194,6 +194,17 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             &["view", "create", "edit", "delete"],
         ),
         module(
+            "transport",
+            "Transport",
+            "Campus operations",
+            "Configure routes and rider assignments; operate dated manifests.",
+            "/modules/transport",
+            "transport",
+            false,
+            "available",
+            &["view", "configure", "operate", "manage"],
+        ),
+        module(
             "hostel",
             "Hostel",
             "Student services",
@@ -456,6 +467,7 @@ pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
     match module_key {
         "fees" => &["academics", "finance", "sis"],
         "fleet" => &["hr_payroll"],
+        "transport" => &["fleet", "sis"],
         "procurement" => &["finance", "hr_payroll"],
         "timetabling" => &["academics", "hr_payroll"],
         "attendance" => &["academics", "sis"],
@@ -814,6 +826,7 @@ mod tests {
             "attendance",
             "learning",
             "student_support",
+            "transport",
             "fleet",
             "hr_payroll",
             "sis",
@@ -859,6 +872,13 @@ mod tests {
                 assert_eq!(module.approval_required_operations(), 8);
                 assert_eq!(module.human_only_operations(), 1);
                 assert_eq!(module.executable_capabilities(), 3);
+            } else if module_key == "transport" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 19);
+                assert_eq!(module.exposed_operations(), 5);
+                assert_eq!(module.approval_required_operations(), 13);
+                assert_eq!(module.human_only_operations(), 1);
+                assert_eq!(module.executable_capabilities(), 5);
             } else if module_key == "fleet" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 7);

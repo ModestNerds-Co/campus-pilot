@@ -30,6 +30,7 @@ cp-document-registry = { path = "../modules/document-registry" }
 cp-internal-audit = { path = "../modules/internal-audit" }
 cp-learning = { path = "../modules/learning" }
 cp-student-support = { path = "../modules/student-support" }
+cp-transport = { path = "../modules/transport" }
 
 sqlx = { workspace = true }
 serde = { workspace = true }

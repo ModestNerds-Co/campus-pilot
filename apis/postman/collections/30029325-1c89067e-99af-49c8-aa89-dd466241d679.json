@@ -6430,6 +6430,32 @@
       ]
     },
     {
+      "name": "Transport",
+      "description": "School routes, dated rider assignments, service runs, immutable manifests, and typed SIS/Fleet references.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Read Transport References", "request": { "method": "GET", "url": "{{base_url}}/transport/references?search=", "description": "Human-operated learner, vehicle, and employee-backed driver picker. Transport never creates shadow people or Fleet records." } },
+        { "name": "List Transport Routes", "request": { "method": "GET", "url": "{{base_url}}/transport/routes?page=1&per_page=25&search=&status=active&direction=inbound" } },
+        { "name": "Create Transport Route", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"NORTH-AM\",\n  \"name\": \"North inbound\",\n  \"direction\": \"inbound\",\n  \"notes\": null\n}" }, "url": "{{base_url}}/transport/routes" } },
+        { "name": "Read Transport Route", "request": { "method": "GET", "url": "{{base_url}}/transport/routes/{{transport_route_id}}" } },
+        { "name": "Update Transport Route", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"NORTH-AM\",\n  \"name\": \"North inbound\",\n  \"direction\": \"inbound\",\n  \"status\": \"active\",\n  \"notes\": null,\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/transport/routes/{{transport_route_id}}" } },
+        { "name": "Add Transport Stop", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"NORTH-01\",\n  \"name\": \"North pickup\",\n  \"stop_order\": 1,\n  \"planned_time\": \"06:30:00\",\n  \"latitude\": -17.8252,\n  \"longitude\": 31.0335\n}" }, "url": "{{base_url}}/transport/routes/{{transport_route_id}}/stops" } },
+        { "name": "Update Transport Stop", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"NORTH-01\",\n  \"name\": \"North pickup\",\n  \"stop_order\": 1,\n  \"planned_time\": \"06:30:00\",\n  \"latitude\": -17.8252,\n  \"longitude\": 31.0335,\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/transport/routes/{{transport_route_id}}/stops/{{transport_stop_id}}" } },
+        { "name": "Remove Transport Stop", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/transport/routes/{{transport_route_id}}/stops/{{transport_stop_id}}/remove" } },
+        { "name": "List Transport Riders", "request": { "method": "GET", "url": "{{base_url}}/transport/riders?page=1&per_page=25&status=active&route_id={{transport_route_id}}&on_date=2026-09-01" } },
+        { "name": "Assign Transport Rider", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"learner_id\": \"{{transport_learner_id}}\",\n  \"route_id\": \"{{transport_route_id}}\",\n  \"boarding_stop_id\": \"{{transport_stop_id}}\",\n  \"alighting_stop_id\": \"{{transport_stop_id}}\",\n  \"effective_from\": \"2026-09-01\",\n  \"effective_until\": null\n}" }, "url": "{{base_url}}/transport/riders" } },
+        { "name": "End Transport Rider Assignment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"effective_until\": \"2026-12-04\",\n  \"reason\": \"Term transport arrangement ended\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/transport/riders/{{transport_rider_assignment_id}}/end" } },
+        { "name": "List Transport Runs", "request": { "method": "GET", "url": "{{base_url}}/transport/runs?page=1&per_page=25&route_id={{transport_route_id}}&status=draft&date_from=2026-09-01&date_to=2026-09-30" } },
+        { "name": "Create Transport Run", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"route_id\": \"{{transport_route_id}}\",\n  \"service_date\": \"2026-09-01\",\n  \"vehicle_id\": \"{{transport_vehicle_id}}\",\n  \"driver_id\": \"{{transport_driver_id}}\"\n}" }, "url": "{{base_url}}/transport/runs" } },
+        { "name": "Read Transport Run", "request": { "method": "GET", "url": "{{base_url}}/transport/runs/{{transport_run_id}}" } },
+        { "name": "Start Transport Boarding", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/transport/runs/{{transport_run_id}}/boarding" } },
+        { "name": "Mark Transport Manifest Entry", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"status\": \"boarded\",\n  \"exception_kind\": null,\n  \"note\": null,\n  \"expected_version\": 2\n}" }, "url": "{{base_url}}/transport/runs/{{transport_run_id}}/manifest/{{transport_manifest_entry_id}}" } },
+        { "name": "Depart Transport Run", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 3\n}" }, "url": "{{base_url}}/transport/runs/{{transport_run_id}}/depart" } },
+        { "name": "Complete Transport Run", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 4\n}" }, "url": "{{base_url}}/transport/runs/{{transport_run_id}}/complete" } },
+        { "name": "Cancel Transport Run", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Service cancelled before departure\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/transport/runs/{{transport_run_id}}/cancel" } }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -6749,6 +6775,46 @@
     },
     {
       "key": "student_support_team_user_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_route_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_stop_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_rider_assignment_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_run_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_manifest_entry_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_learner_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_vehicle_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "transport_driver_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }

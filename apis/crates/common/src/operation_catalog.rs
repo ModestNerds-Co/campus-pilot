@@ -11,21 +11,25 @@ use actix_web::http::Method;
 use crate::{AgentExposure, OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
-pub const OPERATION_CATALOG_VERSION: u32 = 4;
+pub const OPERATION_CATALOG_VERSION: u32 = 5;
 
 /// Product-catalog identifier carried by signed entitlement leases.
 ///
 /// The control plane and campus runtime must agree on this exact value before
 /// lease claims can be accepted. Keep it aligned with
 /// [`OPERATION_CATALOG_VERSION`].
-pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/4";
+pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/5";
 
 /// Product-catalog versions this campus binary can safely interpret.
 ///
 /// A catalog upgrade may temporarily list both versions during a coordinated
 /// rollout; the control plane still issues only [`PRODUCT_CATALOG_VERSION`].
-pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] =
-    &["campus-pilot/2", "campus-pilot/3", PRODUCT_CATALOG_VERSION];
+pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] = &[
+    "campus-pilot/2",
+    "campus-pilot/3",
+    "campus-pilot/4",
+    PRODUCT_CATALOG_VERSION,
+];
 
 /// Declares the authoritative access boundary for one routed operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -3388,6 +3392,178 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Transport: route configuration, dated riders, service runs, and manifests.
+        route(
+            Method::GET,
+            "/api/1.0/transport/references",
+            "transport.references.read",
+            "transport",
+            "transport:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/transport/routes",
+            "transport.routes.list",
+            "transport",
+            "transport:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/routes",
+            "transport.routes.create",
+            "transport",
+            "transport:configure",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/transport/routes/{id}",
+            "transport.routes.read",
+            "transport",
+            "transport:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/transport/routes/{id}",
+            "transport.routes.update",
+            "transport",
+            "transport:configure",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/routes/{id}/stops",
+            "transport.stops.create",
+            "transport",
+            "transport:configure",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/transport/routes/{route_id}/stops/{stop_id}",
+            "transport.stops.update",
+            "transport",
+            "transport:configure",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/routes/{route_id}/stops/{stop_id}/remove",
+            "transport.stops.remove",
+            "transport",
+            "transport:configure",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/transport/riders",
+            "transport.riders.list",
+            "transport",
+            "transport:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/riders",
+            "transport.riders.assign",
+            "transport",
+            "transport:configure",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/riders/{id}/end",
+            "transport.riders.end",
+            "transport",
+            "transport:configure",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/transport/runs",
+            "transport.runs.list",
+            "transport",
+            "transport:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/runs",
+            "transport.runs.create",
+            "transport",
+            "transport:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/transport/runs/{id}",
+            "transport.runs.read",
+            "transport",
+            "transport:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/runs/{id}/boarding",
+            "transport.runs.start_boarding",
+            "transport",
+            "transport:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/runs/{id}/depart",
+            "transport.runs.depart",
+            "transport",
+            "transport:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/runs/{id}/complete",
+            "transport.runs.complete",
+            "transport",
+            "transport:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/transport/runs/{id}/cancel",
+            "transport.runs.cancel",
+            "transport",
+            "transport:manage",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/transport/runs/{run_id}/manifest/{entry_id}",
+            "transport.manifest.mark",
+            "transport",
+            "transport:operate",
+            OperationEffect::Write,
+            true,
+        ),
         // E-learning: class-linked spaces, ordered units, and governed resources.
         route(
             Method::GET,
@@ -4884,6 +5060,8 @@ fn route(
         ])
     } else if key.starts_with("student_support.") {
         operation.requiring_modules(["sis".to_string()])
+    } else if key.starts_with("transport.") {
+        operation.requiring_modules(["fleet".to_string(), "sis".to_string()])
     } else if key.starts_with("internal_audit.") {
         operation.requiring_modules(["document_registry".to_string()])
     } else if key.starts_with("hostel.") {
@@ -5119,6 +5297,11 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "student_support.cases.list"
         | "student_support.cases.read"
         | "student_support.actions.list"
+        | "transport.routes.list"
+        | "transport.routes.read"
+        | "transport.riders.list"
+        | "transport.runs.list"
+        | "transport.runs.read"
         | "learning.settings.read"
         | "learning.references.read"
         | "learning.resource_files.list"
@@ -5378,6 +5561,19 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "student_support.cases.escalate"
         | "student_support.cases.resolve"
         | "student_support.cases.close"
+        | "transport.routes.create"
+        | "transport.routes.update"
+        | "transport.stops.create"
+        | "transport.stops.update"
+        | "transport.stops.remove"
+        | "transport.riders.assign"
+        | "transport.riders.end"
+        | "transport.runs.create"
+        | "transport.runs.start_boarding"
+        | "transport.manifest.mark"
+        | "transport.runs.depart"
+        | "transport.runs.complete"
+        | "transport.runs.cancel"
         | "learning.settings.update"
         | "learning.spaces.create"
         | "learning.spaces.update"
@@ -5484,6 +5680,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         "student_support.references.read" => AgentExposure::HumanOnly {
             reason: "Learner and restricted case-worker selection remains a direct human intake workflow.",
         },
+        "transport.references.read" => AgentExposure::HumanOnly {
+            reason: "Learner, driver, vehicle, and route selection remains a direct human scheduling workflow.",
+        },
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -5583,6 +5782,7 @@ mod tests {
                     "student_support".to_string(),
                     ModuleEntitlementState::Enabled,
                 ),
+                ("transport".to_string(), ModuleEntitlementState::Enabled),
                 ("messaging".to_string(), ModuleEntitlementState::Enabled),
                 ("library".to_string(), ModuleEntitlementState::Enabled),
                 ("hostel".to_string(), ModuleEntitlementState::Enabled),
@@ -5624,13 +5824,13 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
-        assert_eq!(OPERATION_CATALOG_VERSION, 4);
+        assert_eq!(OPERATION_CATALOG_VERSION, 5);
         assert_eq!(
             PRODUCT_CATALOG_VERSION,
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 521);
+        assert_eq!(operation_catalog().len(), 540);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -5682,7 +5882,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [199, 287, 23, 12]);
+        assert_eq!(counts, [204, 300, 24, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
