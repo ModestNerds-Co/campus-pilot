@@ -13,6 +13,7 @@ mod fees;
 mod finance;
 mod fleet;
 pub mod governance;
+mod gradebook;
 mod hr;
 mod origin;
 mod procurement;
@@ -85,6 +86,10 @@ use fleet::{
     FleetDriverCandidatesListCapability, FleetDriverReadCapability, FleetDriversListCapability,
     FleetVehicleLogReadCapability, FleetVehicleLogsListCapability, FleetVehicleReadCapability,
     FleetVehiclesListCapability,
+};
+use gradebook::{
+    GradebookMarkSheetReadCapability, GradebookMarkSheetsListCapability,
+    GradebookReferencesCapability,
 };
 use hr::{
     HrDepartmentReadCapability, HrDepartmentsListCapability, HrEmployeeAvailabilityListCapability,
@@ -270,6 +275,15 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| {
             panic!("invalid Academics assessment-component read capability: {error}")
         });
+    registry
+        .register(GradebookReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Gradebook references capability: {error}"));
+    registry
+        .register(GradebookMarkSheetsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Gradebook mark-sheets list capability: {error}"));
+    registry
+        .register(GradebookMarkSheetReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Gradebook mark-sheet read capability: {error}"));
     registry
         .register(AttendanceReferencesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Attendance references capability: {error}"));
@@ -789,6 +803,9 @@ mod tests {
                 "academics.classes.read",
                 "academics.grade_levels.list",
                 "academics.grade_levels.read",
+                "academics.gradebook.mark_sheets.list",
+                "academics.gradebook.mark_sheets.read",
+                "academics.gradebook.references.read",
                 "academics.subjects.list",
                 "academics.subjects.read",
                 "academics.teacher_candidates.list",

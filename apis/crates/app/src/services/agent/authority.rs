@@ -249,6 +249,7 @@ mod tests {
                 permissions,
                 enabled_modules,
                 entitlements,
+                record_scopes: cp_common::RecordScopeGrants::empty(),
             })
         }
     }

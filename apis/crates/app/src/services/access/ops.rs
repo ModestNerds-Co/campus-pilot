@@ -22,6 +22,7 @@ use super::{
     },
     models::{EffectiveAccess, LicenseInstallation, LicenseLease, TenantModule},
     quota::QuotaOps,
+    record_scopes::RoleRecordScopeOps,
 };
 
 pub struct AccessOps;
@@ -486,12 +487,15 @@ impl AccessOps {
             .filter(|module| module_is_available(&module.module_key, &entitlements))
             .map(|module| module.module_key.clone())
             .collect();
+        let record_scopes =
+            RoleRecordScopeOps::effective_for_roles(pool, tenant_id, role_keys).await?;
 
         Ok(EffectiveAccess {
             role_names,
             permissions: permissions.into_iter().collect(),
             enabled_modules,
             entitlements,
+            record_scopes,
         })
     }
 

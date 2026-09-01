@@ -62,7 +62,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "academics",
             false,
             "available",
-            &["view", "create", "edit", "delete"],
+            &["view", "create", "edit", "delete", "manage"],
         ),
         module(
             "timetabling",
@@ -706,7 +706,7 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 16);
             } else if module_key == "academics" {
                 assert!(module.release_ready());
-                assert_eq!(module.executable_capabilities(), 19);
+                assert_eq!(module.executable_capabilities(), 22);
             } else if module_key == "attendance" {
                 assert!(module.release_ready());
                 assert_eq!(module.routed_operations(), 8);

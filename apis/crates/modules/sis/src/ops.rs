@@ -17,9 +17,9 @@ use crate::{
         UpdateGuardianRequest, UpdateLearnerRequest,
     },
     models::{
-        AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry, Enrolment,
-        EnrolmentWithDetails, GuardianRelationshipWithDetails, GuardianWithAccount,
-        LearnerBillingReference, LearnerWithAccount,
+        AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry,
+        ClassRosterEntry, Enrolment, EnrolmentWithDetails, GuardianRelationshipWithDetails,
+        GuardianWithAccount, LearnerBillingReference, LearnerWithAccount,
     },
     numbering::allocate_learner_number,
 };
@@ -989,15 +989,15 @@ impl ApplicationOps {
 pub struct EnrolmentOps;
 
 impl EnrolmentOps {
-    /// Returns learners eligible for a class register on one date.
-    pub async fn attendance_roster(
+    /// Returns the date-effective SIS roster for one Academics-owned class.
+    pub async fn class_roster_on(
         pool: &PgPool,
         tenant_id: Uuid,
         academic_year_id: Uuid,
         class_group_id: Uuid,
-        attendance_date: NaiveDate,
-    ) -> Result<Vec<AttendanceRosterEntry>> {
-        sqlx::query_as::<_, AttendanceRosterEntry>(
+        effective_on: NaiveDate,
+    ) -> Result<Vec<ClassRosterEntry>> {
+        sqlx::query_as::<_, ClassRosterEntry>(
             r#"
             SELECT enrolment.id AS enrolment_id, learner.id AS learner_id,
                    learner.learner_number, learner.display_name
@@ -1019,22 +1019,40 @@ impl EnrolmentOps {
         .bind(tenant_id)
         .bind(academic_year_id)
         .bind(class_group_id)
-        .bind(attendance_date)
+        .bind(effective_on)
         .fetch_all(pool)
         .await
-        .context("Failed to load the SIS attendance roster")
+        .context("Failed to load the SIS class roster")
     }
 
-    /// Resolves historical register members without applying current status.
-    pub async fn attendance_references_by_ids(
+    /// Returns learners eligible for a class register on one date.
+    pub async fn attendance_roster(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        academic_year_id: Uuid,
+        class_group_id: Uuid,
+        attendance_date: NaiveDate,
+    ) -> Result<Vec<AttendanceRosterEntry>> {
+        Self::class_roster_on(
+            pool,
+            tenant_id,
+            academic_year_id,
+            class_group_id,
+            attendance_date,
+        )
+        .await
+    }
+
+    /// Resolves historical roster identities without applying current status.
+    pub async fn roster_references_by_enrolment_ids(
         pool: &PgPool,
         tenant_id: Uuid,
         enrolment_ids: &[Uuid],
-    ) -> Result<Vec<AttendanceRosterEntry>> {
+    ) -> Result<Vec<ClassRosterEntry>> {
         if enrolment_ids.is_empty() {
             return Ok(Vec::new());
         }
-        sqlx::query_as::<_, AttendanceRosterEntry>(
+        sqlx::query_as::<_, ClassRosterEntry>(
             r#"
             SELECT enrolment.id AS enrolment_id, learner.id AS learner_id,
                    learner.learner_number, learner.display_name
@@ -1051,7 +1069,16 @@ impl EnrolmentOps {
         .bind(enrolment_ids)
         .fetch_all(pool)
         .await
-        .context("Failed to resolve SIS attendance identities")
+        .context("Failed to resolve SIS roster identities")
+    }
+
+    /// Resolves historical register members without applying current status.
+    pub async fn attendance_references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        enrolment_ids: &[Uuid],
+    ) -> Result<Vec<AttendanceRosterEntry>> {
+        Self::roster_references_by_enrolment_ids(pool, tenant_id, enrolment_ids).await
     }
 
     #[allow(clippy::too_many_arguments)]

@@ -82,6 +82,7 @@ import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/acad
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
 import { Route as ModulesAcademicsSubjectsRouteImport } from './routes/modules/academics/subjects'
+import { Route as ModulesAcademicsGradebookRouteImport } from './routes/modules/academics/gradebook'
 import { Route as ModulesAcademicsGradeLevelsRouteImport } from './routes/modules/academics/grade-levels'
 import { Route as ModulesAcademicsClassesRouteImport } from './routes/modules/academics/classes'
 import { Route as ModulesAcademicsAssessmentsRouteImport } from './routes/modules/academics/assessments'
@@ -102,6 +103,7 @@ import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './r
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
 import { Route as ModulesAcademicsClassesClassIdRouteImport } from './routes/modules/academics/classes_.$classId'
+import { Route as ModulesAcademicsGradebookMarkSheetsMarkSheetIdRouteImport } from './routes/modules/academics/gradebook.mark-sheets_.$markSheetId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -494,6 +496,12 @@ const ModulesAcademicsSubjectsRoute =
     path: '/academics/subjects',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAcademicsGradebookRoute =
+  ModulesAcademicsGradebookRouteImport.update({
+    id: '/academics/gradebook',
+    path: '/academics/gradebook',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAcademicsGradeLevelsRoute =
   ModulesAcademicsGradeLevelsRouteImport.update({
     id: '/academics/grade-levels',
@@ -606,6 +614,12 @@ const ModulesAcademicsClassesClassIdRoute =
     path: '/academics/classes/$classId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute =
+  ModulesAcademicsGradebookMarkSheetsMarkSheetIdRouteImport.update({
+    id: '/mark-sheets_/$markSheetId',
+    path: '/mark-sheets/$markSheetId',
+    getParentRoute: () => ModulesAcademicsGradebookRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -648,6 +662,7 @@ export interface FileRoutesByFullPath {
   '/modules/academics/assessments': typeof ModulesAcademicsAssessmentsRoute
   '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
   '/modules/academics/grade-levels': typeof ModulesAcademicsGradeLevelsRoute
+  '/modules/academics/gradebook': typeof ModulesAcademicsGradebookRouteWithChildren
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -701,6 +716,7 @@ export interface FileRoutesByFullPath {
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
   '/modules/sis/learners/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
+  '/modules/academics/gradebook/mark-sheets/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -742,6 +758,7 @@ export interface FileRoutesByTo {
   '/modules/academics/assessments': typeof ModulesAcademicsAssessmentsRoute
   '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
   '/modules/academics/grade-levels': typeof ModulesAcademicsGradeLevelsRoute
+  '/modules/academics/gradebook': typeof ModulesAcademicsGradebookRouteWithChildren
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -795,6 +812,7 @@ export interface FileRoutesByTo {
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
   '/modules/sis/learners/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
+  '/modules/academics/gradebook/mark-sheets/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -838,6 +856,7 @@ export interface FileRoutesById {
   '/modules/academics/assessments': typeof ModulesAcademicsAssessmentsRoute
   '/modules/academics/classes': typeof ModulesAcademicsClassesRoute
   '/modules/academics/grade-levels': typeof ModulesAcademicsGradeLevelsRoute
+  '/modules/academics/gradebook': typeof ModulesAcademicsGradebookRouteWithChildren
   '/modules/academics/subjects': typeof ModulesAcademicsSubjectsRoute
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -891,6 +910,7 @@ export interface FileRoutesById {
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications_/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
   '/modules/sis/learners_/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
+  '/modules/academics/gradebook/mark-sheets_/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -935,6 +955,7 @@ export interface FileRouteTypes {
     | '/modules/academics/assessments'
     | '/modules/academics/classes'
     | '/modules/academics/grade-levels'
+    | '/modules/academics/gradebook'
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
@@ -988,6 +1009,7 @@ export interface FileRouteTypes {
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
     | '/modules/sis/learners/$learnerId'
+    | '/modules/academics/gradebook/mark-sheets/$markSheetId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1029,6 +1051,7 @@ export interface FileRouteTypes {
     | '/modules/academics/assessments'
     | '/modules/academics/classes'
     | '/modules/academics/grade-levels'
+    | '/modules/academics/gradebook'
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
@@ -1082,6 +1105,7 @@ export interface FileRouteTypes {
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
     | '/modules/sis/learners/$learnerId'
+    | '/modules/academics/gradebook/mark-sheets/$markSheetId'
   id:
     | '__root__'
     | '/'
@@ -1124,6 +1148,7 @@ export interface FileRouteTypes {
     | '/modules/academics/assessments'
     | '/modules/academics/classes'
     | '/modules/academics/grade-levels'
+    | '/modules/academics/gradebook'
     | '/modules/academics/subjects'
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
@@ -1177,6 +1202,7 @@ export interface FileRouteTypes {
     | '/modules/procurement/requisitions_/$requisitionId'
     | '/modules/sis/applications_/$applicationId'
     | '/modules/sis/learners_/$learnerId'
+    | '/modules/academics/gradebook/mark-sheets_/$markSheetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1705,6 +1731,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAcademicsSubjectsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/academics/gradebook': {
+      id: '/modules/academics/gradebook'
+      path: '/academics/gradebook'
+      fullPath: '/modules/academics/gradebook'
+      preLoaderRoute: typeof ModulesAcademicsGradebookRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/academics/grade-levels': {
       id: '/modules/academics/grade-levels'
       path: '/academics/grade-levels'
@@ -1845,6 +1878,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAcademicsClassesClassIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/academics/gradebook/mark-sheets_/$markSheetId': {
+      id: '/modules/academics/gradebook/mark-sheets_/$markSheetId'
+      path: '/mark-sheets/$markSheetId'
+      fullPath: '/modules/academics/gradebook/mark-sheets/$markSheetId'
+      preLoaderRoute: typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRouteImport
+      parentRoute: typeof ModulesAcademicsGradebookRoute
+    }
   }
 }
 
@@ -1910,12 +1950,28 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ModulesAcademicsGradebookRouteChildren {
+  ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute: typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
+}
+
+const ModulesAcademicsGradebookRouteChildren: ModulesAcademicsGradebookRouteChildren =
+  {
+    ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute:
+      ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute,
+  }
+
+const ModulesAcademicsGradebookRouteWithChildren =
+  ModulesAcademicsGradebookRoute._addFileChildren(
+    ModulesAcademicsGradebookRouteChildren,
+  )
+
 interface ModulesRouteChildren {
   ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
   ModulesAcademicsAcademicYearsRoute: typeof ModulesAcademicsAcademicYearsRoute
   ModulesAcademicsAssessmentsRoute: typeof ModulesAcademicsAssessmentsRoute
   ModulesAcademicsClassesRoute: typeof ModulesAcademicsClassesRoute
   ModulesAcademicsGradeLevelsRoute: typeof ModulesAcademicsGradeLevelsRoute
+  ModulesAcademicsGradebookRoute: typeof ModulesAcademicsGradebookRouteWithChildren
   ModulesAcademicsSubjectsRoute: typeof ModulesAcademicsSubjectsRoute
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
@@ -1975,6 +2031,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsAssessmentsRoute: ModulesAcademicsAssessmentsRoute,
   ModulesAcademicsClassesRoute: ModulesAcademicsClassesRoute,
   ModulesAcademicsGradeLevelsRoute: ModulesAcademicsGradeLevelsRoute,
+  ModulesAcademicsGradebookRoute: ModulesAcademicsGradebookRouteWithChildren,
   ModulesAcademicsSubjectsRoute: ModulesAcademicsSubjectsRoute,
   ModulesAcademicsTeachersRoute: ModulesAcademicsTeachersRoute,
   ModulesAcademicsTeachingAssignmentsRoute:

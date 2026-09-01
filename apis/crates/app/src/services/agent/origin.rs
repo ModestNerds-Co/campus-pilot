@@ -301,6 +301,10 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: ACADEMICS,
     },
     ExactRoute {
+        path: "/modules/academics/gradebook",
+        access: ACADEMICS,
+    },
+    ExactRoute {
         path: "/modules/academics/subjects",
         access: ACADEMICS,
     },
@@ -499,6 +503,10 @@ const EXACT_ROUTES: &[ExactRoute] = &[
 ];
 
 const UUID_ROUTES: &[UuidRoute] = &[
+    UuidRoute {
+        prefix: "/modules/academics/gradebook/mark-sheets/",
+        access: ACADEMICS,
+    },
     UuidRoute {
         prefix: "/modules/attendance/registers/",
         access: ATTENDANCE,

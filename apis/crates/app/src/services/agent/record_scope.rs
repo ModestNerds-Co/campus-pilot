@@ -116,6 +116,9 @@ pub const WITHHELD_RECORD_SCOPED_OPERATION_KEYS: &[&str] = &[
     "academics.teaching_assignments.read",
     "academics.assessment_components.list",
     "academics.assessment_components.read",
+    "academics.gradebook.references.read",
+    "academics.gradebook.mark_sheets.list",
+    "academics.gradebook.mark_sheets.read",
     "fees.learner_candidates.list",
     "fees.imports.list",
     "fees.imports.read",
@@ -318,6 +321,8 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "academics.academic_years.list"
         | "academics.grade_levels.list"
         | "academics.subjects.list"
+        | "academics.gradebook.references.read"
+        | "academics.gradebook.mark_sheets.list"
         | "finance.currencies.list"
         | "finance.accounts.list"
         | "finance.fiscal_years.list"
@@ -353,6 +358,9 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "academics.classes.read" => Some(OperationScopePolicy::OneResource("class")),
         "academics.assessment_cycles.read" => {
             Some(OperationScopePolicy::OneResource("assessment_cycle"))
+        }
+        "academics.gradebook.mark_sheets.read" => {
+            Some(OperationScopePolicy::OneResource("assessment_mark_sheet"))
         }
         "finance.currencies.read" => Some(OperationScopePolicy::OneResource("finance_currency")),
         "finance.accounts.read" => Some(OperationScopePolicy::OneResource("finance_account")),
@@ -491,6 +499,9 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "assessment_cycle" => Some(
             "SELECT EXISTS(SELECT 1 FROM assessment_cycles WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "assessment_mark_sheet" => Some(
+            "SELECT EXISTS(SELECT 1 FROM assessment_mark_sheets WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         "finance_currency" => Some(
             "SELECT EXISTS(SELECT 1 FROM finance_currencies WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
@@ -625,7 +636,7 @@ mod tests {
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
         assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 64);
-        assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 59);
+        assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 62);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
             .iter()
@@ -644,7 +655,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 123);
+        assert_eq!(exposed.len(), 126);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

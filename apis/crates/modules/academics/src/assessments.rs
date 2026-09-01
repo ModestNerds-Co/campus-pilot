@@ -199,6 +199,40 @@ pub struct PaginatedAssessmentComponentsResponse {
     pub assessment_components: Vec<AssessmentComponentResponse>,
 }
 
+/// Minimum authoritative assessment structure required by Gradebook.
+///
+/// Gradebook stores the stable component identifier and resolves labels and
+/// boundaries through this Academics-owned projection whenever it reads.
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct GradebookAssessmentReference {
+    pub assessment_component_id: Uuid,
+    pub assessment_component_code: String,
+    pub assessment_component_name: String,
+    pub assessment_kind: String,
+    pub maximum_marks: i32,
+    pub weight_basis_points: i16,
+    pub occurs_on: Option<NaiveDate>,
+    pub assessment_component_status: String,
+    pub assessment_cycle_id: Uuid,
+    pub assessment_cycle_name: String,
+    pub assessment_cycle_status: String,
+    pub academic_term_id: Uuid,
+    pub academic_term_name: String,
+    pub academic_term_starts_on: NaiveDate,
+    pub academic_term_ends_on: NaiveDate,
+    pub academic_year_id: Uuid,
+    pub academic_year_name: String,
+    pub teaching_assignment_id: Uuid,
+    pub class_group_id: Uuid,
+    pub class_group_name: String,
+    pub subject_id: Uuid,
+    pub subject_name: String,
+    pub teacher_profile_id: Uuid,
+    pub teacher_name: String,
+    #[serde(skip_serializing)]
+    pub teacher_account_id: Option<Uuid>,
+}
+
 #[derive(Debug, FromRow)]
 struct CycleState {
     academic_term_id: Uuid,
@@ -479,6 +513,79 @@ impl AssessmentCycleOps {
 pub struct AssessmentComponentOps;
 
 impl AssessmentComponentOps {
+    /// Resolves one component and its owning academic structure for Gradebook.
+    pub async fn gradebook_reference(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        component_id: Uuid,
+    ) -> Result<Option<GradebookAssessmentReference>> {
+        sqlx::query_as::<_, GradebookAssessmentReference>(
+            r#"
+            SELECT component.id AS assessment_component_id,
+                   component.code AS assessment_component_code,
+                   component.name AS assessment_component_name,
+                   component.assessment_kind, component.maximum_marks,
+                   component.weight_basis_points, component.occurs_on,
+                   component.status AS assessment_component_status,
+                   cycle.id AS assessment_cycle_id,
+                   cycle.name AS assessment_cycle_name,
+                   cycle.status AS assessment_cycle_status,
+                   term.id AS academic_term_id,
+                   term.name AS academic_term_name,
+                   term.starts_on AS academic_term_starts_on,
+                   term.ends_on AS academic_term_ends_on,
+                   term.academic_year_id,
+                   academic_year.name AS academic_year_name,
+                   assignment.id AS teaching_assignment_id,
+                   assignment.class_group_id, class_group.name AS class_group_name,
+                   assignment.subject_id, subject.name AS subject_name,
+                   assignment.teacher_profile_id, employee.display_name AS teacher_name,
+                   employee.user_id AS teacher_account_id
+              FROM assessment_components AS component
+              JOIN assessment_cycles AS cycle
+                ON cycle.id = component.assessment_cycle_id
+               AND cycle.tenant_id = component.tenant_id
+               AND cycle.deleted_at IS NULL
+              JOIN academic_terms AS term
+                ON term.id = cycle.academic_term_id
+               AND term.tenant_id = cycle.tenant_id
+               AND term.deleted_at IS NULL
+              JOIN academic_years AS academic_year
+                ON academic_year.id = term.academic_year_id
+               AND academic_year.tenant_id = term.tenant_id
+               AND academic_year.deleted_at IS NULL
+              JOIN teaching_assignments AS assignment
+                ON assignment.id = component.teaching_assignment_id
+               AND assignment.tenant_id = component.tenant_id
+               AND assignment.deleted_at IS NULL
+              JOIN class_groups AS class_group
+                ON class_group.id = assignment.class_group_id
+               AND class_group.tenant_id = assignment.tenant_id
+               AND class_group.deleted_at IS NULL
+              JOIN subjects AS subject
+                ON subject.id = assignment.subject_id
+               AND subject.tenant_id = assignment.tenant_id
+               AND subject.deleted_at IS NULL
+              JOIN teacher_profiles AS teacher
+                ON teacher.id = assignment.teacher_profile_id
+               AND teacher.tenant_id = assignment.tenant_id
+               AND teacher.deleted_at IS NULL
+              JOIN employees AS employee
+                ON employee.id = teacher.employee_id
+               AND employee.tenant_id = teacher.tenant_id
+               AND employee.deleted_at IS NULL
+             WHERE component.tenant_id = $1
+               AND component.id = $2
+               AND component.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(component_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to load the Gradebook assessment reference")
+    }
+
     pub async fn list(
         pool: &PgPool,
         tenant_id: Uuid,

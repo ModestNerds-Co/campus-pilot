@@ -4526,6 +4526,149 @@
       ]
     },
     {
+      "name": "Gradebook",
+      "description": "Assessment mark sheets backed by Academics components and date-effective SIS enrolments.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get Gradebook References",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/gradebook/references",
+            "description": "Returns active assessment components with canonical class, subject, teacher, term, and current mark-sheet state."
+          }
+        },
+        {
+          "name": "List Mark Sheets",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/gradebook/mark-sheets?page=1&per_page=25&status=draft"
+          }
+        },
+        {
+          "name": "Create Mark Sheet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessment_component_id\": \"{{assessment_component_id}}\",\n  \"roster_on\": \"2026-09-01\",\n  \"idempotency_key\": \"00000000-0000-4000-8000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets",
+            "description": "Creates a draft and snapshots the class roster by stable SIS enrolment and learner identifiers."
+          }
+        },
+        {
+          "name": "Get Mark Sheet",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}"
+          }
+        },
+        {
+          "name": "Save Learner Marks",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"marks\": [\n    {\n      \"learner_id\": \"{{gradebook_learner_id}}\",\n      \"mark_status\": \"scored\",\n      \"marks_awarded_hundredths\": 7250,\n      \"note\": null\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/marks",
+            "description": "Replaces the complete roster marks using exact integer hundredths and the current sheet version."
+          }
+        },
+        {
+          "name": "Submit Mark Sheet",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/submit"
+          }
+        },
+        {
+          "name": "Publish Mark Sheet",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/publish",
+            "description": "Publishes a submitted sheet. Requires academics:manage."
+          }
+        },
+        {
+          "name": "Reopen Mark Sheet",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 4,\n  \"reason\": \"Correct a reviewed learner mark\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/reopen",
+            "description": "Returns a submitted or published sheet to draft and retains the required reason."
+          }
+        },
+        {
+          "name": "Delete Draft Mark Sheet",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}?expected_version=1"
+          }
+        }
+      ]
+    },
+    {
       "name": "Attendance",
       "description": "Dated class registers built from Academics classes and date-effective SIS enrolments.",
       "auth": {

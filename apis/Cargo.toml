@@ -23,6 +23,7 @@ members = [
     "crates/modules/health",
     "crates/modules/timetabling",
     "crates/modules/attendance",
+    "crates/modules/gradebook",
 ]
 
 [workspace.dependencies]

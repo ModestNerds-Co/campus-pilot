@@ -140,15 +140,20 @@ pub struct EnrolmentWithDetails {
 
 /// Minimum SIS-owned identity and placement projection used by Attendance.
 ///
-/// Attendance stores only stable identifiers. Names and learner numbers are
-/// resolved from SIS whenever a register is read.
+/// Minimum class-roster identity shared with authorised operational modules.
+///
+/// Consumers store only stable identifiers. Names and learner numbers are
+/// resolved from SIS whenever an operational record is read.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct AttendanceRosterEntry {
+pub struct ClassRosterEntry {
     pub enrolment_id: Uuid,
     pub learner_id: Uuid,
     pub learner_number: String,
     pub display_name: String,
 }
+
+/// Backwards-compatible name retained for Attendance callers.
+pub type AttendanceRosterEntry = ClassRosterEntry;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AccountCandidate {

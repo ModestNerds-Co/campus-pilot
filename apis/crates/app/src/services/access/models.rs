@@ -1,7 +1,7 @@
 //! Defines persisted access rows and safe Administration response projections.
 
 use chrono::{DateTime, Utc};
-use cp_common::EntitlementSnapshot;
+use cp_common::{EntitlementSnapshot, RecordScopeGrants};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
@@ -13,6 +13,7 @@ pub struct EffectiveAccess {
     pub permissions: Vec<String>,
     pub enabled_modules: Vec<String>,
     pub entitlements: EntitlementSnapshot,
+    pub record_scopes: RecordScopeGrants,
 }
 
 #[derive(Debug, Clone, FromRow)]

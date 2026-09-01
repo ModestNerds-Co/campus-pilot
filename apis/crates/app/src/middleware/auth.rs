@@ -218,11 +218,13 @@ where
                 enabled_modules: effective_access.enabled_modules,
                 entitlements: effective_access.entitlements,
             };
+            let record_scopes = effective_access.record_scopes;
             req.extensions_mut().insert(user);
             req.extensions_mut().insert(AuditActor::person(claims.sub));
             req.extensions_mut().insert(tenant_id);
             req.extensions_mut().insert(roles);
             req.extensions_mut().insert(access_context);
+            req.extensions_mut().insert(record_scopes);
 
             // Continue to next middleware/handler
             service.call(req).await.map(|res| res.map_into_left_body())

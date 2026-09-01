@@ -1376,6 +1376,87 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/gradebook/references",
+            "academics.gradebook.references.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/gradebook/mark-sheets",
+            "academics.gradebook.mark_sheets.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/gradebook/mark-sheets",
+            "academics.gradebook.mark_sheets.create",
+            "academics",
+            "academics:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/gradebook/mark-sheets/{id}",
+            "academics.gradebook.mark_sheets.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/gradebook/mark-sheets/{id}/marks",
+            "academics.gradebook.mark_sheets.marks.update",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/gradebook/mark-sheets/{id}/submit",
+            "academics.gradebook.mark_sheets.submit",
+            "academics",
+            "academics:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/gradebook/mark-sheets/{id}/publish",
+            "academics.gradebook.mark_sheets.publish",
+            "academics",
+            "academics:manage",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/gradebook/mark-sheets/{id}/reopen",
+            "academics.gradebook.mark_sheets.reopen",
+            "academics",
+            "academics:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/academics/gradebook/mark-sheets/{id}",
+            "academics.gradebook.mark_sheets.delete",
+            "academics",
+            "academics:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
         // Finance: currencies and chart-of-account structure.
         route(
             Method::GET,
@@ -3075,6 +3156,8 @@ fn route(
         operation.requiring_modules(["agent".to_string()])
     } else if key.starts_with("sis.") && !key.starts_with("sis.learner_numbering.") {
         operation.requiring_modules(["academics".to_string()])
+    } else if key.starts_with("academics.gradebook.") {
+        operation.requiring_modules(["sis".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("academics.teacher")
         || key.starts_with("academics.teaching_assignments")
         || key.starts_with("academics.assessment_components")
@@ -3180,6 +3263,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.assessment_cycles.read"
         | "academics.assessment_components.list"
         | "academics.assessment_components.read"
+        | "academics.gradebook.references.read"
+        | "academics.gradebook.mark_sheets.list"
+        | "academics.gradebook.mark_sheets.read"
         | "finance.currencies.list"
         | "finance.currencies.read"
         | "finance.accounts.list"
@@ -3314,6 +3400,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.assessment_components.create"
         | "academics.assessment_components.update"
         | "academics.assessment_components.delete"
+        | "academics.gradebook.mark_sheets.create"
+        | "academics.gradebook.mark_sheets.marks.update"
+        | "academics.gradebook.mark_sheets.submit"
+        | "academics.gradebook.mark_sheets.publish"
+        | "academics.gradebook.mark_sheets.reopen"
+        | "academics.gradebook.mark_sheets.delete"
         | "finance.currencies.create"
         | "finance.currencies.update"
         | "finance.currencies.delete"
@@ -3553,7 +3645,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 324);
+        assert_eq!(operation_catalog().len(), 333);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -3605,7 +3697,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [123, 171, 18, 12]);
+        assert_eq!(counts, [126, 177, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -3783,6 +3875,53 @@ mod tests {
             update.agent_exposure(),
             AgentExposure::ApprovalRequired
         ));
+    }
+
+    #[test]
+    fn gradebook_requires_school_records_and_staff_entitlements() {
+        let publish = operation("academics.gradebook.mark_sheets.publish");
+        assert_eq!(publish.permission(), "academics:manage");
+        assert_eq!(
+            publish.required_modules().collect::<Vec<_>>(),
+            vec!["hr_payroll", "sis"]
+        );
+        assert!(matches!(
+            publish.agent_exposure(),
+            AgentExposure::ApprovalRequired
+        ));
+
+        let academics_only = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [("academics".to_string(), ModuleEntitlementState::Enabled)],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let denied = evaluate_operation(
+            publish,
+            &academics_only,
+            &["academics:manage".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(!denied.allowed);
+        assert_eq!(denied.reason.as_str(), "dependency_missing");
+
+        let complete = EntitlementSnapshot::new(
+            LeaseLifecycle::Active,
+            [
+                ("academics".to_string(), ModuleEntitlementState::Enabled),
+                ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
+                ("sis".to_string(), ModuleEntitlementState::Enabled),
+            ],
+            Vec::<String>::new(),
+        )
+        .unwrap_or_else(|_| unreachable!());
+        let allowed = evaluate_operation(
+            publish,
+            &complete,
+            &["academics:manage".to_string()],
+            RuntimeAccessChecks::default(),
+        );
+        assert!(allowed.allowed);
     }
 
     #[test]

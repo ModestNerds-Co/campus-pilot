@@ -9,7 +9,7 @@ Campus Pilot is structured like the multi-module council ERPs this platform draw
 | Fleet Management | `cp-fleet` | ✅ Implemented (vehicles, drivers) | 010 |
 | Vehicle Daily Log | `cp-vehicle-log` | ✅ Implemented (trip sheets against Fleet) | 011 |
 | Student Information (SIS) | `cp-sis` | 🚧 Scaffolded | 020s |
-| Academics | `cp-academics` | 🚧 Scaffolded | 030s |
+| Academics and Gradebook | `cp-academics`, `cp-gradebook` | ✅ Implemented foundation (structure, assessments, mark capture, submit/publish/reopen) | 030s, 095 |
 | Attendance | `cp-attendance` | ✅ Implemented (class registers, learner marks, submit/reopen lifecycle) | 094 |
 | Finance & Accounting | `cp-finance` | 🚧 Scaffolded | 040s |
 | Fees & Payment Plans | `cp-fees` | 🚧 Scaffolded | 050s |

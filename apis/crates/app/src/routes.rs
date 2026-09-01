@@ -79,6 +79,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_sis::routes::routes),
             )
             .service(
+                scope("/academics/gradebook")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_gradebook::routes::routes),
+            )
+            .service(
                 scope("/academics")
                     .wrap(AuthMiddleware)
                     .configure(cp_academics::routes::routes),
@@ -295,6 +300,60 @@ mod route_wiring_tests {
                 "/api/1.0/sis/learner-numbering".to_string(),
                 "/api/1.0/sis/learner-numbering",
                 "sis.learner_numbering.update",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/academics/gradebook/references".to_string(),
+                "/api/1.0/academics/gradebook/references",
+                "academics.gradebook.references.read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/academics/gradebook/mark-sheets".to_string(),
+                "/api/1.0/academics/gradebook/mark-sheets",
+                "academics.gradebook.mark_sheets.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/academics/gradebook/mark-sheets".to_string(),
+                "/api/1.0/academics/gradebook/mark-sheets",
+                "academics.gradebook.mark_sheets.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}"),
+                "/api/1.0/academics/gradebook/mark-sheets/{id}",
+                "academics.gradebook.mark_sheets.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}/marks"),
+                "/api/1.0/academics/gradebook/mark-sheets/{id}/marks",
+                "academics.gradebook.mark_sheets.marks.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}/submit"),
+                "/api/1.0/academics/gradebook/mark-sheets/{id}/submit",
+                "academics.gradebook.mark_sheets.submit",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}/publish"),
+                "/api/1.0/academics/gradebook/mark-sheets/{id}/publish",
+                "academics.gradebook.mark_sheets.publish",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}/reopen"),
+                "/api/1.0/academics/gradebook/mark-sheets/{id}/reopen",
+                "academics.gradebook.mark_sheets.reopen",
+            ),
+            (
+                Method::DELETE,
+                format!("/api/1.0/academics/gradebook/mark-sheets/{record_id}?expected_version=1"),
+                "/api/1.0/academics/gradebook/mark-sheets/{id}",
+                "academics.gradebook.mark_sheets.delete",
             ),
             (
                 Method::GET,
