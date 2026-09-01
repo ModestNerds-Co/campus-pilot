@@ -3,4 +3,12 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { AnnouncementWorkspace } from "@/modules/messaging";
 
 export const Route = createFileRoute("/modules/messaging/announcements_/$announcementId")({ component: AnnouncementRoute });
-function AnnouncementRoute() { const { announcementId } = Route.useParams(); return <ProtectedRoute requiredModule="messaging" requiredPermission="messaging:create"><AnnouncementWorkspace announcementId={announcementId} /></ProtectedRoute>; }
+function AnnouncementRoute() {
+  const { announcementId } = Route.useParams();
+  const search = Route.useSearch();
+  return (
+    <ProtectedRoute requiredModule="messaging" requiredPermission="messaging:create">
+      <AnnouncementWorkspace announcementId={announcementId} listSearch={search} />
+    </ProtectedRoute>
+  );
+}

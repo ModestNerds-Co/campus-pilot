@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 
 export function ConfirmDrawer({
+  cancelLabel = "Keep record",
   confirmLabel,
   description,
   isPending = false,
@@ -12,6 +13,7 @@ export function ConfirmDrawer({
   open,
   title,
 }: {
+  cancelLabel?: string;
   confirmLabel: string;
   description: string;
   isPending?: boolean;
@@ -33,7 +35,7 @@ export function ConfirmDrawer({
       </DialogBody>
       <DialogFooter>
         <Button data-autofocus="true" disabled={isPending} onClick={onClose} type="button" variant="secondary">
-          Keep record
+          {cancelLabel}
         </Button>
         <Button disabled={isPending} onClick={onConfirm} type="button" variant="destructive">
           {isPending ? <Loader2 className="size-4 animate-spin" /> : null}

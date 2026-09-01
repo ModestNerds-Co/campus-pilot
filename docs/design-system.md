@@ -80,6 +80,7 @@ Forms, destructive confirmations, changelogs, document previews, and secondary w
 - Escape closes; focus is trapped while open and restored to the trigger on close.
 - Background scrolling is locked while open.
 - Header and action footer stay stable while long drawer content scrolls.
+- A dirty form drawer must preserve its input through validation and load failures. Closing it opens a sequential right-side discard confirmation; never stack two drawers or silently discard work.
 - Destructive confirmations focus the safe action first and clearly identify the affected record.
 - One-time codes and credentials state where they must be used, show copy success or failure, and make intentional loss on close clear.
 - Do not use `window.confirm`, centered dialog cards, or ad-hoc fixed overlays.
@@ -91,6 +92,7 @@ The current shared implementation is `client/src/components/ui/dialog.tsx`; its 
 - Prefer primitives in `client/src/components/ui/` for buttons, inputs, badges, tables, cards, and drawers.
 - A surface has one obvious primary action. Use verb-led labels such as “Add user” or “Log a trip”.
 - Search and filters must clearly distinguish an empty collection from no matching results.
+- Operational list search, filters, and pagination belong in the URL so refresh, Back, and Forward restore the same list state. Ignore stale responses when a newer request is in flight.
 - Lists need four deliberate states: loading skeleton, loaded content, helpful empty state, and recoverable error with retry.
 - Destructive actions require a drawer confirmation and a visible pending state.
 - Long provider or operational option sets should use searchable dropdowns rather than raw HTML selects; short fixed enums may use the shared `Select`.

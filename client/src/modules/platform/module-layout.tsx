@@ -1202,7 +1202,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return <Link className={navClass(active)} to="/modules/internal-audit/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/messaging/inbox")
     return (
-      <Link className={navClass(active)} to="/modules/messaging/inbox">
+      <Link className={navClass(active)} search={{ filter: "all", page: 1, q: "", status: "all" }} to="/modules/messaging/inbox">
         <Icon className="size-[17px]" />
         <span className="flex-1">{item.label}</span>
         {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1212,6 +1212,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return (
       <Link
         className={navClass(active)}
+        search={{ filter: "all", page: 1, q: "", status: "all" }}
         to="/modules/messaging/delivery-history"
       >
         <Icon className="size-[17px]" />
