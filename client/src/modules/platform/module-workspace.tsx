@@ -121,6 +121,24 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({ module }) =>
     );
   }
 
+  if (module.key === "attendance") {
+    return (
+      <div className="space-y-8">
+        <ModuleIntroduction module={module} />
+        <section aria-labelledby="attendance-workspaces">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">Working areas</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]" id="attendance-workspaces">Record daily attendance</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Link className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]" to="/modules/attendance/registers">
+              <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">Registers</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+              <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">Create class registers, record learner marks, and submit completed attendance.</span>
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (module.key === "fees") {
     return (
       <div className="space-y-8">

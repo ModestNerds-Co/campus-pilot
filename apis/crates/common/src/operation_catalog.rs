@@ -2961,6 +2961,79 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::External,
             true,
         ),
+        // Attendance: daily learner registers.
+        route(
+            Method::GET,
+            "/api/1.0/attendance/references",
+            "attendance.references.read",
+            "attendance",
+            "attendance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/attendance/registers",
+            "attendance.registers.list",
+            "attendance",
+            "attendance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/registers",
+            "attendance.registers.create",
+            "attendance",
+            "attendance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/attendance/registers/{id}",
+            "attendance.registers.read",
+            "attendance",
+            "attendance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/attendance/registers/{id}/marks",
+            "attendance.registers.marks.update",
+            "attendance",
+            "attendance:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/registers/{id}/submit",
+            "attendance.registers.submit",
+            "attendance",
+            "attendance:submit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/registers/{id}/reopen",
+            "attendance.registers.reopen",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/attendance/registers/{id}",
+            "attendance.registers.delete",
+            "attendance",
+            "attendance:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
     ]
 }
 
@@ -3009,6 +3082,8 @@ fn route(
         operation.requiring_modules(["hr_payroll".to_string()])
     } else if key.starts_with("timetabling.") {
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
+    } else if key.starts_with("attendance.") {
+        operation.requiring_modules(["academics".to_string(), "sis".to_string()])
     } else if key.starts_with("fees.") {
         operation.requiring_modules([
             "sis".to_string(),
@@ -3174,7 +3249,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "timetabling.configuration.read"
         | "timetabling.runs.list"
         | "timetabling.runs.read"
-        | "timetabling.runs.read_latest" => AgentExposure::Exposed,
+        | "timetabling.runs.read_latest"
+        | "attendance.references.read"
+        | "attendance.registers.list"
+        | "attendance.registers.read" => AgentExposure::Exposed,
         "administration.school_settings.update"
         | "administration.school_settings.update_logo"
         | "administration.ai_providers.connections.update"
@@ -3340,7 +3418,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "fleet.vehicle_logs.delete"
         | "timetabling.configuration.update"
         | "timetabling.runs.generate"
-        | "timetabling.runs.publish" => AgentExposure::ApprovalRequired,
+        | "timetabling.runs.publish"
+        | "attendance.registers.create"
+        | "attendance.registers.marks.update"
+        | "attendance.registers.submit"
+        | "attendance.registers.reopen"
+        | "attendance.registers.delete" => AgentExposure::ApprovalRequired,
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -3434,6 +3517,7 @@ mod tests {
                 ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
+                ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
@@ -3469,7 +3553,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 316);
+        assert_eq!(operation_catalog().len(), 324);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -3521,7 +3605,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [120, 166, 18, 12]);
+        assert_eq!(counts, [123, 171, 18, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

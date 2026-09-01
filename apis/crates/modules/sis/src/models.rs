@@ -138,6 +138,18 @@ pub struct EnrolmentWithDetails {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Minimum SIS-owned identity and placement projection used by Attendance.
+///
+/// Attendance stores only stable identifiers. Names and learner numbers are
+/// resolved from SIS whenever a register is read.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AttendanceRosterEntry {
+    pub enrolment_id: Uuid,
+    pub learner_id: Uuid,
+    pub learner_number: String,
+    pub display_name: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AccountCandidate {
     pub id: Uuid,

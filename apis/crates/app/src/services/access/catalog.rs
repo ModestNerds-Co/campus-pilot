@@ -76,6 +76,17 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             &["view", "create", "edit", "manage"],
         ),
         module(
+            "attendance",
+            "Attendance",
+            "People and learning",
+            "Prepare, submit, and review daily learner attendance registers.",
+            "/modules/attendance",
+            "attendance",
+            false,
+            "available",
+            &["view", "create", "edit", "delete", "submit", "manage"],
+        ),
+        module(
             "messaging",
             "Communication",
             "Campus operations",
@@ -401,6 +412,7 @@ pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
         "fleet" => &["hr_payroll"],
         "procurement" => &["finance", "hr_payroll"],
         "timetabling" => &["academics", "hr_payroll"],
+        "attendance" => &["academics", "sis"],
         _ => &[],
     }
 }
@@ -673,6 +685,7 @@ mod tests {
         for module_key in [
             "administration",
             "academics",
+            "attendance",
             "fleet",
             "hr_payroll",
             "sis",
@@ -694,6 +707,12 @@ mod tests {
             } else if module_key == "academics" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 19);
+            } else if module_key == "attendance" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 8);
+                assert_eq!(module.exposed_operations(), 3);
+                assert_eq!(module.approval_required_operations(), 5);
+                assert_eq!(module.executable_capabilities(), 3);
             } else if module_key == "fleet" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 7);

@@ -114,6 +114,7 @@ const ADMINISTRATION_AGENT_AUDIT: OriginAccess = OriginAccess {
 
 const SIS: OriginAccess = OriginAccess::module("sis", "sis:view");
 const ACADEMICS: OriginAccess = OriginAccess::module("academics", "academics:view");
+const ATTENDANCE: OriginAccess = OriginAccess::module("attendance", "attendance:view");
 const TIMETABLING: OriginAccess = OriginAccess::module("timetabling", "timetabling:view");
 const MESSAGING: OriginAccess = OriginAccess::module("messaging", "messaging:view");
 const FINANCE: OriginAccess = OriginAccess::module("finance", "finance:view");
@@ -316,6 +317,14 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: ACADEMICS,
     },
     ExactRoute {
+        path: "/modules/attendance",
+        access: ATTENDANCE,
+    },
+    ExactRoute {
+        path: "/modules/attendance/registers",
+        access: ATTENDANCE,
+    },
+    ExactRoute {
         path: "/modules/timetabling",
         access: TIMETABLING,
     },
@@ -490,6 +499,10 @@ const EXACT_ROUTES: &[ExactRoute] = &[
 ];
 
 const UUID_ROUTES: &[UuidRoute] = &[
+    UuidRoute {
+        prefix: "/modules/attendance/registers/",
+        access: ATTENDANCE,
+    },
     UuidRoute {
         prefix: "/modules/sis/applications/",
         access: SIS,

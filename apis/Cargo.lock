@@ -1415,6 +1415,7 @@ dependencies = [
  "cp-agent-runtime",
  "cp-ai-providers",
  "cp-assets-inventory",
+ "cp-attendance",
  "cp-audit",
  "cp-common",
  "cp-fees",
@@ -1713,6 +1714,25 @@ dependencies = [
  "cp-common",
  "cp-hr-payroll",
  "cp-procurement",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "uuid",
+ "validator",
+]
+
+[[package]]
+name = "cp-attendance"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-academics",
+ "cp-audit",
+ "cp-common",
+ "cp-sis",
  "serde",
  "serde_json",
  "sha2",

@@ -7,6 +7,7 @@ mod administration_access;
 mod ai_providers;
 mod ai_routing;
 mod assets_inventory;
+mod attendance;
 mod authority;
 mod fees;
 mod finance;
@@ -65,6 +66,10 @@ use assets_inventory::{
     StockMovementReadCapability, StockMovementsListCapability, StockRequestCandidateKind,
     StockRequestCandidatesCapability, StockRequestReadCapability, StockRequestReadKind,
     StockRequestsListCapability,
+};
+use attendance::{
+    AttendanceReferencesCapability, AttendanceRegisterReadCapability,
+    AttendanceRegistersListCapability,
 };
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
@@ -265,6 +270,15 @@ pub fn build_capability_registry(
         .unwrap_or_else(|error| {
             panic!("invalid Academics assessment-component read capability: {error}")
         });
+    registry
+        .register(AttendanceReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Attendance references capability: {error}"));
+    registry
+        .register(AttendanceRegistersListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Attendance registers-list capability: {error}"));
+    registry
+        .register(AttendanceRegisterReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Attendance register-read capability: {error}"));
     for kind in [
         FinanceListKind::Currencies,
         FinanceListKind::Accounts,
@@ -813,6 +827,9 @@ mod tests {
                 "assets_inventory.stock_requests.read",
                 "assets_inventory.stores.list",
                 "assets_inventory.stores.read",
+                "attendance.references.read",
+                "attendance.registers.list",
+                "attendance.registers.read",
                 "fees.billing_accounts.list",
                 "fees.billing_accounts.read",
                 "fees.fee_structures.list",
@@ -909,7 +926,7 @@ mod tests {
 
         assert_eq!(
             result.content()["modules"].as_array().map(Vec::len),
-            Some(17)
+            Some(18)
         );
         assert!(result.content()["administration_permissions"].is_array());
     }

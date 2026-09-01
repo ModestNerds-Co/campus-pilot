@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarClock,
+  CalendarCheck2,
   ClipboardCheck,
   GraduationCap,
   HeartPulse,
@@ -37,6 +38,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   academics: {
     icon: BookOpen,
     highlights: ["Subjects and classes", "Assessment structures", "Progression and reporting"],
+  },
+  attendance: {
+    icon: CalendarCheck2,
+    highlights: ["Daily registers", "Learner marks", "Submission history"],
   },
   timetabling: {
     icon: CalendarClock,

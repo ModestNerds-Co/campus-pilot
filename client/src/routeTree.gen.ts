@@ -70,6 +70,7 @@ import { Route as ModulesFeesInvoicesRouteImport } from './routes/modules/fees/i
 import { Route as ModulesFeesImportsRouteImport } from './routes/modules/fees/imports'
 import { Route as ModulesFeesFeeStructuresRouteImport } from './routes/modules/fees/fee-structures'
 import { Route as ModulesFeesBillingAccountsRouteImport } from './routes/modules/fees/billing-accounts'
+import { Route as ModulesAttendanceRegistersRouteImport } from './routes/modules/attendance/registers'
 import { Route as ModulesAssetsInventoryStoresRouteImport } from './routes/modules/assets-inventory/stores'
 import { Route as ModulesAssetsInventoryStockRouteImport } from './routes/modules/assets-inventory/stock'
 import { Route as ModulesAssetsInventoryRequestsRouteImport } from './routes/modules/assets-inventory/requests'
@@ -96,6 +97,7 @@ import { Route as ModulesSisLearnersLearnerIdRouteImport } from './routes/module
 import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './routes/modules/sis/applications_.$applicationId'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
+import { Route as ModulesAttendanceRegistersRegisterIdRouteImport } from './routes/modules/attendance/registers_.$registerId'
 import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './routes/modules/assets-inventory/requests_.$requestId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
@@ -422,6 +424,12 @@ const ModulesFeesBillingAccountsRoute =
     path: '/fees/billing-accounts',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAttendanceRegistersRoute =
+  ModulesAttendanceRegistersRouteImport.update({
+    id: '/attendance/registers',
+    path: '/attendance/registers',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryStoresRoute =
   ModulesAssetsInventoryStoresRouteImport.update({
     id: '/assets-inventory/stores',
@@ -568,6 +576,12 @@ const ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute =
     path: '/procurement/purchase-orders/$purchaseOrderId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAttendanceRegistersRegisterIdRoute =
+  ModulesAttendanceRegistersRegisterIdRouteImport.update({
+    id: '/attendance/registers_/$registerId',
+    path: '/attendance/registers/$registerId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryRequestsRequestIdRoute =
   ModulesAssetsInventoryRequestsRequestIdRouteImport.update({
     id: '/assets-inventory/requests_/$requestId',
@@ -645,6 +659,7 @@ export interface FileRoutesByFullPath {
   '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
+  '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/fees/imports': typeof ModulesFeesImportsRoute
@@ -681,6 +696,7 @@ export interface FileRoutesByFullPath {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -737,6 +753,7 @@ export interface FileRoutesByTo {
   '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
+  '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/fees/imports': typeof ModulesFeesImportsRoute
@@ -773,6 +790,7 @@ export interface FileRoutesByTo {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -831,6 +849,7 @@ export interface FileRoutesById {
   '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
+  '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/fees/imports': typeof ModulesFeesImportsRoute
@@ -867,6 +886,7 @@ export interface FileRoutesById {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests_/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/registers_/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications_/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
@@ -926,6 +946,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
+    | '/modules/attendance/registers'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
     | '/modules/fees/imports'
@@ -962,6 +983,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
+    | '/modules/attendance/registers/$registerId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
@@ -1018,6 +1040,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
+    | '/modules/attendance/registers'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
     | '/modules/fees/imports'
@@ -1054,6 +1077,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
+    | '/modules/attendance/registers/$registerId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
@@ -1111,6 +1135,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
+    | '/modules/attendance/registers'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
     | '/modules/fees/imports'
@@ -1147,6 +1172,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/assets-inventory/requests_/$requestId'
+    | '/modules/attendance/registers_/$registerId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
     | '/modules/sis/applications_/$applicationId'
@@ -1595,6 +1621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFeesBillingAccountsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/attendance/registers': {
+      id: '/modules/attendance/registers'
+      path: '/attendance/registers'
+      fullPath: '/modules/attendance/registers'
+      preLoaderRoute: typeof ModulesAttendanceRegistersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/stores': {
       id: '/modules/assets-inventory/stores'
       path: '/assets-inventory/stores'
@@ -1777,6 +1810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/attendance/registers_/$registerId': {
+      id: '/modules/attendance/registers_/$registerId'
+      path: '/attendance/registers/$registerId'
+      fullPath: '/modules/attendance/registers/$registerId'
+      preLoaderRoute: typeof ModulesAttendanceRegistersRegisterIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/requests_/$requestId': {
       id: '/modules/assets-inventory/requests_/$requestId'
       path: '/assets-inventory/requests/$requestId'
@@ -1887,6 +1927,7 @@ interface ModulesRouteChildren {
   ModulesAssetsInventoryRequestsRoute: typeof ModulesAssetsInventoryRequestsRoute
   ModulesAssetsInventoryStockRoute: typeof ModulesAssetsInventoryStockRoute
   ModulesAssetsInventoryStoresRoute: typeof ModulesAssetsInventoryStoresRoute
+  ModulesAttendanceRegistersRoute: typeof ModulesAttendanceRegistersRoute
   ModulesFeesBillingAccountsRoute: typeof ModulesFeesBillingAccountsRoute
   ModulesFeesFeeStructuresRoute: typeof ModulesFeesFeeStructuresRoute
   ModulesFeesImportsRoute: typeof ModulesFeesImportsRoute
@@ -1921,6 +1962,7 @@ interface ModulesRouteChildren {
   ModulesAgentSessionsSessionIdRoute: typeof ModulesAgentSessionsSessionIdRoute
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesAssetsInventoryRequestsRequestIdRoute: typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
   ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
@@ -1946,6 +1988,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAssetsInventoryRequestsRoute: ModulesAssetsInventoryRequestsRoute,
   ModulesAssetsInventoryStockRoute: ModulesAssetsInventoryStockRoute,
   ModulesAssetsInventoryStoresRoute: ModulesAssetsInventoryStoresRoute,
+  ModulesAttendanceRegistersRoute: ModulesAttendanceRegistersRoute,
   ModulesFeesBillingAccountsRoute: ModulesFeesBillingAccountsRoute,
   ModulesFeesFeeStructuresRoute: ModulesFeesFeeStructuresRoute,
   ModulesFeesImportsRoute: ModulesFeesImportsRoute,
@@ -1982,6 +2025,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
     ModulesAssetsInventoryMovementsMovementIdRoute,
   ModulesAssetsInventoryRequestsRequestIdRoute:
     ModulesAssetsInventoryRequestsRequestIdRoute,
+  ModulesAttendanceRegistersRegisterIdRoute:
+    ModulesAttendanceRegistersRegisterIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:

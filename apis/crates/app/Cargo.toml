@@ -23,6 +23,7 @@ cp-messaging = { path = "../modules/messaging" }
 cp-hostel = { path = "../modules/hostel" }
 cp-health = { path = "../modules/health" }
 cp-timetabling = { path = "../modules/timetabling" }
+cp-attendance = { path = "../modules/attendance" }
 
 sqlx = { workspace = true }
 serde = { workspace = true }

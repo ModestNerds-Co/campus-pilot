@@ -4526,6 +4526,148 @@
       ]
     },
     {
+      "name": "Attendance",
+      "description": "Dated class registers built from Academics classes and date-effective SIS enrolments.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Get Attendance References",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/references",
+            "description": "Returns the active term and active classes available for new registers."
+          }
+        },
+        {
+          "name": "List Attendance Registers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/registers?page=1&per_page=25&status=draft&period=full_day"
+          }
+        },
+        {
+          "name": "Create Attendance Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_term_id\": \"{{attendance_term_id}}\",\n  \"class_group_id\": \"{{attendance_class_group_id}}\",\n  \"attendance_date\": \"2026-09-01\",\n  \"period\": \"full_day\",\n  \"idempotency_key\": \"00000000-0000-4000-8000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/registers",
+            "description": "Creates one draft register and snapshots the current date-effective class roster by stable enrolment and learner identifiers."
+          }
+        },
+        {
+          "name": "Get Attendance Register",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/registers/{{attendance_register_id}}"
+          }
+        },
+        {
+          "name": "Save Attendance Marks",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"marks\": [\n    {\n      \"learner_id\": \"{{attendance_learner_id}}\",\n      \"mark\": \"present\",\n      \"minutes_late\": null,\n      \"note\": null\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/registers/{{attendance_register_id}}/marks",
+            "description": "Replace the complete roster marks using the current register version. Include exactly one entry for every learner returned by the register read."
+          }
+        },
+        {
+          "name": "Submit Attendance Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/registers/{{attendance_register_id}}/submit",
+            "description": "Submits a fully marked draft and locks its marks."
+          }
+        },
+        {
+          "name": "Reopen Attendance Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3,\n  \"reason\": \"Correct a recorded learner mark\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/registers/{{attendance_register_id}}/reopen",
+            "description": "Returns a submitted register to draft and retains the required reason."
+          }
+        },
+        {
+          "name": "Delete Draft Attendance Register",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/attendance/registers/{{attendance_register_id}}?expected_version=1",
+            "description": "Soft-deletes a draft register. Submitted registers must not be deleted."
+          }
+        }
+      ]
+    },
+    {
       "name": "SIS",
       "description": "Canonical learners and guardians, explicit guardian relationships, applications, and Academics-backed enrolments.",
       "auth": {
@@ -5483,6 +5625,26 @@
     {
       "key": "assets_inventory_idempotency_key",
       "value": "00000000-0000-4000-8000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "attendance_term_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "attendance_class_group_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "attendance_register_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "attendance_learner_id",
+      "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }
   ]

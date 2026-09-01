@@ -11,6 +11,7 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  CalendarCheck2,
   BarChart3,
   ClipboardList,
   Coins,
@@ -63,6 +64,7 @@ const moduleLabels: Record<string, string> = {
   agent: "Agent",
   sis: "People and admissions",
   academics: "Academics",
+  attendance: "Attendance",
   timetabling: "Timetabling",
   messaging: "Communication",
   finance: "Finance",
@@ -102,6 +104,10 @@ const academicsNavigation: LocalNavItem[] = [
   { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap },
   { label: "Teaching assignments", path: "/modules/academics/teaching-assignments", icon: ClipboardList },
   { label: "Assessments", path: "/modules/academics/assessments", icon: FileCheck2 },
+];
+
+const attendanceNavigation: LocalNavItem[] = [
+  { label: "Registers", path: "/modules/attendance/registers", icon: CalendarCheck2 },
 ];
 
 const sisNavigation: LocalNavItem[] = [
@@ -171,7 +177,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   const moduleLabel = moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
-  const localNavigation = (moduleKey === "agent" ? agentNavigation : moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
+  const localNavigation = (moduleKey === "agent" ? agentNavigation : moduleKey === "fleet" ? fleetNavigation : moduleKey === "hr_payroll" ? hrNavigation : moduleKey === "academics" ? academicsNavigation : moduleKey === "attendance" ? attendanceNavigation : moduleKey === "sis" ? sisNavigation : moduleKey === "finance" ? financeNavigation : moduleKey === "fees" ? feesNavigation : moduleKey === "procurement" ? procurementNavigation : moduleKey === "assets_inventory" ? assetsInventoryNavigation : [])
     .filter((item) => (!item.permission || user?.permissions.includes("*") || user?.permissions.includes(item.permission)) && (!item.requiredModule || user?.modules.includes(item.requiredModule)));
 
   useEffect(() => {

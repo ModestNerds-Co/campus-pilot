@@ -77,6 +77,9 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "assets_inventory.stock_movements.list",
     "assets_inventory.stock_movements.read",
     "assets_inventory.goods_receipt_allocations.list",
+    "attendance.references.read",
+    "attendance.registers.list",
+    "attendance.registers.read",
     "hr_payroll.departments.list",
     "hr_payroll.departments.read",
     "hr_payroll.positions.list",
@@ -327,6 +330,8 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "assets_inventory.items.list"
         | "assets_inventory.stores.list"
         | "assets_inventory.department_candidates.list"
+        | "attendance.references.read"
+        | "attendance.registers.list"
         | "hr_payroll.departments.list"
         | "hr_payroll.positions.list"
         | "fleet.vehicles.list" => Some(OperationScopePolicy::Dataset),
@@ -377,6 +382,9 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "assets_inventory.stock_requests.fulfilment_preview.read" => Some(
             OperationScopePolicy::OneResource("assets_inventory_stock_request"),
         ),
+        "attendance.registers.read" => {
+            Some(OperationScopePolicy::OneResource("attendance_register"))
+        }
         "hr_payroll.departments.read" => Some(OperationScopePolicy::OneResource("department")),
         "hr_payroll.positions.read" => Some(OperationScopePolicy::OneResource("position")),
         "fleet.vehicles.read" => Some(OperationScopePolicy::OneResource("vehicle")),
@@ -534,6 +542,9 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "vehicle" => Some(
             "SELECT EXISTS(SELECT 1 FROM vehicles WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "attendance_register" => Some(
+            "SELECT EXISTS(SELECT 1 FROM attendance_registers WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         _ => None,
     }
 }
@@ -613,7 +624,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 61);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 64);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 59);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -633,7 +644,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 120);
+        assert_eq!(exposed.len(), 123);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

@@ -4,7 +4,7 @@
 //! through typed Academics operations before any SIS write is performed.
 
 use anyhow::{Context, Result, bail};
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use cp_academics::ops::{AcademicGradeLevelOps, AcademicYearOps, ClassGroupOps};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -17,9 +17,9 @@ use crate::{
         UpdateGuardianRequest, UpdateLearnerRequest,
     },
     models::{
-        AccountCandidate, Application, ApplicationWithDetails, Enrolment, EnrolmentWithDetails,
-        GuardianRelationshipWithDetails, GuardianWithAccount, LearnerBillingReference,
-        LearnerWithAccount,
+        AccountCandidate, Application, ApplicationWithDetails, AttendanceRosterEntry, Enrolment,
+        EnrolmentWithDetails, GuardianRelationshipWithDetails, GuardianWithAccount,
+        LearnerBillingReference, LearnerWithAccount,
     },
     numbering::allocate_learner_number,
 };
@@ -989,6 +989,71 @@ impl ApplicationOps {
 pub struct EnrolmentOps;
 
 impl EnrolmentOps {
+    /// Returns learners eligible for a class register on one date.
+    pub async fn attendance_roster(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        academic_year_id: Uuid,
+        class_group_id: Uuid,
+        attendance_date: NaiveDate,
+    ) -> Result<Vec<AttendanceRosterEntry>> {
+        sqlx::query_as::<_, AttendanceRosterEntry>(
+            r#"
+            SELECT enrolment.id AS enrolment_id, learner.id AS learner_id,
+                   learner.learner_number, learner.display_name
+              FROM enrolments AS enrolment
+              JOIN learners AS learner
+                ON learner.id = enrolment.learner_id
+               AND learner.tenant_id = enrolment.tenant_id
+             WHERE enrolment.tenant_id = $1
+               AND enrolment.academic_year_id = $2
+               AND enrolment.class_group_id = $3
+               AND enrolment.status = 'active'
+               AND enrolment.starts_on <= $4
+               AND (enrolment.ends_on IS NULL OR enrolment.ends_on >= $4)
+               AND enrolment.deleted_at IS NULL
+               AND learner.deleted_at IS NULL
+             ORDER BY learner.display_name, learner.learner_number
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(academic_year_id)
+        .bind(class_group_id)
+        .bind(attendance_date)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load the SIS attendance roster")
+    }
+
+    /// Resolves historical register members without applying current status.
+    pub async fn attendance_references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        enrolment_ids: &[Uuid],
+    ) -> Result<Vec<AttendanceRosterEntry>> {
+        if enrolment_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, AttendanceRosterEntry>(
+            r#"
+            SELECT enrolment.id AS enrolment_id, learner.id AS learner_id,
+                   learner.learner_number, learner.display_name
+              FROM enrolments AS enrolment
+              JOIN learners AS learner
+                ON learner.id = enrolment.learner_id
+               AND learner.tenant_id = enrolment.tenant_id
+             WHERE enrolment.tenant_id = $1
+               AND enrolment.id = ANY($2)
+             ORDER BY learner.display_name, learner.learner_number
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(enrolment_ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve SIS attendance identities")
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub async fn list(
         pool: &PgPool,
