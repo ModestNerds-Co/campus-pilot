@@ -174,9 +174,19 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   }
 
   if (module.key === "academics") {
+    const canAdministerAcademics = permissions.includes("*") || [
+      "academics:create",
+      "academics:edit",
+      "academics:delete",
+      "academics:manage",
+    ].some((permission) => permissions.includes(permission));
+    const canTeach = permissions.includes("*") || permissions.includes("academics:teach") || permissions.includes("academics:manage");
     return (
       <div className="space-y-8">
-        <ModuleIntroduction module={module} />
+        <ModuleIntroduction
+          description={canAdministerAcademics ? module.description : canTeach ? "Open assigned mark sheets and report drafts." : "View published academic records."}
+          module={module}
+        />
         <section aria-labelledby="academics-workspaces">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-strong)]">
             Working areas
@@ -185,10 +195,10 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
             className="mt-1 text-xl font-semibold tracking-[-0.025em] text-[var(--text-strong)]"
             id="academics-workspaces"
           >
-            Manage the teaching structure
+            {canAdministerAcademics ? "Manage the teaching structure" : canTeach ? "Teaching work" : "Academic records"}
           </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <AcademicLink
+            {canAdministerAcademics ? <><AcademicLink
               description="Define the campus academic cycles."
               label="Academic years"
               to="/modules/academics/academic-years"
@@ -227,14 +237,14 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
               description="Define term assessment cycles and weighted components."
               label="Assessments"
               to="/modules/academics/assessments"
-            />
-            <AcademicLink
-              description="Capture, submit, and publish learner marks."
+            /></> : null}
+            {canTeach ? <AcademicLink
+              description={canAdministerAcademics ? "Capture, review, and publish learner marks." : "Capture and submit marks for assigned classes."}
               label="Gradebook"
               to="/modules/academics/gradebook"
-            />
+            /> : null}
             <AcademicLink
-              description="Prepare report cards and published transcripts."
+              description={canAdministerAcademics ? "Prepare, review, and publish report cards." : canTeach ? "Review assigned report drafts and add comments." : "View published report cards and transcripts."}
               label="Progress & reporting"
               to="/modules/academics/reporting"
             />
@@ -571,7 +581,8 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   );
 };
 
-const ModuleIntroduction: React.FC<{ module: ModuleDefinition }> = ({
+const ModuleIntroduction: React.FC<{ description?: string; module: ModuleDefinition }> = ({
+  description,
   module,
 }) => {
   const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
@@ -595,7 +606,7 @@ const ModuleIntroduction: React.FC<{ module: ModuleDefinition }> = ({
             {module.label}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--sidebar-muted)]">
-            {module.description}
+            {description ?? module.description}
           </p>
         </div>
       </div>

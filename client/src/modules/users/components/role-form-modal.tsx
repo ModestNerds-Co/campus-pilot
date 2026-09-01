@@ -35,6 +35,7 @@ interface PermissionSection {
 
 export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, onSuccess, role }) => {
   const operatorPermissions = useAuthStore((state) => state.user?.permissions);
+  const accessIsFixed = role?.is_system ?? false;
   const [formData, setFormData] = useState({ name: "", description: "", permissions: [] as string[] });
   const [accessMode, setAccessMode] = useState<AccessMode>("custom");
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
@@ -161,7 +162,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
         ? await rolesService.updateRole(role.id, {
             name: formData.name.trim(),
             description: formData.description.trim() || null,
-            permissions,
+            permissions: accessIsFixed ? undefined : permissions,
           } satisfies UpdateRoleRequest)
         : await rolesService.createRole({
             name: formData.name.trim(),
@@ -218,29 +219,34 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
           <section className="space-y-4" aria-labelledby="access-profile-heading">
             <div>
               <h3 className="text-sm font-semibold text-[var(--text-strong)]" id="access-profile-heading">Access profile</h3>
-              <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                Choose full access or select permissions by module.
-              </p>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{accessIsFixed ? "Built-in access is fixed. Create a custom role for different responsibilities." : "Choose full access or select permissions by module."}</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {operatorPermissions?.includes("*") ? <AccessModeCard
-                active={accessMode === "full"}
-                description="Every permission in current and future modules."
-                icon={ShieldCheck}
-                label="Full access"
-                onClick={() => selectAccessMode("full")}
-              /> : null}
-              <AccessModeCard
-                active={accessMode === "custom"}
-                description="Select permissions by module."
-                icon={SlidersHorizontal}
-                label="Custom access"
-                onClick={() => selectAccessMode("custom")}
-              />
-            </div>
+            {accessIsFixed ? (
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-strong)]">{role?.permissions.includes("*") ? "Full campus access" : `${role?.permissions.length ?? 0} fixed permissions`}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">The role name and description can still be changed.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {operatorPermissions?.includes("*") ? <AccessModeCard
+                  active={accessMode === "full"}
+                  description="Every permission in current and future modules."
+                  icon={ShieldCheck}
+                  label="Full access"
+                  onClick={() => selectAccessMode("full")}
+                /> : null}
+                <AccessModeCard
+                  active={accessMode === "custom"}
+                  description="Select permissions by module."
+                  icon={SlidersHorizontal}
+                  label="Custom access"
+                  onClick={() => selectAccessMode("custom")}
+                />
+              </div>
+            )}
           </section>
 
-          {accessMode === "custom" ? (
+          {!accessIsFixed && accessMode === "custom" ? (
             <section className="space-y-3" aria-labelledby="module-permissions-heading">
               <div className="flex items-end justify-between gap-4">
                 <div>
@@ -329,7 +335,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                 </div>
               )}
             </section>
-          ) : (
+          ) : !accessIsFixed ? (
             <div className="flex gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-100)] bg-[var(--brand-soft)] p-4">
               <Check className="mt-0.5 size-5 shrink-0 text-[var(--brand-strong)]" />
               <div>
@@ -339,11 +345,11 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogBody>
         <DialogFooter>
           <Button disabled={isSubmitting} onClick={onClose} type="button" variant="ghost">Cancel</Button>
-          <Button disabled={isSubmitting || (accessMode === "custom" && (isLoadingCatalog || !!catalogError))} type="submit">
+          <Button disabled={isSubmitting || (!accessIsFixed && accessMode === "custom" && (isLoadingCatalog || !!catalogError))} type="submit">
             {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : null}
             {isSubmitting ? (role ? "Saving…" : "Creating…") : (role ? "Save changes" : "Create role")}
           </Button>

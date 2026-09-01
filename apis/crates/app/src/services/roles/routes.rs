@@ -280,6 +280,21 @@ async fn update_role(
         )));
     }
 
+    if protected_permissions_changed(
+        current_role.is_system,
+        &current_role.permissions,
+        request.permissions.as_deref(),
+    ) {
+        return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
+            StatusCode::CONFLICT,
+            None::<()>,
+            Some(vec![
+                "Built-in role access is fixed; create a custom role for different responsibilities"
+                    .to_string(),
+            ]),
+        )));
+    }
+
     if let Some(permissions) = request.permissions.as_ref() {
         let known_permissions = all_permission_keys();
         if permissions
@@ -462,6 +477,20 @@ fn normalize_optional_description(description: Option<Option<String>>) -> Option
     description.map(normalize_description)
 }
 
+fn protected_permissions_changed(
+    is_system: bool,
+    current: &[String],
+    requested: Option<&[String]>,
+) -> bool {
+    if !is_system {
+        return false;
+    }
+    let Some(requested) = requested else {
+        return false;
+    };
+    current.iter().collect::<BTreeSet<_>>() != requested.iter().collect::<BTreeSet<_>>()
+}
+
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/roles")
@@ -475,4 +504,40 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(update_role)
             .service(delete_role),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::protected_permissions_changed;
+
+    fn values(items: &[&str]) -> Vec<String> {
+        items.iter().map(|item| (*item).to_string()).collect()
+    }
+
+    #[test]
+    fn built_in_role_permissions_are_fixed() {
+        let current = values(&["academics:view", "academics:teach"]);
+        let changed = values(&["academics:view", "academics:create"]);
+
+        assert!(protected_permissions_changed(
+            true,
+            &current,
+            Some(&changed)
+        ));
+        assert!(!protected_permissions_changed(
+            true,
+            &current,
+            Some(&values(&["academics:teach", "academics:view"]))
+        ));
+        assert!(!protected_permissions_changed(true, &current, None));
+    }
+
+    #[test]
+    fn custom_role_permissions_remain_dynamic() {
+        assert!(!protected_permissions_changed(
+            false,
+            &values(&["academics:view"]),
+            Some(&values(&["academics:view", "academics:create"]))
+        ));
+    }
 }

@@ -14,12 +14,13 @@ This is the canonical product and engineering reference for sign-in, roles, perm
 
 - A user may have multiple roles.
 - A role has an immutable, tenant-scoped `key` used by assignments and an editable `name` shown to people.
-- Seeded roles and the core Home and Administration module records are provisioned atomically when a campus tenant is created. Their names, descriptions, and permissions may be edited, but seeded roles cannot be deleted.
+- Seeded roles and the core Home and Administration module records are provisioned atomically when a campus tenant is created. A seeded role keeps its code-owned permission baseline and cannot be deleted; its presentation name and description may be changed. Schools create custom roles when responsibilities differ from a seeded baseline.
 - Custom roles may be created and deleted dynamically.
 - `roles:create`, `roles:edit`, and `roles:assign` are explicit access-administration authorities. A School Administrator may create ordinary catalog-based roles and assign any non-wildcard seeded or custom role even when that role grants operational permissions the administrator does not personally use.
 - Only a Campus Owner may create, edit, or assign a role containing `*`. The Campus Owner account cannot be edited, deactivated, or deleted from the user directory, and no operator may manage their own account there.
 - An assigned custom role must be removed from every user before deletion. Role names are unique per campus without regard to case, while immutable role keys preserve assignments across renames.
 - User and role drawers mirror these rules by hiding unavailable actions, but every mutation is authorized again by the API. Deactivation and deletion revoke refresh sessions; access tokens are rejected immediately because every request reloads the active user record.
+- Module navigation is persona-aware. Academic setup areas such as years, terms, grade levels, subjects, teacher profiles, classes, teaching assignments, and assessment structures are shown only to academic administrators. Teachers enter assigned marks and comments through Gradebook and Progress and reporting; the seeded Teacher role never receives academic setup permissions.
 - Authorization uses stable permission keys controlled by the application, never labels, URL paths, or substring matching.
 - A permission is `<namespace>:<action>`, for example `users:view`, `fleet:create`, or `timetabling:manage`.
 - `*` grants all permissions inside modules enabled for the campus. It does not bypass licensing.

@@ -76,8 +76,16 @@ type LocalNavItem = {
   path: string;
   icon: React.ComponentType<{ className?: string }>;
   permission?: string;
+  anyPermissions?: string[];
   requiredModule?: string;
 };
+
+const academicAdministrationPermissions = [
+  "academics:create",
+  "academics:edit",
+  "academics:delete",
+  "academics:manage",
+];
 
 const moduleLabels: Record<string, string> = {
   agent: "Agent",
@@ -147,38 +155,45 @@ const academicsNavigation: LocalNavItem[] = [
     label: "Academic years",
     path: "/modules/academics/academic-years",
     icon: CalendarRange,
+    anyPermissions: academicAdministrationPermissions,
   },
   {
     label: "Academic terms",
     path: "/modules/academics/terms",
     icon: CalendarDays,
+    anyPermissions: academicAdministrationPermissions,
   },
   {
     label: "Grade levels",
     path: "/modules/academics/grade-levels",
     icon: ListOrdered,
+    anyPermissions: academicAdministrationPermissions,
   },
-  { label: "Subjects", path: "/modules/academics/subjects", icon: BookOpen },
+  { label: "Subjects", path: "/modules/academics/subjects", icon: BookOpen, anyPermissions: academicAdministrationPermissions },
   {
     label: "Teachers",
     path: "/modules/academics/teachers",
     icon: UserRoundCheck,
+    anyPermissions: academicAdministrationPermissions,
   },
-  { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap },
+  { label: "Classes", path: "/modules/academics/classes", icon: GraduationCap, anyPermissions: academicAdministrationPermissions },
   {
     label: "Teaching assignments",
     path: "/modules/academics/teaching-assignments",
     icon: ClipboardList,
+    anyPermissions: academicAdministrationPermissions,
   },
   {
     label: "Assessments",
     path: "/modules/academics/assessments",
     icon: FileCheck2,
+    anyPermissions: academicAdministrationPermissions,
   },
   {
     label: "Gradebook",
     path: "/modules/academics/gradebook",
     icon: BookOpenCheck,
+    anyPermissions: ["academics:teach", "academics:manage"],
   },
   { label: "Reports", path: "/modules/academics/reporting", icon: BarChart3 },
 ];
@@ -433,6 +448,9 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
       (!item.permission ||
         user?.permissions.includes("*") ||
         user?.permissions.includes(item.permission)) &&
+      (!item.anyPermissions ||
+        user?.permissions.includes("*") ||
+        item.anyPermissions.some((permission) => user?.permissions.includes(permission))) &&
       (!item.requiredModule || user?.modules.includes(item.requiredModule)),
   );
 

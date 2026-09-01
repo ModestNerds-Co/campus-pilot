@@ -299,7 +299,7 @@ pub fn administration_permissions() -> Vec<PermissionDefinition> {
         (
             "roles:edit",
             "Edit roles",
-            "Change seeded or custom role labels and permissions.",
+            "Rename built-in roles or change custom-role access.",
         ),
         (
             "roles:assign",
