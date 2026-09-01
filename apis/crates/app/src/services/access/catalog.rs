@@ -98,6 +98,17 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             &["view", "teach", "manage"],
         ),
         module(
+            "student_support",
+            "Student support",
+            "Student services",
+            "Manage restricted learner-support cases, case teams, actions, and escalation.",
+            "/modules/student-support",
+            "student_support",
+            false,
+            "available",
+            &["view", "create", "edit", "manage"],
+        ),
+        module(
             "messaging",
             "Communication",
             "Campus operations",
@@ -449,6 +460,7 @@ pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
         "timetabling" => &["academics", "hr_payroll"],
         "attendance" => &["academics", "sis"],
         "learning" => &["academics", "sis", "hr_payroll", "document_registry"],
+        "student_support" => &["sis"],
         "hostel" => &["sis"],
         "internal_audit" => &["document_registry"],
         _ => &[],
@@ -472,11 +484,7 @@ fn module(
 ) -> ModuleDefinition {
     let permissions = actions
         .iter()
-        .map(|action| PermissionDefinition {
-            key: format!("{}:{}", permission_namespace, action),
-            label: action_label(action),
-            description: format!("{} access in {}.", action_label(action), label),
-        })
+        .map(|action| module_permission(permission_namespace, label, action))
         .collect();
 
     ModuleDefinition {
@@ -490,6 +498,52 @@ fn module(
         stage,
         dependencies: module_dependencies(key).to_vec(),
         permissions,
+    }
+}
+
+fn module_permission(
+    permission_namespace: &str,
+    module_label: &str,
+    action: &str,
+) -> PermissionDefinition {
+    let (label, description) = match (permission_namespace, action) {
+        ("academics", "view") => (
+            "View academic records".to_string(),
+            "Read academic structures and published records.".to_string(),
+        ),
+        ("academics", "teach") => (
+            "Work with assigned classes".to_string(),
+            "Prepare assigned mark sheets, enter marks, and add teacher comments.".to_string(),
+        ),
+        ("academics", "create") => (
+            "Create academic structures".to_string(),
+            "Create academic years, terms, grade levels, subjects, classes, teacher profiles, teaching assignments, and assessment structures.".to_string(),
+        ),
+        ("academics", "edit") => (
+            "Change academic structures".to_string(),
+            "Change academic years, terms, grade levels, subjects, classes, teacher profiles, teaching assignments, and assessment structures.".to_string(),
+        ),
+        ("academics", "delete") => (
+            "Remove academic structures".to_string(),
+            "Remove eligible academic structures and teacher profiles.".to_string(),
+        ),
+        ("academics", "manage") => (
+            "Govern results and progression".to_string(),
+            "Publish results, review reports, and manage learner progression.".to_string(),
+        ),
+        _ => {
+            let action_label = action_label(action);
+            (
+                action_label.clone(),
+                format!("{} access in {}.", action_label, module_label),
+            )
+        }
+    };
+
+    PermissionDefinition {
+        key: format!("{}:{}", permission_namespace, action),
+        label,
+        description,
     }
 }
 
@@ -520,6 +574,40 @@ mod tests {
             credential_key_base64: None,
             installation_name: "Test installation".to_string(),
         }
+    }
+
+    #[test]
+    fn academics_permissions_distinguish_teaching_from_administration() {
+        let academics = module_catalog()
+            .into_iter()
+            .find(|module| module.key == "academics")
+            .unwrap_or_else(|| unreachable!());
+        let permission = |key: &str| {
+            academics
+                .permissions
+                .iter()
+                .find(|permission| permission.key == key)
+                .unwrap_or_else(|| unreachable!())
+        };
+
+        assert_eq!(
+            permission("academics:teach").label,
+            "Work with assigned classes"
+        );
+        assert!(
+            permission("academics:teach")
+                .description
+                .contains("assigned mark sheets")
+        );
+        assert_eq!(
+            permission("academics:create").label,
+            "Create academic structures"
+        );
+        assert!(
+            permission("academics:create")
+                .description
+                .contains("teacher profiles")
+        );
     }
 
     use super::{all_permission_keys, module_catalog};
@@ -725,6 +813,7 @@ mod tests {
             "academics",
             "attendance",
             "learning",
+            "student_support",
             "fleet",
             "hr_payroll",
             "sis",
@@ -753,16 +842,23 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 28);
             } else if module_key == "attendance" {
                 assert!(module.release_ready());
-                assert_eq!(module.routed_operations(), 8);
-                assert_eq!(module.exposed_operations(), 3);
+                assert_eq!(module.routed_operations(), 9);
+                assert_eq!(module.exposed_operations(), 4);
                 assert_eq!(module.approval_required_operations(), 5);
-                assert_eq!(module.executable_capabilities(), 3);
+                assert_eq!(module.executable_capabilities(), 4);
             } else if module_key == "learning" {
                 assert!(module.release_ready());
                 assert_eq!(module.routed_operations(), 20);
                 assert_eq!(module.exposed_operations(), 5);
                 assert_eq!(module.approval_required_operations(), 13);
                 assert_eq!(module.executable_capabilities(), 5);
+            } else if module_key == "student_support" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 12);
+                assert_eq!(module.exposed_operations(), 3);
+                assert_eq!(module.approval_required_operations(), 8);
+                assert_eq!(module.human_only_operations(), 1);
+                assert_eq!(module.executable_capabilities(), 3);
             } else if module_key == "fleet" {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 7);

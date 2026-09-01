@@ -116,6 +116,8 @@ const SIS: OriginAccess = OriginAccess::module("sis", "sis:view");
 const ACADEMICS: OriginAccess = OriginAccess::module("academics", "academics:view");
 const ATTENDANCE: OriginAccess = OriginAccess::module("attendance", "attendance:view");
 const LEARNING: OriginAccess = OriginAccess::module("learning", "learning:view");
+const STUDENT_SUPPORT: OriginAccess =
+    OriginAccess::module("student_support", "student_support:view");
 const TIMETABLING: OriginAccess = OriginAccess::module("timetabling", "timetabling:view");
 const MESSAGING: OriginAccess = OriginAccess::module("messaging", "messaging:view");
 const MESSAGING_MANAGE: OriginAccess = OriginAccess::module("messaging", "messaging:create");
@@ -346,6 +348,14 @@ const EXACT_ROUTES: &[ExactRoute] = &[
     ExactRoute {
         path: "/modules/learning/settings",
         access: LEARNING,
+    },
+    ExactRoute {
+        path: "/modules/student-support",
+        access: STUDENT_SUPPORT,
+    },
+    ExactRoute {
+        path: "/modules/student-support/cases",
+        access: STUDENT_SUPPORT,
     },
     ExactRoute {
         path: "/modules/timetabling",
@@ -621,6 +631,10 @@ const UUID_ROUTES: &[UuidRoute] = &[
     UuidRoute {
         prefix: "/modules/learning/spaces/",
         access: LEARNING,
+    },
+    UuidRoute {
+        prefix: "/modules/student-support/cases/",
+        access: STUDENT_SUPPORT,
     },
     UuidRoute {
         prefix: "/modules/messaging/announcements/",

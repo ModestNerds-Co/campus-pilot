@@ -33,6 +33,13 @@ interface PermissionSection {
   permissions: PermissionDefinition[];
 }
 
+interface PermissionGroup {
+  key: string;
+  label?: string;
+  description?: string;
+  permissions: PermissionDefinition[];
+}
+
 export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, onSuccess, role }) => {
   const operatorPermissions = useAuthStore((state) => state.user?.permissions);
   const accessIsFixed = role?.is_system ?? false;
@@ -73,6 +80,16 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
     () => sections.flatMap((section) => section.permissions.map((permission) => permission.key)),
     [sections],
   );
+
+  const fixedSections = useMemo(() => {
+    if (!accessIsFixed || !role || role.permissions.includes("*")) return [];
+    return sections
+      .map((section) => ({
+        ...section,
+        permissions: section.permissions.filter((permission) => role.permissions.includes(permission.key)),
+      }))
+      .filter((section) => section.permissions.length > 0);
+  }, [accessIsFixed, role, sections]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -246,6 +263,23 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
             )}
           </section>
 
+          {accessIsFixed && fixedSections.length > 0 ? (
+            <section className="space-y-3" aria-labelledby="fixed-permissions-heading">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--text-strong)]" id="fixed-permissions-heading">Assigned access</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">These responsibilities are included in this built-in role.</p>
+              </div>
+              {fixedSections.map((section) => (
+                <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]" key={section.key}>
+                  <div className="bg-[var(--surface-muted)] px-4 py-3">
+                    <p className="text-sm font-semibold text-[var(--text-strong)]">{section.label}</p>
+                  </div>
+                  <PermissionGroups groups={permissionGroups(section)} readOnly />
+                </div>
+              ))}
+            </section>
+          ) : null}
+
           {!accessIsFixed && accessMode === "custom" ? (
             <section className="space-y-3" aria-labelledby="module-permissions-heading">
               <div className="flex items-end justify-between gap-4">
@@ -313,22 +347,11 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                             {allSelected ? "Clear" : "Allow all"}
                           </button>
                         </div>
-                        {expanded ? <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2">
-                          {section.permissions.map((permission) => (
-                            <label className="flex cursor-pointer gap-3 bg-[var(--surface)] p-4 hover:bg-[var(--surface-muted)]" key={permission.key}>
-                              <input
-                                checked={formData.permissions.includes(permission.key)}
-                                className="mt-0.5 size-4 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--focus-ring)]"
-                                onChange={() => togglePermission(permission.key)}
-                                type="checkbox"
-                              />
-                              <span>
-                                <span className="block text-sm font-medium text-[var(--text-strong)]">{permission.label}</span>
-                                <span className="mt-0.5 block text-xs leading-5 text-[var(--text-muted)]">{permission.description}</span>
-                              </span>
-                            </label>
-                          ))}
-                        </div> : null}
+                        {expanded ? <PermissionGroups
+                          checkedPermissions={formData.permissions}
+                          groups={permissionGroups(section)}
+                          onToggle={togglePermission}
+                        /> : null}
                       </div>
                     );
                   })}
@@ -358,6 +381,78 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
     </DialogShell>
   );
 };
+
+function permissionGroups(section: PermissionSection): PermissionGroup[] {
+  if (section.key !== "academics") {
+    return [{ key: section.key, permissions: section.permissions }];
+  }
+
+  const teachingKeys = new Set(["academics:view", "academics:teach"]);
+  const teaching = section.permissions.filter((permission) => teachingKeys.has(permission.key));
+  const administration = section.permissions.filter((permission) => !teachingKeys.has(permission.key));
+
+  return [
+    {
+      key: "academics-teaching",
+      label: "Teaching work",
+      description: "Read academic records and work only with assigned classes.",
+      permissions: teaching,
+    },
+    {
+      key: "academics-administration",
+      label: "Academic administration",
+      description: "Configure staffing, structures, assessment setup, publication, and progression.",
+      permissions: administration,
+    },
+  ].filter((group) => group.permissions.length > 0);
+}
+
+function PermissionGroups({
+  checkedPermissions = [],
+  groups,
+  onToggle,
+  readOnly = false,
+}: {
+  checkedPermissions?: string[];
+  groups: PermissionGroup[];
+  onToggle?: (permission: string) => void;
+  readOnly?: boolean;
+}) {
+  return (
+    <div className="divide-y divide-[var(--border)]">
+      {groups.map((group) => (
+        <div key={group.key}>
+          {group.label ? <div className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-strong)]">{group.label}</p>
+            {group.description ? <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{group.description}</p> : null}
+          </div> : null}
+          <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2">
+            {group.permissions.map((permission) => (
+              <label className={`flex gap-3 bg-[var(--surface)] p-4 ${readOnly ? "" : "cursor-pointer hover:bg-[var(--surface-muted)]"}`} key={permission.key}>
+                {readOnly ? (
+                  <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[var(--brand-strong)]">
+                    <Check className="size-3" />
+                  </span>
+                ) : (
+                  <input
+                    checked={checkedPermissions.includes(permission.key)}
+                    className="mt-0.5 size-4 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--focus-ring)]"
+                    onChange={() => onToggle?.(permission.key)}
+                    type="checkbox"
+                  />
+                )}
+                <span>
+                  <span className="block text-sm font-medium text-[var(--text-strong)]">{permission.label}</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-[var(--text-muted)]">{permission.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function AccessModeCard({
   active,

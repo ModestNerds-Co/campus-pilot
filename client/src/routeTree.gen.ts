@@ -42,6 +42,7 @@ import { Route as AdminClassesRouteImport } from './routes/admin/classes'
 import { Route as ModulesAgentIndexRouteImport } from './routes/modules/agent/index'
 import { Route as AdminFleetIndexRouteImport } from './routes/admin/fleet/index'
 import { Route as AdminAgentIndexRouteImport } from './routes/admin/agent/index'
+import { Route as ModulesStudentSupportCasesRouteImport } from './routes/modules/student-support/cases'
 import { Route as ModulesSisSettingsRouteImport } from './routes/modules/sis/settings'
 import { Route as ModulesSisLearnersRouteImport } from './routes/modules/sis/learners'
 import { Route as ModulesSisImportsRouteImport } from './routes/modules/sis/imports'
@@ -120,6 +121,7 @@ import { Route as AdminAgentRunsRouteImport } from './routes/admin/agent/runs'
 import { Route as AdminAgentRoutingRouteImport } from './routes/admin/agent/routing'
 import { Route as AdminAgentProvidersRouteImport } from './routes/admin/agent/providers'
 import { Route as AdminAgentCapabilitiesRouteImport } from './routes/admin/agent/capabilities'
+import { Route as ModulesStudentSupportCasesCaseIdRouteImport } from './routes/modules/student-support/cases_.$caseId'
 import { Route as ModulesSisLearnersLearnerIdRouteImport } from './routes/modules/sis/learners_.$learnerId'
 import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './routes/modules/sis/applications_.$applicationId'
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
@@ -304,6 +306,12 @@ const AdminAgentIndexRoute = AdminAgentIndexRouteImport.update({
   path: '/agent/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesStudentSupportCasesRoute =
+  ModulesStudentSupportCasesRouteImport.update({
+    id: '/student-support/cases',
+    path: '/student-support/cases',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesSisSettingsRoute = ModulesSisSettingsRouteImport.update({
   id: '/sis/settings',
   path: '/sis/settings',
@@ -736,6 +744,12 @@ const AdminAgentCapabilitiesRoute = AdminAgentCapabilitiesRouteImport.update({
   path: '/agent/capabilities',
   getParentRoute: () => AdminRoute,
 } as any)
+const ModulesStudentSupportCasesCaseIdRoute =
+  ModulesStudentSupportCasesCaseIdRouteImport.update({
+    id: '/student-support/cases_/$caseId',
+    path: '/student-support/cases/$caseId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesSisLearnersLearnerIdRoute =
   ModulesSisLearnersLearnerIdRouteImport.update({
     id: '/sis/learners_/$learnerId',
@@ -954,6 +968,7 @@ export interface FileRoutesByFullPath {
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
+  '/modules/student-support/cases': typeof ModulesStudentSupportCasesRoute
   '/admin/agent': typeof AdminAgentIndexRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
   '/modules/agent': typeof ModulesAgentIndexRoute
@@ -972,6 +987,7 @@ export interface FileRoutesByFullPath {
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
   '/modules/sis/learners/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
+  '/modules/student-support/cases/$caseId': typeof ModulesStudentSupportCasesCaseIdRoute
   '/modules/academics/gradebook/mark-sheets/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
   '/modules/academics/reporting/report-batches/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
@@ -1084,6 +1100,7 @@ export interface FileRoutesByTo {
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
+  '/modules/student-support/cases': typeof ModulesStudentSupportCasesRoute
   '/admin/agent': typeof AdminAgentIndexRoute
   '/admin/fleet': typeof AdminFleetIndexRoute
   '/modules/agent': typeof ModulesAgentIndexRoute
@@ -1102,6 +1119,7 @@ export interface FileRoutesByTo {
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
   '/modules/sis/learners/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
+  '/modules/student-support/cases/$caseId': typeof ModulesStudentSupportCasesCaseIdRoute
   '/modules/academics/gradebook/mark-sheets/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
   '/modules/academics/reporting/report-batches/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
@@ -1216,6 +1234,7 @@ export interface FileRoutesById {
   '/modules/sis/imports': typeof ModulesSisImportsRoute
   '/modules/sis/learners': typeof ModulesSisLearnersRoute
   '/modules/sis/settings': typeof ModulesSisSettingsRoute
+  '/modules/student-support/cases': typeof ModulesStudentSupportCasesRoute
   '/admin/agent/': typeof AdminAgentIndexRoute
   '/admin/fleet/': typeof AdminFleetIndexRoute
   '/modules/agent/': typeof ModulesAgentIndexRoute
@@ -1234,6 +1253,7 @@ export interface FileRoutesById {
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
   '/modules/sis/applications_/$applicationId': typeof ModulesSisApplicationsApplicationIdRoute
   '/modules/sis/learners_/$learnerId': typeof ModulesSisLearnersLearnerIdRoute
+  '/modules/student-support/cases_/$caseId': typeof ModulesStudentSupportCasesCaseIdRoute
   '/modules/academics/gradebook/mark-sheets_/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
   '/modules/academics/reporting/report-batches_/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts_/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
@@ -1349,6 +1369,7 @@ export interface FileRouteTypes {
     | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/modules/sis/settings'
+    | '/modules/student-support/cases'
     | '/admin/agent'
     | '/admin/fleet'
     | '/modules/agent'
@@ -1367,6 +1388,7 @@ export interface FileRouteTypes {
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
     | '/modules/sis/learners/$learnerId'
+    | '/modules/student-support/cases/$caseId'
     | '/modules/academics/gradebook/mark-sheets/$markSheetId'
     | '/modules/academics/reporting/report-batches/$reportBatchId'
     | '/modules/academics/reporting/transcripts/$learnerId'
@@ -1479,6 +1501,7 @@ export interface FileRouteTypes {
     | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/modules/sis/settings'
+    | '/modules/student-support/cases'
     | '/admin/agent'
     | '/admin/fleet'
     | '/modules/agent'
@@ -1497,6 +1520,7 @@ export interface FileRouteTypes {
     | '/modules/procurement/requisitions/$requisitionId'
     | '/modules/sis/applications/$applicationId'
     | '/modules/sis/learners/$learnerId'
+    | '/modules/student-support/cases/$caseId'
     | '/modules/academics/gradebook/mark-sheets/$markSheetId'
     | '/modules/academics/reporting/report-batches/$reportBatchId'
     | '/modules/academics/reporting/transcripts/$learnerId'
@@ -1610,6 +1634,7 @@ export interface FileRouteTypes {
     | '/modules/sis/imports'
     | '/modules/sis/learners'
     | '/modules/sis/settings'
+    | '/modules/student-support/cases'
     | '/admin/agent/'
     | '/admin/fleet/'
     | '/modules/agent/'
@@ -1628,6 +1653,7 @@ export interface FileRouteTypes {
     | '/modules/procurement/requisitions_/$requisitionId'
     | '/modules/sis/applications_/$applicationId'
     | '/modules/sis/learners_/$learnerId'
+    | '/modules/student-support/cases_/$caseId'
     | '/modules/academics/gradebook/mark-sheets_/$markSheetId'
     | '/modules/academics/reporting/report-batches_/$reportBatchId'
     | '/modules/academics/reporting/transcripts_/$learnerId'
@@ -1878,6 +1904,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/agent'
       preLoaderRoute: typeof AdminAgentIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/modules/student-support/cases': {
+      id: '/modules/student-support/cases'
+      path: '/student-support/cases'
+      fullPath: '/modules/student-support/cases'
+      preLoaderRoute: typeof ModulesStudentSupportCasesRouteImport
+      parentRoute: typeof ModulesRoute
     }
     '/modules/sis/settings': {
       id: '/modules/sis/settings'
@@ -2425,6 +2458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAgentCapabilitiesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/modules/student-support/cases_/$caseId': {
+      id: '/modules/student-support/cases_/$caseId'
+      path: '/student-support/cases/$caseId'
+      fullPath: '/modules/student-support/cases/$caseId'
+      preLoaderRoute: typeof ModulesStudentSupportCasesCaseIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/sis/learners_/$learnerId': {
       id: '/modules/sis/learners_/$learnerId'
       path: '/sis/learners/$learnerId'
@@ -2752,6 +2792,7 @@ interface ModulesRouteChildren {
   ModulesSisImportsRoute: typeof ModulesSisImportsRoute
   ModulesSisLearnersRoute: typeof ModulesSisLearnersRoute
   ModulesSisSettingsRoute: typeof ModulesSisSettingsRoute
+  ModulesStudentSupportCasesRoute: typeof ModulesStudentSupportCasesRoute
   ModulesAgentIndexRoute: typeof ModulesAgentIndexRoute
   ModulesAcademicsClassesClassIdRoute: typeof ModulesAcademicsClassesClassIdRoute
   ModulesAgentSessionsSessionIdRoute: typeof ModulesAgentSessionsSessionIdRoute
@@ -2766,6 +2807,7 @@ interface ModulesRouteChildren {
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
   ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
   ModulesSisLearnersLearnerIdRoute: typeof ModulesSisLearnersLearnerIdRoute
+  ModulesStudentSupportCasesCaseIdRoute: typeof ModulesStudentSupportCasesCaseIdRoute
 }
 
 const ModulesRouteChildren: ModulesRouteChildren = {
@@ -2844,6 +2886,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisImportsRoute: ModulesSisImportsRoute,
   ModulesSisLearnersRoute: ModulesSisLearnersRoute,
   ModulesSisSettingsRoute: ModulesSisSettingsRoute,
+  ModulesStudentSupportCasesRoute: ModulesStudentSupportCasesRoute,
   ModulesAgentIndexRoute: ModulesAgentIndexRoute,
   ModulesAcademicsClassesClassIdRoute: ModulesAcademicsClassesClassIdRoute,
   ModulesAgentSessionsSessionIdRoute: ModulesAgentSessionsSessionIdRoute,
@@ -2866,6 +2909,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesSisApplicationsApplicationIdRoute:
     ModulesSisApplicationsApplicationIdRoute,
   ModulesSisLearnersLearnerIdRoute: ModulesSisLearnersLearnerIdRoute,
+  ModulesStudentSupportCasesCaseIdRoute: ModulesStudentSupportCasesCaseIdRoute,
 }
 
 const ModulesRouteWithChildren =

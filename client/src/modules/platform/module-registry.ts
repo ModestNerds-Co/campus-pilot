@@ -9,6 +9,7 @@ import {
   CalendarCheck2,
   ClipboardCheck,
   GraduationCap,
+  HeartHandshake,
   HeartPulse,
   Landmark,
   Library,
@@ -46,6 +47,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   learning: {
     icon: BookOpen,
     highlights: ["Class spaces", "Ordered units", "Governed resources"],
+  },
+  student_support: {
+    icon: HeartHandshake,
+    highlights: ["Restricted cases", "Assigned case teams", "Lifecycle evidence"],
   },
   timetabling: {
     icon: CalendarClock,

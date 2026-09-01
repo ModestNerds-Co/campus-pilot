@@ -20,6 +20,7 @@ import { HostelResidencesWorkspace } from "@/modules/hostel";
 import { DocumentRegistryDocumentsWorkspace } from "@/modules/document-registry";
 import { InternalAuditEngagementsWorkspace } from "@/modules/internal-audit";
 import { LearningSpacesWorkspace } from "@/modules/learning";
+import { StudentSupportCasesWorkspace } from "@/modules/student-support";
 
 export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
   moduleKey,
@@ -73,6 +74,8 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
         <InternalAuditEngagementsWorkspace />
       ) : module.key === "learning" ? (
         <LearningSpacesWorkspace />
+      ) : module.key === "student_support" ? (
+        <StudentSupportCasesWorkspace />
       ) : (
         <ModuleFoundation module={module} />
       )}

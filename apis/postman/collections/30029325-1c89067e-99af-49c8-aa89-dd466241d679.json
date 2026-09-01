@@ -6411,6 +6411,25 @@
       ]
     },
     {
+      "name": "Student Support",
+      "description": "Restricted learner-support cases with assigned case teams, append-only actions, and reasoned lifecycle decisions.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Read Student Support References", "request": { "method": "GET", "url": "{{base_url}}/student-support/references" } },
+        { "name": "List Student Support Cases", "request": { "method": "GET", "url": "{{base_url}}/student-support/cases?page=1&per_page=25&status=open" } },
+        { "name": "Open Student Support Case", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"learner_id\": \"{{student_support_learner_id}}\",\n  \"lead_case_worker_user_id\": \"{{student_support_case_worker_user_id}}\",\n  \"category\": \"wellbeing\",\n  \"severity\": \"moderate\",\n  \"title\": \"Learner wellbeing follow-up\",\n  \"summary\": \"Initial concern and relevant facts\",\n  \"occurred_on\": \"2026-09-01\"\n}" }, "url": "{{base_url}}/student-support/cases" } },
+        { "name": "Read Student Support Case", "request": { "method": "GET", "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}" } },
+        { "name": "Update Student Support Case", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"category\": \"wellbeing\",\n  \"severity\": \"high\",\n  \"title\": \"Learner wellbeing follow-up\",\n  \"summary\": \"Updated facts and current support needs\",\n  \"occurred_on\": \"2026-09-01\",\n  \"expected_version\": {{student_support_case_version}}\n}" }, "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}" } },
+        { "name": "List Student Support Actions", "request": { "method": "GET", "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/actions" } },
+        { "name": "Record Student Support Action", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"action_kind\": \"meeting\",\n  \"summary\": \"Met with learner\",\n  \"details\": \"Recorded agreed support actions\",\n  \"occurred_at\": \"2026-09-01T08:30:00Z\",\n  \"expected_version\": {{student_support_case_version}}\n}" }, "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/actions" } },
+        { "name": "Assign Student Support Team Member", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{student_support_team_user_id}}\",\n  \"member_role\": \"member\",\n  \"expected_version\": {{student_support_case_version}}\n}" }, "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/team" } },
+        { "name": "Remove Student Support Team Member", "request": { "method": "POST", "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/team/{{student_support_team_user_id}}/remove?expected_version={{student_support_case_version}}" } },
+        { "name": "Escalate Student Support Case", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Immediate management review is required\",\n  \"expected_version\": {{student_support_case_version}}\n}" }, "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/escalate" } },
+        { "name": "Resolve Student Support Case", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Support actions completed and reviewed\",\n  \"expected_version\": {{student_support_case_version}}\n}" }, "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/resolve" } },
+        { "name": "Close Student Support Case", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Resolved case archived after final review\",\n  \"expected_version\": {{student_support_case_version}}\n}" }, "url": "{{base_url}}/student-support/cases/{{student_support_case_id}}/close" } }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -6705,6 +6724,31 @@
     },
     {
       "key": "learning_document_series_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "student_support_case_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "student_support_case_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "student_support_learner_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "student_support_case_worker_user_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "student_support_team_user_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }

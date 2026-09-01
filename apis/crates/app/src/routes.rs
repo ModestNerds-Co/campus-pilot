@@ -109,6 +109,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_learning::routes::routes),
             )
             .service(
+                scope("/student-support")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_student_support::routes::routes),
+            )
+            .service(
                 scope("/messaging")
                     .wrap(AuthMiddleware)
                     .configure(cp_messaging::routes::routes),
@@ -460,6 +465,78 @@ mod route_wiring_tests {
                 format!("/api/1.0/learning/resources/{record_id}/download"),
                 "/api/1.0/learning/resources/{id}/download",
                 "learning.resources.download",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/student-support/references".to_string(),
+                "/api/1.0/student-support/references",
+                "student_support.references.read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/student-support/cases".to_string(),
+                "/api/1.0/student-support/cases",
+                "student_support.cases.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/student-support/cases".to_string(),
+                "/api/1.0/student-support/cases",
+                "student_support.cases.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/student-support/cases/{record_id}"),
+                "/api/1.0/student-support/cases/{id}",
+                "student_support.cases.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/student-support/cases/{record_id}"),
+                "/api/1.0/student-support/cases/{id}",
+                "student_support.cases.update",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/student-support/cases/{record_id}/actions"),
+                "/api/1.0/student-support/cases/{id}/actions",
+                "student_support.actions.list",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/student-support/cases/{record_id}/actions"),
+                "/api/1.0/student-support/cases/{id}/actions",
+                "student_support.actions.create",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/student-support/cases/{record_id}/team"),
+                "/api/1.0/student-support/cases/{id}/team",
+                "student_support.case_team.assign",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/student-support/cases/{record_id}/team/{record_id}/remove"),
+                "/api/1.0/student-support/cases/{case_id}/team/{user_id}/remove",
+                "student_support.case_team.remove",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/student-support/cases/{record_id}/escalate"),
+                "/api/1.0/student-support/cases/{id}/escalate",
+                "student_support.cases.escalate",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/student-support/cases/{record_id}/resolve"),
+                "/api/1.0/student-support/cases/{id}/resolve",
+                "student_support.cases.resolve",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/student-support/cases/{record_id}/close"),
+                "/api/1.0/student-support/cases/{id}/close",
+                "student_support.cases.close",
             ),
             (
                 Method::GET,

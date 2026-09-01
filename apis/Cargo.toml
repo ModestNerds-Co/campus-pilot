@@ -28,6 +28,7 @@ members = [
     "crates/modules/document-registry",
     "crates/modules/internal-audit",
     "crates/modules/learning",
+    "crates/modules/student-support",
 ]
 
 [workspace.dependencies]

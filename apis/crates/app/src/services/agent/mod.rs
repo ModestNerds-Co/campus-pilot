@@ -29,6 +29,7 @@ mod record_scope;
 mod session_dtos;
 pub mod session_routes;
 mod sis;
+mod student_support;
 mod submission_gate;
 mod timetabling;
 mod usage_dtos;
@@ -144,6 +145,10 @@ use sis::{
     AccountCandidatesCapability, LearnerNumberingPolicyCapability, SisImportPreviewCapability,
     SisImportReadCapability, SisImportsListCapability, SisListCapability, SisListKind,
     SisReadCapability, SisReadKind,
+};
+use student_support::{
+    StudentSupportActionsListCapability, StudentSupportCaseReadCapability,
+    StudentSupportCasesListCapability,
 };
 use timetabling::{
     LatestTimetableRunCapability, TimetableConfigurationCapability, TimetableRunReadCapability,
@@ -365,6 +370,15 @@ pub fn build_capability_registry(
     registry
         .register(LearningSpaceCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid E-learning space-read capability: {error}"));
+    registry
+        .register(StudentSupportCasesListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Student Support cases-list capability: {error}"));
+    registry
+        .register(StudentSupportCaseReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Student Support case-read capability: {error}"));
+    registry
+        .register(StudentSupportActionsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Student Support actions-list capability: {error}"));
     registry
         .register(CommunicationReferencesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Communication references capability: {error}"));
@@ -1194,6 +1208,9 @@ mod tests {
                 "sis.learner_numbering.read",
                 "sis.learners.list",
                 "sis.learners.read",
+                "student_support.actions.list",
+                "student_support.cases.list",
+                "student_support.cases.read",
                 "timetabling.configuration.read",
                 "timetabling.runs.list",
                 "timetabling.runs.read",
@@ -1222,7 +1239,7 @@ mod tests {
 
         assert_eq!(
             result.content()["modules"].as_array().map(Vec::len),
-            Some(19)
+            Some(20)
         );
         assert!(result.content()["administration_permissions"].is_array());
     }

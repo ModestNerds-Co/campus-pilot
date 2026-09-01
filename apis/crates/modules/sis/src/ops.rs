@@ -154,6 +154,55 @@ impl AccountCandidateOps {
 pub struct LearnerOps;
 
 impl LearnerOps {
+    /// Returns bounded active learner identities for authorised Student Support intake.
+    pub async fn student_support_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<crate::models::StudentSupportLearnerReference>> {
+        let search = search.map(|value| format!("%{value}%"));
+        sqlx::query_as::<_, crate::models::StudentSupportLearnerReference>(
+            r#"
+            SELECT id, learner_number, display_name, status
+              FROM learners
+             WHERE tenant_id = $1 AND deleted_at IS NULL AND status = 'active'
+               AND ($2::TEXT IS NULL OR learner_number ILIKE $2 OR display_name ILIKE $2)
+             ORDER BY display_name, learner_number
+             LIMIT $3
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(pool)
+        .await
+        .context("Failed to list Student Support learner references")
+    }
+
+    /// Resolves exact current learner identities without exposing SIS tables.
+    pub async fn student_support_references_by_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        ids: &[Uuid],
+    ) -> Result<Vec<crate::models::StudentSupportLearnerReference>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        sqlx::query_as::<_, crate::models::StudentSupportLearnerReference>(
+            r#"
+            SELECT id, learner_number, display_name, status
+              FROM learners
+             WHERE tenant_id = $1 AND id = ANY($2) AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve Student Support learner identities")
+    }
+
     /// Returns the minimum current learner identity Attendance needs for a
     /// history page without exposing SIS persistence to that module.
     pub async fn attendance_reference_by_id(

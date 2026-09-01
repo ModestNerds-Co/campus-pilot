@@ -93,6 +93,7 @@ const moduleLabels: Record<string, string> = {
   academics: "Academics",
   attendance: "Attendance",
   learning: "E-learning",
+  student_support: "Student support",
   timetabling: "Timetabling",
   messaging: "Communication",
   finance: "Finance",
@@ -428,6 +429,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               ? attendanceNavigation
               : moduleKey === "learning"
                 ? learningNavigation
+              : moduleKey === "student_support"
+                ? []
               : moduleKey === "library"
                 ? libraryNavigation
                 : moduleKey === "health"
@@ -685,6 +688,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
                 ? "Engagements"
               : moduleKey === "learning"
                 ? "Spaces"
+              : moduleKey === "student_support"
+                ? "Cases"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1042,6 +1047,8 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     );
   if (item.path === "/modules/learning/spaces")
     return <Link className={navClass(active)} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/student-support/cases")
+    return <Link className={navClass(active)} to="/modules/student-support/cases"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/learning/settings")
     return <Link className={navClass(active)} to="/modules/learning/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/library/circulation")

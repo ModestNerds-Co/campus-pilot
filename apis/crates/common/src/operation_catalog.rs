@@ -11,21 +11,21 @@ use actix_web::http::Method;
 use crate::{AgentExposure, OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
-pub const OPERATION_CATALOG_VERSION: u32 = 3;
+pub const OPERATION_CATALOG_VERSION: u32 = 4;
 
 /// Product-catalog identifier carried by signed entitlement leases.
 ///
 /// The control plane and campus runtime must agree on this exact value before
 /// lease claims can be accepted. Keep it aligned with
 /// [`OPERATION_CATALOG_VERSION`].
-pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/3";
+pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/4";
 
 /// Product-catalog versions this campus binary can safely interpret.
 ///
 /// A catalog upgrade may temporarily list both versions during a coordinated
 /// rollout; the control plane still issues only [`PRODUCT_CATALOG_VERSION`].
 pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] =
-    &["campus-pilot/2", PRODUCT_CATALOG_VERSION];
+    &["campus-pilot/2", "campus-pilot/3", PRODUCT_CATALOG_VERSION];
 
 /// Declares the authoritative access boundary for one routed operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -3279,6 +3279,115 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // Student Support: restricted learner cases and active case teams.
+        route(
+            Method::GET,
+            "/api/1.0/student-support/references",
+            "student_support.references.read",
+            "student_support",
+            "student_support:create",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/student-support/cases",
+            "student_support.cases.list",
+            "student_support",
+            "student_support:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases",
+            "student_support.cases.create",
+            "student_support",
+            "student_support:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/student-support/cases/{id}",
+            "student_support.cases.read",
+            "student_support",
+            "student_support:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/student-support/cases/{id}",
+            "student_support.cases.update",
+            "student_support",
+            "student_support:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/student-support/cases/{id}/actions",
+            "student_support.actions.list",
+            "student_support",
+            "student_support:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases/{id}/actions",
+            "student_support.actions.create",
+            "student_support",
+            "student_support:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases/{id}/team",
+            "student_support.case_team.assign",
+            "student_support",
+            "student_support:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases/{case_id}/team/{user_id}/remove",
+            "student_support.case_team.remove",
+            "student_support",
+            "student_support:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases/{id}/escalate",
+            "student_support.cases.escalate",
+            "student_support",
+            "student_support:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases/{id}/resolve",
+            "student_support.cases.resolve",
+            "student_support",
+            "student_support:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/student-support/cases/{id}/close",
+            "student_support.cases.close",
+            "student_support",
+            "student_support:manage",
+            OperationEffect::Write,
+            true,
+        ),
         // E-learning: class-linked spaces, ordered units, and governed resources.
         route(
             Method::GET,
@@ -4773,6 +4882,8 @@ fn route(
             "hr_payroll".to_string(),
             "sis".to_string(),
         ])
+    } else if key.starts_with("student_support.") {
+        operation.requiring_modules(["sis".to_string()])
     } else if key.starts_with("internal_audit.") {
         operation.requiring_modules(["document_registry".to_string()])
     } else if key.starts_with("hostel.") {
@@ -5005,6 +5116,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.registers.list"
         | "attendance.registers.read"
         | "attendance.learners.history.read"
+        | "student_support.cases.list"
+        | "student_support.cases.read"
+        | "student_support.actions.list"
         | "learning.settings.read"
         | "learning.references.read"
         | "learning.resource_files.list"
@@ -5256,6 +5370,14 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.registers.submit"
         | "attendance.registers.reopen"
         | "attendance.registers.delete"
+        | "student_support.cases.create"
+        | "student_support.cases.update"
+        | "student_support.actions.create"
+        | "student_support.case_team.assign"
+        | "student_support.case_team.remove"
+        | "student_support.cases.escalate"
+        | "student_support.cases.resolve"
+        | "student_support.cases.close"
         | "learning.settings.update"
         | "learning.spaces.create"
         | "learning.spaces.update"
@@ -5359,6 +5481,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         "learning.resources.download" => AgentExposure::HumanOnly {
             reason: "Private learning-resource bytes and signed URLs are never returned to an Agent provider.",
         },
+        "student_support.references.read" => AgentExposure::HumanOnly {
+            reason: "Learner and restricted case-worker selection remains a direct human intake workflow.",
+        },
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
         | "administration.ai_providers.credentials.rotate" => AgentExposure::HumanOnly {
@@ -5454,6 +5579,10 @@ mod tests {
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("learning".to_string(), ModuleEntitlementState::Enabled),
+                (
+                    "student_support".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
                 ("messaging".to_string(), ModuleEntitlementState::Enabled),
                 ("library".to_string(), ModuleEntitlementState::Enabled),
                 ("hostel".to_string(), ModuleEntitlementState::Enabled),
@@ -5495,13 +5624,13 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
-        assert_eq!(OPERATION_CATALOG_VERSION, 3);
+        assert_eq!(OPERATION_CATALOG_VERSION, 4);
         assert_eq!(
             PRODUCT_CATALOG_VERSION,
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 509);
+        assert_eq!(operation_catalog().len(), 521);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -5553,7 +5682,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [196, 279, 22, 12]);
+        assert_eq!(counts, [199, 287, 23, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
