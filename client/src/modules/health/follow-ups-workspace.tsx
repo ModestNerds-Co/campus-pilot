@@ -29,6 +29,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
+import { healthAccessProfile } from "./access";
 import { healthService, responseMessage } from "./service";
 import type {
   FollowUp,
@@ -38,8 +39,9 @@ import type {
 import { displayValue, statusTone } from "./ui";
 
 export function HealthFollowUpsWorkspace() {
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canManage = allowed(permissions, "health:follow_up");
+  const user = useAuthStore((state) => state.user);
+  const access = healthAccessProfile(user?.permissions ?? [], user?.record_scopes);
+  const canManage = access.canManageFollowUps;
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [references, setReferences] = useState<HealthReferences | null>(null);
   const [search, setSearch] = useState("");
@@ -97,7 +99,7 @@ export function HealthFollowUpsWorkspace() {
         {!loading && followUps.length ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}
       </TableControlsBar>
       <TableWrap>
-        {loading ? <TableLoading columns={6} label="Loading Health follow-ups…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : followUps.length === 0 ? <TableEmpty description={search || status !== "all" ? "Change the current filters." : "No Health follow-ups are in this scope."} icon={<CalendarCheck2 />} title={search || status !== "all" ? "No follow-ups match" : "No follow-ups yet"} /> : <TableScroll><Table className="min-w-[860px]"><THead><tr><TH>Patient</TH><TH>Due</TH><TH>Purpose</TH><TH>Assigned to</TH><TH>Status</TH><TH>Outcome</TH></tr></THead><TBody>{followUps.map((followUp) => <TR className={canManage ? "cursor-pointer" : undefined} key={followUp.id} onClick={() => { if (canManage) { setSelected(followUp); setDrawerOpen(true); } }}><TD><span className="font-medium text-[var(--text-strong)]">{followUp.patient_name}</span><p className="mt-1 text-xs text-[var(--text-muted)]">{followUp.patient_number}</p></TD><TD className="whitespace-nowrap text-[var(--text-muted)]">{followUp.due_on}</TD><TD className="max-w-80 text-[var(--text-body)]">{followUp.purpose}</TD><TD className="text-[var(--text-muted)]">{followUp.assigned_employee_name || "Unassigned"}</TD><TD><Badge tone={statusTone(followUp.status)}>{displayValue(followUp.status)}</Badge></TD><TD className="max-w-64 truncate text-[var(--text-muted)]">{followUp.outcome || "—"}</TD></TR>)}</TBody></Table></TableScroll>}
+        {loading ? <TableLoading columns={6} label="Loading Health follow-ups…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : followUps.length === 0 ? <TableEmpty description={search || status !== "all" ? "Change the current filters." : "No Health follow-ups are in this scope."} icon={<CalendarCheck2 />} title={search || status !== "all" ? "No follow-ups match" : "No follow-ups yet"} /> : <TableScroll><Table className="min-w-[860px]"><THead><tr><TH>Patient</TH><TH>Due</TH><TH>Purpose</TH><TH>Assigned to</TH><TH>Status</TH><TH>Outcome</TH></tr></THead><TBody>{followUps.map((followUp) => { const editable = canManage && followUp.status === "open"; return <TR className={editable ? "cursor-pointer" : undefined} key={followUp.id} onClick={() => { if (editable) { setSelected(followUp); setDrawerOpen(true); } }}><TD><span className="font-medium text-[var(--text-strong)]">{followUp.patient_name}</span><p className="mt-1 text-xs text-[var(--text-muted)]">{followUp.patient_number}</p></TD><TD className="whitespace-nowrap text-[var(--text-muted)]">{followUp.due_on}</TD><TD className="max-w-80 text-[var(--text-body)]">{followUp.purpose}</TD><TD className="text-[var(--text-muted)]">{followUp.assigned_employee_name || "Unassigned"}</TD><TD><Badge tone={statusTone(followUp.status)}>{displayValue(followUp.status)}</Badge></TD><TD className="max-w-64 truncate text-[var(--text-muted)]">{followUp.outcome || "—"}</TD></TR>; })}</TBody></Table></TableScroll>}
       </TableWrap>
       <FollowUpDrawer followUp={selected} onClose={() => setDrawerOpen(false)} onSaved={() => { setDrawerOpen(false); void load(); }} open={drawerOpen} references={references} />
     </div>
@@ -139,4 +141,3 @@ function FollowUpDrawer({ open, onClose, onSaved, followUp, references }: { open
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{label}</Label>{children}</div>; }
-function allowed(permissions: string[], permission: string) { return permissions.includes("*") || permissions.includes(permission); }

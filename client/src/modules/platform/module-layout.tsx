@@ -22,6 +22,7 @@ import {
   CircleDollarSign,
   DoorOpen,
   GraduationCap,
+  HeartPulse,
   HeartHandshake,
   FileUp,
   FileCheck2,
@@ -63,6 +64,7 @@ import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access"
 import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
 import { libraryAccessProfile } from "@/modules/library/access";
 import { hostelAccessProfile } from "@/modules/hostel/access";
+import { healthAccessProfile } from "@/modules/health/access";
 import {
   SIS_ADMINISTRATION_PERMISSIONS,
   SIS_IMPORT_ACCESS_PERMISSIONS,
@@ -273,11 +275,17 @@ function libraryNavigation(permissions: readonly string[]): LocalNavItem[] {
   ];
 }
 
-const healthNavigation: LocalNavItem[] = [
-  { label: "Clinic visits", path: "/modules/health/visits", icon: ClipboardList },
-  { label: "Medication", path: "/modules/health/medication", icon: Pill },
-  { label: "Follow-ups", path: "/modules/health/follow-ups", icon: CalendarCheck2 },
-];
+function healthNavigation(
+  permissions: readonly string[],
+  recordScopes: Record<string, string> | undefined,
+): LocalNavItem[] {
+  const access = healthAccessProfile(permissions, recordScopes);
+  return [
+    { label: access.isSelfService ? "My visits" : "Clinic visits", path: "/modules/health/visits", icon: ClipboardList },
+    { label: access.isSelfService ? "My medication" : "Medication", path: "/modules/health/medication", icon: Pill },
+    { label: access.isSelfService ? "My follow-ups" : "Follow-ups", path: "/modules/health/follow-ups", icon: CalendarCheck2 },
+  ];
+}
 
 function hostelNavigation(
   permissions: readonly string[],
@@ -471,12 +479,19 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
     user?.record_scopes,
   );
   const hostelSelfService = moduleKey === "hostel" && !hostelAccess.hasCampusOccupancy;
+  const healthAccess = healthAccessProfile(
+    user?.permissions ?? [],
+    user?.record_scopes,
+  );
+  const healthSelfService = moduleKey === "health" && healthAccess.isSelfService;
   const hasSisAdministrationAccess =
     user?.permissions.includes("*") ||
     SIS_ADMINISTRATION_PERMISSIONS.some((permission) => user?.permissions.includes(permission));
   const moduleLabel = moduleKey === "sis" && !hasSisAdministrationAccess
     ? "Learners"
-    : moduleLabels[moduleKey] || "Module workspace";
+    : healthSelfService
+      ? "My health"
+      : moduleLabels[moduleKey] || "Module workspace";
   const visual = moduleVisuals[moduleKey] ?? defaultModuleVisual;
   const ModuleIcon = visual.icon;
   const localNavigation = (
@@ -503,7 +518,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               : moduleKey === "library"
                 ? libraryNavigation(user?.permissions ?? [])
                 : moduleKey === "health"
-                  ? healthNavigation
+                  ? healthNavigation(user?.permissions ?? [], user?.record_scopes)
                   : moduleKey === "hostel"
                     ? hostelNavigation(user?.permissions ?? [], user?.record_scopes)
                     : moduleKey === "document_registry"
@@ -628,6 +643,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                     location.pathname.startsWith("/modules/hostel/allocations"))
                 }
                 hostelSelfService={hostelSelfService}
+                healthSelfService={healthSelfService}
                 moduleKey={moduleKey}
               />
               {localNavigation.map((item) => (
@@ -734,12 +750,13 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   );
 };
 
-const LocalOverviewLink: React.FC<{ active: boolean; hostelSelfService: boolean; moduleKey: string }> = ({
+const LocalOverviewLink: React.FC<{ active: boolean; healthSelfService: boolean; hostelSelfService: boolean; moduleKey: string }> = ({
   active,
+  healthSelfService,
   hostelSelfService,
   moduleKey,
 }) => {
-  const OverviewIcon = hostelSelfService ? BedDouble : LayoutDashboard;
+  const OverviewIcon = hostelSelfService ? BedDouble : healthSelfService ? HeartPulse : LayoutDashboard;
   return (
   <Link
     aria-current={active ? "page" : undefined}
@@ -756,7 +773,7 @@ const LocalOverviewLink: React.FC<{ active: boolean; hostelSelfService: boolean;
           : moduleKey === "library"
             ? "Catalogue"
             : moduleKey === "health"
-              ? "Patients"
+              ? healthSelfService ? "My health" : "Patients"
               : moduleKey === "hostel"
                 ? hostelSelfService ? "My stay" : "Residences"
               : moduleKey === "document_registry"

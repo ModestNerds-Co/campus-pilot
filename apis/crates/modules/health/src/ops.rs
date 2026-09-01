@@ -362,9 +362,6 @@ impl HealthOps {
         request_context: RequestContext,
         request: &UpdateCareItemRequest,
     ) -> Result<Option<CareItemResponse>> {
-        if !matches!(request.status.as_str(), "active" | "resolved") {
-            bail!("Care item status must be active or resolved");
-        }
         let actor_id = person_actor_id(actor)?;
         let mut transaction = pool
             .begin()
@@ -377,7 +374,8 @@ impl HealthOps {
         let Some((patient_id, current_status)) = row else {
             return Ok(None);
         };
-        let (resolved_by, resolved_at) = if request.status == "resolved" {
+        let event_type = care_item_event_type(&current_status, request.status)?;
+        let (resolved_by, resolved_at) = if request.status == crate::CareItemStatus::Resolved {
             (Some(actor_id), Some(Utc::now()))
         } else {
             (None, None)
@@ -399,7 +397,7 @@ impl HealthOps {
         .bind(optional_text(request.details.as_deref()))
         .bind(request.severity.as_str())
         .bind(request.reviewed_on)
-        .bind(&request.status)
+        .bind(request.status.as_str())
         .bind(resolved_by)
         .bind(resolved_at)
         .bind(actor_id)
@@ -418,13 +416,9 @@ impl HealthOps {
             "care_item",
             id,
             patient_id,
-            if current_status != request.status {
-                "status_changed"
-            } else {
-                "updated"
-            },
+            event_type,
             "health.care_items.update",
-            json!({ "status": request.status, "severity": request.severity.as_str() }),
+            json!({ "status": request.status.as_str(), "severity": request.severity.as_str() }),
         )
         .await?;
         transaction
@@ -442,12 +436,16 @@ impl HealthOps {
     ) -> Result<(Vec<VisitResponse>, i64)> {
         validate_status(query.status.as_deref(), &["open", "closed"], "visit")?;
         let visible_ids = visible_patient_ids(pool, tenant_id, scope).await?;
+        let search = trimmed(query.search.as_deref());
+        let search_patient_ids = search_health_patient_ids(pool, tenant_id, search).await?;
         let (page, per_page) = bounded_page(query);
         let rows = sqlx::query_as::<_, VisitRow>(VISIT_LIST)
             .bind(tenant_id)
             .bind(query.status.as_deref())
             .bind(query.patient_id)
             .bind(visible_ids.as_deref())
+            .bind(search)
+            .bind(search_patient_ids.as_deref())
             .bind(per_page)
             .bind((page - 1) * per_page)
             .fetch_all(pool)
@@ -458,6 +456,8 @@ impl HealthOps {
             .bind(query.status.as_deref())
             .bind(query.patient_id)
             .bind(visible_ids.as_deref())
+            .bind(search)
+            .bind(search_patient_ids.as_deref())
             .fetch_one(pool)
             .await
             .context("Failed to count clinic visits")?;
@@ -616,12 +616,16 @@ impl HealthOps {
             "medication plan",
         )?;
         let visible_ids = visible_patient_ids(pool, tenant_id, scope).await?;
+        let search = trimmed(query.search.as_deref());
+        let search_patient_ids = search_health_patient_ids(pool, tenant_id, search).await?;
         let (page, per_page) = bounded_page(query);
         let rows = sqlx::query_as::<_, MedicationPlanRow>(MEDICATION_PLAN_LIST)
             .bind(tenant_id)
             .bind(query.status.as_deref())
             .bind(query.patient_id)
             .bind(visible_ids.as_deref())
+            .bind(search)
+            .bind(search_patient_ids.as_deref())
             .bind(per_page)
             .bind((page - 1) * per_page)
             .fetch_all(pool)
@@ -632,6 +636,8 @@ impl HealthOps {
             .bind(query.status.as_deref())
             .bind(query.patient_id)
             .bind(visible_ids.as_deref())
+            .bind(search)
+            .bind(search_patient_ids.as_deref())
             .fetch_one(pool)
             .await
             .context("Failed to count medication plans")?;
@@ -716,6 +722,18 @@ impl HealthOps {
             .begin()
             .await
             .context("Failed to start medication plan update")?;
+        let current = sqlx::query_as::<_, (Uuid, String)>(
+            "SELECT patient_id, status FROM health_medication_plans WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .context("Failed to lock medication plan")?;
+        let Some((patient_id, current_status)) = current else {
+            return Ok(None);
+        };
+        let event_type = medication_plan_event_type(&current_status, request.status)?;
         let changed = sqlx::query_as::<_, (Uuid, Uuid)>(
             r#"
             UPDATE health_medication_plans SET
@@ -744,16 +762,10 @@ impl HealthOps {
         .fetch_optional(&mut *transaction)
         .await
         .context("Failed to update medication plan")?;
-        let Some((_, patient_id)) = changed else {
-            return versioned_not_found(
-                &mut transaction,
-                tenant_id,
-                "health_medication_plans",
-                id,
-                request.expected_version,
-            )
-            .await;
+        let Some((_, updated_patient_id)) = changed else {
+            bail!("The medication plan changed; reload it before saving");
         };
+        debug_assert_eq!(patient_id, updated_patient_id);
         append_evidence(
             &mut transaction,
             tenant_id,
@@ -762,7 +774,7 @@ impl HealthOps {
             "medication_plan",
             id,
             patient_id,
-            "updated",
+            event_type,
             "health.medication_plans.update",
             json!({ "status": request.status.as_str() }),
         )
@@ -812,10 +824,17 @@ impl HealthOps {
         if request.administered_at > Utc::now() + Duration::minutes(5) {
             bail!("Medication administration time cannot be in the future");
         }
+        let actor_id = person_actor_id(actor)?;
+        let mut transaction = pool
+            .begin()
+            .await
+            .context("Failed to start medication administration")?;
+        // Serializing against plan updates prevents a dose from being recorded
+        // after another request suspends or ends the authorization.
         let plan = sqlx::query_as::<_, (Uuid, String, chrono::NaiveDate, Option<chrono::NaiveDate>)>(
-            "SELECT patient_id, status, starts_on, ends_on FROM health_medication_plans WHERE tenant_id=$1 AND id=$2",
-        ).bind(tenant_id).bind(plan_id).fetch_optional(pool).await
-        .context("Failed to load medication plan")?.ok_or_else(|| anyhow!("The medication plan was not found"))?;
+            "SELECT patient_id, status, starts_on, ends_on FROM health_medication_plans WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+        ).bind(tenant_id).bind(plan_id).fetch_optional(&mut *transaction).await
+        .context("Failed to lock medication plan")?.ok_or_else(|| anyhow!("The medication plan was not found"))?;
         if plan.1 != "active" {
             bail!("The medication plan is not active");
         }
@@ -823,11 +842,6 @@ impl HealthOps {
         if administered_on < plan.2 || plan.3.is_some_and(|ends_on| administered_on > ends_on) {
             bail!("The administration time is outside the medication plan dates");
         }
-        let actor_id = person_actor_id(actor)?;
-        let mut transaction = pool
-            .begin()
-            .await
-            .context("Failed to start medication administration")?;
         let id = sqlx::query_scalar::<_, Uuid>(
             r#"
             INSERT INTO health_medication_administrations (
@@ -881,12 +895,16 @@ impl HealthOps {
             "follow-up",
         )?;
         let visible_ids = visible_patient_ids(pool, tenant_id, scope).await?;
+        let search = trimmed(query.search.as_deref());
+        let search_patient_ids = search_health_patient_ids(pool, tenant_id, search).await?;
         let (page, per_page) = bounded_page(query);
         let rows = sqlx::query_as::<_, FollowUpRow>(FOLLOW_UP_LIST)
             .bind(tenant_id)
             .bind(query.status.as_deref())
             .bind(query.patient_id)
             .bind(visible_ids.as_deref())
+            .bind(search)
+            .bind(search_patient_ids.as_deref())
             .bind(per_page)
             .bind((page - 1) * per_page)
             .fetch_all(pool)
@@ -897,6 +915,8 @@ impl HealthOps {
             .bind(query.status.as_deref())
             .bind(query.patient_id)
             .bind(visible_ids.as_deref())
+            .bind(search)
+            .bind(search_patient_ids.as_deref())
             .fetch_one(pool)
             .await
             .context("Failed to count health follow-ups")?;
@@ -972,17 +992,22 @@ impl HealthOps {
         request_context: RequestContext,
         request: &UpdateFollowUpRequest,
     ) -> Result<Option<FollowUpResponse>> {
-        let patient_id = sqlx::query_scalar::<_, Uuid>(
-            "SELECT patient_id FROM health_follow_ups WHERE tenant_id=$1 AND id=$2",
+        let mut transaction = pool
+            .begin()
+            .await
+            .context("Failed to start follow-up update")?;
+        let current = sqlx::query_as::<_, (Uuid, String)>(
+            "SELECT patient_id, status FROM health_follow_ups WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
         )
         .bind(tenant_id)
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *transaction)
         .await
-        .context("Failed to load health follow-up")?;
-        let Some(patient_id) = patient_id else {
+        .context("Failed to lock health follow-up")?;
+        let Some((patient_id, current_status)) = current else {
             return Ok(None);
         };
+        let event_type = follow_up_event_type(&current_status, request.status)?;
         validate_follow_up_references(
             pool,
             tenant_id,
@@ -1009,10 +1034,6 @@ impl HealthOps {
             Some(Utc::now())
         };
         let actor_id = person_actor_id(actor)?;
-        let mut transaction = pool
-            .begin()
-            .await
-            .context("Failed to start follow-up update")?;
         let changed = sqlx::query_scalar::<_, Uuid>(
             r#"
             UPDATE health_follow_ups SET assigned_employee_id=$3, due_on=$4, purpose=$5,
@@ -1045,7 +1066,7 @@ impl HealthOps {
             "follow_up",
             id,
             patient_id,
-            "updated",
+            event_type,
             "health.follow_ups.update",
             json!({ "status": request.status.as_str(), "due_on": request.due_on }),
         )
@@ -1139,6 +1160,32 @@ async fn search_person_ids(
         .map(|value| value.id)
         .collect();
     Ok((Some(learners), Some(employees)))
+}
+
+async fn search_health_patient_ids(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    search: Option<&str>,
+) -> Result<Option<Vec<Uuid>>> {
+    let Some(search) = search else {
+        return Ok(None);
+    };
+    let (learner_ids, employee_ids) = search_person_ids(pool, tenant_id, Some(search)).await?;
+    sqlx::query_scalar::<_, Uuid>(
+        r#"
+        SELECT id
+          FROM health_patients
+         WHERE tenant_id=$1
+           AND (learner_id=ANY($2) OR employee_id=ANY($3))
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(learner_ids.unwrap_or_default())
+    .bind(employee_ids.unwrap_or_default())
+    .fetch_all(pool)
+    .await
+    .context("Failed to resolve Health patients matching the search")
+    .map(Some)
 }
 
 async fn patient_identities(
@@ -1574,6 +1621,43 @@ fn validate_plan_dates(
     }
     Ok(())
 }
+
+fn care_item_event_type(current: &str, requested: crate::CareItemStatus) -> Result<&'static str> {
+    match (current, requested) {
+        ("active", crate::CareItemStatus::Active) => Ok("updated"),
+        ("active", crate::CareItemStatus::Resolved) => Ok("resolved"),
+        ("resolved", _) => bail!("A resolved care item is final and cannot be changed"),
+        _ => bail!("The care item has an invalid current status"),
+    }
+}
+
+fn medication_plan_event_type(
+    current: &str,
+    requested: crate::MedicationPlanStatus,
+) -> Result<&'static str> {
+    use crate::MedicationPlanStatus::{Active, Ended, Suspended};
+    match (current, requested) {
+        ("active", Active) | ("suspended", Suspended) => Ok("updated"),
+        ("active", Suspended) => Ok("suspended"),
+        ("suspended", Active) => Ok("resumed"),
+        ("active" | "suspended", Ended) => Ok("ended"),
+        ("ended", _) => bail!("An ended medication plan is final and cannot be changed"),
+        _ => bail!("The medication plan has an invalid current status"),
+    }
+}
+
+fn follow_up_event_type(current: &str, requested: crate::FollowUpStatus) -> Result<&'static str> {
+    use crate::FollowUpStatus::{Cancelled, Completed, Open};
+    match (current, requested) {
+        ("open", Open) => Ok("updated"),
+        ("open", Completed) => Ok("completed"),
+        ("open", Cancelled) => Ok("cancelled"),
+        ("completed" | "cancelled", _) => {
+            bail!("A completed or cancelled follow-up is final and cannot be changed")
+        }
+        _ => bail!("The follow-up has an invalid current status"),
+    }
+}
 fn validate_patient_status(status: Option<&str>) -> Result<()> {
     validate_status(status, &["active", "inactive"], "patient")
 }
@@ -1707,17 +1791,17 @@ const PATIENT_BY_ID: &str = r#"
 "#;
 const CARE_ITEM_COLUMNS: &str = "SELECT id,patient_id,kind,title,details,severity,status,reviewed_on,version,created_at,updated_at FROM health_care_items";
 const CARE_ITEM_SELECT: &str = "SELECT id,patient_id,kind,title,details,severity,status,reviewed_on,version,created_at,updated_at FROM health_care_items WHERE tenant_id=$1 AND patient_id=$2 ORDER BY status, severity DESC, updated_at DESC";
-const VISIT_LIST: &str = "SELECT id,patient_id,checked_in_at,category,presenting_concern,assessment,care_given,disposition,status,version,closed_at,created_at,updated_at FROM health_visits WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) ORDER BY checked_in_at DESC,id LIMIT $5 OFFSET $6";
-const VISIT_COUNT: &str = "SELECT COUNT(*) FROM health_visits WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4))";
+const VISIT_LIST: &str = "SELECT id,patient_id,checked_in_at,category,presenting_concern,assessment,care_given,disposition,status,version,closed_at,created_at,updated_at FROM health_visits WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) AND ($5::TEXT IS NULL OR patient_id=ANY($6) OR presenting_concern ILIKE '%'||$5||'%') ORDER BY checked_in_at DESC,id LIMIT $7 OFFSET $8";
+const VISIT_COUNT: &str = "SELECT COUNT(*) FROM health_visits WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) AND ($5::TEXT IS NULL OR patient_id=ANY($6) OR presenting_concern ILIKE '%'||$5||'%')";
 const VISIT_BY_ID: &str = "SELECT id,patient_id,checked_in_at,category,presenting_concern,assessment,care_given,disposition,status,version,closed_at,created_at,updated_at FROM health_visits WHERE tenant_id=$1 AND id=$2 AND ($3::UUID[] IS NULL OR patient_id=ANY($3))";
 const MEDICATION_PLAN_COLUMNS: &str = "SELECT id,patient_id,medication_name,dosage,route,schedule,instructions,authorization_reference,starts_on,ends_on,status,version,created_at,updated_at FROM health_medication_plans";
-const MEDICATION_PLAN_LIST: &str = "SELECT id,patient_id,medication_name,dosage,route,schedule,instructions,authorization_reference,starts_on,ends_on,status,version,created_at,updated_at FROM health_medication_plans WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) ORDER BY status,starts_on DESC,id LIMIT $5 OFFSET $6";
-const MEDICATION_PLAN_COUNT: &str = "SELECT COUNT(*) FROM health_medication_plans WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4))";
+const MEDICATION_PLAN_LIST: &str = "SELECT id,patient_id,medication_name,dosage,route,schedule,instructions,authorization_reference,starts_on,ends_on,status,version,created_at,updated_at FROM health_medication_plans WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) AND ($5::TEXT IS NULL OR patient_id=ANY($6) OR medication_name ILIKE '%'||$5||'%' OR dosage ILIKE '%'||$5||'%') ORDER BY status,starts_on DESC,id LIMIT $7 OFFSET $8";
+const MEDICATION_PLAN_COUNT: &str = "SELECT COUNT(*) FROM health_medication_plans WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) AND ($5::TEXT IS NULL OR patient_id=ANY($6) OR medication_name ILIKE '%'||$5||'%' OR dosage ILIKE '%'||$5||'%')";
 const MEDICATION_ADMIN_LIST: &str = r#"SELECT administration.id,administration.medication_plan_id,administration.patient_id,plan.medication_name,administration.administered_at,administration.dose,administration.outcome,administration.note,administration.created_at FROM health_medication_administrations administration JOIN health_medication_plans plan ON plan.id=administration.medication_plan_id AND plan.tenant_id=administration.tenant_id WHERE administration.tenant_id=$1 AND ($2::UUID IS NULL OR administration.patient_id=$2) AND ($3::UUID[] IS NULL OR administration.patient_id=ANY($3)) ORDER BY administration.administered_at DESC,administration.id LIMIT $4 OFFSET $5"#;
 const MEDICATION_ADMIN_COUNT: &str = "SELECT COUNT(*) FROM health_medication_administrations WHERE tenant_id=$1 AND ($2::UUID IS NULL OR patient_id=$2) AND ($3::UUID[] IS NULL OR patient_id=ANY($3))";
 const FOLLOW_UP_COLUMNS: &str = "SELECT id,patient_id,visit_id,assigned_employee_id,due_on,purpose,status,outcome,version,completed_at,created_at,updated_at FROM health_follow_ups";
-const FOLLOW_UP_LIST: &str = "SELECT id,patient_id,visit_id,assigned_employee_id,due_on,purpose,status,outcome,version,completed_at,created_at,updated_at FROM health_follow_ups WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) ORDER BY CASE WHEN status='open' THEN 0 ELSE 1 END,due_on,id LIMIT $5 OFFSET $6";
-const FOLLOW_UP_COUNT: &str = "SELECT COUNT(*) FROM health_follow_ups WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4))";
+const FOLLOW_UP_LIST: &str = "SELECT id,patient_id,visit_id,assigned_employee_id,due_on,purpose,status,outcome,version,completed_at,created_at,updated_at FROM health_follow_ups WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) AND ($5::TEXT IS NULL OR patient_id=ANY($6) OR purpose ILIKE '%'||$5||'%') ORDER BY CASE WHEN status='open' THEN 0 ELSE 1 END,due_on,id LIMIT $7 OFFSET $8";
+const FOLLOW_UP_COUNT: &str = "SELECT COUNT(*) FROM health_follow_ups WHERE tenant_id=$1 AND ($2::TEXT IS NULL OR status=$2) AND ($3::UUID IS NULL OR patient_id=$3) AND ($4::UUID[] IS NULL OR patient_id=ANY($4)) AND ($5::TEXT IS NULL OR patient_id=ANY($6) OR purpose ILIKE '%'||$5||'%')";
 
 #[cfg(test)]
 mod tests {
@@ -1732,5 +1816,25 @@ mod tests {
     fn status_filters_are_closed() {
         assert!(validate_patient_status(Some("active")).is_ok());
         assert!(validate_patient_status(Some("unknown")).is_err());
+    }
+
+    #[test]
+    fn terminal_health_decisions_cannot_be_reopened() {
+        assert!(care_item_event_type("active", crate::CareItemStatus::Resolved).is_ok());
+        assert!(care_item_event_type("resolved", crate::CareItemStatus::Active).is_err());
+        assert!(
+            medication_plan_event_type("suspended", crate::MedicationPlanStatus::Active).is_ok()
+        );
+        assert!(medication_plan_event_type("ended", crate::MedicationPlanStatus::Active).is_err());
+        assert!(follow_up_event_type("open", crate::FollowUpStatus::Completed).is_ok());
+        assert!(follow_up_event_type("completed", crate::FollowUpStatus::Open).is_err());
+        assert!(follow_up_event_type("cancelled", crate::FollowUpStatus::Open).is_err());
+    }
+
+    #[test]
+    fn worklist_queries_apply_the_search_term() {
+        assert!(VISIT_LIST.contains("presenting_concern ILIKE"));
+        assert!(MEDICATION_PLAN_LIST.contains("medication_name ILIKE"));
+        assert!(FOLLOW_UP_LIST.contains("purpose ILIKE"));
     }
 }

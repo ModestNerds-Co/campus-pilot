@@ -29,6 +29,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
+import { healthAccessProfile } from "./access";
 import { healthService, responseMessage } from "./service";
 import type {
   HealthReferences,
@@ -39,9 +40,10 @@ import type {
 import { dateTime, displayValue, statusTone } from "./ui";
 
 export function HealthVisitsWorkspace() {
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canCreate = allowed(permissions, "health:create");
-  const canEdit = allowed(permissions, "health:edit");
+  const user = useAuthStore((state) => state.user);
+  const access = healthAccessProfile(user?.permissions ?? [], user?.record_scopes);
+  const canCreate = access.canCreateVisit;
+  const canEdit = access.canEditCare;
   const [visits, setVisits] = useState<Visit[]>([]);
   const [references, setReferences] = useState<HealthReferences | null>(null);
   const [search, setSearch] = useState("");
@@ -279,9 +281,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 function ReadValue({ label, value }: { label: string; value: string }) {
   return <div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--text-body)]">{value}</p></div>;
-}
-function allowed(permissions: string[], permission: string) {
-  return permissions.includes("*") || permissions.includes(permission);
 }
 function localDateTime() {
   const now = new Date();

@@ -65,6 +65,23 @@ pub enum CareSeverity {
     High,
     Critical,
 }
+
+/// Forward-only state of a care alert or plan item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CareItemStatus {
+    Active,
+    Resolved,
+}
+impl CareItemStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Resolved => "resolved",
+        }
+    }
+}
 impl CareSeverity {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -385,7 +402,7 @@ pub struct UpdateCareItemRequest {
     pub details: Option<String>,
     pub severity: CareSeverity,
     pub reviewed_on: Option<NaiveDate>,
-    pub status: String,
+    pub status: CareItemStatus,
 }
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateVisitRequest {

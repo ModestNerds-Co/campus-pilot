@@ -11,14 +11,16 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
+import { healthAccessProfile } from "./access";
 import { healthService, responseMessage } from "./service";
 import type { HealthReferences, PatientSummary } from "./types";
 import { displayValue, statusTone } from "./ui";
 
 export function HealthPatientsWorkspace() {
   const navigate = useNavigate();
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canCreate = permissions.includes("*") || permissions.includes("health:create");
+  const user = useAuthStore((state) => state.user);
+  const access = healthAccessProfile(user?.permissions ?? [], user?.record_scopes);
+  const selfService = !access.hasCampusPatients;
   const [records, setRecords] = useState<PatientSummary[]>([]);
   const [references, setReferences] = useState<HealthReferences | null>(null);
   const [search, setSearch] = useState("");
@@ -40,23 +42,23 @@ export function HealthPatientsWorkspace() {
   }, [page, search, status]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    if (!canCreate) return;
+    if (!access.canAddPatient) return;
     void healthService.references().then((response) => { if (response.success) setReferences(response.data ?? null); });
-  }, [canCreate]);
+  }, [access.canAddPatient]);
 
-  usePageChrome("Patients", canCreate ? <Button onClick={() => setDrawerOpen(true)}><Plus className="size-4" />Add patient</Button> : null);
+  usePageChrome(selfService ? "My health record" : "Patients", access.canAddPatient ? <Button onClick={() => setDrawerOpen(true)}><Plus className="size-4" />Add patient</Button> : null);
 
   return <div className="space-y-6">
-    <p className="text-sm text-[var(--text-muted)]">Learner and employee identity stays in SIS and HR.</p>
-    <TableControlsBar>
+    <p className="text-sm text-[var(--text-muted)]">{selfService ? "Review the health record linked to your account." : "Learner and employee identity stays in SIS and HR."}</p>
+    {!selfService ? <TableControlsBar>
       <Input aria-label="Search Health patients" className="sm:w-72" leadingIcon={<Search />} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search name or number" value={search} />
       <Select aria-label="Patient status" className="sm:w-44" onChange={(event) => { setPage(1); setStatus(event.target.value); }} value={status}>
         <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
       </Select>
       {!loading && records.length ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}
-    </TableControlsBar>
+    </TableControlsBar> : null}
     <TableWrap>
-      {loading ? <TableLoading columns={6} label="Loading Health patients…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={search || status !== "all" ? "Change the current filters." : canCreate ? "Add a learner or employee from the campus directory." : "No Health patient record is available."} icon={<HeartPulse />} title={search || status !== "all" ? "No patients match" : "No Health patients yet"} /> :
+      {loading ? <TableLoading columns={6} label={selfService ? "Loading your health record…" : "Loading Health patients…"} /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={search || status !== "all" ? "Change the current filters." : access.canAddPatient ? "Add a learner or employee from the campus directory." : selfService ? "No Health patient record is linked to your account." : "No Health patient record is available."} icon={<HeartPulse />} title={search || status !== "all" ? "No patients match" : selfService ? "No health record" : "No Health patients yet"} /> :
         <TableScroll><Table className="min-w-[860px]"><THead><tr><TH>Patient</TH><TH>Type</TH><TH>Status</TH><TH>Care alerts</TH><TH>Open visits</TH><TH>Follow-up</TH></tr></THead><TBody>
           {records.map((patient) => <TR className="cursor-pointer" key={patient.id} onClick={() => void navigate({ to: "/modules/health/patients/$patientId", params: { patientId: patient.id } })}>
             <TD><span className="font-medium text-[var(--text-strong)]">{patient.person_name}</span><p className="mt-1 text-xs text-[var(--text-muted)]">{patient.person_number}</p></TD>
