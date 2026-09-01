@@ -1420,6 +1420,7 @@ dependencies = [
  "cp-audit",
  "cp-common",
  "cp-document-registry",
+ "cp-facilities",
  "cp-fees",
  "cp-finance",
  "cp-fleet",
@@ -1812,6 +1813,23 @@ dependencies = [
  "sha2",
  "sqlx",
  "tokio",
+ "uuid",
+ "validator",
+]
+
+[[package]]
+name = "cp-facilities"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-audit",
+ "cp-common",
+ "cp-hr-payroll",
+ "serde",
+ "serde_json",
+ "sqlx",
  "uuid",
  "validator",
 ]

@@ -46,6 +46,8 @@ import {
   UserRoundCheck,
   UsersRound,
   Warehouse,
+  Wrench,
+  MapPin,
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -96,6 +98,7 @@ const moduleLabels: Record<string, string> = {
   hr_payroll: "HR and payroll",
   procurement: "Procurement",
   fleet: "Fleet",
+  facilities: "Facilities",
   transport: "Transport",
   hostel: "Hostel",
   health: "Health services",
@@ -112,6 +115,11 @@ const fleetNavigation: LocalNavItem[] = [
     path: "/modules/fleet/daily-log",
     icon: ReceiptText,
   },
+];
+
+const facilitiesNavigation: LocalNavItem[] = [
+  { label: "Work orders", path: "/modules/facilities/work-orders", icon: Wrench, permission: "facilities:operate" },
+  { label: "Locations", path: "/modules/facilities/locations", icon: MapPin, permission: "facilities:manage" },
 ];
 
 const transportNavigation: LocalNavItem[] = [
@@ -422,6 +430,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
       ? agentNavigation
       : moduleKey === "fleet"
         ? fleetNavigation
+        : moduleKey === "facilities"
+          ? facilitiesNavigation
         : moduleKey === "transport"
           ? transportNavigation
         : moduleKey === "hr_payroll"
@@ -555,7 +565,9 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                   (moduleKey === "agent" &&
                     location.pathname.startsWith("/modules/agent/sessions/")) ||
                   (moduleKey === "health" &&
-                    location.pathname.startsWith("/modules/health/patients"))
+                    location.pathname.startsWith("/modules/health/patients")) ||
+                  (moduleKey === "facilities" &&
+                    location.pathname.startsWith("/modules/facilities/requests"))
                 }
                 moduleKey={moduleKey}
               />
@@ -695,6 +707,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
                 ? "Cases"
               : moduleKey === "transport"
                 ? "Routes"
+              : moduleKey === "facilities"
+                ? "Service requests"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -738,6 +752,12 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
         {active ? <ChevronRight className="size-3.5" /> : null}
       </Link>
     );
+  if (item.path === "/modules/facilities/requests")
+    return <Link className={navClass(active)} to="/modules/facilities/requests"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/facilities/work-orders")
+    return <Link className={navClass(active)} to="/modules/facilities/work-orders"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/facilities/locations")
+    return <Link className={navClass(active)} to="/modules/facilities/locations"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/hr-payroll/employees")
     return (
       <Link className={navClass(active)} to="/modules/hr-payroll/employees">

@@ -30,6 +30,7 @@ members = [
     "crates/modules/learning",
     "crates/modules/student-support",
     "crates/modules/transport",
+    "crates/modules/facilities",
 ]
 
 [workspace.dependencies]

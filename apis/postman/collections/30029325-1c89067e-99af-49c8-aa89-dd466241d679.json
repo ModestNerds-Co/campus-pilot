@@ -6456,6 +6456,31 @@
       ]
     },
     {
+      "name": "Facilities",
+      "description": "Campus locations, scoped service requests, employee-assigned work orders, immutable completion submissions, and inspections.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "List Facilities Locations", "request": { "method": "GET", "url": "{{base_url}}/facilities/locations?status=active&search=" } },
+        { "name": "Read Facilities Location", "request": { "method": "GET", "url": "{{base_url}}/facilities/locations/{{facilities_location_id}}" } },
+        { "name": "Create Facilities Location", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"parent_id\": null,\n  \"kind\": \"site\",\n  \"code\": \"MAIN\",\n  \"name\": \"Main campus\",\n  \"capacity\": null,\n  \"notes\": null\n}" }, "url": "{{base_url}}/facilities/locations" } },
+        { "name": "Update Facilities Location", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"parent_id\": null,\n  \"kind\": \"site\",\n  \"code\": \"MAIN\",\n  \"name\": \"Main campus\",\n  \"capacity\": null,\n  \"notes\": null,\n  \"expected_version\": {{facilities_location_version}}\n}" }, "url": "{{base_url}}/facilities/locations/{{facilities_location_id}}" } },
+        { "name": "Archive Facilities Location", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_location_version}},\n  \"reason\": \"Location is no longer in use\"\n}" }, "url": "{{base_url}}/facilities/locations/{{facilities_location_id}}/archive" } },
+        { "name": "Read Facilities References", "request": { "method": "GET", "url": "{{base_url}}/facilities/references?search=", "description": "Human-operated picker for active HR employees and Facilities locations." } },
+        { "name": "List Facilities Service Requests", "request": { "method": "GET", "url": "{{base_url}}/facilities/requests?page=1&per_page=25&status=open" } },
+        { "name": "Create Facilities Service Request", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"location_id\": \"{{facilities_location_id}}\",\n  \"priority\": \"normal\",\n  \"summary\": \"Classroom light is not working\",\n  \"description\": \"The ceiling light does not switch on.\"\n}" }, "url": "{{base_url}}/facilities/requests" } },
+        { "name": "Read Facilities Service Request", "request": { "method": "GET", "url": "{{base_url}}/facilities/requests/{{facilities_request_id}}" } },
+        { "name": "Cancel Facilities Service Request", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_request_version}},\n  \"reason\": \"The issue no longer requires work\"\n}" }, "url": "{{base_url}}/facilities/requests/{{facilities_request_id}}/cancel" } },
+        { "name": "Close Facilities Service Request", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_request_version}},\n  \"reason\": \"Resolved work was reviewed and closed\"\n}" }, "url": "{{base_url}}/facilities/requests/{{facilities_request_id}}/close" } },
+        { "name": "List Facilities Work Orders", "request": { "method": "GET", "url": "{{base_url}}/facilities/work-orders?page=1&per_page=25&status=assigned" } },
+        { "name": "Create Facilities Work Order", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"service_request_id\": \"{{facilities_request_id}}\",\n  \"assigned_employee_id\": \"{{facilities_employee_id}}\",\n  \"title\": \"Repair classroom light\",\n  \"instructions\": \"Inspect the fitting and replace failed parts.\",\n  \"target_date\": \"2026-09-04\"\n}" }, "url": "{{base_url}}/facilities/work-orders" } },
+        { "name": "Read Facilities Work Order", "request": { "method": "GET", "url": "{{base_url}}/facilities/work-orders/{{facilities_work_order_id}}" } },
+        { "name": "Start Facilities Work Order", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_work_order_version}}\n}" }, "url": "{{base_url}}/facilities/work-orders/{{facilities_work_order_id}}/start" } },
+        { "name": "Submit Facilities Completion", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_work_order_version}},\n  \"summary\": \"The failed fitting was replaced and tested.\"\n}" }, "url": "{{base_url}}/facilities/work-orders/{{facilities_work_order_id}}/submit-completion" } },
+        { "name": "Cancel Facilities Work Order", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_work_order_version}},\n  \"reason\": \"The work is no longer required\"\n}" }, "url": "{{base_url}}/facilities/work-orders/{{facilities_work_order_id}}/cancel" } },
+        { "name": "Inspect Facilities Work Order", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{facilities_work_order_version}},\n  \"outcome\": \"pass\",\n  \"notes\": \"The repair was inspected and is operational.\"\n}" }, "url": "{{base_url}}/facilities/work-orders/{{facilities_work_order_id}}/inspections" } }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -6816,6 +6841,41 @@
     {
       "key": "transport_driver_id",
       "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "facilities_location_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "facilities_location_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "facilities_request_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "facilities_request_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "facilities_employee_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "facilities_work_order_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "facilities_work_order_version",
+      "value": "1",
       "type": "default"
     }
   ]

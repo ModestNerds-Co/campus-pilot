@@ -11,14 +11,14 @@ use actix_web::http::Method;
 use crate::{AgentExposure, OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
-pub const OPERATION_CATALOG_VERSION: u32 = 5;
+pub const OPERATION_CATALOG_VERSION: u32 = 6;
 
 /// Product-catalog identifier carried by signed entitlement leases.
 ///
 /// The control plane and campus runtime must agree on this exact value before
 /// lease claims can be accepted. Keep it aligned with
 /// [`OPERATION_CATALOG_VERSION`].
-pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/5";
+pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/6";
 
 /// Product-catalog versions this campus binary can safely interpret.
 ///
@@ -28,6 +28,7 @@ pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] = &[
     "campus-pilot/2",
     "campus-pilot/3",
     "campus-pilot/4",
+    "campus-pilot/5",
     PRODUCT_CATALOG_VERSION,
 ];
 
@@ -4993,6 +4994,168 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/locations",
+            "facilities.locations.list",
+            "facilities",
+            "facilities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/locations/{id}",
+            "facilities.locations.read",
+            "facilities",
+            "facilities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/locations",
+            "facilities.locations.create",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/facilities/locations/{id}",
+            "facilities.locations.update",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/locations/{id}/archive",
+            "facilities.locations.archive",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/references",
+            "facilities.references.list",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/requests",
+            "facilities.requests.list",
+            "facilities",
+            "facilities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/requests",
+            "facilities.requests.create",
+            "facilities",
+            "facilities:request",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/requests/{id}",
+            "facilities.requests.read",
+            "facilities",
+            "facilities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/requests/{id}/cancel",
+            "facilities.requests.cancel",
+            "facilities",
+            "facilities:request",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/requests/{id}/close",
+            "facilities.requests.close",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/work-orders",
+            "facilities.work_orders.list",
+            "facilities",
+            "facilities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/work-orders",
+            "facilities.work_orders.create",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/facilities/work-orders/{id}",
+            "facilities.work_orders.read",
+            "facilities",
+            "facilities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/work-orders/{id}/start",
+            "facilities.work_orders.start",
+            "facilities",
+            "facilities:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/work-orders/{id}/submit-completion",
+            "facilities.work_orders.submit_completion",
+            "facilities",
+            "facilities:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/work-orders/{id}/cancel",
+            "facilities.work_orders.cancel",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/facilities/work-orders/{id}/inspections",
+            "facilities.work_orders.inspect",
+            "facilities",
+            "facilities:manage",
+            OperationEffect::Write,
+            true,
+        ),
     ]
 }
 
@@ -5123,7 +5286,7 @@ fn route(
         ])
     } else if key.starts_with("procurement.") {
         operation.requiring_modules(["hr_payroll".to_string(), "finance".to_string()])
-    } else if key.starts_with("fleet.") {
+    } else if key.starts_with("fleet.") || key.starts_with("facilities.") {
         operation.requiring_modules(["hr_payroll".to_string()])
     } else {
         operation
@@ -5335,7 +5498,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "health.visits.read"
         | "health.medication_plans.list"
         | "health.medication_administrations.list"
-        | "health.follow_ups.list" => AgentExposure::Exposed,
+        | "health.follow_ups.list"
+        | "facilities.locations.list"
+        | "facilities.locations.read"
+        | "facilities.requests.list"
+        | "facilities.requests.read"
+        | "facilities.work_orders.list"
+        | "facilities.work_orders.read" => AgentExposure::Exposed,
         "document_registry.numbering_policy.read"
         | "document_registry.series.list"
         | "document_registry.series.read"
@@ -5625,7 +5794,18 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "health.medication_plans.update"
         | "health.medication_administrations.create"
         | "health.follow_ups.create"
-        | "health.follow_ups.update" => AgentExposure::ApprovalRequired,
+        | "health.follow_ups.update"
+        | "facilities.locations.create"
+        | "facilities.locations.update"
+        | "facilities.locations.archive"
+        | "facilities.requests.create"
+        | "facilities.requests.cancel"
+        | "facilities.requests.close"
+        | "facilities.work_orders.create"
+        | "facilities.work_orders.start"
+        | "facilities.work_orders.submit_completion"
+        | "facilities.work_orders.cancel"
+        | "facilities.work_orders.inspect" => AgentExposure::ApprovalRequired,
         "document_registry.numbering_policy.update"
         | "document_registry.series.create"
         | "document_registry.series.update"
@@ -5682,6 +5862,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         },
         "transport.references.read" => AgentExposure::HumanOnly {
             reason: "Learner, driver, vehicle, and route selection remains a direct human scheduling workflow.",
+        },
+        "facilities.references.list" => AgentExposure::HumanOnly {
+            reason: "Employee and location assignment selection remains a direct human Facilities workflow.",
         },
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
@@ -5775,6 +5958,7 @@ mod tests {
                 ("sis".to_string(), ModuleEntitlementState::Enabled),
                 ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
+                ("facilities".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("learning".to_string(), ModuleEntitlementState::Enabled),
@@ -5824,13 +6008,13 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
-        assert_eq!(OPERATION_CATALOG_VERSION, 5);
+        assert_eq!(OPERATION_CATALOG_VERSION, 6);
         assert_eq!(
             PRODUCT_CATALOG_VERSION,
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 540);
+        assert_eq!(operation_catalog().len(), 558);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -5882,7 +6066,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [204, 300, 24, 12]);
+        assert_eq!(counts, [210, 311, 25, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -6029,6 +6213,41 @@ mod tests {
         assert!(!allowed(
             "procurement.requisitions.create",
             &procurement_viewer
+        ));
+
+        let facilities_requester = ["facilities:view", "facilities:request"];
+        assert!(allowed("facilities.requests.list", &facilities_requester));
+        assert!(allowed("facilities.requests.create", &facilities_requester));
+        assert!(!allowed(
+            "facilities.work_orders.start",
+            &facilities_requester
+        ));
+        assert!(!allowed(
+            "facilities.locations.create",
+            &facilities_requester
+        ));
+
+        let facilities_officer = [
+            "facilities:view",
+            "facilities:request",
+            "facilities:operate",
+        ];
+        assert!(allowed("facilities.work_orders.start", &facilities_officer));
+        assert!(allowed(
+            "facilities.work_orders.submit_completion",
+            &facilities_officer
+        ));
+        assert!(!allowed(
+            "facilities.work_orders.inspect",
+            &facilities_officer
+        ));
+        assert!(!allowed("facilities.locations.update", &facilities_officer));
+
+        let facilities_manager = ["facilities:view", "facilities:manage"];
+        assert!(allowed("facilities.locations.create", &facilities_manager));
+        assert!(allowed(
+            "facilities.work_orders.inspect",
+            &facilities_manager
         ));
     }
 

@@ -11,6 +11,7 @@ mod assets_inventory;
 mod attendance;
 mod authority;
 mod document_registry;
+mod facilities;
 mod fees;
 mod finance;
 mod fleet;
@@ -87,6 +88,10 @@ use attendance::{
     AttendanceRegisterReadCapability, AttendanceRegistersListCapability,
 };
 use document_registry::{RegistryReadCapability, RegistryReadKind};
+use facilities::{
+    FacilitiesLocationsCapability, FacilitiesReadCapability, FacilitiesReadKind,
+    FacilitiesRequestsCapability, FacilitiesWorkOrdersCapability,
+};
 use fees::{
     FeesImportPreviewCapability, FeesImportReadCapability, FeesImportsListCapability,
     FeesLearnerCandidatesCapability, FeesListCapability, FeesListKind, FeesReadCapability,
@@ -630,6 +635,24 @@ pub fn build_capability_registry(
     registry
         .register(FleetVehicleLogReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Fleet vehicle-log-read capability: {error}"));
+    registry
+        .register(FacilitiesLocationsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Facilities locations-list capability: {error}"));
+    registry
+        .register(FacilitiesRequestsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Facilities requests-list capability: {error}"));
+    registry
+        .register(FacilitiesWorkOrdersCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Facilities work-orders-list capability: {error}"));
+    for kind in [
+        FacilitiesReadKind::Location,
+        FacilitiesReadKind::Request,
+        FacilitiesReadKind::WorkOrder,
+    ] {
+        registry
+            .register(FacilitiesReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     registry
         .register(LibrarySettingsCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Library settings capability: {error}"));

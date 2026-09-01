@@ -23,6 +23,7 @@ export function moduleContextLabel(moduleKey: string) {
     fees: "Fees and billing",
     finance: "Finance",
     fleet: "Fleet",
+    facilities: "Facilities",
     home: "All modules",
     hr_payroll: "HR and payroll",
     procurement: "Procurement",

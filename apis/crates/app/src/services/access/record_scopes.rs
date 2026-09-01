@@ -80,6 +80,8 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("fleet.driver_candidates", CAMPUS_ONLY),
     definition("fleet.drivers", CAMPUS_SELF),
     definition("fleet.vehicle_logs", CAMPUS_SELF),
+    definition("facilities.requests", CAMPUS_SELF),
+    definition("facilities.work_orders", CAMPUS_ASSIGNED),
     definition("timetabling.snapshots", CAMPUS_ONLY),
     definition("messaging.announcements", CAMPUS_SELF_ASSIGNED),
     definition("library.members", CAMPUS_SELF),
@@ -298,7 +300,7 @@ mod tests {
 
     #[test]
     fn catalogue_keys_are_unique_and_parse_safe() {
-        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 39);
+        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 41);
         let mut keys = BTreeSet::new();
         for definition in RECORD_SCOPE_FAMILIES {
             assert!(keys.insert(definition.key()), "duplicate family key");
@@ -330,6 +332,9 @@ mod tests {
         assert!(RoleRecordScopeAssignment::parse("learning.spaces", "self").is_ok());
         assert!(RoleRecordScopeAssignment::parse("attendance.registers", "assigned").is_ok());
         assert!(RoleRecordScopeAssignment::parse("attendance.registers", "self").is_err());
+        assert!(RoleRecordScopeAssignment::parse("facilities.requests", "self").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("facilities.work_orders", "assigned").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("facilities.work_orders", "self").is_err());
     }
 
     #[test]

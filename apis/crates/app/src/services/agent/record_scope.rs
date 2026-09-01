@@ -158,6 +158,12 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "internal_audit.evidence.list",
     "internal_audit.findings.list",
     "internal_audit.findings.read",
+    "facilities.locations.list",
+    "facilities.locations.read",
+    "facilities.requests.list",
+    "facilities.requests.read",
+    "facilities.work_orders.list",
+    "facilities.work_orders.read",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -455,7 +461,10 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "internal_audit.plans.list"
         | "internal_audit.auditor_candidates.list"
         | "internal_audit.engagements.list"
-        | "internal_audit.findings.list" => Some(OperationScopePolicy::Dataset),
+        | "internal_audit.findings.list"
+        | "facilities.locations.list"
+        | "facilities.requests.list"
+        | "facilities.work_orders.list" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -567,6 +576,13 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         ),
         "internal_audit.findings.read" => {
             Some(OperationScopePolicy::OneResource("internal_audit_finding"))
+        }
+        "facilities.locations.read" => Some(OperationScopePolicy::OneResource("facility_location")),
+        "facilities.requests.read" => Some(OperationScopePolicy::OneResource(
+            "facility_service_request",
+        )),
+        "facilities.work_orders.read" => {
+            Some(OperationScopePolicy::OneResource("facility_work_order"))
         }
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
@@ -821,6 +837,15 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "internal_audit_finding" => Some(
             "SELECT EXISTS(SELECT 1 FROM internal_audit_findings WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "facility_location" => {
+            Some("SELECT EXISTS(SELECT 1 FROM facility_locations WHERE tenant_id = $1 AND id = $2)")
+        }
+        "facility_service_request" => Some(
+            "SELECT EXISTS(SELECT 1 FROM facility_service_requests WHERE tenant_id = $1 AND id = $2)",
+        ),
+        "facility_work_order" => Some(
+            "SELECT EXISTS(SELECT 1 FROM facility_work_orders WHERE tenant_id = $1 AND id = $2)",
+        ),
         _ => None,
     }
 }
@@ -900,7 +925,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 136);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 142);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -920,7 +945,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 204);
+        assert_eq!(exposed.len(), 210);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

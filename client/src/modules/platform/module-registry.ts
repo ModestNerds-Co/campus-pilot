@@ -19,6 +19,7 @@ import {
   Settings2,
   ShieldCheck,
   Truck,
+  Wrench,
 } from "lucide-react";
 
 import type { ModuleVisual } from "./types";
@@ -83,6 +84,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   fleet: {
     icon: Truck,
     highlights: ["Vehicles", "Drivers", "Daily vehicle log"],
+  },
+  facilities: {
+    icon: Wrench,
+    highlights: ["Service requests", "Assigned work orders", "Locations and inspections"],
   },
   transport: {
     icon: Truck,

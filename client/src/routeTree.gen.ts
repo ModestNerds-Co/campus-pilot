@@ -95,6 +95,9 @@ import { Route as ModulesFeesInvoicesRouteImport } from './routes/modules/fees/i
 import { Route as ModulesFeesImportsRouteImport } from './routes/modules/fees/imports'
 import { Route as ModulesFeesFeeStructuresRouteImport } from './routes/modules/fees/fee-structures'
 import { Route as ModulesFeesBillingAccountsRouteImport } from './routes/modules/fees/billing-accounts'
+import { Route as ModulesFacilitiesWorkOrdersRouteImport } from './routes/modules/facilities/work-orders'
+import { Route as ModulesFacilitiesRequestsRouteImport } from './routes/modules/facilities/requests'
+import { Route as ModulesFacilitiesLocationsRouteImport } from './routes/modules/facilities/locations'
 import { Route as ModulesDocumentRegistrySettingsRouteImport } from './routes/modules/document-registry/settings'
 import { Route as ModulesDocumentRegistryReviewsRouteImport } from './routes/modules/document-registry/reviews'
 import { Route as ModulesDocumentRegistryRetentionRouteImport } from './routes/modules/document-registry/retention'
@@ -600,6 +603,24 @@ const ModulesFeesBillingAccountsRoute =
     path: '/fees/billing-accounts',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesFacilitiesWorkOrdersRoute =
+  ModulesFacilitiesWorkOrdersRouteImport.update({
+    id: '/facilities/work-orders',
+    path: '/facilities/work-orders',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesFacilitiesRequestsRoute =
+  ModulesFacilitiesRequestsRouteImport.update({
+    id: '/facilities/requests',
+    path: '/facilities/requests',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesFacilitiesLocationsRoute =
+  ModulesFacilitiesLocationsRouteImport.update({
+    id: '/facilities/locations',
+    path: '/facilities/locations',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesDocumentRegistrySettingsRoute =
   ModulesDocumentRegistrySettingsRouteImport.update({
     id: '/document-registry/settings',
@@ -951,6 +972,9 @@ export interface FileRoutesByFullPath {
   '/modules/document-registry/retention': typeof ModulesDocumentRegistryRetentionRoute
   '/modules/document-registry/reviews': typeof ModulesDocumentRegistryReviewsRoute
   '/modules/document-registry/settings': typeof ModulesDocumentRegistrySettingsRoute
+  '/modules/facilities/locations': typeof ModulesFacilitiesLocationsRoute
+  '/modules/facilities/requests': typeof ModulesFacilitiesRequestsRoute
+  '/modules/facilities/work-orders': typeof ModulesFacilitiesWorkOrdersRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/fees/imports': typeof ModulesFeesImportsRoute
@@ -1088,6 +1112,9 @@ export interface FileRoutesByTo {
   '/modules/document-registry/retention': typeof ModulesDocumentRegistryRetentionRoute
   '/modules/document-registry/reviews': typeof ModulesDocumentRegistryReviewsRoute
   '/modules/document-registry/settings': typeof ModulesDocumentRegistrySettingsRoute
+  '/modules/facilities/locations': typeof ModulesFacilitiesLocationsRoute
+  '/modules/facilities/requests': typeof ModulesFacilitiesRequestsRoute
+  '/modules/facilities/work-orders': typeof ModulesFacilitiesWorkOrdersRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/fees/imports': typeof ModulesFeesImportsRoute
@@ -1227,6 +1254,9 @@ export interface FileRoutesById {
   '/modules/document-registry/retention': typeof ModulesDocumentRegistryRetentionRoute
   '/modules/document-registry/reviews': typeof ModulesDocumentRegistryReviewsRoute
   '/modules/document-registry/settings': typeof ModulesDocumentRegistrySettingsRoute
+  '/modules/facilities/locations': typeof ModulesFacilitiesLocationsRoute
+  '/modules/facilities/requests': typeof ModulesFacilitiesRequestsRoute
+  '/modules/facilities/work-orders': typeof ModulesFacilitiesWorkOrdersRoute
   '/modules/fees/billing-accounts': typeof ModulesFeesBillingAccountsRoute
   '/modules/fees/fee-structures': typeof ModulesFeesFeeStructuresRoute
   '/modules/fees/imports': typeof ModulesFeesImportsRoute
@@ -1367,6 +1397,9 @@ export interface FileRouteTypes {
     | '/modules/document-registry/retention'
     | '/modules/document-registry/reviews'
     | '/modules/document-registry/settings'
+    | '/modules/facilities/locations'
+    | '/modules/facilities/requests'
+    | '/modules/facilities/work-orders'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
     | '/modules/fees/imports'
@@ -1504,6 +1537,9 @@ export interface FileRouteTypes {
     | '/modules/document-registry/retention'
     | '/modules/document-registry/reviews'
     | '/modules/document-registry/settings'
+    | '/modules/facilities/locations'
+    | '/modules/facilities/requests'
+    | '/modules/facilities/work-orders'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
     | '/modules/fees/imports'
@@ -1642,6 +1678,9 @@ export interface FileRouteTypes {
     | '/modules/document-registry/retention'
     | '/modules/document-registry/reviews'
     | '/modules/document-registry/settings'
+    | '/modules/facilities/locations'
+    | '/modules/facilities/requests'
+    | '/modules/facilities/work-orders'
     | '/modules/fees/billing-accounts'
     | '/modules/fees/fee-structures'
     | '/modules/fees/imports'
@@ -2338,6 +2377,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesFeesBillingAccountsRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/facilities/work-orders': {
+      id: '/modules/facilities/work-orders'
+      path: '/facilities/work-orders'
+      fullPath: '/modules/facilities/work-orders'
+      preLoaderRoute: typeof ModulesFacilitiesWorkOrdersRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/facilities/requests': {
+      id: '/modules/facilities/requests'
+      path: '/facilities/requests'
+      fullPath: '/modules/facilities/requests'
+      preLoaderRoute: typeof ModulesFacilitiesRequestsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/facilities/locations': {
+      id: '/modules/facilities/locations'
+      path: '/facilities/locations'
+      fullPath: '/modules/facilities/locations'
+      preLoaderRoute: typeof ModulesFacilitiesLocationsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/document-registry/settings': {
       id: '/modules/document-registry/settings'
       path: '/document-registry/settings'
@@ -2842,6 +2902,9 @@ interface ModulesRouteChildren {
   ModulesDocumentRegistryRetentionRoute: typeof ModulesDocumentRegistryRetentionRoute
   ModulesDocumentRegistryReviewsRoute: typeof ModulesDocumentRegistryReviewsRoute
   ModulesDocumentRegistrySettingsRoute: typeof ModulesDocumentRegistrySettingsRoute
+  ModulesFacilitiesLocationsRoute: typeof ModulesFacilitiesLocationsRoute
+  ModulesFacilitiesRequestsRoute: typeof ModulesFacilitiesRequestsRoute
+  ModulesFacilitiesWorkOrdersRoute: typeof ModulesFacilitiesWorkOrdersRoute
   ModulesFeesBillingAccountsRoute: typeof ModulesFeesBillingAccountsRoute
   ModulesFeesFeeStructuresRoute: typeof ModulesFeesFeeStructuresRoute
   ModulesFeesImportsRoute: typeof ModulesFeesImportsRoute
@@ -2940,6 +3003,9 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesDocumentRegistryRetentionRoute: ModulesDocumentRegistryRetentionRoute,
   ModulesDocumentRegistryReviewsRoute: ModulesDocumentRegistryReviewsRoute,
   ModulesDocumentRegistrySettingsRoute: ModulesDocumentRegistrySettingsRoute,
+  ModulesFacilitiesLocationsRoute: ModulesFacilitiesLocationsRoute,
+  ModulesFacilitiesRequestsRoute: ModulesFacilitiesRequestsRoute,
+  ModulesFacilitiesWorkOrdersRoute: ModulesFacilitiesWorkOrdersRoute,
   ModulesFeesBillingAccountsRoute: ModulesFeesBillingAccountsRoute,
   ModulesFeesFeeStructuresRoute: ModulesFeesFeeStructuresRoute,
   ModulesFeesImportsRoute: ModulesFeesImportsRoute,

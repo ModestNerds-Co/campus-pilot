@@ -130,6 +130,7 @@ const LIBRARY: OriginAccess = OriginAccess::module("library", "library:view");
 const HR_PAYROLL: OriginAccess = OriginAccess::module("hr_payroll", "hr_payroll:view");
 const PROCUREMENT: OriginAccess = OriginAccess::module("procurement", "procurement:view");
 const FLEET: OriginAccess = OriginAccess::module("fleet", "fleet:view");
+const FACILITIES: OriginAccess = OriginAccess::module("facilities", "facilities:view");
 const HOSTEL: OriginAccess = OriginAccess::module("hostel", "hostel:view");
 const HEALTH: OriginAccess = OriginAccess::module("health", "health:view");
 const ASSETS_INVENTORY: OriginAccess =
@@ -501,6 +502,22 @@ const EXACT_ROUTES: &[ExactRoute] = &[
     ExactRoute {
         path: "/modules/fleet/vehicles",
         access: FLEET,
+    },
+    ExactRoute {
+        path: "/modules/facilities",
+        access: FACILITIES,
+    },
+    ExactRoute {
+        path: "/modules/facilities/requests",
+        access: FACILITIES,
+    },
+    ExactRoute {
+        path: "/modules/facilities/work-orders",
+        access: FACILITIES,
+    },
+    ExactRoute {
+        path: "/modules/facilities/locations",
+        access: FACILITIES,
     },
     ExactRoute {
         path: "/modules/hostel",
