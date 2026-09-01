@@ -43,6 +43,7 @@ import {
   Clock3,
   ShoppingCart,
   Truck,
+  Trophy,
   UserRoundCheck,
   UsersRound,
   Warehouse,
@@ -88,6 +89,7 @@ const moduleLabels: Record<string, string> = {
   sis: "People and admissions",
   academics: "Academics",
   attendance: "Attendance",
+  activities: "Activities",
   learning: "E-learning",
   student_support: "Student support",
   timetabling: "Timetabling",
@@ -120,6 +122,12 @@ const fleetNavigation: LocalNavItem[] = [
 const facilitiesNavigation: LocalNavItem[] = [
   { label: "Work orders", path: "/modules/facilities/work-orders", icon: Wrench, permission: "facilities:operate" },
   { label: "Locations", path: "/modules/facilities/locations", icon: MapPin, permission: "facilities:manage" },
+];
+
+const activitiesNavigation: LocalNavItem[] = [
+  { label: "Groups", path: "/modules/activities/groups", icon: UsersRound, permission: "activities:view" },
+  { label: "Sessions", path: "/modules/activities/sessions", icon: CalendarDays, permission: "activities:view" },
+  { label: "Catalog", path: "/modules/activities/catalog", icon: Trophy, permission: "activities:manage" },
 ];
 
 const transportNavigation: LocalNavItem[] = [
@@ -432,6 +440,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
         ? fleetNavigation
         : moduleKey === "facilities"
           ? facilitiesNavigation
+        : moduleKey === "activities"
+          ? activitiesNavigation
         : moduleKey === "transport"
           ? transportNavigation
         : moduleKey === "hr_payroll"
@@ -758,6 +768,12 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return <Link className={navClass(active)} to="/modules/facilities/work-orders"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/facilities/locations")
     return <Link className={navClass(active)} to="/modules/facilities/locations"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/activities/groups")
+    return <Link className={navClass(active)} to="/modules/activities/groups"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/activities/sessions")
+    return <Link className={navClass(active)} to="/modules/activities/sessions"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
+  if (item.path === "/modules/activities/catalog")
+    return <Link className={navClass(active)} to="/modules/activities/catalog"><Icon className="size-[17px]" /><span className="flex-1">{item.label}</span>{active ? <ChevronRight className="size-3.5" /> : null}</Link>;
   if (item.path === "/modules/hr-payroll/employees")
     return (
       <Link className={navClass(active)} to="/modules/hr-payroll/employees">

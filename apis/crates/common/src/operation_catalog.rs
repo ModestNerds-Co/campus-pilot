@@ -11,14 +11,14 @@ use actix_web::http::Method;
 use crate::{AgentExposure, OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
-pub const OPERATION_CATALOG_VERSION: u32 = 6;
+pub const OPERATION_CATALOG_VERSION: u32 = 7;
 
 /// Product-catalog identifier carried by signed entitlement leases.
 ///
 /// The control plane and campus runtime must agree on this exact value before
 /// lease claims can be accepted. Keep it aligned with
 /// [`OPERATION_CATALOG_VERSION`].
-pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/6";
+pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/7";
 
 /// Product-catalog versions this campus binary can safely interpret.
 ///
@@ -29,6 +29,7 @@ pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] = &[
     "campus-pilot/3",
     "campus-pilot/4",
     "campus-pilot/5",
+    "campus-pilot/6",
     PRODUCT_CATALOG_VERSION,
 ];
 
@@ -5156,6 +5157,231 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/catalog",
+            "activities.catalog.list",
+            "activities",
+            "activities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/catalog",
+            "activities.catalog.create",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/catalog/{id}",
+            "activities.catalog.read",
+            "activities",
+            "activities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/activities/catalog/{id}",
+            "activities.catalog.update",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/catalog/{id}/archive",
+            "activities.catalog.archive",
+            "activities",
+            "activities:manage",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/references",
+            "activities.references.list",
+            "activities",
+            "activities:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/groups",
+            "activities.groups.list",
+            "activities",
+            "activities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups",
+            "activities.groups.create",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/groups/{id}",
+            "activities.groups.read",
+            "activities",
+            "activities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/activities/groups/{id}",
+            "activities.groups.update",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{id}/activate",
+            "activities.groups.activate",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{id}/close",
+            "activities.groups.close",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{id}/cancel",
+            "activities.groups.cancel",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{id}/leaders",
+            "activities.groups.leaders.assign",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{group_id}/leaders/{leader_id}/end",
+            "activities.groups.leaders.end",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{id}/members",
+            "activities.groups.members.add",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/activities/groups/{group_id}/members/{membership_id}",
+            "activities.groups.members.update",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/groups/{group_id}/members/{membership_id}/end",
+            "activities.groups.members.end",
+            "activities",
+            "activities:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/sessions",
+            "activities.sessions.list",
+            "activities",
+            "activities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/sessions",
+            "activities.sessions.create",
+            "activities",
+            "activities:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/activities/sessions/{id}",
+            "activities.sessions.read",
+            "activities",
+            "activities:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/activities/sessions/{id}",
+            "activities.sessions.update",
+            "activities",
+            "activities:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/activities/sessions/{session_id}/participation/{membership_id}",
+            "activities.sessions.participation.mark",
+            "activities",
+            "activities:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/sessions/{id}/complete",
+            "activities.sessions.complete",
+            "activities",
+            "activities:operate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/activities/sessions/{id}/cancel",
+            "activities.sessions.cancel",
+            "activities",
+            "activities:operate",
+            OperationEffect::Write,
+            true,
+        ),
     ]
 }
 
@@ -5225,6 +5451,8 @@ fn route(
         operation.requiring_modules(["sis".to_string()])
     } else if key.starts_with("transport.") {
         operation.requiring_modules(["fleet".to_string(), "sis".to_string()])
+    } else if key.starts_with("activities.") {
+        operation.requiring_modules(["hr_payroll".to_string(), "sis".to_string()])
     } else if key.starts_with("internal_audit.") {
         operation.requiring_modules(["document_registry".to_string()])
     } else if key.starts_with("hostel.") {
@@ -5504,7 +5732,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "facilities.requests.list"
         | "facilities.requests.read"
         | "facilities.work_orders.list"
-        | "facilities.work_orders.read" => AgentExposure::Exposed,
+        | "facilities.work_orders.read"
+        | "activities.catalog.list"
+        | "activities.catalog.read"
+        | "activities.groups.list"
+        | "activities.groups.read"
+        | "activities.sessions.list"
+        | "activities.sessions.read" => AgentExposure::Exposed,
         "document_registry.numbering_policy.read"
         | "document_registry.series.list"
         | "document_registry.series.read"
@@ -5805,7 +6039,25 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "facilities.work_orders.start"
         | "facilities.work_orders.submit_completion"
         | "facilities.work_orders.cancel"
-        | "facilities.work_orders.inspect" => AgentExposure::ApprovalRequired,
+        | "facilities.work_orders.inspect"
+        | "activities.catalog.create"
+        | "activities.catalog.update"
+        | "activities.catalog.archive"
+        | "activities.groups.create"
+        | "activities.groups.update"
+        | "activities.groups.activate"
+        | "activities.groups.close"
+        | "activities.groups.cancel"
+        | "activities.groups.leaders.assign"
+        | "activities.groups.leaders.end"
+        | "activities.groups.members.add"
+        | "activities.groups.members.update"
+        | "activities.groups.members.end"
+        | "activities.sessions.create"
+        | "activities.sessions.update"
+        | "activities.sessions.participation.mark"
+        | "activities.sessions.complete"
+        | "activities.sessions.cancel" => AgentExposure::ApprovalRequired,
         "document_registry.numbering_policy.update"
         | "document_registry.series.create"
         | "document_registry.series.update"
@@ -5865,6 +6117,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         },
         "facilities.references.list" => AgentExposure::HumanOnly {
             reason: "Employee and location assignment selection remains a direct human Facilities workflow.",
+        },
+        "activities.references.list" => AgentExposure::HumanOnly {
+            reason: "Learner and employee selection remains a direct human Activities workflow.",
         },
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
@@ -5959,6 +6214,7 @@ mod tests {
                 ("hr_payroll".to_string(), ModuleEntitlementState::Enabled),
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("facilities".to_string(), ModuleEntitlementState::Enabled),
+                ("activities".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
                 ("learning".to_string(), ModuleEntitlementState::Enabled),
@@ -6008,13 +6264,13 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
-        assert_eq!(OPERATION_CATALOG_VERSION, 6);
+        assert_eq!(OPERATION_CATALOG_VERSION, 7);
         assert_eq!(
             PRODUCT_CATALOG_VERSION,
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 558);
+        assert_eq!(operation_catalog().len(), 583);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6066,7 +6322,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [210, 311, 25, 12]);
+        assert_eq!(counts, [216, 329, 26, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

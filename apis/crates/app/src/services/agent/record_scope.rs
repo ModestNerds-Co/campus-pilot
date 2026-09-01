@@ -164,6 +164,12 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "facilities.requests.read",
     "facilities.work_orders.list",
     "facilities.work_orders.read",
+    "activities.catalog.list",
+    "activities.catalog.read",
+    "activities.groups.list",
+    "activities.groups.read",
+    "activities.sessions.list",
+    "activities.sessions.read",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -464,7 +470,10 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "internal_audit.findings.list"
         | "facilities.locations.list"
         | "facilities.requests.list"
-        | "facilities.work_orders.list" => Some(OperationScopePolicy::Dataset),
+        | "facilities.work_orders.list"
+        | "activities.catalog.list"
+        | "activities.groups.list"
+        | "activities.sessions.list" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -584,6 +593,11 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "facilities.work_orders.read" => {
             Some(OperationScopePolicy::OneResource("facility_work_order"))
         }
+        "activities.catalog.read" => {
+            Some(OperationScopePolicy::OneResource("activity_catalog_item"))
+        }
+        "activities.groups.read" => Some(OperationScopePolicy::OneResource("activity_group")),
+        "activities.sessions.read" => Some(OperationScopePolicy::OneResource("activity_session")),
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
                 allowed_kinds: &["academic_year"],
@@ -925,7 +939,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 142);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 148);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -945,7 +959,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 210);
+        assert_eq!(exposed.len(), 216);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

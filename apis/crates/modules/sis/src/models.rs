@@ -62,6 +62,17 @@ pub struct TransportLearnerReference {
     pub status: String,
 }
 
+/// Minimum SIS-owned learner identity used by co-curricular Activities.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ActivityLearnerReference {
+    pub id: Uuid,
+    #[serde(skip_serializing)]
+    pub account_id: Option<Uuid>,
+    pub learner_number: String,
+    pub display_name: String,
+    pub status: String,
+}
+
 /// Minimum SIS-owned learner identity used by Library membership workflows.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LibraryLearnerReference {

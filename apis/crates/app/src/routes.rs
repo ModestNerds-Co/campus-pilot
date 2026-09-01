@@ -124,6 +124,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_facilities::routes::routes),
             )
             .service(
+                scope("/activities")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_activities::routes::routes),
+            )
+            .service(
                 scope("/messaging")
                     .wrap(AuthMiddleware)
                     .configure(cp_messaging::routes::routes),

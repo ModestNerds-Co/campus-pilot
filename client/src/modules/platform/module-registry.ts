@@ -19,6 +19,7 @@ import {
   Settings2,
   ShieldCheck,
   Truck,
+  Trophy,
   Wrench,
 } from "lucide-react";
 
@@ -44,6 +45,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   attendance: {
     icon: CalendarCheck2,
     highlights: ["Daily registers", "Learner marks", "Submission history"],
+  },
+  activities: {
+    icon: Trophy,
+    highlights: ["Groups and teams", "Sessions and participation", "Consent and leaders"],
   },
   learning: {
     icon: BookOpen,

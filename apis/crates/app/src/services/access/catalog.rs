@@ -109,6 +109,17 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             &["view", "create", "edit", "manage"],
         ),
         module(
+            "activities",
+            "Activities",
+            "Student services",
+            "Manage co-curricular groups, leaders, learner rosters, consent, sessions, and participation.",
+            "/modules/activities",
+            "activities",
+            false,
+            "available",
+            &["view", "operate", "manage"],
+        ),
+        module(
             "messaging",
             "Communication",
             "Campus operations",
@@ -479,6 +490,7 @@ pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
         "fees" => &["academics", "finance", "sis"],
         "fleet" => &["hr_payroll"],
         "facilities" => &["hr_payroll"],
+        "activities" => &["hr_payroll", "sis"],
         "transport" => &["fleet", "sis"],
         "procurement" => &["finance", "hr_payroll"],
         "timetabling" => &["academics", "hr_payroll"],
@@ -554,6 +566,18 @@ fn module_permission(
         ("academics", "manage") => (
             "Govern results and progression".to_string(),
             "Publish results, review reports, and manage learner progression.".to_string(),
+        ),
+        ("activities", "view") => (
+            "View activities".to_string(),
+            "Read co-curricular groups and sessions within the assigned or self record scope.".to_string(),
+        ),
+        ("activities", "operate") => (
+            "Run assigned activities".to_string(),
+            "Schedule assigned-group sessions, record participation, and complete or cancel those sessions.".to_string(),
+        ),
+        ("activities", "manage") => (
+            "Manage activities".to_string(),
+            "Manage the campus activity catalog, groups, employee leaders, learner rosters, consent, and all sessions.".to_string(),
         ),
         _ => {
             let action_label = action_label(action);

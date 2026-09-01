@@ -110,6 +110,9 @@ import { Route as ModulesAssetsInventoryProcurementReceiptsRouteImport } from '.
 import { Route as ModulesAssetsInventoryMovementsRouteImport } from './routes/modules/assets-inventory/movements'
 import { Route as ModulesAssetsInventoryItemsRouteImport } from './routes/modules/assets-inventory/items'
 import { Route as ModulesAgentUsageRouteImport } from './routes/modules/agent/usage'
+import { Route as ModulesActivitiesSessionsRouteImport } from './routes/modules/activities/sessions'
+import { Route as ModulesActivitiesGroupsRouteImport } from './routes/modules/activities/groups'
+import { Route as ModulesActivitiesCatalogRouteImport } from './routes/modules/activities/catalog'
 import { Route as ModulesAcademicsTermsRouteImport } from './routes/modules/academics/terms'
 import { Route as ModulesAcademicsTeachingAssignmentsRouteImport } from './routes/modules/academics/teaching-assignments'
 import { Route as ModulesAcademicsTeachersRouteImport } from './routes/modules/academics/teachers'
@@ -692,6 +695,23 @@ const ModulesAgentUsageRoute = ModulesAgentUsageRouteImport.update({
   path: '/agent/usage',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesActivitiesSessionsRoute =
+  ModulesActivitiesSessionsRouteImport.update({
+    id: '/activities/sessions',
+    path: '/activities/sessions',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesActivitiesGroupsRoute = ModulesActivitiesGroupsRouteImport.update({
+  id: '/activities/groups',
+  path: '/activities/groups',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesActivitiesCatalogRoute =
+  ModulesActivitiesCatalogRouteImport.update({
+    id: '/activities/catalog',
+    path: '/activities/catalog',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAcademicsTermsRoute = ModulesAcademicsTermsRouteImport.update({
   id: '/academics/terms',
   path: '/academics/terms',
@@ -960,6 +980,9 @@ export interface FileRoutesByFullPath {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/activities/catalog': typeof ModulesActivitiesCatalogRoute
+  '/modules/activities/groups': typeof ModulesActivitiesGroupsRoute
+  '/modules/activities/sessions': typeof ModulesActivitiesSessionsRoute
   '/modules/agent/usage': typeof ModulesAgentUsageRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
   '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
@@ -1100,6 +1123,9 @@ export interface FileRoutesByTo {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/activities/catalog': typeof ModulesActivitiesCatalogRoute
+  '/modules/activities/groups': typeof ModulesActivitiesGroupsRoute
+  '/modules/activities/sessions': typeof ModulesActivitiesSessionsRoute
   '/modules/agent/usage': typeof ModulesAgentUsageRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
   '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
@@ -1242,6 +1268,9 @@ export interface FileRoutesById {
   '/modules/academics/teachers': typeof ModulesAcademicsTeachersRoute
   '/modules/academics/teaching-assignments': typeof ModulesAcademicsTeachingAssignmentsRoute
   '/modules/academics/terms': typeof ModulesAcademicsTermsRoute
+  '/modules/activities/catalog': typeof ModulesActivitiesCatalogRoute
+  '/modules/activities/groups': typeof ModulesActivitiesGroupsRoute
+  '/modules/activities/sessions': typeof ModulesActivitiesSessionsRoute
   '/modules/agent/usage': typeof ModulesAgentUsageRoute
   '/modules/assets-inventory/items': typeof ModulesAssetsInventoryItemsRoute
   '/modules/assets-inventory/movements': typeof ModulesAssetsInventoryMovementsRoute
@@ -1385,6 +1414,9 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/activities/catalog'
+    | '/modules/activities/groups'
+    | '/modules/activities/sessions'
     | '/modules/agent/usage'
     | '/modules/assets-inventory/items'
     | '/modules/assets-inventory/movements'
@@ -1525,6 +1557,9 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/activities/catalog'
+    | '/modules/activities/groups'
+    | '/modules/activities/sessions'
     | '/modules/agent/usage'
     | '/modules/assets-inventory/items'
     | '/modules/assets-inventory/movements'
@@ -1666,6 +1701,9 @@ export interface FileRouteTypes {
     | '/modules/academics/teachers'
     | '/modules/academics/teaching-assignments'
     | '/modules/academics/terms'
+    | '/modules/activities/catalog'
+    | '/modules/activities/groups'
+    | '/modules/activities/sessions'
     | '/modules/agent/usage'
     | '/modules/assets-inventory/items'
     | '/modules/assets-inventory/movements'
@@ -2482,6 +2520,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAgentUsageRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/activities/sessions': {
+      id: '/modules/activities/sessions'
+      path: '/activities/sessions'
+      fullPath: '/modules/activities/sessions'
+      preLoaderRoute: typeof ModulesActivitiesSessionsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/activities/groups': {
+      id: '/modules/activities/groups'
+      path: '/activities/groups'
+      fullPath: '/modules/activities/groups'
+      preLoaderRoute: typeof ModulesActivitiesGroupsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/activities/catalog': {
+      id: '/modules/activities/catalog'
+      path: '/activities/catalog'
+      fullPath: '/modules/activities/catalog'
+      preLoaderRoute: typeof ModulesActivitiesCatalogRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/academics/terms': {
       id: '/modules/academics/terms'
       path: '/academics/terms'
@@ -2890,6 +2949,9 @@ interface ModulesRouteChildren {
   ModulesAcademicsTeachersRoute: typeof ModulesAcademicsTeachersRoute
   ModulesAcademicsTeachingAssignmentsRoute: typeof ModulesAcademicsTeachingAssignmentsRoute
   ModulesAcademicsTermsRoute: typeof ModulesAcademicsTermsRoute
+  ModulesActivitiesCatalogRoute: typeof ModulesActivitiesCatalogRoute
+  ModulesActivitiesGroupsRoute: typeof ModulesActivitiesGroupsRoute
+  ModulesActivitiesSessionsRoute: typeof ModulesActivitiesSessionsRoute
   ModulesAgentUsageRoute: typeof ModulesAgentUsageRoute
   ModulesAssetsInventoryItemsRoute: typeof ModulesAssetsInventoryItemsRoute
   ModulesAssetsInventoryMovementsRoute: typeof ModulesAssetsInventoryMovementsRoute
@@ -2989,6 +3051,9 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAcademicsTeachingAssignmentsRoute:
     ModulesAcademicsTeachingAssignmentsRoute,
   ModulesAcademicsTermsRoute: ModulesAcademicsTermsRoute,
+  ModulesActivitiesCatalogRoute: ModulesActivitiesCatalogRoute,
+  ModulesActivitiesGroupsRoute: ModulesActivitiesGroupsRoute,
+  ModulesActivitiesSessionsRoute: ModulesActivitiesSessionsRoute,
   ModulesAgentUsageRoute: ModulesAgentUsageRoute,
   ModulesAssetsInventoryItemsRoute: ModulesAssetsInventoryItemsRoute,
   ModulesAssetsInventoryMovementsRoute: ModulesAssetsInventoryMovementsRoute,

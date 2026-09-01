@@ -3,6 +3,7 @@
 mod academic_assessments;
 mod academic_reporting;
 mod academics;
+mod activities;
 mod administration;
 mod administration_access;
 mod ai_providers;
@@ -59,6 +60,9 @@ use academic_reporting::{
 use academics::{
     AcademicsListCapability, AcademicsListKind, AcademicsReadCapability, AcademicsReadKind,
     TeacherCandidatesCapability,
+};
+use activities::{
+    ActivitiesListCapability, ActivitiesListKind, ActivitiesReadCapability, ActivitiesReadKind,
 };
 use administration::{
     AdministrationCatalogCapability, AdministrationLicensingCapability,
@@ -653,6 +657,24 @@ pub fn build_capability_registry(
             .register(FacilitiesReadCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
+    for kind in [
+        ActivitiesListKind::Catalog,
+        ActivitiesListKind::Groups,
+        ActivitiesListKind::Sessions,
+    ] {
+        registry
+            .register(ActivitiesListCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
+    for kind in [
+        ActivitiesReadKind::Catalog,
+        ActivitiesReadKind::Group,
+        ActivitiesReadKind::Session,
+    ] {
+        registry
+            .register(ActivitiesReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     registry
         .register(LibrarySettingsCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Library settings capability: {error}"));
@@ -1087,6 +1109,12 @@ mod tests {
                 "academics.teaching_assignments.read",
                 "academics.terms.list",
                 "academics.terms.read",
+                "activities.catalog.list",
+                "activities.catalog.read",
+                "activities.groups.list",
+                "activities.groups.read",
+                "activities.sessions.list",
+                "activities.sessions.read",
                 "administration.ai_providers.catalog.list",
                 "administration.ai_providers.connections.list",
                 "administration.ai_providers.connections.read",
@@ -1129,6 +1157,12 @@ mod tests {
                 "document_registry.retention_due.list",
                 "document_registry.series.list",
                 "document_registry.series.read",
+                "facilities.locations.list",
+                "facilities.locations.read",
+                "facilities.requests.list",
+                "facilities.requests.read",
+                "facilities.work_orders.list",
+                "facilities.work_orders.read",
                 "fees.billing_accounts.list",
                 "fees.billing_accounts.read",
                 "fees.fee_structures.list",
@@ -1287,7 +1321,7 @@ mod tests {
 
         assert_eq!(
             result.content()["modules"].as_array().map(Vec::len),
-            Some(21)
+            Some(23)
         );
         assert!(result.content()["administration_permissions"].is_array());
     }

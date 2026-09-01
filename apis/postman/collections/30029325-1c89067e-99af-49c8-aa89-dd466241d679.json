@@ -6481,6 +6481,38 @@
       ]
     },
     {
+      "name": "Activities",
+      "description": "Role-scoped activity catalog, groups, employee-backed leaders, SIS learner memberships, consent, sessions, participation, and immutable completion evidence.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "List Activity Catalog", "request": { "method": "GET", "url": "{{base_url}}/activities/catalog?status=active&search=" } },
+        { "name": "Read Activity Catalog Item", "request": { "method": "GET", "url": "{{base_url}}/activities/catalog/{{activity_catalog_id}}" } },
+        { "name": "Create Activity Catalog Item", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"SOCCER\",\n  \"name\": \"Soccer\",\n  \"category\": \"sport\",\n  \"description\": null\n}" }, "url": "{{base_url}}/activities/catalog" } },
+        { "name": "Update Activity Catalog Item", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"code\": \"SOCCER\",\n  \"name\": \"Soccer\",\n  \"category\": \"sport\",\n  \"description\": null,\n  \"expected_version\": {{activity_catalog_version}}\n}" }, "url": "{{base_url}}/activities/catalog/{{activity_catalog_id}}" } },
+        { "name": "Archive Activity Catalog Item", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_catalog_version}},\n  \"reason\": \"Activity is no longer offered\"\n}" }, "url": "{{base_url}}/activities/catalog/{{activity_catalog_id}}/archive" } },
+        { "name": "Read Activities References", "request": { "method": "GET", "description": "Human-operated picker for canonical SIS learners and HR employees.", "url": "{{base_url}}/activities/references?search=" } },
+        { "name": "List Activity Groups", "request": { "method": "GET", "url": "{{base_url}}/activities/groups?page=1&per_page=25&status=active" } },
+        { "name": "Read Activity Group", "request": { "method": "GET", "url": "{{base_url}}/activities/groups/{{activity_group_id}}" } },
+        { "name": "Create Activity Group", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"activity_id\": \"{{activity_catalog_id}}\",\n  \"code\": \"SOCCER-2026\",\n  \"name\": \"Senior Soccer\",\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": \"2026-12-01\",\n  \"capacity\": 30,\n  \"consent_required\": true,\n  \"consent_instructions\": \"Guardian consent is required before participation.\"\n}" }, "url": "{{base_url}}/activities/groups" } },
+        { "name": "Update Activity Group", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"activity_id\": \"{{activity_catalog_id}}\",\n  \"code\": \"SOCCER-2026\",\n  \"name\": \"Senior Soccer\",\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": \"2026-12-01\",\n  \"capacity\": 30,\n  \"consent_required\": true,\n  \"consent_instructions\": \"Guardian consent is required before participation.\",\n  \"expected_version\": {{activity_group_version}}\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}" } },
+        { "name": "Activate Activity Group", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_group_version}},\n  \"reason\": null\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/activate" } },
+        { "name": "Close Activity Group", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_group_version}},\n  \"reason\": \"The activity period is complete\"\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/close" } },
+        { "name": "Cancel Activity Group", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_group_version}},\n  \"reason\": \"The activity will not proceed\"\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/cancel" } },
+        { "name": "Assign Activity Leader", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"employee_id\": \"{{activity_employee_id}}\",\n  \"role\": \"lead\",\n  \"starts_on\": \"2026-09-01\",\n  \"ends_on\": null\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/leaders" } },
+        { "name": "End Activity Leader Assignment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_leader_version}},\n  \"ends_on\": \"2026-12-01\",\n  \"reason\": \"Assignment is complete\"\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/leaders/{{activity_leader_id}}/end" } },
+        { "name": "Add Activity Member", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"learner_id\": \"{{activity_learner_id}}\",\n  \"joined_on\": \"2026-09-01\"\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/members" } },
+        { "name": "Update Activity Member Consent", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_membership_version}},\n  \"consent_status\": \"granted\",\n  \"consent_notes\": \"Consent received by the school office.\"\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/members/{{activity_membership_id}}" } },
+        { "name": "End Activity Membership", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_membership_version}},\n  \"ended_on\": \"2026-12-01\",\n  \"outcome\": \"ended\",\n  \"reason\": \"The activity period is complete\"\n}" }, "url": "{{base_url}}/activities/groups/{{activity_group_id}}/members/{{activity_membership_id}}/end" } },
+        { "name": "List Activity Sessions", "request": { "method": "GET", "url": "{{base_url}}/activities/sessions?page=1&per_page=25&status=scheduled" } },
+        { "name": "Read Activity Session", "request": { "method": "GET", "url": "{{base_url}}/activities/sessions/{{activity_session_id}}" } },
+        { "name": "Create Activity Session", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"group_id\": \"{{activity_group_id}}\",\n  \"title\": \"Training session\",\n  \"starts_at\": \"2026-09-03T13:00:00Z\",\n  \"ends_at\": \"2026-09-03T14:30:00Z\",\n  \"location_note\": \"Main field\",\n  \"notes\": null\n}" }, "url": "{{base_url}}/activities/sessions" } },
+        { "name": "Update Activity Session", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Training session\",\n  \"starts_at\": \"2026-09-03T13:00:00Z\",\n  \"ends_at\": \"2026-09-03T14:30:00Z\",\n  \"location_note\": \"Main field\",\n  \"notes\": null,\n  \"expected_version\": {{activity_session_version}}\n}" }, "url": "{{base_url}}/activities/sessions/{{activity_session_id}}" } },
+        { "name": "Mark Activity Participation", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_participation_version}},\n  \"mark\": \"present\",\n  \"notes\": null\n}" }, "url": "{{base_url}}/activities/sessions/{{activity_session_id}}/participation/{{activity_membership_id}}" } },
+        { "name": "Complete Activity Session", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_session_version}},\n  \"summary\": \"The full roster was marked and the session was completed.\"\n}" }, "url": "{{base_url}}/activities/sessions/{{activity_session_id}}/complete" } },
+        { "name": "Cancel Activity Session", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{activity_session_version}},\n  \"reason\": \"The session cannot proceed\"\n}" }, "url": "{{base_url}}/activities/sessions/{{activity_session_id}}/cancel" } }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -6875,6 +6907,71 @@
     },
     {
       "key": "facilities_work_order_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "activity_catalog_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_catalog_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "activity_group_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_group_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "activity_employee_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_leader_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_leader_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "activity_learner_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_membership_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_membership_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "activity_session_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "activity_session_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "activity_participation_version",
       "value": "1",
       "type": "default"
     }

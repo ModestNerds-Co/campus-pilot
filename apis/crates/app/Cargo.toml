@@ -32,6 +32,7 @@ cp-learning = { path = "../modules/learning" }
 cp-student-support = { path = "../modules/student-support" }
 cp-transport = { path = "../modules/transport" }
 cp-facilities = { path = "../modules/facilities" }
+cp-activities = { path = "../modules/activities" }
 
 sqlx = { workspace = true }
 serde = { workspace = true }
