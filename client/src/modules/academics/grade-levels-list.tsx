@@ -9,11 +9,16 @@ import { Table, TableControlsBar, TableControlsPagination, TableControlsSearch, 
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { academicsService, responseMessage } from "./service";
 import type { AcademicGradeLevel, DirectoryStatus } from "./types";
 
 export function AcademicGradeLevelsList() {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("academics:create");
+  const canEdit = permissions.includes("*") || permissions.includes("academics:edit");
+  const canDelete = permissions.includes("*") || permissions.includes("academics:delete");
   const [records, setRecords] = useState<AcademicGradeLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +61,7 @@ export function AcademicGradeLevelsList() {
     } else toast.error(responseMessage(response, "Grade level could not be removed"));
   };
 
-  usePageChrome("Grade levels", <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add grade level</Button>);
+  usePageChrome("Grade levels", canCreate ? <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add grade level</Button> : null);
   const filtered = submittedSearch || status !== "all";
 
   return <div className="space-y-6">
@@ -70,10 +75,10 @@ export function AcademicGradeLevelsList() {
       {!loading && records.length > 0 ? <TableControlsPagination onNext={() => setPage((value) => Math.min(totalPages, value + 1))} onPrevious={() => setPage((value) => Math.max(1, value - 1))} page={page} totalPages={totalPages} /> : null}
     </TableControlsBar>
     <TableWrap>
-      {loading ? <TableLoading columns={5} label="Loading grade levels…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={filtered ? "Change the current filters." : "Add the first grade level."} icon={<ListOrdered />} title={filtered ? "No grade levels match these filters" : "No grade levels yet"} /> : <TableScroll><Table><THead><tr><TH>Grade level</TH><TH>Code</TH><TH>Order</TH><TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>{records.map((record) => <TR key={record.id}><TD><span className="font-medium text-[var(--text-strong)]">{record.name}</span></TD><TD className="font-tabular text-[var(--text-muted)]">{record.code}</TD><TD className="font-tabular text-[var(--text-muted)]">{record.sequence_number}</TD><TD><Badge tone={record.status === "active" ? "success" : "neutral"}>{record.status}</Badge></TD><TD className="text-right"><div className="relative inline-flex"><button aria-label="Grade level actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button><button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button></div> : null}</div></TD></TR>)}</TBody></Table></TableScroll>}
+      {loading ? <TableLoading columns={5} label="Loading grade levels…" /> : error ? <TableError description={error} onRetry={() => void load()} /> : records.length === 0 ? <TableEmpty description={filtered ? "Change the current filters." : "No grade levels have been created."} icon={<ListOrdered />} title={filtered ? "No grade levels match these filters" : "No grade levels yet"} /> : <TableScroll><Table><THead><tr><TH>Grade level</TH><TH>Code</TH><TH>Order</TH><TH>Status</TH><TH className="text-right">Actions</TH></tr></THead><TBody>{records.map((record) => <TR key={record.id}><TD><span className="font-medium text-[var(--text-strong)]">{record.name}</span></TD><TD className="font-tabular text-[var(--text-muted)]">{record.code}</TD><TD className="font-tabular text-[var(--text-muted)]">{record.sequence_number}</TD><TD><Badge tone={record.status === "active" ? "success" : "neutral"}>{record.status}</Badge></TD><TD className="text-right">{canEdit || canDelete ? <div className="relative inline-flex"><button aria-label="Grade level actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === record.id ? null : record.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === record.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">{canEdit ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(record); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button> : null}{canDelete ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(record); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button> : null}</div> : null}</div> : <span className="text-[var(--text-subtle)]">—</span>}</TD></TR>)}</TBody></Table></TableScroll>}
     </TableWrap>
-    <GradeLevelDrawer onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={drawerRecord !== undefined} record={drawerRecord ?? null} />
-    <ConfirmDrawer confirmLabel="Remove grade level" description={`Remove ${deleteRecord?.name ?? "this grade level"}? Classes that use it must be moved first.`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={deleteRecord !== null} title="Remove grade level?" />
+    <GradeLevelDrawer onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={(canCreate || canEdit) && drawerRecord !== undefined} record={drawerRecord ?? null} />
+    <ConfirmDrawer confirmLabel="Remove grade level" description={`Remove ${deleteRecord?.name ?? "this grade level"}? Classes that use it must be moved first.`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={canDelete && deleteRecord !== null} title="Remove grade level?" />
   </div>;
 }
 

@@ -62,7 +62,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "academics",
             false,
             "available",
-            &["view", "create", "edit", "delete", "manage"],
+            &["view", "create", "edit", "delete", "teach", "manage"],
         ),
         module(
             "timetabling",

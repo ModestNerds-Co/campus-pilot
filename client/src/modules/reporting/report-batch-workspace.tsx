@@ -21,7 +21,7 @@ type CardDrawer = { kind: "teacher" | "review"; card: ReportCard } | null;
 export function ReportBatchWorkspace({ reportBatchId }: { reportBatchId: string }) {
   const navigate = useNavigate();
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canEdit = permissions.includes("*") || permissions.includes("academics:edit");
+  const canEdit = permissions.includes("*") || permissions.includes("academics:teach");
   const canManage = permissions.includes("*") || permissions.includes("academics:manage");
   const canDelete = permissions.includes("*") || permissions.includes("academics:delete");
   const [report, setReport] = useState<ReportBatch | null>(null);

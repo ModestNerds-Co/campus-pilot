@@ -20,7 +20,7 @@ import type { GradebookComponentReference, GradebookSheetStatus } from "./types"
 export function GradebookWorkspace() {
   const navigate = useNavigate();
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canCreate = permissions.includes("*") || permissions.includes("academics:create");
+  const canCreate = permissions.includes("*") || permissions.includes("academics:teach");
   const [components, setComponents] = useState<GradebookComponentReference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

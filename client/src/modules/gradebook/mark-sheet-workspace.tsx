@@ -20,7 +20,7 @@ type MarkSheetAction = "submit" | "publish" | "reopen" | "delete" | null;
 export function MarkSheetWorkspace({ markSheetId }: { markSheetId: string }) {
   const navigate = useNavigate();
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canEdit = permissions.includes("*") || permissions.includes("academics:edit");
+  const canEdit = permissions.includes("*") || permissions.includes("academics:teach");
   const canManage = permissions.includes("*") || permissions.includes("academics:manage");
   const canDelete = permissions.includes("*") || permissions.includes("academics:delete");
   const [sheet, setSheet] = useState<GradebookSheet | null>(null);

@@ -24,11 +24,16 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { academicsService, responseMessage } from "./service";
 import type { AcademicTerm, AcademicTermInput, AcademicYear, AcademicYearStatus } from "./types";
 
 export function AcademicTermsList() {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("academics:create");
+  const canEdit = permissions.includes("*") || permissions.includes("academics:edit");
+  const canDelete = permissions.includes("*") || permissions.includes("academics:delete");
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +93,7 @@ export function AcademicTermsList() {
     }
   };
 
-  usePageChrome("Academic terms", <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add term</Button>);
+  usePageChrome("Academic terms", canCreate ? <Button onClick={() => setDrawerRecord(null)}><Plus className="size-4" />Add term</Button> : null);
   const filtered = submittedSearch || status !== "all" || yearId !== "all";
 
   return (
@@ -122,13 +127,13 @@ export function AcademicTermsList() {
             <TD className="text-[var(--text-muted)]">{term.academic_year_name}</TD>
             <TD className="text-[var(--text-muted)]">{formatDate(term.starts_on)} – {formatDate(term.ends_on)}</TD>
             <TD><Badge tone={term.status === "active" ? "success" : term.status === "planned" ? "warning" : "neutral"}>{term.status}</Badge></TD>
-            <TD className="text-right">{term.status !== "closed" ? <div className="relative inline-flex"><button aria-label="Academic term actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === term.id ? null : term.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === term.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]"><button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(term); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button>{term.status === "planned" ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(term); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button> : null}</div> : null}</div> : <span className="text-[var(--text-subtle)]">—</span>}</TD>
+            <TD className="text-right">{term.status !== "closed" && (canEdit || canDelete) ? <div className="relative inline-flex"><button aria-label="Academic term actions" className="inline-flex size-8 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--surface-muted)]" onClick={() => setMenuId(menuId === term.id ? null : term.id)} type="button"><MoreVertical className="size-4" /></button>{menuId === term.id ? <div className="absolute right-0 top-9 z-10 w-40 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-popover)]">{canEdit ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-[var(--surface-muted)]" onClick={() => { setDrawerRecord(term); setMenuId(null); }} type="button"><Edit className="size-4" />Edit</button> : null}{canDelete && term.status === "planned" ? <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--tone-danger)] hover:bg-[var(--tone-danger-bg)]" onClick={() => { setDeleteRecord(term); setMenuId(null); }} type="button"><Trash2 className="size-4" />Remove</button> : null}</div> : null}</div> : <span className="text-[var(--text-subtle)]">—</span>}</TD>
           </TR>)}
         </TBody></Table></TableScroll>}
       </TableWrap>
 
-      <AcademicTermDrawer onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={drawerRecord !== undefined} record={drawerRecord ?? null} years={years} />
-      <ConfirmDrawer confirmLabel="Remove term" description={`Remove ${deleteRecord?.name || "this academic term"}?`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={deleteRecord !== null} title="Remove academic term?" />
+      <AcademicTermDrawer onClose={() => setDrawerRecord(undefined)} onSaved={() => { setDrawerRecord(undefined); void load(); }} open={(canCreate || canEdit) && drawerRecord !== undefined} record={drawerRecord ?? null} years={years} />
+      <ConfirmDrawer confirmLabel="Remove term" description={`Remove ${deleteRecord?.name || "this academic term"}?`} isPending={deleting} onClose={() => setDeleteRecord(null)} onConfirm={() => void remove()} open={canDelete && deleteRecord !== null} title="Remove academic term?" />
     </div>
   );
 }

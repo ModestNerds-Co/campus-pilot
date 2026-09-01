@@ -31,6 +31,7 @@ import {
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
+import { useAuthStore } from "@/stores/auth-store";
 
 import { academicsService, responseMessage } from "./service";
 import type {
@@ -48,6 +49,10 @@ import type {
 type Transition = "open" | "closed";
 
 export function AssessmentsList() {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const canCreate = permissions.includes("*") || permissions.includes("academics:create");
+  const canEdit = permissions.includes("*") || permissions.includes("academics:edit");
+  const canDelete = permissions.includes("*") || permissions.includes("academics:delete");
   const [cycles, setCycles] = useState<AssessmentCycle[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [components, setComponents] = useState<AssessmentComponent[]>([]);
@@ -131,7 +136,7 @@ export function AssessmentsList() {
 
   usePageChrome(
     "Assessments",
-    <Button onClick={() => setCycleDrawer(null)}><Plus className="size-4" />Add cycle</Button>,
+    canCreate ? <Button onClick={() => setCycleDrawer(null)}><Plus className="size-4" />Add cycle</Button> : null,
   );
 
   const removeCycle = async () => {
@@ -207,10 +212,10 @@ export function AssessmentsList() {
                     <TD><CycleStatus status={cycle.status} /></TD>
                     <TD><div className="flex justify-end gap-2">
                       <Button onClick={() => setSelectedCycleId(cycle.id)} size="sm" variant={selected ? "secondary" : "ghost"}>{selected ? "Selected" : "Components"}</Button>
-                      {cycle.status === "draft" ? <Button aria-label={`Edit ${cycle.name}`} onClick={() => setCycleDrawer(cycle)} size="icon-sm" variant="ghost"><Edit className="size-4" /></Button> : null}
-                      {cycle.status === "draft" ? <Button onClick={() => setTransition({ cycle, status: "open" })} size="sm" variant="secondary">Open</Button> : null}
-                      {cycle.status === "open" ? <Button onClick={() => setTransition({ cycle, status: "closed" })} size="sm" variant="secondary">Close</Button> : null}
-                      {cycle.status === "draft" ? <Button aria-label={`Remove ${cycle.name}`} onClick={() => setDeleteCycle(cycle)} size="icon-sm" variant="ghost"><Trash2 className="size-4 text-[var(--tone-danger)]" /></Button> : null}
+                      {canEdit && cycle.status === "draft" ? <Button aria-label={`Edit ${cycle.name}`} onClick={() => setCycleDrawer(cycle)} size="icon-sm" variant="ghost"><Edit className="size-4" /></Button> : null}
+                      {canEdit && cycle.status === "draft" ? <Button onClick={() => setTransition({ cycle, status: "open" })} size="sm" variant="secondary">Open</Button> : null}
+                      {canEdit && cycle.status === "open" ? <Button onClick={() => setTransition({ cycle, status: "closed" })} size="sm" variant="secondary">Close</Button> : null}
+                      {canDelete && cycle.status === "draft" ? <Button aria-label={`Remove ${cycle.name}`} onClick={() => setDeleteCycle(cycle)} size="icon-sm" variant="ghost"><Trash2 className="size-4 text-[var(--tone-danger)]" /></Button> : null}
                     </div></TD>
                   </TR>;
                 })}</TBody></Table></TableScroll>}
@@ -223,7 +228,7 @@ export function AssessmentsList() {
             <h2 className="text-base font-semibold text-[var(--text-strong)]" id="components-heading">Components</h2>
             <p className="mt-1 text-sm text-[var(--text-muted)]">{selectedCycle ? `${selectedCycle.name} · ${selectedCycle.academic_term_name}` : "Select an assessment cycle."}</p>
           </div>
-          {selectedCycle?.status === "draft" ? <Button onClick={() => setComponentDrawer(null)} variant="secondary"><Plus className="size-4" />Add component</Button> : null}
+          {canCreate && selectedCycle?.status === "draft" ? <Button onClick={() => setComponentDrawer(null)} variant="secondary"><Plus className="size-4" />Add component</Button> : null}
         </div>
         <TableWrap>
           {!selectedCycle ? <TableEmpty description="Choose a cycle above to view its components." icon={<FileCheck2 />} title="No cycle selected" />
@@ -238,16 +243,16 @@ export function AssessmentsList() {
                     <TD><span className="font-tabular text-[var(--text-strong)]">{formatWeight(component.weight_basis_points)}</span><span className="mt-0.5 block text-xs text-[var(--text-muted)]">Assignment total {formatWeight(assignmentWeights.get(component.teaching_assignment_id) ?? 0)}</span></TD>
                     <TD className="text-[var(--text-muted)]">{component.occurs_on ?? "Not set"}</TD>
                     <TD><Badge tone={component.status === "active" ? "success" : "neutral"}>{component.status}</Badge></TD>
-                    <TD><div className="flex justify-end gap-1">{selectedCycle.status === "draft" ? <><Button aria-label={`Edit ${component.name}`} onClick={() => setComponentDrawer(component)} size="icon-sm" variant="ghost"><Edit className="size-4" /></Button><Button aria-label={`Remove ${component.name}`} onClick={() => setDeleteComponent(component)} size="icon-sm" variant="ghost"><Trash2 className="size-4 text-[var(--tone-danger)]" /></Button></> : null}</div></TD>
+                    <TD><div className="flex justify-end gap-1">{selectedCycle.status === "draft" ? <>{canEdit ? <Button aria-label={`Edit ${component.name}`} onClick={() => setComponentDrawer(component)} size="icon-sm" variant="ghost"><Edit className="size-4" /></Button> : null}{canDelete ? <Button aria-label={`Remove ${component.name}`} onClick={() => setDeleteComponent(component)} size="icon-sm" variant="ghost"><Trash2 className="size-4 text-[var(--tone-danger)]" /></Button> : null}</> : null}</div></TD>
                   </TR>)}</TBody></Table></TableScroll>}
         </TableWrap>
       </section>
 
-      <CycleDrawer cycle={cycleDrawer ?? null} onClose={() => setCycleDrawer(undefined)} onSaved={() => { setCycleDrawer(undefined); void loadCycles(); }} open={cycleDrawer !== undefined} terms={terms} />
-      <ComponentDrawer assignments={assignments} component={componentDrawer ?? null} cycle={selectedCycle} onClose={() => setComponentDrawer(undefined)} onSaved={() => { setComponentDrawer(undefined); void loadComponents(selectedCycle); void loadCycles(); }} open={componentDrawer !== undefined} />
-      <ConfirmDrawer confirmLabel="Remove cycle" description={`Remove ${deleteCycle?.name ?? "this assessment cycle"}? A cycle with components cannot be removed.`} isPending={pending} onClose={() => setDeleteCycle(null)} onConfirm={() => void removeCycle()} open={deleteCycle !== null} title="Remove assessment cycle?" />
-      <ConfirmDrawer confirmLabel="Remove component" description={`Remove ${deleteComponent?.name ?? "this assessment component"} from the draft cycle?`} isPending={pending} onClose={() => setDeleteComponent(null)} onConfirm={() => void removeComponent()} open={deleteComponent !== null} title="Remove assessment component?" />
-      <TransitionDrawer cycle={transition?.cycle ?? null} isPending={pending} onClose={() => setTransition(null)} onConfirm={() => void applyTransition()} open={transition !== null} status={transition?.status ?? "open"} />
+      <CycleDrawer cycle={cycleDrawer ?? null} onClose={() => setCycleDrawer(undefined)} onSaved={() => { setCycleDrawer(undefined); void loadCycles(); }} open={(canCreate || canEdit) && cycleDrawer !== undefined} terms={terms} />
+      <ComponentDrawer assignments={assignments} component={componentDrawer ?? null} cycle={selectedCycle} onClose={() => setComponentDrawer(undefined)} onSaved={() => { setComponentDrawer(undefined); void loadComponents(selectedCycle); void loadCycles(); }} open={(canCreate || canEdit) && componentDrawer !== undefined} />
+      <ConfirmDrawer confirmLabel="Remove cycle" description={`Remove ${deleteCycle?.name ?? "this assessment cycle"}? A cycle with components cannot be removed.`} isPending={pending} onClose={() => setDeleteCycle(null)} onConfirm={() => void removeCycle()} open={canDelete && deleteCycle !== null} title="Remove assessment cycle?" />
+      <ConfirmDrawer confirmLabel="Remove component" description={`Remove ${deleteComponent?.name ?? "this assessment component"} from the draft cycle?`} isPending={pending} onClose={() => setDeleteComponent(null)} onConfirm={() => void removeComponent()} open={canDelete && deleteComponent !== null} title="Remove assessment component?" />
+      <TransitionDrawer cycle={transition?.cycle ?? null} isPending={pending} onClose={() => setTransition(null)} onConfirm={() => void applyTransition()} open={canEdit && transition !== null} status={transition?.status ?? "open"} />
     </div>
   );
 }
