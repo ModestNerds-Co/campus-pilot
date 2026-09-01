@@ -22,7 +22,7 @@ import { TimetableWorkspace } from "@/modules/timetabling";
 import { useAuthStore } from "@/stores/auth-store";
 import { LibraryCatalogueWorkspace } from "@/modules/library";
 import { HealthPatientsWorkspace } from "@/modules/health";
-import { HostelResidencesWorkspace } from "@/modules/hostel";
+import { HostelResidencesWorkspace, hostelAccessProfile } from "@/modules/hostel";
 import { DocumentRegistryDocumentsWorkspace } from "@/modules/document-registry";
 import { InternalAuditEngagementsWorkspace } from "@/modules/internal-audit";
 import { StudentSupportCasesWorkspace } from "@/modules/student-support";
@@ -33,6 +33,7 @@ import { ActivitiesGroupsWorkspace } from "@/modules/activities";
 export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
   moduleKey,
 }) => {
+  const user = useAuthStore((state) => state.user);
   const normalizedKey = moduleKey.replace(/-/g, "_");
   const [module, setModule] = useState<ModuleDefinition | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +76,11 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
       ) : module.key === "health" ? (
         <HealthPatientsWorkspace />
       ) : module.key === "hostel" ? (
-        <HostelResidencesWorkspace />
+        hostelAccessProfile(user?.permissions ?? [], user?.record_scopes).hasCampusOccupancy ? (
+          <HostelResidencesWorkspace />
+        ) : (
+          <Navigate replace to="/modules/hostel/allocations" />
+        )
       ) : module.key === "document_registry" ? (
         <DocumentRegistryDocumentsWorkspace />
       ) : module.key === "internal_audit" ? (

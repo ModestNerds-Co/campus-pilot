@@ -30,6 +30,7 @@ export interface User {
   role_names: string[];
   permissions: string[];
   modules: string[];
+  record_scopes: Record<string, "self" | "assigned" | "self_and_assigned" | "campus">;
   is_active: boolean;
   last_login_at: string | null;
 }

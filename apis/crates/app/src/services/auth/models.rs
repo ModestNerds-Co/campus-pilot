@@ -6,7 +6,10 @@
 //  Copyright (c) 2025 Codecraft Solutions. All rights reserved.
 //
 
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, Utc};
+use cp_common::EffectiveRecordScope;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -53,6 +56,7 @@ pub struct UserInfo {
     pub role_names: Vec<String>,
     pub permissions: Vec<String>,
     pub modules: Vec<String>,
+    pub record_scopes: BTreeMap<String, String>,
     pub is_active: bool,
     pub last_login_at: Option<DateTime<Utc>>,
 }
@@ -62,6 +66,16 @@ impl UserInfo {
         user: User,
         access: crate::services::access::models::EffectiveAccess,
     ) -> Self {
+        let record_scopes = access
+            .record_scopes
+            .families()
+            .filter_map(|family| {
+                access
+                    .record_scopes
+                    .effective_scope(family)
+                    .map(|scope| (family.to_string(), effective_scope_key(scope).to_owned()))
+            })
+            .collect();
         UserInfo {
             id: user.id,
             email: user.email,
@@ -71,8 +85,18 @@ impl UserInfo {
             role_names: access.role_names,
             permissions: access.permissions,
             modules: access.enabled_modules,
+            record_scopes,
             is_active: user.is_active,
             last_login_at: user.last_login_at,
         }
+    }
+}
+
+const fn effective_scope_key(scope: EffectiveRecordScope) -> &'static str {
+    match scope {
+        EffectiveRecordScope::SelfRecord => "self",
+        EffectiveRecordScope::Assigned => "assigned",
+        EffectiveRecordScope::SelfAndAssigned => "self_and_assigned",
+        EffectiveRecordScope::Campus => "campus",
     }
 }

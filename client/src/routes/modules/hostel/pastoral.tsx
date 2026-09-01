@@ -6,5 +6,5 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { HostelPastoralWorkspace } from "@/modules/hostel";
 
 export const Route = createFileRoute("/modules/hostel/pastoral")({
-  component: () => <ProtectedRoute requiredModule="hostel" requiredPermission="hostel:view"><HostelPastoralWorkspace /></ProtectedRoute>,
+  component: () => <ProtectedRoute requiredModule="hostel" requiredPermission="hostel:pastoral"><HostelPastoralWorkspace /></ProtectedRoute>,
 });

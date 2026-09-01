@@ -126,8 +126,8 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("library.borrowing", CAMPUS_SELF),
     definition("health.patients", CAMPUS_SELF_ASSIGNED),
     definition("health.care", CAMPUS_SELF_ASSIGNED),
-    definition("hostel.occupancy", CAMPUS_SELF_ASSIGNED),
-    definition("hostel.pastoral", CAMPUS_SELF_ASSIGNED),
+    definition("hostel.occupancy", CAMPUS_SELF),
+    definition("hostel.pastoral", CAMPUS_ONLY),
     definition("document_registry.records", CAMPUS_ONLY),
     definition("internal_audit.plans", CAMPUS_ONLY),
     definition("internal_audit.records", CAMPUS_ASSIGNED),
@@ -481,7 +481,11 @@ mod tests {
         assert!(RoleRecordScopeAssignment::parse("timetabling.snapshots", "campus").is_ok());
         assert!(RoleRecordScopeAssignment::parse("timetabling.snapshots", "self").is_err());
         assert!(RoleRecordScopeAssignment::parse("health.care", "self").is_ok());
-        assert!(RoleRecordScopeAssignment::parse("hostel.pastoral", "assigned").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("hostel.occupancy", "self").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("hostel.occupancy", "assigned").is_err());
+        assert!(RoleRecordScopeAssignment::parse("hostel.pastoral", "campus").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("hostel.pastoral", "self").is_err());
+        assert!(RoleRecordScopeAssignment::parse("hostel.pastoral", "assigned").is_err());
         assert!(RoleRecordScopeAssignment::parse("document_registry.records", "campus").is_ok());
         assert!(RoleRecordScopeAssignment::parse("document_registry.records", "self").is_err());
         assert!(RoleRecordScopeAssignment::parse("internal_audit.records", "assigned").is_ok());

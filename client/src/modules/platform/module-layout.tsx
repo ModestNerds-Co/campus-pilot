@@ -14,6 +14,7 @@ import {
   CalendarRange,
   CalendarCheck2,
   BarChart3,
+  BedDouble,
   ClipboardList,
   ArchiveRestore,
   FileArchive,
@@ -61,6 +62,7 @@ import { AgentWidget } from "@/modules/agent";
 import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
 import { libraryAccessProfile } from "@/modules/library/access";
+import { hostelAccessProfile } from "@/modules/hostel/access";
 import {
   SIS_ADMINISTRATION_PERMISSIONS,
   SIS_IMPORT_ACCESS_PERMISSIONS,
@@ -277,11 +279,20 @@ const healthNavigation: LocalNavItem[] = [
   { label: "Follow-ups", path: "/modules/health/follow-ups", icon: CalendarCheck2 },
 ];
 
-const hostelNavigation: LocalNavItem[] = [
-  { label: "Rooms & occupancy", path: "/modules/hostel/rooms", icon: DoorOpen },
-  { label: "Allocations", path: "/modules/hostel/allocations", icon: ClipboardList },
-  { label: "Pastoral records", path: "/modules/hostel/pastoral", icon: HeartHandshake, permission: "hostel:pastoral" },
-];
+function hostelNavigation(
+  permissions: readonly string[],
+  recordScopes: Record<string, string> | undefined,
+): LocalNavItem[] {
+  const access = hostelAccessProfile(permissions, recordScopes);
+  if (!access.hasCampusOccupancy) {
+    return [];
+  }
+  return [
+    { label: "Rooms & occupancy", path: "/modules/hostel/rooms", icon: DoorOpen },
+    { label: "Allocations", path: "/modules/hostel/allocations", icon: ClipboardList },
+    { label: "Pastoral records", path: "/modules/hostel/pastoral", icon: HeartHandshake, permission: "hostel:pastoral" },
+  ];
+}
 
 const documentRegistryNavigation: LocalNavItem[] = [
   { label: "Classifications", path: "/modules/document-registry/classifications", icon: ArchiveRestore },
@@ -455,6 +466,11 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
     triggerRef: menuButtonRef,
   } = useNavigationDrawer(sidebarOpen, setSidebarOpen);
   const moduleKey = moduleKeyFromPath(location.pathname);
+  const hostelAccess = hostelAccessProfile(
+    user?.permissions ?? [],
+    user?.record_scopes,
+  );
+  const hostelSelfService = moduleKey === "hostel" && !hostelAccess.hasCampusOccupancy;
   const hasSisAdministrationAccess =
     user?.permissions.includes("*") ||
     SIS_ADMINISTRATION_PERMISSIONS.some((permission) => user?.permissions.includes(permission));
@@ -489,7 +505,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                 : moduleKey === "health"
                   ? healthNavigation
                   : moduleKey === "hostel"
-                    ? hostelNavigation
+                    ? hostelNavigation(user?.permissions ?? [], user?.record_scopes)
                     : moduleKey === "document_registry"
                       ? documentRegistryNavigation
                     : moduleKey === "internal_audit"
@@ -607,8 +623,11 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                   (moduleKey === "health" &&
                     location.pathname.startsWith("/modules/health/patients")) ||
                   (moduleKey === "facilities" &&
-                    location.pathname.startsWith("/modules/facilities/requests"))
+                    location.pathname.startsWith("/modules/facilities/requests")) ||
+                  (hostelSelfService &&
+                    location.pathname.startsWith("/modules/hostel/allocations"))
                 }
+                hostelSelfService={hostelSelfService}
                 moduleKey={moduleKey}
               />
               {localNavigation.map((item) => (
@@ -715,17 +734,20 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
   );
 };
 
-const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
+const LocalOverviewLink: React.FC<{ active: boolean; hostelSelfService: boolean; moduleKey: string }> = ({
   active,
+  hostelSelfService,
   moduleKey,
-}) => (
+}) => {
+  const OverviewIcon = hostelSelfService ? BedDouble : LayoutDashboard;
+  return (
   <Link
     aria-current={active ? "page" : undefined}
     className={navClass(active)}
     params={{ moduleKey: moduleRouteKey(moduleKey) }}
     to="/modules/$moduleKey"
   >
-    <LayoutDashboard className="size-[17px]" />
+    <OverviewIcon className="size-[17px]" />
     <span className="flex-1">
       {moduleKey === "agent"
         ? "Sessions"
@@ -736,7 +758,7 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
             : moduleKey === "health"
               ? "Patients"
               : moduleKey === "hostel"
-                ? "Residences"
+                ? hostelSelfService ? "My stay" : "Residences"
               : moduleKey === "document_registry"
                 ? "Documents"
               : moduleKey === "internal_audit"
@@ -753,7 +775,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
   </Link>
-);
+  );
+};
 
 const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
   active,
