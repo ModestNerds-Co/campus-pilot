@@ -11,12 +11,16 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::{
-    ActivityResponse, CloseFileRequest, CreateReviewRequest, CreateSeriesRequest, DocumentStorage,
-    EvidenceFileReference, ExecuteDestructionRequest, FileResponse, NewRegistryFile,
-    NumberingPolicyResponse, ReclassifyFileRequest, RegistryListQuery, ReviewDecisionRequest,
+    ActivityResponse, CloseFileRequest, CreateLegalHoldRequest, CreateReviewRequest,
+    CreateSeriesRequest, DocumentStorage, EvidenceFileReference, ExecuteDestructionRequest,
+    FileResponse, LegalHoldResponse, NewRegistryFile, NumberingPolicyResponse,
+    ReclassifyFileRequest, RegistryListQuery, ReleaseLegalHoldRequest, ReviewDecisionRequest,
     ReviewResponse, SeriesResponse, UpdateFileRequest, UpdateNumberingPolicyRequest,
     UpdateSeriesRequest,
-    models::{ActivityRow, FileRow, NumberingPolicyRow, ReviewRow, SeriesRow},
+    models::{
+        ActivityRow, DeletionJobClaim, FileRow, LegalHoldRow, NumberingPolicyRow, ReviewRow,
+        SeriesRow,
+    },
 };
 
 pub struct DocumentRegistryOps;
@@ -745,9 +749,239 @@ impl DocumentRegistryOps {
         can_view_restricted: bool,
     ) -> Result<Vec<FileResponse>> {
         sqlx::query_as::<_, FileRow>(
-            &format!("{} AND file.status='closed' AND file.retain_until <= CURRENT_DATE AND file.final_disposition_snapshot <> 'permanent' AND NOT EXISTS (SELECT 1 FROM document_registry_disposition_reviews review WHERE review.tenant_id=file.tenant_id AND review.file_id=file.id AND review.deleted_at IS NULL AND review.status IN ('pending','approved')) ORDER BY file.retain_until,file.reference LIMIT 200", FILE_BASE),
+            &format!("{} AND file.status='closed' AND file.retain_until <= CURRENT_DATE AND file.final_disposition_snapshot <> 'permanent' AND NOT EXISTS (SELECT 1 FROM document_registry_disposition_reviews review WHERE review.tenant_id=file.tenant_id AND review.file_id=file.id AND review.deleted_at IS NULL AND review.status IN ('pending','approved','deletion_pending')) ORDER BY file.retain_until,file.reference LIMIT 200", FILE_BASE),
         ).bind(tenant_id).bind(can_view_restricted).fetch_all(pool).await.context("load retention-due documents")
           .map(|rows| rows.into_iter().map(file_response).collect())
+    }
+
+    pub async fn list_legal_holds(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        query: &RegistryListQuery,
+        can_view_restricted: bool,
+    ) -> Result<(Vec<LegalHoldResponse>, i64)> {
+        validate_optional(
+            query.status.as_deref(),
+            &["active", "released"],
+            "legal hold status",
+        )?;
+        let search = like_query(query.search.as_deref());
+        let (page, per_page) = bounded_page(query);
+        let rows = sqlx::query_as::<_, LegalHoldRow>(LEGAL_HOLD_SELECT)
+            .bind(tenant_id)
+            .bind(query.status.as_deref())
+            .bind(query.file_id)
+            .bind(search.as_deref())
+            .bind(can_view_restricted)
+            .bind(per_page)
+            .bind((page - 1) * per_page)
+            .fetch_all(pool)
+            .await
+            .context("list Document Registry legal holds")?;
+        let total = sqlx::query_scalar::<_, i64>(LEGAL_HOLD_COUNT)
+            .bind(tenant_id)
+            .bind(query.status.as_deref())
+            .bind(query.file_id)
+            .bind(search.as_deref())
+            .bind(can_view_restricted)
+            .fetch_one(pool)
+            .await
+            .context("count Document Registry legal holds")?;
+        Ok((rows.into_iter().map(legal_hold_response).collect(), total))
+    }
+
+    pub async fn get_legal_hold(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        id: Uuid,
+        can_view_restricted: bool,
+    ) -> Result<Option<LegalHoldResponse>> {
+        sqlx::query_as::<_, LegalHoldRow>(LEGAL_HOLD_BY_ID)
+            .bind(tenant_id)
+            .bind(id)
+            .bind(can_view_restricted)
+            .fetch_optional(pool)
+            .await
+            .context("load Document Registry legal hold")
+            .map(|row| row.map(legal_hold_response))
+    }
+
+    pub async fn create_legal_hold(
+        pool: &PgPool,
+        file_id: Uuid,
+        scope: RegistryScope,
+        actor: AuditActor,
+        context: RequestContext,
+        request: &CreateLegalHoldRequest,
+    ) -> Result<LegalHoldResponse> {
+        let RegistryScope {
+            tenant_id,
+            can_view_restricted,
+        } = scope;
+        let actor_id = person_actor_id(actor)?;
+        let reason = required("Legal hold reason", &request.reason)?;
+        let reference = clean(request.reference.as_deref());
+        let id = Uuid::new_v4();
+        let mut tx = pool.begin().await.context("start legal hold")?;
+        let file = sqlx::query_as::<_, (i32, String)>(
+            r#"SELECT version,status
+                 FROM document_registry_files
+                WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL
+                  AND ($3 OR sensitivity <> 'restricted')
+                FOR UPDATE"#,
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock the document for legal hold")?
+        .ok_or_else(|| anyhow!("The document was not found"))?;
+        if file.0 != request.file_version {
+            bail!("The document changed since it was loaded");
+        }
+        if file.1 == "destroyed" {
+            bail!("A destroyed document cannot be placed on legal hold");
+        }
+        let deletion_started = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM document_registry_deletion_jobs WHERE tenant_id=$1 AND file_id=$2 AND status='processing')",
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .fetch_one(&mut *tx)
+        .await
+        .context("check document destruction progress")?;
+        if deletion_started {
+            bail!("Document destruction has already started");
+        }
+        sqlx::query(
+            r#"INSERT INTO document_registry_legal_holds
+               (id,tenant_id,file_id,reference,reason,applied_by)
+               VALUES ($1,$2,$3,$4,$5,$6)"#,
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(file_id)
+        .bind(reference)
+        .bind(reason)
+        .bind(actor_id)
+        .execute(&mut *tx)
+        .await
+        .context("apply Document Registry legal hold")?;
+        sqlx::query(
+            r#"UPDATE document_registry_deletion_jobs
+                  SET status='blocked',version=version+1
+                WHERE tenant_id=$1 AND file_id=$2 AND status IN ('pending','retry')"#,
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .execute(&mut *tx)
+        .await
+        .context("block queued document destruction")?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            context,
+            "legal_hold",
+            id,
+            Some(file_id),
+            "legal_hold_applied",
+            "document_registry.legal_hold.create",
+            json!({"reference": reference}),
+        )
+        .await?;
+        tx.commit().await.context("commit legal hold")?;
+        Self::get_legal_hold(pool, tenant_id, id, can_view_restricted)
+            .await?
+            .ok_or_else(|| anyhow!("The legal hold could not be reloaded"))
+    }
+
+    pub async fn release_legal_hold(
+        pool: &PgPool,
+        id: Uuid,
+        scope: RegistryScope,
+        actor: AuditActor,
+        context: RequestContext,
+        request: &ReleaseLegalHoldRequest,
+    ) -> Result<Option<LegalHoldResponse>> {
+        let RegistryScope {
+            tenant_id,
+            can_view_restricted,
+        } = scope;
+        let actor_id = person_actor_id(actor)?;
+        let reason = required("Release reason", &request.reason)?;
+        let mut tx = pool.begin().await.context("start legal hold release")?;
+        let hold = sqlx::query_as::<_, (Uuid, String, i32)>(
+            r#"SELECT hold.file_id,hold.status,hold.version
+                 FROM document_registry_legal_holds hold
+                 JOIN document_registry_files file
+                   ON file.id=hold.file_id AND file.tenant_id=hold.tenant_id
+                WHERE hold.tenant_id=$1 AND hold.id=$2
+                  AND ($3 OR file.sensitivity <> 'restricted')
+                FOR UPDATE OF hold,file"#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(can_view_restricted)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock legal hold for release")?;
+        let Some((file_id, status, version)) = hold else {
+            return Ok(None);
+        };
+        if status != "active" || version != request.version {
+            return Ok(None);
+        }
+        sqlx::query(
+            r#"UPDATE document_registry_legal_holds
+                  SET status='released',released_by=$4,released_at=NOW(),release_reason=$5,
+                      version=version+1
+                WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='active'"#,
+        )
+        .bind(tenant_id)
+        .bind(id)
+        .bind(request.version)
+        .bind(actor_id)
+        .bind(reason)
+        .execute(&mut *tx)
+        .await
+        .context("release Document Registry legal hold")?;
+        let still_held = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM document_registry_legal_holds WHERE tenant_id=$1 AND file_id=$2 AND status='active')",
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .fetch_one(&mut *tx)
+        .await
+        .context("check remaining legal holds")?;
+        if !still_held {
+            sqlx::query(
+                r#"UPDATE document_registry_deletion_jobs
+                      SET status='pending',next_attempt_at=NOW(),version=version+1
+                    WHERE tenant_id=$1 AND file_id=$2 AND status='blocked'"#,
+            )
+            .bind(tenant_id)
+            .bind(file_id)
+            .execute(&mut *tx)
+            .await
+            .context("release blocked document destruction")?;
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            context,
+            "legal_hold",
+            id,
+            Some(file_id),
+            "legal_hold_released",
+            "document_registry.legal_hold.release",
+            json!({"reason": request.reason.trim()}),
+        )
+        .await?;
+        tx.commit().await.context("commit legal hold release")?;
+        Self::get_legal_hold(pool, tenant_id, id, can_view_restricted).await
     }
 
     pub async fn list_reviews(
@@ -758,7 +992,13 @@ impl DocumentRegistryOps {
     ) -> Result<(Vec<ReviewResponse>, i64)> {
         validate_optional(
             query.status.as_deref(),
-            &["pending", "approved", "rejected", "executed"],
+            &[
+                "pending",
+                "approved",
+                "rejected",
+                "deletion_pending",
+                "executed",
+            ],
             "review status",
         )?;
         let (page, per_page) = bounded_page(query);
@@ -933,6 +1173,19 @@ impl DocumentRegistryOps {
         if approve && requested_by == actor_id {
             bail!("The requester cannot approve their own disposition review");
         }
+        if approve && recommendation == "destroy" {
+            let held = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM document_registry_legal_holds WHERE tenant_id=$1 AND file_id=$2 AND status='active')",
+            )
+            .bind(tenant_id)
+            .bind(file_id)
+            .fetch_one(&mut *tx)
+            .await
+            .context("check legal holds before disposition approval")?;
+            if held {
+                bail!("An active legal hold blocks document destruction");
+            }
+        }
         let review_changed = if approve && recommendation == "retain" {
             let file_changed = sqlx::query("UPDATE document_registry_files SET retain_until=$4,version=version+1,updated_by=$3 WHERE tenant_id=$1 AND id=$2 AND status='closed'")
                 .bind(tenant_id).bind(file_id).bind(actor_id).bind(proposed_retain_until)
@@ -980,7 +1233,6 @@ impl DocumentRegistryOps {
 
     pub async fn execute_destruction(
         pool: &PgPool,
-        storage: &DocumentStorage,
         id: Uuid,
         scope: RegistryScope,
         actor: AuditActor,
@@ -1018,20 +1270,40 @@ impl DocumentRegistryOps {
         let Some((file_id, object_key)) = locked else {
             return Ok(None);
         };
-        storage.delete(&object_key).await?;
-        let file_changed = sqlx::query(
-            "UPDATE document_registry_files SET status='destroyed',object_key=NULL,destroyed_by=$3,destroyed_at=NOW(),destruction_reason=$4,version=version+1,updated_by=$3 WHERE tenant_id=$1 AND id=$2 AND status='closed'",
-        ).bind(tenant_id).bind(file_id).bind(actor_id).bind(required("Destruction reason", &request.reason)?)
-          .execute(&mut *tx).await.context("retain the destruction evidence")?;
-        if file_changed.rows_affected() != 1 {
-            bail!("The document changed before destruction could be recorded");
+        let held = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM document_registry_legal_holds WHERE tenant_id=$1 AND file_id=$2 AND status='active')",
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .fetch_one(&mut *tx)
+        .await
+        .context("check legal holds before destruction queueing")?;
+        if held {
+            bail!("An active legal hold blocks document destruction");
         }
+        let reason = required("Destruction reason", &request.reason)?;
         let review_changed = sqlx::query(
-            "UPDATE document_registry_disposition_reviews SET status='executed',executed_by=$4,executed_at=NOW(),version=version+1 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='approved'",
-        ).bind(tenant_id).bind(id).bind(request.version).bind(actor_id).execute(&mut *tx).await.context("execute disposition review")?;
+            "UPDATE document_registry_disposition_reviews SET status='deletion_pending',version=version+1 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='approved'",
+        ).bind(tenant_id).bind(id).bind(request.version).execute(&mut *tx).await.context("queue disposition review")?;
         if review_changed.rows_affected() != 1 {
-            bail!("The disposition review changed before execution could be recorded");
+            bail!("The disposition review changed before destruction could be queued");
         }
+        let job_id = Uuid::new_v4();
+        sqlx::query(
+            r#"INSERT INTO document_registry_deletion_jobs
+               (id,tenant_id,review_id,file_id,object_key,destruction_reason,requested_by)
+               VALUES ($1,$2,$3,$4,$5,$6,$7)"#,
+        )
+        .bind(job_id)
+        .bind(tenant_id)
+        .bind(id)
+        .bind(file_id)
+        .bind(object_key)
+        .bind(reason)
+        .bind(actor_id)
+        .execute(&mut *tx)
+        .await
+        .context("create durable document deletion job")?;
         append_evidence(
             &mut tx,
             tenant_id,
@@ -1040,15 +1312,177 @@ impl DocumentRegistryOps {
             "disposition_review",
             id,
             Some(file_id),
-            "document_destroyed",
+            "document_destruction_queued",
             "document_registry.disposition.execute",
             json!({"reason": request.reason.trim()}),
         )
         .await?;
         tx.commit()
             .await
-            .context("commit approved document destruction")?;
+            .context("commit approved document destruction queue")?;
         Self::get_review(pool, tenant_id, id, can_view_restricted).await
+    }
+
+    /// Claims and processes at most one durable private-object deletion.
+    /// Returns `true` when work was claimed so callers may drain a small batch.
+    pub async fn process_next_deletion(pool: &PgPool, storage: &DocumentStorage) -> Result<bool> {
+        sqlx::query(
+            r#"UPDATE document_registry_deletion_jobs
+                  SET status='retry',lease_token=NULL,lease_expires_at=NULL,
+                      next_attempt_at=NOW(),last_error_code='lease_expired',version=version+1
+                WHERE status='processing' AND lease_expires_at <= NOW()"#,
+        )
+        .execute(pool)
+        .await
+        .context("recover expired document deletion leases")?;
+
+        let lease_token = Uuid::new_v4();
+        let mut tx = pool.begin().await.context("claim document deletion job")?;
+        let claim = sqlx::query_as::<_, DeletionJobClaim>(
+            r#"SELECT job.id,job.tenant_id,job.review_id,job.file_id,job.object_key,
+                      job.destruction_reason,job.requested_by,$1::UUID AS lease_token
+                 FROM document_registry_deletion_jobs job
+                 JOIN document_registry_disposition_reviews review
+                   ON review.id=job.review_id AND review.tenant_id=job.tenant_id
+                 JOIN document_registry_files file
+                   ON file.id=job.file_id AND file.tenant_id=job.tenant_id
+                WHERE job.status IN ('pending','retry')
+                  AND job.next_attempt_at <= NOW()
+                  AND review.status='deletion_pending'
+                  AND file.status='closed' AND file.object_key=job.object_key
+                  AND NOT EXISTS (
+                      SELECT 1 FROM document_registry_legal_holds hold
+                       WHERE hold.tenant_id=job.tenant_id AND hold.file_id=job.file_id
+                         AND hold.status='active'
+                  )
+                ORDER BY job.next_attempt_at,job.requested_at,job.id
+                LIMIT 1
+                FOR UPDATE OF job,review,file SKIP LOCKED"#,
+        )
+        .bind(lease_token)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("select document deletion job")?;
+        let Some(claim) = claim else {
+            tx.rollback().await.context("close empty deletion claim")?;
+            return Ok(false);
+        };
+        let claimed = sqlx::query(
+            r#"UPDATE document_registry_deletion_jobs
+                  SET status='processing',lease_token=$3,lease_expires_at=NOW()+INTERVAL '45 seconds',
+                      attempt_count=attempt_count+1,last_error_code=NULL,version=version+1
+                WHERE tenant_id=$1 AND id=$2 AND status IN ('pending','retry')"#,
+        )
+        .bind(claim.tenant_id)
+        .bind(claim.id)
+        .bind(claim.lease_token)
+        .execute(&mut *tx)
+        .await
+        .context("lease document deletion job")?;
+        if claimed.rows_affected() != 1 {
+            tx.rollback().await.context("close lost deletion claim")?;
+            return Ok(false);
+        }
+        tx.commit()
+            .await
+            .context("commit document deletion lease")?;
+
+        if storage.delete(&claim.object_key).await.is_err() {
+            sqlx::query(
+                r#"UPDATE document_registry_deletion_jobs
+                      SET status='retry',lease_token=NULL,lease_expires_at=NULL,
+                          next_attempt_at=NOW()+LEAST(300,POWER(2,attempt_count)) * INTERVAL '1 second',
+                          last_error_code='storage_delete_failed',version=version+1
+                    WHERE tenant_id=$1 AND id=$2 AND status='processing' AND lease_token=$3"#,
+            )
+            .bind(claim.tenant_id)
+            .bind(claim.id)
+            .bind(claim.lease_token)
+            .execute(pool)
+            .await
+            .context("schedule document deletion retry")?;
+            return Ok(true);
+        }
+
+        let mut tx = pool.begin().await.context("finalize document deletion")?;
+        let locked = sqlx::query_scalar::<_, Uuid>(
+            r#"SELECT job.id
+                 FROM document_registry_deletion_jobs job
+                 JOIN document_registry_disposition_reviews review
+                   ON review.id=job.review_id AND review.tenant_id=job.tenant_id
+                 JOIN document_registry_files file
+                   ON file.id=job.file_id AND file.tenant_id=job.tenant_id
+                WHERE job.tenant_id=$1 AND job.id=$2 AND job.status='processing'
+                  AND job.lease_token=$3 AND review.status='deletion_pending'
+                  AND file.status='closed'
+                FOR UPDATE OF job,review,file"#,
+        )
+        .bind(claim.tenant_id)
+        .bind(claim.id)
+        .bind(claim.lease_token)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("fence document deletion completion")?;
+        if locked.is_none() {
+            tx.rollback()
+                .await
+                .context("close stale deletion completion")?;
+            return Ok(true);
+        }
+        sqlx::query(
+            r#"UPDATE document_registry_files
+                  SET status='destroyed',object_key=NULL,destroyed_by=$3,destroyed_at=NOW(),
+                      destruction_reason=$4,version=version+1,updated_by=$3
+                WHERE tenant_id=$1 AND id=$2 AND status='closed'"#,
+        )
+        .bind(claim.tenant_id)
+        .bind(claim.file_id)
+        .bind(claim.requested_by)
+        .bind(&claim.destruction_reason)
+        .execute(&mut *tx)
+        .await
+        .context("record terminal document destruction")?;
+        sqlx::query(
+            r#"UPDATE document_registry_disposition_reviews
+                  SET status='executed',executed_by=$3,executed_at=NOW(),version=version+1
+                WHERE tenant_id=$1 AND id=$2 AND status='deletion_pending'"#,
+        )
+        .bind(claim.tenant_id)
+        .bind(claim.review_id)
+        .bind(claim.requested_by)
+        .execute(&mut *tx)
+        .await
+        .context("complete disposition review")?;
+        sqlx::query(
+            r#"UPDATE document_registry_deletion_jobs
+                  SET status='completed',lease_token=NULL,lease_expires_at=NULL,completed_at=NOW(),
+                      last_error_code=NULL,version=version+1
+                WHERE tenant_id=$1 AND id=$2 AND status='processing' AND lease_token=$3"#,
+        )
+        .bind(claim.tenant_id)
+        .bind(claim.id)
+        .bind(claim.lease_token)
+        .execute(&mut *tx)
+        .await
+        .context("complete document deletion job")?;
+        append_evidence_with_activity_actor(
+            &mut tx,
+            claim.tenant_id,
+            AuditActor::system(),
+            claim.requested_by,
+            RequestContext::generate(None),
+            "disposition_review",
+            claim.review_id,
+            Some(claim.file_id),
+            "document_destroyed",
+            "document_registry.disposition.complete",
+            json!({"source": "deletion_queue"}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit terminal document destruction")?;
+        Ok(true)
     }
 }
 
@@ -1146,6 +1580,25 @@ fn activity_response(row: ActivityRow) -> ActivityResponse {
         actor_id: row.actor_id,
         metadata: row.metadata,
         created_at: row.created_at,
+    }
+}
+fn legal_hold_response(row: LegalHoldRow) -> LegalHoldResponse {
+    LegalHoldResponse {
+        id: row.id,
+        file_id: row.file_id,
+        file_reference: row.file_reference,
+        file_title: row.file_title,
+        reference: row.reference,
+        reason: row.reason,
+        status: row.status,
+        version: row.version,
+        applied_by: row.applied_by,
+        applied_at: row.applied_at,
+        released_by: row.released_by,
+        released_at: row.released_at,
+        release_reason: row.release_reason,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
     }
 }
 
@@ -1256,14 +1709,50 @@ async fn append_evidence(
     metadata: Value,
 ) -> Result<()> {
     let actor_id = person_actor_id(actor)?;
+    append_evidence_with_activity_actor(
+        tx,
+        tenant_id,
+        actor,
+        actor_id,
+        context,
+        aggregate_type,
+        aggregate_id,
+        file_id,
+        event_type,
+        action,
+        metadata,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn append_evidence_with_activity_actor(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    audit_actor: AuditActor,
+    activity_actor_id: Uuid,
+    context: RequestContext,
+    aggregate_type: &str,
+    aggregate_id: Uuid,
+    file_id: Option<Uuid>,
+    event_type: &str,
+    action: &str,
+    metadata: Value,
+) -> Result<()> {
     sqlx::query("INSERT INTO document_registry_activity_events (tenant_id,aggregate_type,aggregate_id,file_id,event_type,actor_id,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)")
-        .bind(tenant_id).bind(aggregate_type).bind(aggregate_id).bind(file_id).bind(event_type).bind(actor_id).bind(metadata.clone())
+        .bind(tenant_id).bind(aggregate_type).bind(aggregate_id).bind(file_id).bind(event_type).bind(activity_actor_id).bind(metadata.clone())
         .execute(&mut **tx).await.context("append Document Registry activity evidence")?;
     append_audit(
         &mut **tx,
-        &NewAuditEvent::new(tenant_id, actor, action, AuditOutcome::Succeeded, context)
-            .with_target(AuditTarget::new(aggregate_type, aggregate_id.to_string()))
-            .with_redacted_metadata(metadata.as_object().cloned().unwrap_or_else(Map::new)),
+        &NewAuditEvent::new(
+            tenant_id,
+            audit_actor,
+            action,
+            AuditOutcome::Succeeded,
+            context,
+        )
+        .with_target(AuditTarget::new(aggregate_type, aggregate_id.to_string()))
+        .with_redacted_metadata(metadata.as_object().cloned().unwrap_or_else(Map::new)),
     )
     .await
     .context("append Document Registry audit evidence")?;
@@ -1281,6 +1770,9 @@ const FILE_BASE: &str = "SELECT file.id,file.reference,file.series_id,file.serie
 const REVIEW_SELECT: &str = "SELECT review.id,review.file_id,file.reference AS file_reference,file.title AS file_title,review.recommendation,review.proposed_retain_until,review.request_reason,review.status,review.version,review.requested_by,review.reviewed_by,review.reviewed_at,review.review_reason,review.executed_by,review.executed_at,review.created_at,review.updated_at FROM document_registry_disposition_reviews review JOIN document_registry_files file ON file.id=review.file_id AND file.tenant_id=review.tenant_id WHERE review.tenant_id=$1 AND review.deleted_at IS NULL AND ($2::TEXT IS NULL OR review.status=$2) AND ($3 OR file.sensitivity <> 'restricted') ORDER BY review.created_at DESC LIMIT $4 OFFSET $5";
 const REVIEW_COUNT: &str = "SELECT COUNT(*) FROM document_registry_disposition_reviews review JOIN document_registry_files file ON file.id=review.file_id AND file.tenant_id=review.tenant_id WHERE review.tenant_id=$1 AND review.deleted_at IS NULL AND ($2::TEXT IS NULL OR review.status=$2) AND ($3 OR file.sensitivity <> 'restricted')";
 const REVIEW_BY_ID: &str = "SELECT review.id,review.file_id,file.reference AS file_reference,file.title AS file_title,review.recommendation,review.proposed_retain_until,review.request_reason,review.status,review.version,review.requested_by,review.reviewed_by,review.reviewed_at,review.review_reason,review.executed_by,review.executed_at,review.created_at,review.updated_at FROM document_registry_disposition_reviews review JOIN document_registry_files file ON file.id=review.file_id AND file.tenant_id=review.tenant_id WHERE review.tenant_id=$1 AND review.id=$2 AND review.deleted_at IS NULL AND ($3 OR file.sensitivity <> 'restricted')";
+const LEGAL_HOLD_SELECT: &str = "SELECT hold.id,hold.file_id,file.reference AS file_reference,file.title AS file_title,hold.reference,hold.reason,hold.status,hold.version,hold.applied_by,hold.applied_at,hold.released_by,hold.released_at,hold.release_reason,hold.created_at,hold.updated_at FROM document_registry_legal_holds hold JOIN document_registry_files file ON file.id=hold.file_id AND file.tenant_id=hold.tenant_id WHERE hold.tenant_id=$1 AND ($2::TEXT IS NULL OR hold.status=$2) AND ($3::UUID IS NULL OR hold.file_id=$3) AND ($4::TEXT IS NULL OR file.reference ILIKE $4 OR file.title ILIKE $4 OR hold.reference ILIKE $4 OR hold.reason ILIKE $4) AND ($5 OR file.sensitivity <> 'restricted') ORDER BY hold.applied_at DESC,hold.id DESC LIMIT $6 OFFSET $7";
+const LEGAL_HOLD_COUNT: &str = "SELECT COUNT(*) FROM document_registry_legal_holds hold JOIN document_registry_files file ON file.id=hold.file_id AND file.tenant_id=hold.tenant_id WHERE hold.tenant_id=$1 AND ($2::TEXT IS NULL OR hold.status=$2) AND ($3::UUID IS NULL OR hold.file_id=$3) AND ($4::TEXT IS NULL OR file.reference ILIKE $4 OR file.title ILIKE $4 OR hold.reference ILIKE $4 OR hold.reason ILIKE $4) AND ($5 OR file.sensitivity <> 'restricted')";
+const LEGAL_HOLD_BY_ID: &str = "SELECT hold.id,hold.file_id,file.reference AS file_reference,file.title AS file_title,hold.reference,hold.reason,hold.status,hold.version,hold.applied_by,hold.applied_at,hold.released_by,hold.released_at,hold.release_reason,hold.created_at,hold.updated_at FROM document_registry_legal_holds hold JOIN document_registry_files file ON file.id=hold.file_id AND file.tenant_id=hold.tenant_id WHERE hold.tenant_id=$1 AND hold.id=$2 AND ($3 OR file.sensitivity <> 'restricted')";
 
 #[cfg(test)]
 mod tests {

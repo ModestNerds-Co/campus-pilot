@@ -13,6 +13,7 @@ use actix_web::middleware::Logger;
 use actix_web::web::JsonConfig;
 use actix_web::{App, HttpResponse, HttpServer, web};
 use cp_audit::{CORRELATION_ID_HEADER, REQUEST_ID_HEADER};
+use cp_document_registry::DocumentRegistryOps;
 use dotenv::dotenv;
 use log::info;
 use sentry::integrations::log::LogFilter;
@@ -101,6 +102,28 @@ async fn main() -> anyhow::Result<std::io::Result<()>> {
     info!("Storage bucket configured successfully 📦");
     app_state.document_storage.ensure_ready().await?;
     info!("Private Document Registry storage and malware scanner are ready");
+
+    let deletion_pool = app_state.db.clone();
+    let deletion_storage = Arc::clone(&app_state.document_storage);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            for _ in 0..10 {
+                match DocumentRegistryOps::process_next_deletion(&deletion_pool, &deletion_storage)
+                    .await
+                {
+                    Ok(true) => continue,
+                    Ok(false) => break,
+                    Err(error) => {
+                        log::error!("Document Registry deletion worker failed: {:#}", error);
+                        break;
+                    }
+                }
+            }
+        }
+    });
 
     let refresh_state = Arc::clone(&app_state);
     tokio::spawn(async move {

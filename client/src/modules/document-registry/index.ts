@@ -4,3 +4,4 @@ export { DocumentRegistryDocumentDetailWorkspace } from "./document-detail-works
 export { DocumentRegistryRetentionWorkspace } from "./retention-workspace";
 export { DocumentRegistryReviewsWorkspace } from "./reviews-workspace";
 export { DocumentRegistrySettingsWorkspace } from "./settings-workspace";
+export { DocumentRegistryLegalHoldsWorkspace } from "./legal-holds-workspace";

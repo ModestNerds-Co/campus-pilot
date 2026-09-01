@@ -6386,7 +6386,7 @@
     },
     {
       "name": "Document Registry",
-      "description": "Private governed files, retention classifications, immutable closure, and independently reviewed disposition.",
+      "description": "Private governed files, retention classifications, immutable closure, legal holds, and independently reviewed queued disposition.",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
       "item": [
         { "name": "Read Numbering Policy", "request": { "method": "GET", "url": "{{base_url}}/document-registry/numbering-policy" } },
@@ -6404,12 +6404,16 @@
         { "name": "Read Document Activity", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/activity" } },
         { "name": "Prepare Private Download", "request": { "method": "GET", "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/download", "description": "Returns a short-lived URL and appends reduced download authorization evidence." } },
         { "name": "List Retention Due", "request": { "method": "GET", "url": "{{base_url}}/document-registry/retention-due" } },
+        { "name": "List Legal Holds", "request": { "method": "GET", "url": "{{base_url}}/document-registry/legal-holds?page=1&per_page=25&status=active" } },
+        { "name": "Read Legal Hold", "request": { "method": "GET", "url": "{{base_url}}/document-registry/legal-holds/{{document_registry_legal_hold_id}}" } },
+        { "name": "Apply Legal Hold", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reference\": \"CASE-2026-001\",\n  \"reason\": \"Preserve while the matter remains active\",\n  \"file_version\": {{document_registry_file_version}}\n}" }, "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/legal-holds", "description": "An active hold blocks destruction approval and queued object deletion." } },
+        { "name": "Release Legal Hold", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"The preservation instruction has ended\",\n  \"version\": {{document_registry_legal_hold_version}}\n}" }, "url": "{{base_url}}/document-registry/legal-holds/{{document_registry_legal_hold_id}}/release" } },
         { "name": "List Disposition Reviews", "request": { "method": "GET", "url": "{{base_url}}/document-registry/disposition-reviews?page=1&per_page=25&status=pending" } },
         { "name": "Read Disposition Review", "request": { "method": "GET", "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}" } },
         { "name": "Request Disposition Review", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"recommendation\": \"retain\",\n  \"proposed_retain_until\": \"2027-09-02\",\n  \"reason\": \"Operational need continues\",\n  \"file_version\": {{document_registry_file_version}}\n}" }, "url": "{{base_url}}/document-registry/files/{{document_registry_file_id}}/disposition-reviews" } },
         { "name": "Approve Disposition Review", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Independent review completed\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/approve" } },
         { "name": "Reject Disposition Review", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Retention evidence is incomplete\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/reject" } },
-        { "name": "Execute Approved Destruction", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Approved retention period elapsed\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/execute" } }
+        { "name": "Queue Approved Destruction", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Approved retention period elapsed\",\n  \"version\": {{document_registry_review_version}}\n}" }, "url": "{{base_url}}/document-registry/disposition-reviews/{{document_registry_review_id}}/execute", "description": "Moves the review to deletion_pending. The leased worker deletes the private object and then records the terminal executed state." } }
       ]
     },
     {
@@ -6818,6 +6822,16 @@
     },
     {
       "key": "document_registry_review_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_legal_hold_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "document_registry_legal_hold_version",
       "value": "1",
       "type": "default"
     },

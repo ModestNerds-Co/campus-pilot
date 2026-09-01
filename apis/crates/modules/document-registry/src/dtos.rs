@@ -13,6 +13,7 @@ pub struct RegistryListQuery {
     pub status: Option<String>,
     pub series_id: Option<Uuid>,
     pub sensitivity: Option<String>,
+    pub file_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -228,6 +229,43 @@ pub struct ExecuteDestructionRequest {
     pub version: i32,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct LegalHoldResponse {
+    pub id: Uuid,
+    pub file_id: Uuid,
+    pub file_reference: String,
+    pub file_title: String,
+    pub reference: Option<String>,
+    pub reason: String,
+    pub status: String,
+    pub version: i32,
+    pub applied_by: Uuid,
+    pub applied_at: DateTime<Utc>,
+    pub released_by: Option<Uuid>,
+    pub released_at: Option<DateTime<Utc>>,
+    pub release_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateLegalHoldRequest {
+    #[validate(length(max = 120))]
+    pub reference: Option<String>,
+    #[validate(length(min = 1, max = 2000))]
+    pub reason: String,
+    #[validate(range(min = 1))]
+    pub file_version: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ReleaseLegalHoldRequest {
+    #[validate(length(min = 1, max = 2000))]
+    pub reason: String,
+    #[validate(range(min = 1))]
+    pub version: i32,
+}
+
 #[derive(Debug, Serialize)]
 pub struct SeriesPage {
     pub series: Vec<SeriesResponse>,
@@ -243,6 +281,10 @@ pub struct ReviewsPage {
 #[derive(Debug, Serialize)]
 pub struct ActivityPage {
     pub activity: Vec<ActivityResponse>,
+}
+#[derive(Debug, Serialize)]
+pub struct LegalHoldsPage {
+    pub legal_holds: Vec<LegalHoldResponse>,
 }
 #[derive(Debug, Serialize)]
 pub struct DownloadResponse {

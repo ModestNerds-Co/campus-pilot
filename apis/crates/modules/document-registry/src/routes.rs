@@ -16,9 +16,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    ActivityPage, CloseFileRequest, CreateReviewRequest, CreateSeriesRequest, DocumentRegistryOps,
-    DocumentStorage, DownloadResponse, ExecuteDestructionRequest, FilesPage, NewRegistryFile,
-    ReclassifyFileRequest, RegistryListQuery, RegistryScope, ReviewDecisionRequest, ReviewsPage,
+    ActivityPage, CloseFileRequest, CreateLegalHoldRequest, CreateReviewRequest,
+    CreateSeriesRequest, DocumentRegistryOps, DocumentStorage, DownloadResponse,
+    ExecuteDestructionRequest, FilesPage, LegalHoldsPage, NewRegistryFile, ReclassifyFileRequest,
+    RegistryListQuery, RegistryScope, ReleaseLegalHoldRequest, ReviewDecisionRequest, ReviewsPage,
     SeriesPage, UpdateFileRequest, UpdateNumberingPolicyRequest, UpdateSeriesRequest,
     storage::MAX_DOCUMENT_BYTES,
 };
@@ -639,10 +640,8 @@ async fn reject_review(
     )
 }
 #[post("/disposition-reviews/{id}/execute")]
-#[allow(clippy::too_many_arguments)]
 async fn execute_review(
     pool: web::Data<PgPool>,
-    storage: web::Data<DocumentStorage>,
     tenant: web::ReqData<TenantId>,
     authority: Authority,
     actor: web::ReqData<AuditActor>,
@@ -659,7 +658,6 @@ async fn execute_review(
     updated_or_error(
         DocumentRegistryOps::execute_destruction(
             &pool,
-            &storage,
             path.into_inner(),
             RegistryScope::new(
                 tenant_id(tenant),
@@ -671,6 +669,119 @@ async fn execute_review(
         )
         .await,
         "Disposition review",
+    )
+}
+
+#[get("/legal-holds")]
+async fn list_legal_holds(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: Authority,
+    query: web::Query<RegistryListQuery>,
+) -> HttpResponse {
+    if !allowed(&authority, "document_registry:manage") {
+        return forbidden();
+    }
+    let (page, per_page) = bounded_page(&query);
+    match DocumentRegistryOps::list_legal_holds(
+        &pool,
+        tenant_id(tenant),
+        &query,
+        allowed(&authority, "document_registry:restricted"),
+    )
+    .await
+    {
+        Ok((legal_holds, total)) => {
+            paginated(LegalHoldsPage { legal_holds }, page, per_page, total)
+        }
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/legal-holds/{id}")]
+async fn read_legal_hold(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: Authority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    if !allowed(&authority, "document_registry:manage") {
+        return forbidden();
+    }
+    found(
+        DocumentRegistryOps::get_legal_hold(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            allowed(&authority, "document_registry:restricted"),
+        )
+        .await,
+        "Legal hold",
+    )
+}
+
+#[post("/files/{id}/legal-holds")]
+async fn create_legal_hold(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: Authority,
+    actor: web::ReqData<AuditActor>,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CreateLegalHoldRequest>,
+) -> HttpResponse {
+    if !allowed(&authority, "document_registry:manage") {
+        return forbidden();
+    }
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    created_or_error(
+        DocumentRegistryOps::create_legal_hold(
+            &pool,
+            path.into_inner(),
+            RegistryScope::new(
+                tenant_id(tenant),
+                allowed(&authority, "document_registry:restricted"),
+            ),
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[post("/legal-holds/{id}/release")]
+async fn release_legal_hold(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: Authority,
+    actor: web::ReqData<AuditActor>,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ReleaseLegalHoldRequest>,
+) -> HttpResponse {
+    if !allowed(&authority, "document_registry:manage") {
+        return forbidden();
+    }
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    updated_or_error(
+        DocumentRegistryOps::release_legal_hold(
+            &pool,
+            path.into_inner(),
+            RegistryScope::new(
+                tenant_id(tenant),
+                allowed(&authority, "document_registry:restricted"),
+            ),
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "Legal hold",
     )
 }
 
@@ -693,6 +804,10 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(file_activity)
             .service(download_file)
             .service(retention_due)
+            .service(list_legal_holds)
+            .service(read_legal_hold)
+            .service(create_legal_hold)
+            .service(release_legal_hold)
             .service(list_reviews)
             .service(read_review)
             .service(create_review)

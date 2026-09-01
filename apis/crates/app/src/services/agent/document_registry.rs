@@ -27,6 +27,7 @@ pub(super) struct RegistryReadInput {
     status: Option<String>,
     series_id: Option<Uuid>,
     sensitivity: Option<String>,
+    file_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,6 +41,8 @@ pub(super) enum RegistryReadKind {
     RetentionDue,
     ReviewsList,
     ReviewRead,
+    LegalHoldsList,
+    LegalHoldRead,
 }
 
 impl RegistryReadKind {
@@ -54,6 +57,8 @@ impl RegistryReadKind {
             Self::RetentionDue => "document_registry.retention_due.list",
             Self::ReviewsList => "document_registry.disposition_reviews.list",
             Self::ReviewRead => "document_registry.disposition_reviews.read",
+            Self::LegalHoldsList => "document_registry.legal_holds.list",
+            Self::LegalHoldRead => "document_registry.legal_holds.read",
         }
     }
     const fn title(self) -> &'static str {
@@ -67,6 +72,8 @@ impl RegistryReadKind {
             Self::RetentionDue => "List retention-due documents",
             Self::ReviewsList => "List document disposition reviews",
             Self::ReviewRead => "Read document disposition review",
+            Self::LegalHoldsList => "List document legal holds",
+            Self::LegalHoldRead => "Read document legal hold",
         }
     }
     const fn resource_kind(self) -> Option<&'static str> {
@@ -74,6 +81,7 @@ impl RegistryReadKind {
             Self::SeriesRead => Some("document_registry_series"),
             Self::FileRead | Self::FileActivity => Some("document_registry_file"),
             Self::ReviewRead => Some("document_registry_disposition_review"),
+            Self::LegalHoldRead => Some("document_registry_legal_hold"),
             _ => None,
         }
     }
@@ -107,7 +115,8 @@ impl RegistryReadCapability {
                     "search": {"type":["string","null"],"maxLength":240},
                     "status": {"type":["string","null"],"maxLength":40},
                     "series_id": {"type":["string","null"],"format":"uuid"},
-                    "sensitivity": {"type":["string","null"],"maxLength":40}
+                    "sensitivity": {"type":["string","null"],"maxLength":40},
+                    "file_id": {"type":["string","null"],"format":"uuid"}
                 }),
                 json!({"result":{"type":"object"}}),
                 kind.sensitivity(),
@@ -146,6 +155,7 @@ impl Capability for RegistryReadCapability {
             status: input.status,
             series_id: input.series_id,
             sensitivity: input.sensitivity,
+            file_id: input.file_id,
         };
         let result = match self.kind {
             RegistryReadKind::NumberingPolicy => json!(
@@ -225,6 +235,28 @@ impl Capability for RegistryReadCapability {
                 .map_err(|_| dependency_failure())?
                 .ok_or_else(not_found)?
             ),
+            RegistryReadKind::LegalHoldsList => {
+                let (values, total) = DocumentRegistryOps::list_legal_holds(
+                    &self.pool,
+                    principal.tenant_id(),
+                    &query,
+                    restricted,
+                )
+                .await
+                .map_err(|_| dependency_failure())?;
+                json!({"legal_holds":values,"total":total})
+            }
+            RegistryReadKind::LegalHoldRead => json!(
+                DocumentRegistryOps::get_legal_hold(
+                    &self.pool,
+                    principal.tenant_id(),
+                    required_id(input.record_id)?,
+                    restricted
+                )
+                .await
+                .map_err(|_| dependency_failure())?
+                .ok_or_else(not_found)?
+            ),
         };
         Ok(json!({"result":result}))
     }
@@ -236,9 +268,6 @@ async fn require_campus_scope(
     user_id: Uuid,
 ) -> Result<(), CapabilityExecutionError> {
     let roles = roles(pool, tenant_id, user_id).await?;
-    if wildcard(pool, tenant_id, &roles).await? {
-        return Ok(());
-    }
     let grants = RoleRecordScopeOps::effective_for_roles(pool, tenant_id, &roles)
         .await
         .map_err(|_| dependency_failure())?;
@@ -276,13 +305,6 @@ async fn roles(
     .await
     .map_err(|_| dependency_failure())?
     .ok_or_else(invalid_state)
-}
-async fn wildcard(
-    pool: &PgPool,
-    tenant_id: Uuid,
-    roles: &[String],
-) -> Result<bool, CapabilityExecutionError> {
-    sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM roles WHERE tenant_id=$1 AND key=ANY($2) AND deleted_at IS NULL AND '*'=ANY(permissions))").bind(tenant_id).bind(roles).fetch_one(pool).await.map_err(|_|dependency_failure())
 }
 fn required_id(value: Option<Uuid>) -> Result<Uuid, CapabilityExecutionError> {
     value.ok_or_else(invalid_state)

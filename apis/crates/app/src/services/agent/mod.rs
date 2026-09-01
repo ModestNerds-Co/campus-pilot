@@ -788,6 +788,8 @@ pub fn build_capability_registry(
         RegistryReadKind::RetentionDue,
         RegistryReadKind::ReviewsList,
         RegistryReadKind::ReviewRead,
+        RegistryReadKind::LegalHoldsList,
+        RegistryReadKind::LegalHoldRead,
     ] {
         registry
             .register(RegistryReadCapability::new(pool.clone(), kind))
@@ -1176,6 +1178,8 @@ mod tests {
                 "document_registry.files.activity.list",
                 "document_registry.files.list",
                 "document_registry.files.read",
+                "document_registry.legal_holds.list",
+                "document_registry.legal_holds.read",
                 "document_registry.numbering_policy.read",
                 "document_registry.retention_due.list",
                 "document_registry.series.list",

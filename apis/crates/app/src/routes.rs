@@ -1303,6 +1303,30 @@ mod route_wiring_tests {
             ),
             (
                 Method::GET,
+                "/api/1.0/document-registry/legal-holds".to_string(),
+                "/api/1.0/document-registry/legal-holds",
+                "document_registry.legal_holds.list",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/document-registry/legal-holds/{record_id}"),
+                "/api/1.0/document-registry/legal-holds/{id}",
+                "document_registry.legal_holds.read",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/files/{record_id}/legal-holds"),
+                "/api/1.0/document-registry/files/{id}/legal-holds",
+                "document_registry.legal_holds.create",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/document-registry/legal-holds/{record_id}/release"),
+                "/api/1.0/document-registry/legal-holds/{id}/release",
+                "document_registry.legal_holds.release",
+            ),
+            (
+                Method::GET,
                 "/api/1.0/document-registry/disposition-reviews".to_string(),
                 "/api/1.0/document-registry/disposition-reviews",
                 "document_registry.disposition_reviews.list",

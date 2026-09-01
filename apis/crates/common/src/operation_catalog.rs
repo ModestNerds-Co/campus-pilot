@@ -4392,6 +4392,42 @@ fn build_catalog() -> Vec<RoutedOperation> {
         ),
         route(
             Method::GET,
+            "/api/1.0/document-registry/legal-holds",
+            "document_registry.legal_holds.list",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/document-registry/legal-holds/{id}",
+            "document_registry.legal_holds.read",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/files/{id}/legal-holds",
+            "document_registry.legal_holds.create",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/document-registry/legal-holds/{id}/release",
+            "document_registry.legal_holds.release",
+            "document_registry",
+            "document_registry:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
             "/api/1.0/document-registry/disposition-reviews",
             "document_registry.disposition_reviews.list",
             "document_registry",
@@ -5917,7 +5953,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "document_registry.files.activity.list"
         | "document_registry.retention_due.list"
         | "document_registry.disposition_reviews.list"
-        | "document_registry.disposition_reviews.read" => AgentExposure::Exposed,
+        | "document_registry.disposition_reviews.read"
+        | "document_registry.legal_holds.list"
+        | "document_registry.legal_holds.read" => AgentExposure::Exposed,
         "internal_audit.numbering_policy.read"
         | "internal_audit.plans.list"
         | "internal_audit.plans.read"
@@ -6248,7 +6286,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "document_registry.disposition_reviews.create"
         | "document_registry.disposition_reviews.approve"
         | "document_registry.disposition_reviews.reject"
-        | "document_registry.disposition_reviews.execute" => AgentExposure::ApprovalRequired,
+        | "document_registry.disposition_reviews.execute"
+        | "document_registry.legal_holds.create"
+        | "document_registry.legal_holds.release" => AgentExposure::ApprovalRequired,
         "internal_audit.numbering_policy.update"
         | "internal_audit.plans.create"
         | "internal_audit.plans.update"
@@ -6451,7 +6491,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 601);
+        assert_eq!(operation_catalog().len(), 605);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6503,7 +6543,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [223, 340, 26, 12]);
+        assert_eq!(counts, [225, 342, 26, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

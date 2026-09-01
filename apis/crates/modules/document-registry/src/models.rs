@@ -93,3 +93,34 @@ pub(crate) struct ActivityRow {
     pub metadata: serde_json::Value,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, FromRow)]
+pub(crate) struct LegalHoldRow {
+    pub id: Uuid,
+    pub file_id: Uuid,
+    pub file_reference: String,
+    pub file_title: String,
+    pub reference: Option<String>,
+    pub reason: String,
+    pub status: String,
+    pub version: i32,
+    pub applied_by: Uuid,
+    pub applied_at: DateTime<Utc>,
+    pub released_by: Option<Uuid>,
+    pub released_at: Option<DateTime<Utc>>,
+    pub release_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub(crate) struct DeletionJobClaim {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub review_id: Uuid,
+    pub file_id: Uuid,
+    pub object_key: String,
+    pub destruction_reason: String,
+    pub requested_by: Uuid,
+    pub lease_token: Uuid,
+}

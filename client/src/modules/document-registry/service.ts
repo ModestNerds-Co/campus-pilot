@@ -1,10 +1,10 @@
 import { AxiosError } from "axios";
 import { httpClient } from "@/lib/http-client";
-import type { ActivityResponse,ApiEnvelope,Classification,ClassificationsResponse,DispositionReview,DownloadResponse,FilesResponse,NumberingPolicy,RegistryFile,ReviewsResponse,Sensitivity } from "./types";
+import type { ActivityResponse,ApiEnvelope,Classification,ClassificationsResponse,DispositionReview,DownloadResponse,FilesResponse,LegalHold,LegalHoldsResponse,NumberingPolicy,RegistryFile,ReviewsResponse,Sensitivity } from "./types";
 
 const BASE="/api/1.0/document-registry";
 async function request<T>(work:()=>Promise<{data:ApiEnvelope<T>}>):Promise<ApiEnvelope<T>>{try{return(await work()).data}catch(error){if(error instanceof AxiosError&&error.response)return error.response.data as ApiEnvelope<T>;throw error}}
-export type ListParams={page?:number;per_page?:number;search?:string;status?:string;series_id?:string;sensitivity?:string};
+export type ListParams={page?:number;per_page?:number;search?:string;status?:string;series_id?:string;sensitivity?:string;file_id?:string};
 export type ClassificationPayload={code:string;name:string;description:string|null;retention_trigger:"filed"|"closed";retention_period_months:number|null;final_disposition:"review"|"destroy"|"permanent";default_sensitivity:Sensitivity};
 export const documentRegistryService={
   numbering:()=>request<NumberingPolicy>(()=>httpClient.get(`${BASE}/numbering-policy`)),
@@ -22,6 +22,10 @@ export const documentRegistryService={
   activity:(id:string)=>request<ActivityResponse>(()=>httpClient.get(`${BASE}/files/${id}/activity`)),
   download:(id:string)=>request<DownloadResponse>(()=>httpClient.get(`${BASE}/files/${id}/download`)),
   retentionDue:()=>request<FilesResponse>(()=>httpClient.get(`${BASE}/retention-due`)),
+  legalHolds:(params?:ListParams)=>request<LegalHoldsResponse>(()=>httpClient.get(`${BASE}/legal-holds`,{params})),
+  legalHold:(id:string)=>request<LegalHold>(()=>httpClient.get(`${BASE}/legal-holds/${id}`)),
+  applyLegalHold:(record:RegistryFile,payload:{reference:string|null;reason:string})=>request<LegalHold>(()=>httpClient.post(`${BASE}/files/${record.id}/legal-holds`,{...payload,file_version:record.version})),
+  releaseLegalHold:(record:LegalHold,reason:string)=>request<LegalHold>(()=>httpClient.post(`${BASE}/legal-holds/${record.id}/release`,{reason,version:record.version})),
   reviews:(params?:ListParams)=>request<ReviewsResponse>(()=>httpClient.get(`${BASE}/disposition-reviews`,{params})),
   review:(id:string)=>request<DispositionReview>(()=>httpClient.get(`${BASE}/disposition-reviews/${id}`)),
   requestReview:(record:RegistryFile,payload:{recommendation:"retain"|"destroy";proposed_retain_until:string|null;reason:string})=>request<DispositionReview>(()=>httpClient.post(`${BASE}/files/${record.id}/disposition-reviews`,{...payload,file_version:record.version})),

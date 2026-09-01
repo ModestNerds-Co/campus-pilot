@@ -101,6 +101,7 @@ import { Route as ModulesFacilitiesLocationsRouteImport } from './routes/modules
 import { Route as ModulesDocumentRegistrySettingsRouteImport } from './routes/modules/document-registry/settings'
 import { Route as ModulesDocumentRegistryReviewsRouteImport } from './routes/modules/document-registry/reviews'
 import { Route as ModulesDocumentRegistryRetentionRouteImport } from './routes/modules/document-registry/retention'
+import { Route as ModulesDocumentRegistryLegalHoldsRouteImport } from './routes/modules/document-registry/legal-holds'
 import { Route as ModulesDocumentRegistryClassificationsRouteImport } from './routes/modules/document-registry/classifications'
 import { Route as ModulesAttendanceRegistersRouteImport } from './routes/modules/attendance/registers'
 import { Route as ModulesAssetsInventoryStoresRouteImport } from './routes/modules/assets-inventory/stores'
@@ -647,6 +648,12 @@ const ModulesDocumentRegistryRetentionRoute =
     path: '/document-registry/retention',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesDocumentRegistryLegalHoldsRoute =
+  ModulesDocumentRegistryLegalHoldsRouteImport.update({
+    id: '/document-registry/legal-holds',
+    path: '/document-registry/legal-holds',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesDocumentRegistryClassificationsRoute =
   ModulesDocumentRegistryClassificationsRouteImport.update({
     id: '/document-registry/classifications',
@@ -1027,6 +1034,7 @@ export interface FileRoutesByFullPath {
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/document-registry/classifications': typeof ModulesDocumentRegistryClassificationsRoute
+  '/modules/document-registry/legal-holds': typeof ModulesDocumentRegistryLegalHoldsRoute
   '/modules/document-registry/retention': typeof ModulesDocumentRegistryRetentionRoute
   '/modules/document-registry/reviews': typeof ModulesDocumentRegistryReviewsRoute
   '/modules/document-registry/settings': typeof ModulesDocumentRegistrySettingsRoute
@@ -1175,6 +1183,7 @@ export interface FileRoutesByTo {
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/document-registry/classifications': typeof ModulesDocumentRegistryClassificationsRoute
+  '/modules/document-registry/legal-holds': typeof ModulesDocumentRegistryLegalHoldsRoute
   '/modules/document-registry/retention': typeof ModulesDocumentRegistryRetentionRoute
   '/modules/document-registry/reviews': typeof ModulesDocumentRegistryReviewsRoute
   '/modules/document-registry/settings': typeof ModulesDocumentRegistrySettingsRoute
@@ -1325,6 +1334,7 @@ export interface FileRoutesById {
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
   '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/document-registry/classifications': typeof ModulesDocumentRegistryClassificationsRoute
+  '/modules/document-registry/legal-holds': typeof ModulesDocumentRegistryLegalHoldsRoute
   '/modules/document-registry/retention': typeof ModulesDocumentRegistryRetentionRoute
   '/modules/document-registry/reviews': typeof ModulesDocumentRegistryReviewsRoute
   '/modules/document-registry/settings': typeof ModulesDocumentRegistrySettingsRoute
@@ -1476,6 +1486,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/stores'
     | '/modules/attendance/registers'
     | '/modules/document-registry/classifications'
+    | '/modules/document-registry/legal-holds'
     | '/modules/document-registry/retention'
     | '/modules/document-registry/reviews'
     | '/modules/document-registry/settings'
@@ -1624,6 +1635,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/stores'
     | '/modules/attendance/registers'
     | '/modules/document-registry/classifications'
+    | '/modules/document-registry/legal-holds'
     | '/modules/document-registry/retention'
     | '/modules/document-registry/reviews'
     | '/modules/document-registry/settings'
@@ -1773,6 +1785,7 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/stores'
     | '/modules/attendance/registers'
     | '/modules/document-registry/classifications'
+    | '/modules/document-registry/legal-holds'
     | '/modules/document-registry/retention'
     | '/modules/document-registry/reviews'
     | '/modules/document-registry/settings'
@@ -2522,6 +2535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesDocumentRegistryRetentionRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/document-registry/legal-holds': {
+      id: '/modules/document-registry/legal-holds'
+      path: '/document-registry/legal-holds'
+      fullPath: '/modules/document-registry/legal-holds'
+      preLoaderRoute: typeof ModulesDocumentRegistryLegalHoldsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/document-registry/classifications': {
       id: '/modules/document-registry/classifications'
       path: '/document-registry/classifications'
@@ -3085,6 +3105,7 @@ interface ModulesRouteChildren {
   ModulesAssetsInventoryStoresRoute: typeof ModulesAssetsInventoryStoresRoute
   ModulesAttendanceRegistersRoute: typeof ModulesAttendanceRegistersRoute
   ModulesDocumentRegistryClassificationsRoute: typeof ModulesDocumentRegistryClassificationsRoute
+  ModulesDocumentRegistryLegalHoldsRoute: typeof ModulesDocumentRegistryLegalHoldsRoute
   ModulesDocumentRegistryRetentionRoute: typeof ModulesDocumentRegistryRetentionRoute
   ModulesDocumentRegistryReviewsRoute: typeof ModulesDocumentRegistryReviewsRoute
   ModulesDocumentRegistrySettingsRoute: typeof ModulesDocumentRegistrySettingsRoute
@@ -3190,6 +3211,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAttendanceRegistersRoute: ModulesAttendanceRegistersRoute,
   ModulesDocumentRegistryClassificationsRoute:
     ModulesDocumentRegistryClassificationsRoute,
+  ModulesDocumentRegistryLegalHoldsRoute:
+    ModulesDocumentRegistryLegalHoldsRoute,
   ModulesDocumentRegistryRetentionRoute: ModulesDocumentRegistryRetentionRoute,
   ModulesDocumentRegistryReviewsRoute: ModulesDocumentRegistryReviewsRoute,
   ModulesDocumentRegistrySettingsRoute: ModulesDocumentRegistrySettingsRoute,

@@ -80,6 +80,8 @@ $$;
 DROP TABLE document_registry_files;
 
 CREATE TEMP TABLE document_registry_disposition_reviews (
+    tenant_id UUID NOT NULL,
+    file_id UUID NOT NULL,
     status TEXT NOT NULL,
     recommendation TEXT NOT NULL,
     request_reason TEXT NOT NULL,
@@ -96,8 +98,8 @@ CREATE TRIGGER verify_document_registry_reviews_lifecycle
     FOR EACH ROW EXECUTE FUNCTION enforce_document_registry_review_lifecycle();
 
 INSERT INTO document_registry_disposition_reviews (
-    status, recommendation, request_reason
-) VALUES ('pending', 'destroy', 'Retention elapsed');
+    tenant_id, file_id, status, recommendation, request_reason
+) VALUES (gen_random_uuid(), gen_random_uuid(), 'pending', 'destroy', 'Retention elapsed');
 
 DO $$
 BEGIN

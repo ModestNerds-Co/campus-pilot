@@ -306,6 +306,7 @@ const documentRegistryNavigation: LocalNavItem[] = [
   { label: "Classifications", path: "/modules/document-registry/classifications", icon: ArchiveRestore },
   { label: "Retention", path: "/modules/document-registry/retention", icon: Clock3, permission: "document_registry:dispose" },
   { label: "Disposition reviews", path: "/modules/document-registry/reviews", icon: FileArchive, permission: "document_registry:dispose" },
+  { label: "Legal holds", path: "/modules/document-registry/legal-holds", icon: ShieldAlert, permission: "document_registry:manage" },
   { label: "Settings", path: "/modules/document-registry/settings", icon: Settings2 },
 ];
 
@@ -1262,6 +1263,8 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return <Link className={navClass(active)} to="/modules/document-registry/retention"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/document-registry/reviews")
     return <Link className={navClass(active)} to="/modules/document-registry/reviews"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/document-registry/legal-holds")
+    return <Link className={navClass(active)} to="/modules/document-registry/legal-holds"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/document-registry/settings")
     return <Link className={navClass(active)} to="/modules/document-registry/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/internal-audit/plans")
