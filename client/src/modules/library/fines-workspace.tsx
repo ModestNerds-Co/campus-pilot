@@ -30,13 +30,13 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { libraryService, responseMessage } from "./service";
+import { libraryAccessProfile } from "./access";
 import type { Fine, LibraryReferenceData } from "./types";
 import { displayValue, formatDateTime, formatMinor, statusTone } from "./ui";
 
 export function LibraryFinesWorkspace() {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canManage =
-    permissions.includes("*") || permissions.includes("library:manage");
+  const { canManage } = libraryAccessProfile(permissions);
   const [fines, setFines] = useState<Fine[]>([]);
   const [references, setReferences] = useState<LibraryReferenceData | null>(
     null,
@@ -81,12 +81,14 @@ export function LibraryFinesWorkspace() {
       if (response.success) setReferences(response.data ?? null);
     });
   }, [canManage]);
-  usePageChrome("Fines");
+  usePageChrome(canManage ? "Fines" : "My fines");
   const filtered = Boolean(search.trim() || status !== "all");
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--text-muted)]">
-        Review assessed fines and submit learner charges to Fees.
+        {canManage
+          ? "Review assessed fines and submit learner charges to Fees."
+          : "Review fines recorded against your borrowing account."}
       </p>
       <TableControlsBar>
         <Input

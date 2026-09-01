@@ -11,9 +11,14 @@ import { Button } from "@/components/ui/button";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { accessService } from "@/modules/platform/access-service";
-import type { ModuleCatalogResponse, PermissionDefinition } from "@/modules/platform/types";
+import type {
+  ModuleCatalogResponse,
+  PermissionDefinition,
+  RecordScopeFamilyDefinition,
+  RecordScopeKind,
+} from "@/modules/platform/types";
 import { rolesService } from "../services/roles-service";
-import type { CreateRoleRequest, Role, UpdateRoleRequest } from "../types";
+import type { CreateRoleRequest, Role, RoleRecordScope, UpdateRoleRequest } from "../types";
 import { apiErrorMessage, canDelegatePermissions } from "../access-control";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -31,6 +36,7 @@ interface PermissionSection {
   label: string;
   description: string;
   permissions: PermissionDefinition[];
+  recordScopes: RecordScopeFamilyDefinition[];
 }
 
 interface PermissionGroup {
@@ -43,7 +49,12 @@ interface PermissionGroup {
 export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, onSuccess, role }) => {
   const operatorPermissions = useAuthStore((state) => state.user?.permissions);
   const accessIsFixed = role?.is_system ?? false;
-  const [formData, setFormData] = useState({ name: "", description: "", permissions: [] as string[] });
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    permissions: [] as string[],
+    recordScopes: [] as RoleRecordScope[],
+  });
   const [accessMode, setAccessMode] = useState<AccessMode>("custom");
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [catalog, setCatalog] = useState<ModuleCatalogResponse | null>(null);
@@ -62,6 +73,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
         permissions: catalog.administration_permissions.filter((permission) =>
           canDelegatePermissions(operatorPermissions, [permission.key]),
         ),
+        recordScopes: [],
       },
       ...catalog.modules
         .filter((module) => module.key !== "administration")
@@ -72,6 +84,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
           permissions: module.permissions.filter((permission) =>
             canDelegatePermissions(operatorPermissions, [permission.key]),
           ),
+          recordScopes: catalog.record_scope_families.filter((family) => family.module_key === module.key),
         })),
     ].filter((section) => section.permissions.length > 0);
   }, [catalog, operatorPermissions]);
@@ -87,8 +100,11 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
       .map((section) => ({
         ...section,
         permissions: section.permissions.filter((permission) => role.permissions.includes(permission.key)),
+        recordScopes: section.recordScopes.filter((family) =>
+          role.record_scopes.some((assignment) => assignment.family === family.key),
+        ),
       }))
-      .filter((section) => section.permissions.length > 0);
+      .filter((section) => section.permissions.length > 0 || section.recordScopes.length > 0);
   }, [accessIsFixed, role, sections]);
 
   useEffect(() => {
@@ -100,6 +116,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
       name: role?.name ?? "",
       description: role?.description ?? "",
       permissions: hasFullAccess ? [] : (role?.permissions ?? []),
+      recordScopes: hasFullAccess ? [] : (role?.record_scopes ?? []),
     });
   }, [role, isOpen]);
 
@@ -134,12 +151,49 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
   };
 
   const togglePermission = (permission: string) => {
-    setFormData((current) => ({
-      ...current,
-      permissions: current.permissions.includes(permission)
+    setFormData((current) => {
+      const permissions = current.permissions.includes(permission)
         ? current.permissions.filter((item) => item !== permission)
-        : [...current.permissions, permission],
-    }));
+        : [...current.permissions, permission];
+      const section = sections.find((candidate) =>
+        candidate.permissions.some((item) => item.key === permission),
+      );
+      const sectionStillSelected = section?.permissions.some((item) => permissions.includes(item.key)) ?? true;
+      return {
+        ...current,
+        permissions,
+        recordScopes: section && !sectionStillSelected
+          ? current.recordScopes.filter((assignment) =>
+              !section.recordScopes.some((family) => family.key === assignment.family),
+            )
+          : current.recordScopes,
+      };
+    });
+  };
+
+  const toggleRecordScope = (family: string, kind: RecordScopeKind) => {
+    setFormData((current) => {
+      const selected = current.recordScopes.some(
+        (assignment) => assignment.family === family && assignment.kind === kind,
+      );
+      const withoutFamily = current.recordScopes.filter((assignment) => assignment.family !== family);
+      const withoutExact = current.recordScopes.filter(
+        (assignment) => !(assignment.family === family && assignment.kind === kind),
+      );
+      if (selected) return { ...current, recordScopes: withoutExact };
+      if (kind === "campus") {
+        return { ...current, recordScopes: [...withoutFamily, { family, kind }] };
+      }
+      return {
+        ...current,
+        recordScopes: [
+          ...current.recordScopes.filter(
+            (assignment) => !(assignment.family === family && assignment.kind === "campus"),
+          ),
+          { family, kind },
+        ],
+      };
+    });
   };
 
   const toggleSection = (section: PermissionSection) => {
@@ -150,6 +204,11 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
       permissions: sectionSelected
         ? current.permissions.filter((permission) => !keys.includes(permission))
         : Array.from(new Set([...current.permissions, ...keys])),
+      recordScopes: sectionSelected
+        ? current.recordScopes.filter((assignment) =>
+            !section.recordScopes.some((family) => family.key === assignment.family),
+          )
+        : current.recordScopes,
     }));
   };
 
@@ -173,6 +232,14 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
     }
 
     const permissions = accessMode === "full" ? ["*"] : formData.permissions;
+    const activeFamilies = new Set(
+      sections
+        .filter((section) => section.permissions.some((permission) => permissions.includes(permission.key)))
+        .flatMap((section) => section.recordScopes.map((family) => family.key)),
+    );
+    const recordScopes = accessMode === "full"
+      ? []
+      : formData.recordScopes.filter((assignment) => activeFamilies.has(assignment.family));
     setIsSubmitting(true);
     try {
       const response = role
@@ -180,11 +247,13 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
             name: formData.name.trim(),
             description: formData.description.trim() || null,
             permissions: accessIsFixed ? undefined : permissions,
+            record_scopes: accessIsFixed ? undefined : recordScopes,
           } satisfies UpdateRoleRequest)
         : await rolesService.createRole({
             name: formData.name.trim(),
             description: formData.description.trim() || null,
             permissions,
+            record_scopes: recordScopes,
           } satisfies CreateRoleRequest);
 
       if (response.success) {
@@ -275,6 +344,11 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                     <p className="text-sm font-semibold text-[var(--text-strong)]">{section.label}</p>
                   </div>
                   <PermissionGroups groups={permissionGroups(section)} readOnly />
+                  {section.recordScopes.length > 0 ? <RecordScopeEditor
+                    assignments={role?.record_scopes ?? []}
+                    families={section.recordScopes}
+                    readOnly
+                  /> : null}
                 </div>
               ))}
             </section>
@@ -295,6 +369,7 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                     onClick={() => setFormData((current) => ({
                       ...current,
                       permissions: current.permissions.length === allPermissionKeys.length ? [] : allPermissionKeys,
+                      recordScopes: current.permissions.length === allPermissionKeys.length ? [] : current.recordScopes,
                     }))}
                     type="button"
                   >
@@ -347,11 +422,18 @@ export const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, o
                             {allSelected ? "Clear" : "Allow all"}
                           </button>
                         </div>
-                        {expanded ? <PermissionGroups
-                          checkedPermissions={formData.permissions}
-                          groups={permissionGroups(section)}
-                          onToggle={togglePermission}
-                        /> : null}
+                        {expanded ? <>
+                          <PermissionGroups
+                            checkedPermissions={formData.permissions}
+                            groups={permissionGroups(section)}
+                            onToggle={togglePermission}
+                          />
+                          {selectedCount > 0 && section.recordScopes.length > 0 ? <RecordScopeEditor
+                            assignments={formData.recordScopes}
+                            families={section.recordScopes}
+                            onToggle={toggleRecordScope}
+                          /> : null}
+                        </> : null}
                       </div>
                     );
                   })}
@@ -452,6 +534,67 @@ function PermissionGroups({
       ))}
     </div>
   );
+}
+
+function RecordScopeEditor({
+  assignments,
+  families,
+  onToggle,
+  readOnly = false,
+}: {
+  assignments: RoleRecordScope[];
+  families: RecordScopeFamilyDefinition[];
+  onToggle?: (family: string, kind: RecordScopeKind) => void;
+  readOnly?: boolean;
+}) {
+  return (
+    <div className="border-t border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-strong)]">Record visibility</p>
+        <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+          {readOnly
+            ? "These limits apply after the permission check."
+            : "Choose whose records this role can access. No selection means no records in that group."}
+        </p>
+      </div>
+      <div className="mt-3 divide-y divide-[var(--border)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
+        {families.map((family) => {
+          const selected = assignments.filter((assignment) => assignment.family === family.key);
+          return (
+            <div className="gap-3 px-3 py-3 sm:flex sm:items-center sm:justify-between" key={family.key}>
+              <p className="text-sm font-medium text-[var(--text-strong)]">{family.label}</p>
+              <div className="mt-2 flex flex-wrap gap-2 sm:mt-0 sm:justify-end">
+                {(readOnly ? selected.map((assignment) => assignment.kind) : family.allowed_kinds).map((kind) => {
+                  const checked = selected.some((assignment) => assignment.kind === kind);
+                  return readOnly ? (
+                    <span className="rounded-full border border-[var(--brand-100)] bg-[var(--brand-soft)] px-2.5 py-1 text-xs font-medium text-[var(--brand-strong)]" key={kind}>
+                      {scopeKindLabel(kind)}
+                    </span>
+                  ) : (
+                    <label className="flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-body)] hover:bg-[var(--surface-muted)]" key={kind}>
+                      <input
+                        checked={checked}
+                        className="size-3.5 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--focus-ring)]"
+                        onChange={() => onToggle?.(family.key, kind)}
+                        type="checkbox"
+                      />
+                      {scopeKindLabel(kind)}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function scopeKindLabel(kind: RecordScopeKind) {
+  if (kind === "self") return "Own record";
+  if (kind === "assigned") return "Assigned records";
+  return "All campus records";
 }
 
 function AccessModeCard({

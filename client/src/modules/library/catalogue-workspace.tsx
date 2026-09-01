@@ -36,6 +36,7 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { libraryService, responseMessage } from "./service";
+import { libraryAccessProfile } from "./access";
 import type {
   CopyCondition,
   CopyRecord,
@@ -53,6 +54,7 @@ export function LibraryCatalogueWorkspace() {
   const canCreate = allowed(permissions, "library:create");
   const canEdit = allowed(permissions, "library:edit");
   const canRetire = allowed(permissions, "library:delete");
+  const { canManageCatalogue } = libraryAccessProfile(permissions);
   const [titles, setTitles] = useState<TitleSummary[]>([]);
   const [references, setReferences] = useState<LibraryReferenceData | null>(
     null,
@@ -120,7 +122,7 @@ export function LibraryCatalogueWorkspace() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--text-muted)]">
-        Manage titles and physical copies.
+        {canManageCatalogue ? "Manage titles and physical copies." : "Search titles and available copies."}
       </p>
       <TableControlsBar>
         <Input

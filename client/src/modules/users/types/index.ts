@@ -80,21 +80,29 @@ export interface Role {
   name: string;
   description: string | null;
   permissions: string[];
+  record_scopes: RoleRecordScope[];
   is_system: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface RoleRecordScope {
+  family: string;
+  kind: "self" | "assigned" | "campus";
 }
 
 export interface CreateRoleRequest {
   name: string;
   description?: string | null;
   permissions: string[];
+  record_scopes: RoleRecordScope[];
 }
 
 export interface UpdateRoleRequest {
   name?: string;
   description?: string | null;
   permissions?: string[];
+  record_scopes?: RoleRecordScope[];
 }
 
 export interface RolesListParams {

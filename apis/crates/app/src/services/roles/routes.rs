@@ -11,6 +11,9 @@ use cp_common::{AccessContext, TenantId};
 use validator::Validate;
 
 use crate::services::access::catalog::all_permission_keys;
+use crate::services::access::record_scopes::{
+    RoleRecordScopeAssignment, RoleRecordScopeOps, parse_role_record_scope_assignments,
+};
 use crate::{
     middleware::{AuthMiddleware, RequirePermission},
     models::api_response::{ApiResponse, PaginationMeta},
@@ -19,7 +22,10 @@ use crate::{
 };
 
 use super::{
-    dtos::{CreateRoleRequest, ListRolesQuery, ListRolesResponse, RoleResponse, UpdateRoleRequest},
+    dtos::{
+        CreateRoleRequest, ListRolesQuery, ListRolesResponse, RoleRecordScopeRequest, RoleResponse,
+        UpdateRoleRequest,
+    },
     ops::{DeleteRoleOutcome, RoleOps},
 };
 
@@ -57,8 +63,28 @@ async fn list_roles(
 
     let pagination = PaginationMeta::new(page, limit, total);
 
+    let role_ids = roles.iter().map(|role| role.id).collect::<Vec<_>>();
+    let mut scopes = match RoleRecordScopeOps::for_role_ids(&state.db, tenant_id, &role_ids).await {
+        Ok(values) => values,
+        Err(error) => {
+            log::error!("Failed to list role record scopes: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["Role access could not be loaded".to_string()]),
+                )),
+            );
+        }
+    };
     let response = ListRolesResponse {
-        roles: roles.into_iter().map(RoleResponse::from).collect(),
+        roles: roles
+            .into_iter()
+            .map(|role| {
+                let role_scopes = scopes.remove(&role.id).unwrap_or_default();
+                RoleResponse::from_role(role, role_scopes)
+            })
+            .collect(),
     };
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_pagination(
@@ -97,7 +123,20 @@ async fn get_role(
         }
     };
 
-    let response: RoleResponse = role.into();
+    let scopes = match RoleRecordScopeOps::for_role_ids(&state.db, tenant_id, &[role.id]).await {
+        Ok(mut values) => values.remove(&role.id).unwrap_or_default(),
+        Err(error) => {
+            log::error!("Failed to load role record scopes: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["Role access could not be loaded".to_string()]),
+                )),
+            );
+        }
+    };
+    let response = RoleResponse::from_role(role, scopes);
 
     Ok(HttpResponse::Ok().json(ApiResponse::from_status(
         StatusCode::OK,
@@ -129,6 +168,16 @@ async fn create_role(
     request.name = request.name.trim().to_string();
     request.description = normalize_description(request.description);
     request.permissions = canonical_values(request.permissions);
+    let record_scopes = match parse_requested_scopes(&request.record_scopes) {
+        Ok(values) => values,
+        Err(message) => {
+            return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+                StatusCode::BAD_REQUEST,
+                None::<()>,
+                Some(vec![message]),
+            )));
+        }
+    };
     if request.name.is_empty() || request.permissions.is_empty() {
         return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
             StatusCode::BAD_REQUEST,
@@ -187,7 +236,7 @@ async fn create_role(
     }
 
     // Create role
-    let role = match RoleOps::create_role(&state.db, tenant_id, &request).await {
+    let role = match RoleOps::create_role(&state.db, tenant_id, &request, &record_scopes).await {
         Ok(role) => role,
         Err(e) => {
             log::error!("Failed to create role: {:?}", e);
@@ -201,7 +250,7 @@ async fn create_role(
         }
     };
 
-    let response: RoleResponse = role.into();
+    let response = RoleResponse::from_role(role, record_scopes);
 
     Ok(HttpResponse::Created().json(ApiResponse::from_status(
         StatusCode::CREATED,
@@ -265,6 +314,19 @@ async fn update_role(
     request.name = request.name.map(|name| name.trim().to_string());
     request.description = normalize_optional_description(request.description);
     request.permissions = request.permissions.map(canonical_values);
+    let record_scopes = match request.record_scopes.as_ref() {
+        Some(values) => match parse_requested_scopes(values) {
+            Ok(values) => Some(values),
+            Err(message) => {
+                return Ok(HttpResponse::BadRequest().json(ApiResponse::from_status(
+                    StatusCode::BAD_REQUEST,
+                    None::<()>,
+                    Some(vec![message]),
+                )));
+            }
+        },
+        None => None,
+    };
     if request.name.as_ref().is_some_and(String::is_empty)
         || request.permissions.as_ref().is_some_and(Vec::is_empty)
         || request
@@ -285,6 +347,16 @@ async fn update_role(
         &current_role.permissions,
         request.permissions.as_deref(),
     ) {
+        return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
+            StatusCode::CONFLICT,
+            None::<()>,
+            Some(vec![
+                "Built-in role access is fixed; create a custom role for different responsibilities"
+                    .to_string(),
+            ]),
+        )));
+    }
+    if current_role.is_system && request.record_scopes.is_some() {
         return Ok(HttpResponse::Conflict().json(ApiResponse::from_status(
             StatusCode::CONFLICT,
             None::<()>,
@@ -345,7 +417,15 @@ async fn update_role(
     }
 
     // Update role
-    let role = match RoleOps::update_role(&state.db, tenant_id, role_id, &request).await {
+    let role = match RoleOps::update_role(
+        &state.db,
+        tenant_id,
+        role_id,
+        &request,
+        record_scopes.as_deref(),
+    )
+    .await
+    {
         Ok(Some(role)) => role,
         Ok(None) => {
             return Ok(HttpResponse::NotFound().json(ApiResponse::from_status(
@@ -366,7 +446,20 @@ async fn update_role(
         }
     };
 
-    let response: RoleResponse = role.into();
+    let scopes = match RoleRecordScopeOps::for_role_ids(&state.db, tenant_id, &[role.id]).await {
+        Ok(mut values) => values.remove(&role.id).unwrap_or_default(),
+        Err(error) => {
+            log::error!("Failed to load updated role record scopes: {:?}", error);
+            return Ok(
+                HttpResponse::InternalServerError().json(ApiResponse::from_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    None::<()>,
+                    Some(vec!["Role access could not be loaded".to_string()]),
+                )),
+            );
+        }
+    };
+    let response = RoleResponse::from_role(role, scopes);
 
     Ok(HttpResponse::Ok().json(ApiResponse::from_status(
         StatusCode::OK,
@@ -491,6 +584,17 @@ fn protected_permissions_changed(
     current.iter().collect::<BTreeSet<_>>() != requested.iter().collect::<BTreeSet<_>>()
 }
 
+fn parse_requested_scopes(
+    values: &[RoleRecordScopeRequest],
+) -> Result<Vec<RoleRecordScopeAssignment>, String> {
+    parse_role_record_scope_assignments(
+        values
+            .iter()
+            .map(|assignment| (&assignment.family, &assignment.kind)),
+    )
+    .map_err(|error| error.to_string())
+}
+
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/roles")
@@ -508,7 +612,7 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
-    use super::protected_permissions_changed;
+    use super::{RoleRecordScopeRequest, parse_requested_scopes, protected_permissions_changed};
 
     fn values(items: &[&str]) -> Vec<String> {
         items.iter().map(|item| (*item).to_string()).collect()
@@ -539,5 +643,20 @@ mod tests {
             &values(&["academics:view"]),
             Some(&values(&["academics:view", "academics:create"]))
         ));
+    }
+
+    #[test]
+    fn custom_role_scopes_are_validated_against_the_closed_catalogue() {
+        let valid = vec![RoleRecordScopeRequest {
+            family: "library.borrowing".to_string(),
+            kind: "self".to_string(),
+        }];
+        assert!(parse_requested_scopes(&valid).is_ok());
+
+        let invalid = vec![RoleRecordScopeRequest {
+            family: "library.borrowing".to_string(),
+            kind: "assigned".to_string(),
+        }];
+        assert!(parse_requested_scopes(&invalid).is_err());
     }
 }

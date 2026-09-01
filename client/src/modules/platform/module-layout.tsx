@@ -60,6 +60,7 @@ import type { SchoolConfiguration } from "@/modules/configs/types";
 import { AgentWidget } from "@/modules/agent";
 import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
 import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
+import { libraryAccessProfile } from "@/modules/library/access";
 import {
   SIS_ADMINISTRATION_PERMISSIONS,
   SIS_IMPORT_ACCESS_PERMISSIONS,
@@ -238,22 +239,37 @@ const learningNavigation: LocalNavItem[] = [
   { label: "Settings", path: "/modules/learning/settings", icon: Settings2, permission: "learning:manage" },
 ];
 
-const libraryNavigation: LocalNavItem[] = [
-  {
-    label: "Circulation",
-    path: "/modules/library/circulation",
-    icon: BookOpenCheck,
-  },
-  { label: "Holds", path: "/modules/library/holds", icon: Clock3 },
-  { label: "Members", path: "/modules/library/members", icon: UsersRound },
-  { label: "Fines", path: "/modules/library/fines", icon: CircleDollarSign },
-  {
-    label: "Settings",
-    path: "/modules/library/settings",
-    icon: Settings2,
-    permission: "library:manage",
-  },
-];
+function libraryNavigation(permissions: readonly string[]): LocalNavItem[] {
+  const access = libraryAccessProfile(permissions);
+  return [
+    {
+      label: access.canCirculate ? "Circulation" : "My loans",
+      path: "/modules/library/circulation",
+      icon: BookOpenCheck,
+    },
+    {
+      label: access.canCirculate ? "Reservations" : "My holds",
+      path: "/modules/library/holds",
+      icon: Clock3,
+    },
+    {
+      label: access.canManage ? "Members" : "My membership",
+      path: "/modules/library/members",
+      icon: UsersRound,
+    },
+    {
+      label: access.canManage ? "Fines" : "My fines",
+      path: "/modules/library/fines",
+      icon: CircleDollarSign,
+    },
+    {
+      label: "Settings",
+      path: "/modules/library/settings",
+      icon: Settings2,
+      permission: "library:manage",
+    },
+  ];
+}
 
 const healthNavigation: LocalNavItem[] = [
   { label: "Clinic visits", path: "/modules/health/visits", icon: ClipboardList },
@@ -469,7 +485,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
               : moduleKey === "student_support"
                 ? []
               : moduleKey === "library"
-                ? libraryNavigation
+                ? libraryNavigation(user?.permissions ?? [])
                 : moduleKey === "health"
                   ? healthNavigation
                   : moduleKey === "hostel"

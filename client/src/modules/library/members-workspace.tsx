@@ -30,6 +30,7 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { libraryService, responseMessage } from "./service";
+import { libraryAccessProfile } from "./access";
 import type {
   BorrowerKind,
   LibraryReferenceData,
@@ -40,8 +41,7 @@ import { displayValue, statusTone } from "./ui";
 
 export function LibraryMembersWorkspace() {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canManage =
-    permissions.includes("*") || permissions.includes("library:manage");
+  const { canManage } = libraryAccessProfile(permissions);
   const [members, setMembers] = useState<Membership[]>([]);
   const [references, setReferences] = useState<LibraryReferenceData | null>(
     null,
@@ -90,7 +90,7 @@ export function LibraryMembersWorkspace() {
     });
   }, [canManage]);
   usePageChrome(
-    "Members",
+    canManage ? "Members" : "My membership",
     canManage ? (
       <Button
         onClick={() => {
@@ -107,7 +107,9 @@ export function LibraryMembersWorkspace() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--text-muted)]">
-        Library memberships reference existing learner and employee records.
+        {canManage
+          ? "Library memberships reference existing learner and employee records."
+          : "Review your borrowing membership and limits."}
       </p>
       <TableControlsBar>
         <Input

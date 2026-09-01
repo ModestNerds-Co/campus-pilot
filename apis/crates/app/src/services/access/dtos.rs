@@ -13,12 +13,14 @@ use validator::Validate;
 use super::{
     catalog::ModuleDefinition,
     models::{LicenseLimitResponse, TenantModuleResponse},
+    record_scopes::RecordScopeFamilyCatalogItem,
 };
 
 #[derive(Debug, Serialize)]
 pub struct ModuleCatalogResponse {
     pub modules: Vec<ModuleDefinition>,
     pub administration_permissions: Vec<super::catalog::PermissionDefinition>,
+    pub record_scope_families: Vec<RecordScopeFamilyCatalogItem>,
 }
 
 #[derive(Debug, Serialize)]

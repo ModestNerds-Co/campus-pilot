@@ -30,13 +30,13 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { libraryService, responseMessage } from "./service";
+import { libraryAccessProfile } from "./access";
 import type { CopyRecord, Hold, Membership, TitleSummary } from "./types";
 import { displayValue, formatDateTime, statusTone } from "./ui";
 
 export function LibraryHoldsWorkspace() {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canBorrow = allowed(permissions, "library:borrow");
-  const canCirculate = allowed(permissions, "library:circulate");
+  const { canBorrow, canCirculate } = libraryAccessProfile(permissions);
   const [holds, setHolds] = useState<Hold[]>([]);
   const [members, setMembers] = useState<Membership[]>([]);
   const [titles, setTitles] = useState<TitleSummary[]>([]);
@@ -87,7 +87,7 @@ export function LibraryHoldsWorkspace() {
     });
   }, [canBorrow]);
   usePageChrome(
-    "Holds",
+    canCirculate ? "Reservations" : "My holds",
     canBorrow ? (
       <Button onClick={() => setPlaceOpen(true)}>
         <Plus className="size-4" />
@@ -99,7 +99,9 @@ export function LibraryHoldsWorkspace() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--text-muted)]">
-        Reserve titles and manage the pickup queue.
+        {canCirculate
+          ? "Reserve titles and manage the pickup queue."
+          : "Place and review your title reservations."}
       </p>
       <TableControlsBar>
         <Input
@@ -574,9 +576,6 @@ function HoldDrawer({
   );
 }
 
-function allowed(permissions: string[], permission: string) {
-  return permissions.includes("*") || permissions.includes(permission);
-}
 function today() {
   return new Date().toISOString().slice(0, 10);
 }

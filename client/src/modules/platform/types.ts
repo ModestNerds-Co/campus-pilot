@@ -6,6 +6,15 @@ export interface PermissionDefinition {
   description: string;
 }
 
+export type RecordScopeKind = "self" | "assigned" | "campus";
+
+export interface RecordScopeFamilyDefinition {
+  key: string;
+  module_key: string;
+  label: string;
+  allowed_kinds: RecordScopeKind[];
+}
+
 export interface ModuleDefinition {
   key: string;
   label: string;
@@ -22,6 +31,7 @@ export interface ModuleDefinition {
 export interface ModuleCatalogResponse {
   modules: ModuleDefinition[];
   administration_permissions: PermissionDefinition[];
+  record_scope_families: RecordScopeFamilyDefinition[];
 }
 
 export interface TenantModule {

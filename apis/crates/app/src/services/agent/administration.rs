@@ -21,6 +21,7 @@ use crate::{
             models::TenantModuleResponse,
             ops::AccessOps,
             read_model::LicensingReadModel,
+            record_scopes::record_scope_catalog,
         },
         kernel::{db::KernelDbOps, dtos::SchoolProfileResponse},
     },
@@ -44,7 +45,8 @@ impl AdministrationCatalogCapability {
                 json!({}),
                 json!({
                     "modules": { "type": "array" },
-                    "administration_permissions": { "type": "array" }
+                    "administration_permissions": { "type": "array" },
+                    "record_scope_families": { "type": "array" }
                 }),
                 DataSensitivity::General,
                 "administration.catalog",
@@ -74,6 +76,7 @@ impl Capability for AdministrationCatalogCapability {
         Ok(ModuleCatalogResponse {
             modules: module_catalog(),
             administration_permissions: administration_permissions(),
+            record_scope_families: record_scope_catalog(),
         })
     }
 }

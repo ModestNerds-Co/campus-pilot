@@ -7,6 +7,15 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::services::access::record_scopes::RoleRecordScopeAssignment;
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct RoleRecordScopeRequest {
+    pub family: String,
+    pub kind: String,
+}
+
 #[derive(Debug, Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct CreateRoleRequest {
@@ -21,6 +30,9 @@ pub struct CreateRoleRequest {
     pub description: Option<String>,
 
     pub permissions: Vec<String>,
+
+    #[serde(default)]
+    pub record_scopes: Vec<RoleRecordScopeRequest>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -37,6 +49,8 @@ pub struct UpdateRoleRequest {
     pub description: Option<Option<String>>,
 
     pub permissions: Option<Vec<String>>,
+
+    pub record_scopes: Option<Vec<RoleRecordScopeRequest>>,
 }
 
 fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
@@ -54,6 +68,7 @@ pub struct RoleResponse {
     pub name: String,
     pub description: Option<String>,
     pub permissions: Vec<String>,
+    pub record_scopes: Vec<RoleRecordScopeRequest>,
     pub is_system: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -71,14 +86,24 @@ pub struct ListRolesResponse {
     pub roles: Vec<RoleResponse>,
 }
 
-impl From<super::models::Role> for RoleResponse {
-    fn from(role: super::models::Role) -> Self {
+impl RoleResponse {
+    pub fn from_role(
+        role: super::models::Role,
+        record_scopes: Vec<RoleRecordScopeAssignment>,
+    ) -> Self {
         Self {
             id: role.id,
             key: role.key,
             name: role.name,
             description: role.description,
             permissions: role.permissions,
+            record_scopes: record_scopes
+                .into_iter()
+                .map(|assignment| RoleRecordScopeRequest {
+                    family: assignment.family().as_str().to_owned(),
+                    kind: assignment.kind().as_str().to_owned(),
+                })
+                .collect(),
             is_system: role.is_system,
             created_at: role.created_at,
             updated_at: role.updated_at,
@@ -88,7 +113,7 @@ impl From<super::models::Role> for RoleResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::UpdateRoleRequest;
+    use super::{CreateRoleRequest, UpdateRoleRequest};
 
     #[test]
     fn update_description_preserves_omitted_null_and_value() {
@@ -108,5 +133,23 @@ mod tests {
     #[test]
     fn role_updates_reject_unknown_fields() {
         assert!(serde_json::from_str::<UpdateRoleRequest>(r#"{"is_system":true}"#).is_err());
+    }
+
+    #[test]
+    fn create_role_defaults_to_no_record_visibility() {
+        let request: CreateRoleRequest =
+            serde_json::from_str(r#"{"name":"Library assistant","permissions":["library:view"]}"#)
+                .unwrap();
+        assert!(request.record_scopes.is_empty());
+    }
+
+    #[test]
+    fn role_scope_assignments_reject_unknown_fields() {
+        assert!(
+            serde_json::from_str::<CreateRoleRequest>(
+                r#"{"name":"Library assistant","permissions":["library:view"],"record_scopes":[{"family":"library.members","kind":"self","extra":true}]}"#,
+            )
+            .is_err()
+        );
     }
 }

@@ -12,6 +12,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::services::{
+    access::record_scopes::RoleRecordScopeOps,
     roles::{
         dtos::{ListRolesResponse, RoleResponse},
         ops::RoleOps,
@@ -97,9 +98,23 @@ impl Capability for AdministrationRolesListCapability {
         )
         .await
         .map_err(|_| dependency_failure("Roles could not be loaded."))?;
+        let role_ids = roles.iter().map(|role| role.id).collect::<Vec<_>>();
+        let mut scopes = RoleRecordScopeOps::for_role_ids(
+            &self.pool,
+            context.principal().tenant_id(),
+            &role_ids,
+        )
+        .await
+        .map_err(|_| dependency_failure("Role visibility could not be loaded."))?;
         Ok(ListRolesOutput {
             roles: ListRolesResponse {
-                roles: roles.into_iter().map(RoleResponse::from).collect(),
+                roles: roles
+                    .into_iter()
+                    .map(|role| {
+                        let role_scopes = scopes.remove(&role.id).unwrap_or_default();
+                        RoleResponse::from_role(role, role_scopes)
+                    })
+                    .collect(),
             },
             pagination: PaginationMeta::new(page, limit, total),
         })
@@ -164,8 +179,16 @@ impl Capability for AdministrationRoleReadCapability {
                 .await
                 .map_err(|_| dependency_failure("The role could not be loaded."))?
                 .ok_or_else(|| not_found("The role was not found."))?;
+        let mut scopes = RoleRecordScopeOps::for_role_ids(
+            &self.pool,
+            context.principal().tenant_id(),
+            &[role.id],
+        )
+        .await
+        .map_err(|_| dependency_failure("Role visibility could not be loaded."))?;
+        let role_scopes = scopes.remove(&role.id).unwrap_or_default();
         Ok(ReadRoleOutput {
-            role: RoleResponse::from(role),
+            role: RoleResponse::from_role(role, role_scopes),
         })
     }
 }

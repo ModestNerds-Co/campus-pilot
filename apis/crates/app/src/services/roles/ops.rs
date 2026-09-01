@@ -10,6 +10,8 @@ use anyhow::Result;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::services::access::record_scopes::{RoleRecordScopeAssignment, RoleRecordScopeOps};
+
 use super::dtos::{CreateRoleRequest, UpdateRoleRequest};
 use super::models::Role;
 
@@ -143,11 +145,13 @@ impl RoleOps {
         pool: &PgPool,
         tenant_id: Uuid,
         req: &CreateRoleRequest,
+        record_scopes: &[RoleRecordScopeAssignment],
     ) -> Result<Role> {
         let base_key = role_key_base(&req.name);
         let suffix = Uuid::new_v4().simple().to_string();
         let key = format!("{}_{}", base_key, &suffix[..8]);
 
+        let mut transaction = pool.begin().await?;
         let role = sqlx::query_as!(
             Role,
             r#"
@@ -161,8 +165,12 @@ impl RoleOps {
             req.description,
             &req.permissions
         )
-        .fetch_one(pool)
+        .fetch_one(&mut *transaction)
         .await?;
+
+        RoleRecordScopeOps::replace_for_role(&mut transaction, tenant_id, role.id, record_scopes)
+            .await?;
+        transaction.commit().await?;
 
         Ok(role)
     }
@@ -172,7 +180,9 @@ impl RoleOps {
         tenant_id: Uuid,
         id: Uuid,
         req: &UpdateRoleRequest,
+        record_scopes: Option<&[RoleRecordScopeAssignment]>,
     ) -> Result<Option<Role>> {
+        let mut transaction = pool.begin().await?;
         let role = sqlx::query_as!(
             Role,
             r#"
@@ -191,8 +201,14 @@ impl RoleOps {
             id,
             tenant_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&mut *transaction)
         .await?;
+
+        if let (Some(role), Some(assignments)) = (role.as_ref(), record_scopes) {
+            RoleRecordScopeOps::replace_for_role(&mut transaction, tenant_id, role.id, assignments)
+                .await?;
+        }
+        transaction.commit().await?;
 
         Ok(role)
     }

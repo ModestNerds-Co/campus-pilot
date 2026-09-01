@@ -4,11 +4,15 @@
 //! kind match this closed catalogue. Unknown or corrupt rows fail the complete
 //! authority load rather than being ignored or widened.
 
-use std::{collections::BTreeSet, error::Error, fmt};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    error::Error,
+    fmt,
+};
 
 use anyhow::{Context, Result, bail};
 use cp_common::{RecordScopeFamilyKey, RecordScopeGrant, RecordScopeGrants, RecordScopeKind};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 const CAMPUS_ONLY: &[RecordScopeKind] = &[RecordScopeKind::Campus];
@@ -44,6 +48,38 @@ impl RecordScopeFamilyDefinition {
     fn supports(self, kind: RecordScopeKind) -> bool {
         self.allowed_kinds.contains(&kind)
     }
+}
+
+/// One Administration-safe projection of a code-owned record-scope family.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RecordScopeFamilyCatalogItem {
+    pub key: &'static str,
+    pub module_key: &'static str,
+    pub label: String,
+    pub allowed_kinds: Vec<&'static str>,
+}
+
+/// Returns the record visibility choices that may be assigned to custom roles.
+#[must_use]
+pub fn record_scope_catalog() -> Vec<RecordScopeFamilyCatalogItem> {
+    RECORD_SCOPE_FAMILIES
+        .iter()
+        .copied()
+        .map(|definition| RecordScopeFamilyCatalogItem {
+            key: definition.key(),
+            module_key: record_scope_module_key(definition.key()),
+            label: record_scope_label(definition.key()),
+            allowed_kinds: [
+                RecordScopeKind::SelfRecord,
+                RecordScopeKind::Assigned,
+                RecordScopeKind::Campus,
+            ]
+            .into_iter()
+            .filter(|kind| definition.supports(*kind))
+            .map(RecordScopeKind::as_str)
+            .collect(),
+        })
+        .collect()
 }
 
 /// The complete initial record-scope family catalogue.
@@ -231,6 +267,80 @@ where
 pub struct RoleRecordScopeOps;
 
 impl RoleRecordScopeOps {
+    /// Loads the exact persisted assignments for a page of role records.
+    pub async fn for_role_ids(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        role_ids: &[Uuid],
+    ) -> Result<BTreeMap<Uuid, Vec<RoleRecordScopeAssignment>>> {
+        if role_ids.is_empty() {
+            return Ok(BTreeMap::new());
+        }
+        let rows = sqlx::query_as::<_, (Uuid, String, String)>(
+            r#"
+            SELECT role_id, scope_family, scope_kind
+            FROM role_record_scope_grants
+            WHERE tenant_id = $1
+              AND role_id = ANY($2)
+              AND deleted_at IS NULL
+            ORDER BY role_id, scope_family, scope_kind
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(role_ids)
+        .fetch_all(pool)
+        .await
+        .context("Failed to load role record-scope assignments")?;
+
+        let mut assignments = BTreeMap::<Uuid, Vec<RoleRecordScopeAssignment>>::new();
+        for (role_id, family, kind) in rows {
+            assignments
+                .entry(role_id)
+                .or_default()
+                .push(RoleRecordScopeAssignment::parse(&family, &kind)?);
+        }
+        Ok(assignments)
+    }
+
+    /// Replaces one custom role's assignments inside the role mutation transaction.
+    pub async fn replace_for_role(
+        transaction: &mut Transaction<'_, Postgres>,
+        tenant_id: Uuid,
+        role_id: Uuid,
+        assignments: &[RoleRecordScopeAssignment],
+    ) -> Result<()> {
+        sqlx::query(
+            r#"
+            UPDATE role_record_scope_grants
+            SET deleted_at = NOW(), updated_at = NOW()
+            WHERE tenant_id = $1 AND role_id = $2 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(role_id)
+        .execute(&mut **transaction)
+        .await
+        .context("Failed to clear role record-scope assignments")?;
+
+        for assignment in assignments {
+            sqlx::query(
+                r#"
+                INSERT INTO role_record_scope_grants
+                    (tenant_id, role_id, scope_family, scope_kind)
+                VALUES ($1, $2, $3, $4)
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(role_id)
+            .bind(assignment.family().as_str())
+            .bind(assignment.kind().as_str())
+            .execute(&mut **transaction)
+            .await
+            .context("Failed to save role record-scope assignment")?;
+        }
+        Ok(())
+    }
+
     /// Loads and unions current grants for active roles assigned to one account.
     ///
     /// Unknown database values fail the authority load. Missing role keys do
@@ -271,6 +381,39 @@ impl RoleRecordScopeOps {
     }
 }
 
+fn record_scope_module_key(key: &str) -> &'static str {
+    match key.split('.').next().unwrap_or_default() {
+        "sis" => "sis",
+        "academics" => "academics",
+        "attendance" => "attendance",
+        "learning" => "learning",
+        "student_support" => "student_support",
+        "activities" => "activities",
+        "fees" => "fees",
+        "hr" => "hr_payroll",
+        "procurement" => "procurement",
+        "fleet" => "fleet",
+        "facilities" => "facilities",
+        "timetabling" => "timetabling",
+        "messaging" => "messaging",
+        "library" => "library",
+        "health" => "health",
+        "hostel" => "hostel",
+        "document_registry" => "document_registry",
+        "internal_audit" => "internal_audit",
+        _ => "administration",
+    }
+}
+
+fn record_scope_label(key: &str) -> String {
+    let value = key.rsplit('.').next().unwrap_or(key).replace('_', " ");
+    let mut characters = value.chars();
+    match characters.next() {
+        Some(first) => format!("{}{}", first.to_uppercase(), characters.as_str()),
+        None => value,
+    }
+}
+
 fn parse_persisted_grants(
     rows: impl IntoIterator<Item = (String, String)>,
 ) -> Result<RecordScopeGrants, RecordScopeAssignmentError> {
@@ -292,7 +435,7 @@ mod tests {
 
     use super::{
         RECORD_SCOPE_FAMILIES, RecordScopeAssignmentError, RoleRecordScopeAssignment,
-        parse_persisted_grants, parse_role_record_scope_assignments,
+        parse_persisted_grants, parse_role_record_scope_assignments, record_scope_catalog,
     };
 
     fn family(value: &str) -> RecordScopeFamilyKey {
@@ -309,6 +452,19 @@ mod tests {
             assert!(RecordScopeFamilyKey::parse(definition.key()).is_ok());
             assert!(!definition.allowed_kinds().is_empty());
         }
+    }
+
+    #[test]
+    fn administration_catalogue_maps_every_family_to_a_product_module() {
+        let catalogue = record_scope_catalog();
+        assert_eq!(catalogue.len(), RECORD_SCOPE_FAMILIES.len());
+        assert!(
+            catalogue
+                .iter()
+                .all(|item| item.module_key != "administration")
+        );
+        assert!(catalogue.iter().all(|item| !item.label.is_empty()));
+        assert!(catalogue.iter().all(|item| !item.allowed_kinds.is_empty()));
     }
 
     #[test]

@@ -34,6 +34,7 @@ use super::{
     models::TenantModuleResponse,
     ops::AccessOps,
     read_model::LicensingReadModel,
+    record_scopes::record_scope_catalog,
 };
 
 #[derive(Debug, Deserialize)]
@@ -49,6 +50,7 @@ async fn catalog() -> HttpResponse {
         Some(ModuleCatalogResponse {
             modules: module_catalog(),
             administration_permissions: administration_permissions(),
+            record_scope_families: record_scope_catalog(),
         }),
         None,
     ))

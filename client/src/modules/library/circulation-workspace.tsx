@@ -30,6 +30,7 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { libraryService, responseMessage } from "./service";
+import { libraryAccessProfile } from "./access";
 import type {
   CopyCondition,
   CopyRecord,
@@ -41,9 +42,7 @@ import { displayValue, formatDate, optional, statusTone } from "./ui";
 
 export function LibraryCirculationWorkspace() {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canBorrow = allowed(permissions, "library:borrow");
-  const canCirculate = allowed(permissions, "library:circulate");
-  const canManage = allowed(permissions, "library:manage");
+  const { canBorrow, canCirculate, canManage } = libraryAccessProfile(permissions);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [members, setMembers] = useState<Membership[]>([]);
   const [titles, setTitles] = useState<TitleSummary[]>([]);
@@ -96,7 +95,7 @@ export function LibraryCirculationWorkspace() {
     });
   }, [canCirculate]);
   usePageChrome(
-    "Circulation",
+    canCirculate ? "Circulation" : "My loans",
     canCirculate ? (
       <Button onClick={() => setCheckoutOpen(true)}>
         <Plus className="size-4" />
@@ -108,7 +107,9 @@ export function LibraryCirculationWorkspace() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--text-muted)]">
-        Check out, renew, return, and record lost copies.
+        {canCirculate
+          ? "Check out, renew, return, and record lost copies."
+          : "Review your current and previous loans."}
       </p>
       <TableControlsBar>
         <Input
@@ -730,9 +731,6 @@ function LoanDrawer({
   );
 }
 
-function allowed(permissions: string[], permission: string) {
-  return permissions.includes("*") || permissions.includes(permission);
-}
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
