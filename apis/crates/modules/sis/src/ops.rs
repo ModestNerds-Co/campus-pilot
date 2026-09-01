@@ -1403,6 +1403,45 @@ impl EnrolmentOps {
         )
     }
 
+    /// Resolves the direct learner account's current enrolment for one class.
+    ///
+    /// Learning uses this typed identity proof for self-service submission
+    /// ownership; guardian relationships never satisfy learner participation.
+    pub async fn active_roster_entry_for_account(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+        academic_year_id: Uuid,
+        class_group_id: Uuid,
+    ) -> Result<Option<ClassRosterEntry>> {
+        sqlx::query_as::<_, ClassRosterEntry>(
+            r#"
+            SELECT enrolment.id AS enrolment_id, learner.id AS learner_id,
+                   learner.learner_number, learner.display_name
+              FROM enrolments AS enrolment
+              JOIN learners AS learner
+                ON learner.id = enrolment.learner_id
+               AND learner.tenant_id = enrolment.tenant_id
+               AND learner.deleted_at IS NULL
+             WHERE enrolment.tenant_id = $1
+               AND learner.account_id = $2
+               AND enrolment.academic_year_id = $3
+               AND enrolment.class_group_id = $4
+               AND enrolment.status = 'active'
+               AND enrolment.starts_on <= CURRENT_DATE
+               AND (enrolment.ends_on IS NULL OR enrolment.ends_on >= CURRENT_DATE)
+               AND enrolment.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(account_id)
+        .bind(academic_year_id)
+        .bind(class_group_id)
+        .fetch_optional(pool)
+        .await
+        .context("Failed to resolve the learner's current class enrolment")
+    }
+
     /// Resolves learners the authenticated account may view as self-service.
     ///
     /// A direct learner account and active guardian relationships contribute to

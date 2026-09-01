@@ -57,7 +57,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "academics",
             "Academics",
             "People and learning",
-            "Plan teaching structures, subjects, classes, assessment, and progression.",
+            "Classes, subjects, teaching assignments, assessment, and academic records.",
             "/modules/academics",
             "academics",
             false,
@@ -90,12 +90,12 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "learning",
             "E-learning",
             "People and learning",
-            "Publish class learning spaces, ordered units, and governed resources.",
+            "Learning spaces, units, assignments, submissions, feedback, and progress.",
             "/modules/learning",
             "learning",
             false,
             "available",
-            &["view", "teach", "manage"],
+            &["view", "teach", "participate", "manage"],
         ),
         module(
             "student_support",
@@ -567,6 +567,11 @@ fn module_permission(
             "Govern results and progression".to_string(),
             "Publish results, review reports, and manage learner progression.".to_string(),
         ),
+        ("learning", "participate") => (
+            "Submit learning work".to_string(),
+            "Save and submit the current learner's own work for published assignments."
+                .to_string(),
+        ),
         ("activities", "view") => (
             "View activities".to_string(),
             "Read co-curricular groups and sessions within the assigned or self record scope.".to_string(),
@@ -726,6 +731,44 @@ mod tests {
     }
 
     #[test]
+    fn learning_permissions_separate_participation_from_teaching() {
+        let learning = module_catalog()
+            .into_iter()
+            .find(|module| module.key == "learning")
+            .unwrap_or_else(|| unreachable!());
+        let permissions = learning
+            .permissions
+            .iter()
+            .map(|permission| permission.key.as_str())
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(
+            permissions,
+            BTreeSet::from([
+                "learning:manage",
+                "learning:participate",
+                "learning:teach",
+                "learning:view",
+            ])
+        );
+        let participate = learning
+            .permissions
+            .iter()
+            .find(|permission| permission.key == "learning:participate")
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(participate.label, "Submit learning work");
+        assert!(
+            participate
+                .description
+                .contains("current learner's own work")
+        );
+        assert_eq!(
+            learning.dependencies,
+            ["academics", "sis", "hr_payroll", "document_registry"]
+        );
+    }
+
+    #[test]
     fn agent_routing_permissions_are_code_owned_administration_permissions() {
         let permissions = all_permission_keys().into_iter().collect::<BTreeSet<_>>();
 
@@ -855,7 +898,7 @@ mod tests {
         .unwrap_or_else(|_| unreachable!());
 
         assert_eq!(coverage.entries().len(), module_catalog().len());
-        assert_eq!(coverage.missing_executable_capability_count(), 0);
+        assert_eq!(coverage.missing_executable_capability_count(), 7);
         for module_key in [
             "administration",
             "academics",
@@ -897,11 +940,24 @@ mod tests {
                 assert_eq!(module.approval_required_operations(), 5);
                 assert_eq!(module.executable_capabilities(), 4);
             } else if module_key == "learning" {
-                assert!(module.release_ready());
-                assert_eq!(module.routed_operations(), 20);
-                assert_eq!(module.exposed_operations(), 5);
-                assert_eq!(module.approval_required_operations(), 13);
+                assert!(!module.release_ready());
+                assert_eq!(module.routed_operations(), 38);
+                assert_eq!(module.exposed_operations(), 12);
+                assert_eq!(module.approval_required_operations(), 24);
+                assert_eq!(module.human_only_operations(), 2);
                 assert_eq!(module.executable_capabilities(), 5);
+                assert_eq!(
+                    module.missing_executable_capabilities(),
+                    [
+                        "learning.assignments.list",
+                        "learning.assignments.read",
+                        "learning.progress.list",
+                        "learning.progress.mine.read",
+                        "learning.submissions.list",
+                        "learning.submissions.mine.read",
+                        "learning.submissions.read",
+                    ]
+                );
             } else if module_key == "student_support" {
                 assert!(module.release_ready());
                 assert_eq!(module.routed_operations(), 12);

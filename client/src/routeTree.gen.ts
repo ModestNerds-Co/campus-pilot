@@ -138,6 +138,7 @@ import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './route
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 import { Route as ModulesMessagingAnnouncementsAnnouncementIdRouteImport } from './routes/modules/messaging.announcements_.$announcementId'
+import { Route as ModulesLearningSubmissionsSubmissionIdRouteImport } from './routes/modules/learning/submissions_.$submissionId'
 import { Route as ModulesLearningSpacesSpaceIdRouteImport } from './routes/modules/learning/spaces_.$spaceId'
 import { Route as ModulesInternalAuditEngagementsEngagementIdRouteImport } from './routes/modules/internal-audit/engagements/$engagementId'
 import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/modules/health/patients_.$patientId'
@@ -148,9 +149,13 @@ import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './r
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
 import { Route as ModulesAcademicsClassesClassIdRouteImport } from './routes/modules/academics/classes_.$classId'
+import { Route as ModulesLearningSpacesSpaceIdProgressRouteImport } from './routes/modules/learning/spaces_.$spaceId.progress'
+import { Route as ModulesLearningSpacesSpaceIdAssignmentsRouteImport } from './routes/modules/learning/spaces_.$spaceId.assignments'
 import { Route as ModulesAcademicsReportingTranscriptsLearnerIdRouteImport } from './routes/modules/academics/reporting.transcripts_.$learnerId'
 import { Route as ModulesAcademicsReportingReportBatchesReportBatchIdRouteImport } from './routes/modules/academics/reporting.report-batches_.$reportBatchId'
 import { Route as ModulesAcademicsGradebookMarkSheetsMarkSheetIdRouteImport } from './routes/modules/academics/gradebook.mark-sheets_.$markSheetId'
+import { Route as ModulesLearningSpacesSpaceIdUnitsUnitIdRouteImport } from './routes/modules/learning/spaces_.$spaceId.units_.$unitId'
+import { Route as ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRouteImport } from './routes/modules/learning/spaces_.$spaceId.assignments_.$assignmentId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
   id: '/style-guide',
@@ -853,6 +858,12 @@ const ModulesMessagingAnnouncementsAnnouncementIdRoute =
     path: '/announcements/$announcementId',
     getParentRoute: () => ModulesMessagingRoute,
   } as any)
+const ModulesLearningSubmissionsSubmissionIdRoute =
+  ModulesLearningSubmissionsSubmissionIdRouteImport.update({
+    id: '/learning/submissions_/$submissionId',
+    path: '/learning/submissions/$submissionId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesLearningSpacesSpaceIdRoute =
   ModulesLearningSpacesSpaceIdRouteImport.update({
     id: '/learning/spaces_/$spaceId',
@@ -913,6 +924,18 @@ const ModulesAcademicsClassesClassIdRoute =
     path: '/academics/classes/$classId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesLearningSpacesSpaceIdProgressRoute =
+  ModulesLearningSpacesSpaceIdProgressRouteImport.update({
+    id: '/progress',
+    path: '/progress',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
+  } as any)
+const ModulesLearningSpacesSpaceIdAssignmentsRoute =
+  ModulesLearningSpacesSpaceIdAssignmentsRouteImport.update({
+    id: '/assignments',
+    path: '/assignments',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
+  } as any)
 const ModulesAcademicsReportingTranscriptsLearnerIdRoute =
   ModulesAcademicsReportingTranscriptsLearnerIdRouteImport.update({
     id: '/transcripts_/$learnerId',
@@ -930,6 +953,18 @@ const ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute =
     id: '/mark-sheets_/$markSheetId',
     path: '/mark-sheets/$markSheetId',
     getParentRoute: () => ModulesAcademicsGradebookRoute,
+  } as any)
+const ModulesLearningSpacesSpaceIdUnitsUnitIdRoute =
+  ModulesLearningSpacesSpaceIdUnitsUnitIdRouteImport.update({
+    id: '/units_/$unitId',
+    path: '/units/$unitId',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
+  } as any)
+const ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute =
+  ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRouteImport.update({
+    id: '/assignments_/$assignmentId',
+    path: '/assignments/$assignmentId',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -1063,7 +1098,8 @@ export interface FileRoutesByFullPath {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
-  '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRoute
+  '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRouteWithChildren
+  '/modules/learning/submissions/$submissionId': typeof ModulesLearningSubmissionsSubmissionIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1075,6 +1111,10 @@ export interface FileRoutesByFullPath {
   '/modules/academics/gradebook/mark-sheets/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
   '/modules/academics/reporting/report-batches/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
+  '/modules/learning/spaces/$spaceId/assignments': typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  '/modules/learning/spaces/$spaceId/progress': typeof ModulesLearningSpacesSpaceIdProgressRoute
+  '/modules/learning/spaces/$spaceId/assignments/$assignmentId': typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  '/modules/learning/spaces/$spaceId/units/$unitId': typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1206,7 +1246,8 @@ export interface FileRoutesByTo {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
-  '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRoute
+  '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRouteWithChildren
+  '/modules/learning/submissions/$submissionId': typeof ModulesLearningSubmissionsSubmissionIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1218,6 +1259,10 @@ export interface FileRoutesByTo {
   '/modules/academics/gradebook/mark-sheets/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
   '/modules/academics/reporting/report-batches/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
+  '/modules/learning/spaces/$spaceId/assignments': typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  '/modules/learning/spaces/$spaceId/progress': typeof ModulesLearningSpacesSpaceIdProgressRoute
+  '/modules/learning/spaces/$spaceId/assignments/$assignmentId': typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  '/modules/learning/spaces/$spaceId/units/$unitId': typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1351,7 +1396,8 @@ export interface FileRoutesById {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients_/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
-  '/modules/learning/spaces_/$spaceId': typeof ModulesLearningSpacesSpaceIdRoute
+  '/modules/learning/spaces_/$spaceId': typeof ModulesLearningSpacesSpaceIdRouteWithChildren
+  '/modules/learning/submissions_/$submissionId': typeof ModulesLearningSubmissionsSubmissionIdRoute
   '/modules/messaging/announcements_/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1363,6 +1409,10 @@ export interface FileRoutesById {
   '/modules/academics/gradebook/mark-sheets_/$markSheetId': typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRoute
   '/modules/academics/reporting/report-batches_/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts_/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
+  '/modules/learning/spaces_/$spaceId/assignments': typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  '/modules/learning/spaces_/$spaceId/progress': typeof ModulesLearningSpacesSpaceIdProgressRoute
+  '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId': typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  '/modules/learning/spaces_/$spaceId/units_/$unitId': typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1498,6 +1548,7 @@ export interface FileRouteTypes {
     | '/modules/health/patients/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
     | '/modules/learning/spaces/$spaceId'
+    | '/modules/learning/submissions/$submissionId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1509,6 +1560,10 @@ export interface FileRouteTypes {
     | '/modules/academics/gradebook/mark-sheets/$markSheetId'
     | '/modules/academics/reporting/report-batches/$reportBatchId'
     | '/modules/academics/reporting/transcripts/$learnerId'
+    | '/modules/learning/spaces/$spaceId/assignments'
+    | '/modules/learning/spaces/$spaceId/progress'
+    | '/modules/learning/spaces/$spaceId/assignments/$assignmentId'
+    | '/modules/learning/spaces/$spaceId/units/$unitId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1641,6 +1696,7 @@ export interface FileRouteTypes {
     | '/modules/health/patients/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
     | '/modules/learning/spaces/$spaceId'
+    | '/modules/learning/submissions/$submissionId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1652,6 +1708,10 @@ export interface FileRouteTypes {
     | '/modules/academics/gradebook/mark-sheets/$markSheetId'
     | '/modules/academics/reporting/report-batches/$reportBatchId'
     | '/modules/academics/reporting/transcripts/$learnerId'
+    | '/modules/learning/spaces/$spaceId/assignments'
+    | '/modules/learning/spaces/$spaceId/progress'
+    | '/modules/learning/spaces/$spaceId/assignments/$assignmentId'
+    | '/modules/learning/spaces/$spaceId/units/$unitId'
   id:
     | '__root__'
     | '/'
@@ -1785,6 +1845,7 @@ export interface FileRouteTypes {
     | '/modules/health/patients_/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
     | '/modules/learning/spaces_/$spaceId'
+    | '/modules/learning/submissions_/$submissionId'
     | '/modules/messaging/announcements_/$announcementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
@@ -1796,6 +1857,10 @@ export interface FileRouteTypes {
     | '/modules/academics/gradebook/mark-sheets_/$markSheetId'
     | '/modules/academics/reporting/report-batches_/$reportBatchId'
     | '/modules/academics/reporting/transcripts_/$learnerId'
+    | '/modules/learning/spaces_/$spaceId/assignments'
+    | '/modules/learning/spaces_/$spaceId/progress'
+    | '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId'
+    | '/modules/learning/spaces_/$spaceId/units_/$unitId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2716,6 +2781,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesMessagingAnnouncementsAnnouncementIdRouteImport
       parentRoute: typeof ModulesMessagingRoute
     }
+    '/modules/learning/submissions_/$submissionId': {
+      id: '/modules/learning/submissions_/$submissionId'
+      path: '/learning/submissions/$submissionId'
+      fullPath: '/modules/learning/submissions/$submissionId'
+      preLoaderRoute: typeof ModulesLearningSubmissionsSubmissionIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/learning/spaces_/$spaceId': {
       id: '/modules/learning/spaces_/$spaceId'
       path: '/learning/spaces/$spaceId'
@@ -2786,6 +2858,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAcademicsClassesClassIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/learning/spaces_/$spaceId/progress': {
+      id: '/modules/learning/spaces_/$spaceId/progress'
+      path: '/progress'
+      fullPath: '/modules/learning/spaces/$spaceId/progress'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdProgressRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
+    }
+    '/modules/learning/spaces_/$spaceId/assignments': {
+      id: '/modules/learning/spaces_/$spaceId/assignments'
+      path: '/assignments'
+      fullPath: '/modules/learning/spaces/$spaceId/assignments'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdAssignmentsRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
+    }
     '/modules/academics/reporting/transcripts_/$learnerId': {
       id: '/modules/academics/reporting/transcripts_/$learnerId'
       path: '/transcripts/$learnerId'
@@ -2806,6 +2892,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/modules/academics/gradebook/mark-sheets/$markSheetId'
       preLoaderRoute: typeof ModulesAcademicsGradebookMarkSheetsMarkSheetIdRouteImport
       parentRoute: typeof ModulesAcademicsGradebookRoute
+    }
+    '/modules/learning/spaces_/$spaceId/units_/$unitId': {
+      id: '/modules/learning/spaces_/$spaceId/units_/$unitId'
+      path: '/units/$unitId'
+      fullPath: '/modules/learning/spaces/$spaceId/units/$unitId'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
+    }
+    '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId': {
+      id: '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId'
+      path: '/assignments/$assignmentId'
+      fullPath: '/modules/learning/spaces/$spaceId/assignments/$assignmentId'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
     }
   }
 }
@@ -2936,6 +3036,30 @@ const ModulesInternalAuditEngagementsRouteWithChildren =
     ModulesInternalAuditEngagementsRouteChildren,
   )
 
+interface ModulesLearningSpacesSpaceIdRouteChildren {
+  ModulesLearningSpacesSpaceIdAssignmentsRoute: typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  ModulesLearningSpacesSpaceIdProgressRoute: typeof ModulesLearningSpacesSpaceIdProgressRoute
+  ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute: typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  ModulesLearningSpacesSpaceIdUnitsUnitIdRoute: typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
+}
+
+const ModulesLearningSpacesSpaceIdRouteChildren: ModulesLearningSpacesSpaceIdRouteChildren =
+  {
+    ModulesLearningSpacesSpaceIdAssignmentsRoute:
+      ModulesLearningSpacesSpaceIdAssignmentsRoute,
+    ModulesLearningSpacesSpaceIdProgressRoute:
+      ModulesLearningSpacesSpaceIdProgressRoute,
+    ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute:
+      ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute,
+    ModulesLearningSpacesSpaceIdUnitsUnitIdRoute:
+      ModulesLearningSpacesSpaceIdUnitsUnitIdRoute,
+  }
+
+const ModulesLearningSpacesSpaceIdRouteWithChildren =
+  ModulesLearningSpacesSpaceIdRoute._addFileChildren(
+    ModulesLearningSpacesSpaceIdRouteChildren,
+  )
+
 interface ModulesRouteChildren {
   ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
   ModulesMessagingRoute: typeof ModulesMessagingRouteWithChildren
@@ -3027,7 +3151,8 @@ interface ModulesRouteChildren {
   ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
   ModulesDocumentRegistryDocumentsDocumentIdRoute: typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   ModulesHealthPatientsPatientIdRoute: typeof ModulesHealthPatientsPatientIdRoute
-  ModulesLearningSpacesSpaceIdRoute: typeof ModulesLearningSpacesSpaceIdRoute
+  ModulesLearningSpacesSpaceIdRoute: typeof ModulesLearningSpacesSpaceIdRouteWithChildren
+  ModulesLearningSubmissionsSubmissionIdRoute: typeof ModulesLearningSubmissionsSubmissionIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
   ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
@@ -3137,7 +3262,10 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesDocumentRegistryDocumentsDocumentIdRoute:
     ModulesDocumentRegistryDocumentsDocumentIdRoute,
   ModulesHealthPatientsPatientIdRoute: ModulesHealthPatientsPatientIdRoute,
-  ModulesLearningSpacesSpaceIdRoute: ModulesLearningSpacesSpaceIdRoute,
+  ModulesLearningSpacesSpaceIdRoute:
+    ModulesLearningSpacesSpaceIdRouteWithChildren,
+  ModulesLearningSubmissionsSubmissionIdRoute:
+    ModulesLearningSubmissionsSubmissionIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:

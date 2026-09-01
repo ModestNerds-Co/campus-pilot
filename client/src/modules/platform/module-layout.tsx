@@ -1087,7 +1087,7 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
       </Link>
     );
   if (item.path === "/modules/learning/spaces")
-    return <Link className={navClass(active)} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+    return <Link className={navClass(active)} search={{ page: 1, q: "", status: "all" }} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/student-support/cases")
     return <Link className={navClass(active)} to="/modules/student-support/cases"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/transport/routes")

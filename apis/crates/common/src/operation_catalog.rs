@@ -3747,6 +3747,169 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Read,
             true,
         ),
+        // E-learning assignments: assessed work, learner submissions, feedback, and progress.
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/assignments",
+            "learning.assignments.list",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/assignments/{id}",
+            "learning.assignments.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/units/{id}/assignments",
+            "learning.assignments.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/assignments/{id}",
+            "learning.assignments.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/assignments/{id}/publish",
+            "learning.assignments.publish",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/assignments/{id}/close",
+            "learning.assignments.close",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/assignments/{id}/rubric-criteria",
+            "learning.rubric_criteria.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/rubric-criteria/{id}",
+            "learning.rubric_criteria.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/learning/rubric-criteria/{id}",
+            "learning.rubric_criteria.delete",
+            "learning",
+            "learning:teach",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/assignments/{id}/submission",
+            "learning.submissions.mine.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/assignments/{id}/submission",
+            "learning.submissions.save",
+            "learning",
+            "learning:participate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/assignments/{id}/submission/submit",
+            "learning.submissions.submit",
+            "learning",
+            "learning:participate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/assignments/{id}/submissions",
+            "learning.submissions.list",
+            "learning",
+            "learning:teach",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/submissions/{id}",
+            "learning.submissions.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/submissions/{id}/feedback",
+            "learning.feedback.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/submissions/{id}/feedback/release",
+            "learning.feedback.release",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/progress/me",
+            "learning.progress.mine.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/progress",
+            "learning.progress.list",
+            "learning",
+            "learning:teach",
+            OperationEffect::Read,
+            true,
+        ),
         // Communication: reviewed announcements and personal in-app inbox.
         route(
             Method::GET,
@@ -5698,6 +5861,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "learning.resource_files.list"
         | "learning.spaces.list"
         | "learning.spaces.read"
+        | "learning.assignments.list"
+        | "learning.assignments.read"
+        | "learning.submissions.mine.read"
+        | "learning.submissions.list"
+        | "learning.submissions.read"
+        | "learning.progress.mine.read"
+        | "learning.progress.list"
         | "messaging.references.read"
         | "messaging.announcements.list"
         | "messaging.announcements.read"
@@ -5990,6 +6160,17 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "learning.resources.update"
         | "learning.resources.publish"
         | "learning.resources.withdraw"
+        | "learning.assignments.create"
+        | "learning.assignments.update"
+        | "learning.assignments.publish"
+        | "learning.assignments.close"
+        | "learning.rubric_criteria.create"
+        | "learning.rubric_criteria.update"
+        | "learning.rubric_criteria.delete"
+        | "learning.submissions.save"
+        | "learning.submissions.submit"
+        | "learning.feedback.update"
+        | "learning.feedback.release"
         | "messaging.announcements.create"
         | "messaging.announcements.update"
         | "messaging.announcements.submit"
@@ -6270,7 +6451,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 583);
+        assert_eq!(operation_catalog().len(), 601);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6322,8 +6503,177 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [216, 329, 26, 12]);
+        assert_eq!(counts, [223, 340, 26, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
+    }
+
+    #[test]
+    fn learning_assignment_operations_are_additive_v7_contracts() {
+        let cases = [
+            (
+                Method::GET,
+                "/api/1.0/learning/spaces/{id}/assignments",
+                "learning.assignments.list",
+                "learning:view",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/assignments/{id}",
+                "learning.assignments.read",
+                "learning:view",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/units/{id}/assignments",
+                "learning.assignments.create",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/learning/assignments/{id}",
+                "learning.assignments.update",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/assignments/{id}/publish",
+                "learning.assignments.publish",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/assignments/{id}/close",
+                "learning.assignments.close",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/assignments/{id}/rubric-criteria",
+                "learning.rubric_criteria.create",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/learning/rubric-criteria/{id}",
+                "learning.rubric_criteria.update",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::DELETE,
+                "/api/1.0/learning/rubric-criteria/{id}",
+                "learning.rubric_criteria.delete",
+                "learning:teach",
+                OperationEffect::Destructive,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/assignments/{id}/submission",
+                "learning.submissions.mine.read",
+                "learning:view",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/learning/assignments/{id}/submission",
+                "learning.submissions.save",
+                "learning:participate",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/assignments/{id}/submission/submit",
+                "learning.submissions.submit",
+                "learning:participate",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/assignments/{id}/submissions",
+                "learning.submissions.list",
+                "learning:teach",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/submissions/{id}",
+                "learning.submissions.read",
+                "learning:view",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/learning/submissions/{id}/feedback",
+                "learning.feedback.update",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/submissions/{id}/feedback/release",
+                "learning.feedback.release",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/spaces/{id}/progress/me",
+                "learning.progress.mine.read",
+                "learning:view",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/spaces/{id}/progress",
+                "learning.progress.list",
+                "learning:teach",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+        ];
+
+        assert_eq!(OPERATION_CATALOG_VERSION, 7);
+        assert_eq!(PRODUCT_CATALOG_VERSION, "campus-pilot/7");
+        for (method, path, key, permission, effect, exposure) in cases {
+            let routed = routed_operation_for_route(&method, path)
+                .unwrap_or_else(|| panic!("missing route descriptor for {key}"));
+            let operation = routed.operation();
+            assert_eq!(operation.key(), key);
+            assert_eq!(operation.module_key(), "learning", "{key}");
+            assert_eq!(operation.permission(), permission, "{key}");
+            assert_eq!(operation.effect(), effect, "{key}");
+            assert_eq!(operation.agent_exposure(), exposure, "{key}");
+            assert!(operation.license_required(), "{key}");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                ["academics", "document_registry", "hr_payroll", "sis"],
+                "{key}"
+            );
+        }
     }
 
     #[test]

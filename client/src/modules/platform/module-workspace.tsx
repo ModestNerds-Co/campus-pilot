@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, Navigate } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, CircleDashed } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/protected-route";
@@ -20,7 +20,6 @@ import { HealthPatientsWorkspace } from "@/modules/health";
 import { HostelResidencesWorkspace } from "@/modules/hostel";
 import { DocumentRegistryDocumentsWorkspace } from "@/modules/document-registry";
 import { InternalAuditEngagementsWorkspace } from "@/modules/internal-audit";
-import { LearningSpacesWorkspace } from "@/modules/learning";
 import { StudentSupportCasesWorkspace } from "@/modules/student-support";
 import { TransportRoutesWorkspace } from "@/modules/transport";
 import { FacilitiesRequestsWorkspace } from "@/modules/facilities";
@@ -77,7 +76,7 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
       ) : module.key === "internal_audit" ? (
         <InternalAuditEngagementsWorkspace />
       ) : module.key === "learning" ? (
-        <LearningSpacesWorkspace />
+        <Navigate replace search={{ page: 1, q: "", status: "all" }} to="/modules/learning/spaces" />
       ) : module.key === "student_support" ? (
         <StudentSupportCasesWorkspace />
       ) : module.key === "transport" ? (

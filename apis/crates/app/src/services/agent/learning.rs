@@ -7,9 +7,11 @@ use cp_agent::{
 };
 use cp_common::{EffectiveRecordScope, PaginationMeta, RecordScopeFamilyKey};
 use cp_learning::{
-    LearningAccessScope, LearningOps, LearningReferenceData, LearningResourceFileQuery,
-    LearningSettingsResponse, LearningSpaceListQuery, LearningSpaceResponse, LearningSpaceStatus,
-    LearningSpaceSummary,
+    LearningAccessScope, LearningAssignmentListQuery, LearningAssignmentResponse,
+    LearningAssignmentStatus, LearningOps, LearningProgressEntry, LearningReferenceData,
+    LearningResourceFileQuery, LearningSettingsResponse, LearningSpaceListQuery,
+    LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary, LearningSubmissionListQuery,
+    LearningSubmissionResponse, LearningSubmissionStatus,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -350,6 +352,490 @@ impl Capability for LearningSpaceCapability {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningAssignmentsInput {
+    space_id: Uuid,
+    page: Option<i64>,
+    per_page: Option<i64>,
+    status: Option<LearningAssignmentStatus>,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningAssignmentsOutput {
+    assignments: Vec<LearningAssignmentResponse>,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct LearningAssignmentsCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningAssignmentsCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.assignments.list",
+                "List E-learning assignments",
+                "Returns bounded assignments visible through one current learning space.",
+                json!({
+                    "space_id": { "type": "string", "format": "uuid" },
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+                    "status": { "type": ["string", "null"], "enum": ["draft", "published", "closed", null] }
+                }),
+                json!({ "assignments": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "learning.assignments",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningAssignmentsCapability {
+    type Input = LearningAssignmentsInput;
+    type Output = LearningAssignmentsOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let page = input.page.unwrap_or(1).max(1);
+        let per_page = input.per_page.unwrap_or(25).clamp(1, 100);
+        let (assignments, total) = LearningOps::list_assignments(
+            &self.pool,
+            principal.tenant_id(),
+            input.space_id,
+            scope,
+            &LearningAssignmentListQuery {
+                page: Some(page),
+                per_page: Some(per_page),
+                status: input.status,
+            },
+        )
+        .await
+        .map_err(|_| dependency_failure("E-learning assignments could not be loaded."))?;
+        Ok(LearningAssignmentsOutput {
+            assignments,
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningAssignmentInput {
+    assignment_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningAssignmentOutput {
+    assignment: LearningAssignmentResponse,
+}
+
+pub(super) struct LearningAssignmentCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningAssignmentCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.assignments.read",
+                "Read E-learning assignment",
+                "Returns one visible assignment with its immutable published rubric and lifecycle state.",
+                json!({ "assignment_id": { "type": "string", "format": "uuid" } }),
+                json!({ "assignment": { "type": "object" } }),
+                DataSensitivity::Personal,
+                "learning.assignments",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningAssignmentCapability {
+    type Input = LearningAssignmentInput;
+    type Output = LearningAssignmentOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_assignment", input.assignment_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let assignment = LearningOps::get_assignment(
+            &self.pool,
+            principal.tenant_id(),
+            input.assignment_id,
+            scope,
+        )
+        .await
+        .map_err(|_| dependency_failure("The E-learning assignment could not be loaded."))?
+        .ok_or_else(|| invalid_state("The E-learning assignment is unavailable."))?;
+        Ok(LearningAssignmentOutput { assignment })
+    }
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningMineSubmissionOutput {
+    submission: Option<LearningSubmissionResponse>,
+}
+
+pub(super) struct LearningMineSubmissionCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningMineSubmissionCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.submissions.mine.read",
+                "Read my E-learning submission",
+                "Returns only the authenticated learner's own draft, immutable attempts, and released feedback for one assignment.",
+                json!({ "assignment_id": { "type": "string", "format": "uuid" } }),
+                json!({ "submission": { "type": ["object", "null"] } }),
+                DataSensitivity::Sensitive,
+                "learning.submissions",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningMineSubmissionCapability {
+    type Input = LearningAssignmentInput;
+    type Output = LearningMineSubmissionOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_assignment", input.assignment_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let submission = LearningOps::self_submission(
+            &self.pool,
+            principal.tenant_id(),
+            input.assignment_id,
+            scope,
+        )
+        .await
+        .map_err(|_| dependency_failure("The learner submission could not be loaded."))?;
+        Ok(LearningMineSubmissionOutput { submission })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningSubmissionsInput {
+    assignment_id: Uuid,
+    page: Option<i64>,
+    per_page: Option<i64>,
+    status: Option<LearningSubmissionStatus>,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningSubmissionsOutput {
+    submissions: Vec<LearningSubmissionResponse>,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct LearningSubmissionsCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningSubmissionsCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.submissions.list",
+                "List E-learning submissions",
+                "Returns bounded learner submission evidence for one assignment within assigned or campus teaching scope.",
+                json!({
+                    "assignment_id": { "type": "string", "format": "uuid" },
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+                    "status": { "type": ["string", "null"], "enum": ["draft", "submitted", "revision_requested", "graded", null] }
+                }),
+                json!({ "submissions": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.submissions",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningSubmissionsCapability {
+    type Input = LearningSubmissionsInput;
+    type Output = LearningSubmissionsOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_assignment", input.assignment_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let page = input.page.unwrap_or(1).max(1);
+        let per_page = input.per_page.unwrap_or(25).clamp(1, 100);
+        let (submissions, total) = LearningOps::list_submissions(
+            &self.pool,
+            principal.tenant_id(),
+            input.assignment_id,
+            scope,
+            &LearningSubmissionListQuery {
+                page: Some(page),
+                per_page: Some(per_page),
+                status: input.status,
+            },
+        )
+        .await
+        .map_err(|_| dependency_failure("E-learning submissions could not be loaded."))?;
+        Ok(LearningSubmissionsOutput {
+            submissions,
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningSubmissionInput {
+    submission_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningSubmissionOutput {
+    submission: LearningSubmissionResponse,
+}
+
+pub(super) struct LearningSubmissionCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningSubmissionCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.submissions.read",
+                "Read E-learning submission",
+                "Returns one authorized learner submission with immutable attempts and visible feedback.",
+                json!({ "submission_id": { "type": "string", "format": "uuid" } }),
+                json!({ "submission": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.submissions",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningSubmissionCapability {
+    type Input = LearningSubmissionInput;
+    type Output = LearningSubmissionOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_submission", input.submission_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let submission = LearningOps::get_submission(
+            &self.pool,
+            principal.tenant_id(),
+            input.submission_id,
+            scope,
+        )
+        .await
+        .map_err(|_| dependency_failure("The E-learning submission could not be loaded."))?
+        .ok_or_else(|| invalid_state("The E-learning submission is unavailable."))?;
+        Ok(LearningSubmissionOutput { submission })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningProgressInput {
+    space_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningMineProgressOutput {
+    progress: LearningProgressEntry,
+}
+
+pub(super) struct LearningMineProgressCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningMineProgressCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.progress.mine.read",
+                "Read my E-learning progress",
+                "Returns derived assignment progress only for the authenticated learner in one visible space.",
+                json!({ "space_id": { "type": "string", "format": "uuid" } }),
+                json!({ "progress": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.progress",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningMineProgressCapability {
+    type Input = LearningProgressInput;
+    type Output = LearningMineProgressOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let progress =
+            LearningOps::self_progress(&self.pool, principal.tenant_id(), input.space_id, scope)
+                .await
+                .map_err(|_| {
+                    dependency_failure("Learner E-learning progress could not be loaded.")
+                })?
+                .ok_or_else(|| invalid_state("Learner E-learning progress is unavailable."))?;
+        Ok(LearningMineProgressOutput { progress })
+    }
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningProgressOutput {
+    progress: Vec<LearningProgressEntry>,
+}
+
+pub(super) struct LearningProgressCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningProgressCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.progress.list",
+                "List E-learning progress",
+                "Returns derived learner progress within assigned or campus teaching scope for one space.",
+                json!({ "space_id": { "type": "string", "format": "uuid" } }),
+                json!({ "progress": { "type": "array" } }),
+                DataSensitivity::Sensitive,
+                "learning.progress",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningProgressCapability {
+    type Input = LearningProgressInput;
+    type Output = LearningProgressOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let progress =
+            LearningOps::list_progress(&self.pool, principal.tenant_id(), input.space_id, scope)
+                .await
+                .map_err(|_| dependency_failure("E-learning progress could not be loaded."))?;
+        Ok(LearningProgressOutput { progress })
+    }
+}
+
+fn resource_scope(kind: &'static str, id: Uuid) -> CapabilityScope {
+    CapabilityScope::resources([CapabilityResource::parse(kind, id.to_string())
+        .unwrap_or_else(|error| panic!("invalid built-in capability resource: {error}"))])
+    .unwrap_or_else(|error| panic!("invalid built-in capability scope: {error}"))
+}
+
 async fn current_scope(
     pool: &PgPool,
     tenant_id: Uuid,
@@ -396,7 +882,11 @@ mod tests {
     use cp_agent::Capability as _;
     use sqlx::postgres::PgPoolOptions;
 
-    use super::{LearningSpaceCapability, LearningSpaceInput};
+    use super::{
+        LearningAssignmentCapability, LearningAssignmentInput, LearningAssignmentsCapability,
+        LearningAssignmentsInput, LearningSpaceCapability, LearningSpaceInput,
+        LearningSubmissionCapability, LearningSubmissionInput,
+    };
 
     #[tokio::test]
     async fn exact_space_read_declares_the_requested_resource() {
@@ -410,5 +900,49 @@ mod tests {
         let resource = scope.primary_resource().unwrap_or_else(|| unreachable!());
         assert_eq!(resource.kind(), "learning_space");
         assert_eq!(resource.id(), id.to_string());
+    }
+
+    #[tokio::test]
+    async fn assignment_capabilities_declare_the_exact_parent_or_record() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+            .unwrap_or_else(|_| unreachable!());
+        let space_id = uuid::Uuid::new_v4();
+        let assignment_id = uuid::Uuid::new_v4();
+
+        let list_scope =
+            LearningAssignmentsCapability::new(pool.clone()).scope(&LearningAssignmentsInput {
+                space_id,
+                page: None,
+                per_page: None,
+                status: None,
+            });
+        let list_resource = list_scope
+            .primary_resource()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(list_resource.kind(), "learning_space");
+        assert_eq!(list_resource.id(), space_id.to_string());
+
+        let read_scope = LearningAssignmentCapability::new(pool)
+            .scope(&LearningAssignmentInput { assignment_id });
+        let read_resource = read_scope
+            .primary_resource()
+            .unwrap_or_else(|| unreachable!());
+        assert_eq!(read_resource.kind(), "learning_assignment");
+        assert_eq!(read_resource.id(), assignment_id.to_string());
+    }
+
+    #[tokio::test]
+    async fn submission_read_declares_the_exact_submission() {
+        let capability = LearningSubmissionCapability::new(
+            PgPoolOptions::new()
+                .connect_lazy("postgresql://campus-pilot.invalid/campus_pilot")
+                .unwrap_or_else(|_| unreachable!()),
+        );
+        let submission_id = uuid::Uuid::new_v4();
+        let scope = capability.scope(&LearningSubmissionInput { submission_id });
+        let resource = scope.primary_resource().unwrap_or_else(|| unreachable!());
+        assert_eq!(resource.kind(), "learning_submission");
+        assert_eq!(resource.id(), submission_id.to_string());
     }
 }

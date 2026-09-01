@@ -4,28 +4,44 @@
 //! learner-self scope before projection. Published records are immutable and
 //! move only to an explicit retained terminal state.
 
+use std::collections::BTreeSet;
+
 use anyhow::{Context, Result, anyhow, bail};
+use chrono::Utc;
 use cp_academics::ops::{AcademicTermOps, AcademicYearOps, TeachingAssignmentOps};
 use cp_audit::{
     AuditActor, AuditOutcome, AuditTarget, NewAuditEvent, RequestContext, append as append_audit,
 };
 use cp_document_registry::{DocumentRegistryOps, EvidenceFileReference};
-use cp_sis::ops::EnrolmentOps;
+use cp_sis::{models::ClassRosterEntry, ops::EnrolmentOps};
 use serde_json::{Map, Value, json};
+use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::dtos::{
-    CreateLearningResourceRequest, CreateLearningSpaceRequest, CreateLearningUnitRequest,
-    LearningAccessScope, LearningAssignmentReference, LearningReferenceData,
+    CreateLearningAssignmentRequest, CreateLearningResourceRequest,
+    CreateLearningRubricCriterionRequest, CreateLearningSpaceRequest, CreateLearningUnitRequest,
+    DeleteLearningRubricCriterionRequest, LearningAccessScope, LearningAssignmentListQuery,
+    LearningAssignmentReference, LearningAssignmentResponse, LearningAssignmentStatus,
+    LearningFeedbackResponse, LearningProgressEntry, LearningReferenceData,
     LearningResourceCreation, LearningResourceFileQuery, LearningResourceResponse,
-    LearningResourceStatus, LearningSettingsResponse, LearningSpaceListQuery,
-    LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary, LearningTermReference,
-    LearningUnitResponse, LearningUnitStatus, ReasonedLearningTransitionRequest,
-    UpdateLearningResourceRequest, UpdateLearningSettingsRequest, UpdateLearningSpaceRequest,
-    UpdateLearningUnitRequest,
+    LearningResourceStatus, LearningReviewOutcome, LearningReviewScoreResponse,
+    LearningRubricCriterionResponse, LearningSettingsResponse, LearningSpaceListQuery,
+    LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary, LearningSubmissionListQuery,
+    LearningSubmissionResponse, LearningSubmissionStatus, LearningSubmissionVersionResponse,
+    LearningTermReference, LearningUnitResponse, LearningUnitStatus,
+    ReasonedLearningTransitionRequest, ReleaseLearningFeedbackRequest,
+    SaveLearningSubmissionRequest, SubmitLearningSubmissionRequest,
+    UpdateLearningAssignmentRequest, UpdateLearningFeedbackRequest, UpdateLearningResourceRequest,
+    UpdateLearningRubricCriterionRequest, UpdateLearningSettingsRequest,
+    UpdateLearningSpaceRequest, UpdateLearningUnitRequest,
 };
-use crate::models::{LearningResourceRow, LearningSettingsRow, LearningSpaceRow, LearningUnitRow};
+use crate::models::{
+    LearningAssignmentRow, LearningFeedbackRow, LearningProgressRow, LearningResourceRow,
+    LearningReviewScoreRow, LearningRubricCriterionRow, LearningSettingsRow, LearningSpaceRow,
+    LearningSubmissionRow, LearningSubmissionVersionRow, LearningUnitRow,
+};
 
 const DEFAULT_PAGE: i64 = 1;
 const DEFAULT_PER_PAGE: i64 = 25;
@@ -973,6 +989,1173 @@ impl LearningOps {
             None => Ok(None),
         }
     }
+
+    /// Lists assignments under one visible Learning space.
+    pub async fn list_assignments(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        space_id: Uuid,
+        scope: LearningAccessScope,
+        query: &LearningAssignmentListQuery,
+    ) -> Result<(Vec<LearningAssignmentResponse>, i64)> {
+        let Some(space) = space_row(pool, tenant_id, space_id).await? else {
+            return Ok((Vec::new(), 0));
+        };
+        if !scope_allows_space(pool, tenant_id, &space, scope).await? {
+            return Ok((Vec::new(), 0));
+        }
+        let published_only = published_only_for_space(pool, tenant_id, &space, scope).await?;
+        let (page, per_page) = bounded_page(query.page, query.per_page);
+        let offset = (page - 1) * per_page;
+        let rows = sqlx::query_as::<_, LearningAssignmentRow>(&format!(
+            "{ASSIGNMENT_SELECT} AND unit.learning_space_id=$2 AND ($3::TEXT IS NULL OR assignment.status=$3) AND (NOT $4 OR assignment.status <> 'draft') ORDER BY assignment.position,assignment.created_at LIMIT $5 OFFSET $6"
+        ))
+        .bind(tenant_id)
+        .bind(space_id)
+        .bind(query.status.map(LearningAssignmentStatus::as_str))
+        .bind(published_only)
+        .bind(per_page)
+        .bind(offset)
+        .fetch_all(pool)
+        .await
+        .context("list Learning assignments")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM learning_assignments assignment JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id WHERE assignment.tenant_id=$1 AND unit.learning_space_id=$2 AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL AND ($3::TEXT IS NULL OR assignment.status=$3) AND (NOT $4 OR assignment.status <> 'draft')",
+        )
+        .bind(tenant_id)
+        .bind(space_id)
+        .bind(query.status.map(LearningAssignmentStatus::as_str))
+        .bind(published_only)
+        .fetch_one(pool)
+        .await
+        .context("count Learning assignments")?;
+        let mut assignments = Vec::with_capacity(rows.len());
+        for row in rows {
+            assignments.push(assignment_response(pool, tenant_id, row).await?);
+        }
+        Ok((assignments, total))
+    }
+
+    /// Reads one assignment through its parent Learning-space scope.
+    pub async fn get_assignment(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Option<LearningAssignmentResponse>> {
+        let Some(row) = assignment_row(pool, tenant_id, assignment_id).await? else {
+            return Ok(None);
+        };
+        let Some(space) = space_row(pool, tenant_id, row.learning_space_id).await? else {
+            return Ok(None);
+        };
+        if !scope_allows_space(pool, tenant_id, &space, scope).await?
+            || (published_only_for_space(pool, tenant_id, &space, scope).await?
+                && row.status == "draft")
+        {
+            return Ok(None);
+        }
+        assignment_response(pool, tenant_id, row).await.map(Some)
+    }
+
+    /// Creates a draft assignment under an active Learning unit.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn create_assignment(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        unit_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &CreateLearningAssignmentRequest,
+    ) -> Result<Option<LearningAssignmentResponse>> {
+        let Some(space_id) = unit_space_id(pool, tenant_id, unit_id).await? else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning assignment creation")?;
+        require_active_assignment_parent(&mut tx, tenant_id, unit_id, space_id).await?;
+        let assignment_id = sqlx::query_scalar::<_, Uuid>(
+            "INSERT INTO learning_assignments (tenant_id,learning_unit_id,position,title,instructions,due_at,max_score_hundredths,created_by,updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8) RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(unit_id)
+        .bind(request.position)
+        .bind(required("Assignment title", &request.title)?)
+        .bind(required("Assignment instructions", &request.instructions)?)
+        .bind(request.due_at)
+        .bind(request.max_score_hundredths)
+        .bind(actor_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|error| database_error(error, "create Learning assignment"))?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_created",
+            "learning.assignments.create",
+            json!({"unit_id": unit_id, "position": request.position}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning assignment creation")?;
+        assignment_response_by_id(pool, tenant_id, assignment_id).await
+    }
+
+    /// Updates an assignment while it remains draft.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn update_assignment(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &UpdateLearningAssignmentRequest,
+    ) -> Result<Option<LearningAssignmentResponse>> {
+        let Some((_, space_id)) = assignment_owner(pool, tenant_id, assignment_id).await? else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning assignment update")?;
+        let changed = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE learning_assignments SET position=$4,title=$5,instructions=$6,due_at=$7,max_score_hundredths=$8,version=version+1,updated_by=$9 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='draft' AND deleted_at IS NULL RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(request.expected_version)
+        .bind(request.position)
+        .bind(required("Assignment title", &request.title)?)
+        .bind(required("Assignment instructions", &request.instructions)?)
+        .bind(request.due_at)
+        .bind(request.max_score_hundredths)
+        .bind(actor_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| database_error(error, "update Learning assignment"))?;
+        if changed.is_none() {
+            return Ok(None);
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_updated",
+            "learning.assignments.update",
+            json!({"position": request.position, "expected_version": request.expected_version}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning assignment update")?;
+        assignment_response_by_id(pool, tenant_id, assignment_id).await
+    }
+
+    /// Adds one draft rubric criterion.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn create_rubric_criterion(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &CreateLearningRubricCriterionRequest,
+    ) -> Result<Option<LearningRubricCriterionResponse>> {
+        let Some((_, space_id)) = assignment_owner(pool, tenant_id, assignment_id).await? else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning rubric creation")?;
+        require_draft_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let criterion_id = sqlx::query_scalar::<_, Uuid>(
+            "INSERT INTO learning_assignment_rubric_criteria (tenant_id,learning_assignment_id,position,title,description,max_score_hundredths,created_by,updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$7) RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(request.position)
+        .bind(required("Rubric title", &request.title)?)
+        .bind(optional(request.description.as_deref()))
+        .bind(request.max_score_hundredths)
+        .bind(actor_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|error| database_error(error, "create Learning rubric criterion"))?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_rubric_changed",
+            "learning.rubric_criteria.create",
+            json!({"criterion_id": criterion_id, "position": request.position}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning rubric creation")?;
+        rubric_criterion(pool, tenant_id, criterion_id).await
+    }
+
+    /// Updates one criterion while the assignment remains draft.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn update_rubric_criterion(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        criterion_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &UpdateLearningRubricCriterionRequest,
+    ) -> Result<Option<LearningRubricCriterionResponse>> {
+        let Some((assignment_id, space_id)) = rubric_owner(pool, tenant_id, criterion_id).await?
+        else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool.begin().await.context("start Learning rubric update")?;
+        require_draft_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let changed = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE learning_assignment_rubric_criteria SET position=$4,title=$5,description=$6,max_score_hundredths=$7,version=version+1,updated_by=$8 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND deleted_at IS NULL RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(criterion_id)
+        .bind(request.expected_version)
+        .bind(request.position)
+        .bind(required("Rubric title", &request.title)?)
+        .bind(optional(request.description.as_deref()))
+        .bind(request.max_score_hundredths)
+        .bind(actor_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| database_error(error, "update Learning rubric criterion"))?;
+        if changed.is_none() {
+            return Ok(None);
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_rubric_changed",
+            "learning.rubric_criteria.update",
+            json!({"criterion_id": criterion_id, "expected_version": request.expected_version}),
+        )
+        .await?;
+        tx.commit().await.context("commit Learning rubric update")?;
+        rubric_criterion(pool, tenant_id, criterion_id).await
+    }
+
+    /// Soft-deletes one draft rubric criterion with optimistic concurrency.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn delete_rubric_criterion(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        criterion_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &DeleteLearningRubricCriterionRequest,
+    ) -> Result<bool> {
+        let Some((assignment_id, space_id)) = rubric_owner(pool, tenant_id, criterion_id).await?
+        else {
+            return Ok(false);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning rubric deletion")?;
+        require_draft_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let changed = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE learning_assignment_rubric_criteria SET deleted_at=NOW(),deleted_by=$4,updated_by=$4,version=version+1 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND deleted_at IS NULL RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(criterion_id)
+        .bind(request.expected_version)
+        .bind(actor_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("delete Learning rubric criterion")?;
+        if changed.is_none() {
+            return Ok(false);
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_rubric_changed",
+            "learning.rubric_criteria.delete",
+            json!({"criterion_id": criterion_id, "expected_version": request.expected_version}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning rubric deletion")?;
+        Ok(true)
+    }
+
+    /// Publishes an assignment with an immutable SIS recipient snapshot.
+    pub async fn publish_assignment(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        expected_version: i32,
+    ) -> Result<Option<LearningAssignmentResponse>> {
+        let Some((_, space_id)) = assignment_owner(pool, tenant_id, assignment_id).await? else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning assignment publication")?;
+        let state = sqlx::query_as::<_, (String, i32, String, String, Uuid, Uuid)>(
+            r#"
+            SELECT assignment.status,assignment.max_score_hundredths,
+                   unit.status,space.status,space.academic_year_id,space.class_group_id
+              FROM learning_assignments assignment
+              JOIN learning_units unit
+                ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id
+              JOIN learning_spaces space
+                ON space.id=unit.learning_space_id AND space.tenant_id=unit.tenant_id
+             WHERE assignment.tenant_id=$1 AND assignment.id=$2
+               AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL
+               AND space.deleted_at IS NULL
+             FOR UPDATE OF assignment,unit,space
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock Learning assignment publication")?;
+        let Some((status, maximum, unit_status, space_status, academic_year_id, class_group_id)) =
+            state
+        else {
+            return Ok(None);
+        };
+        if status != "draft" || unit_status != "published" || space_status != "published" {
+            bail!("Only a draft assignment in published Learning content can be published");
+        }
+        let (criterion_count, rubric_total) = sqlx::query_as::<_, (i64, i64)>(
+            "SELECT COUNT(*),COALESCE(SUM(max_score_hundredths),0)::BIGINT FROM learning_assignment_rubric_criteria WHERE tenant_id=$1 AND learning_assignment_id=$2 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .fetch_one(&mut *tx)
+        .await
+        .context("validate Learning assignment rubric")?;
+        if criterion_count == 0 || rubric_total != i64::from(maximum) {
+            bail!("The assignment rubric must contain criteria totalling the maximum score");
+        }
+        let roster = EnrolmentOps::class_roster_on(
+            pool,
+            tenant_id,
+            academic_year_id,
+            class_group_id,
+            Utc::now().date_naive(),
+        )
+        .await?;
+        if roster.is_empty() {
+            bail!("The assignment cannot be published without eligible learners");
+        }
+        let changed = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE learning_assignments SET status='published',published_by=$4,published_at=NOW(),version=version+1,updated_by=$4 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='draft' AND deleted_at IS NULL RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(expected_version)
+        .bind(actor_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("publish Learning assignment")?;
+        if changed.is_none() {
+            return Ok(None);
+        }
+        for recipient in &roster {
+            sqlx::query(
+                "INSERT INTO learning_assignment_recipients (tenant_id,learning_assignment_id,enrolment_id,learner_id) VALUES ($1,$2,$3,$4)",
+            )
+            .bind(tenant_id)
+            .bind(assignment_id)
+            .bind(recipient.enrolment_id)
+            .bind(recipient.learner_id)
+            .execute(&mut *tx)
+            .await
+            .context("snapshot Learning assignment recipient")?;
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_published",
+            "learning.assignments.publish",
+            json!({"recipient_count": roster.len(), "expected_version": expected_version}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning assignment publication")?;
+        assignment_response_by_id(pool, tenant_id, assignment_id).await
+    }
+
+    /// Closes a published assignment and prevents further learner submissions.
+    pub async fn close_assignment(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &ReasonedLearningTransitionRequest,
+    ) -> Result<Option<LearningAssignmentResponse>> {
+        let Some((_, space_id)) = assignment_owner(pool, tenant_id, assignment_id).await? else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let reason = required("Close reason", &request.reason)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning assignment closure")?;
+        let changed = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE learning_assignments SET status='closed',closed_by=$4,closed_at=NOW(),close_reason=$5,version=version+1,updated_by=$4 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='published' AND deleted_at IS NULL RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(request.expected_version)
+        .bind(actor_id)
+        .bind(reason)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("close Learning assignment")?;
+        if changed.is_none() {
+            return Ok(None);
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "assignment",
+            assignment_id,
+            Some(space_id),
+            "learning_assignment_closed",
+            "learning.assignments.close",
+            json!({"reason": reason, "expected_version": request.expected_version}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning assignment closure")?;
+        assignment_response_by_id(pool, tenant_id, assignment_id).await
+    }
+
+    /// Reads the authenticated learner's own submission aggregate, if started.
+    pub async fn self_submission(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Option<LearningSubmissionResponse>> {
+        let Some(context) = self_submission_context(pool, tenant_id, assignment_id, scope).await?
+        else {
+            return Ok(None);
+        };
+        let submission_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(context.recipient_id)
+        .fetch_optional(pool)
+        .await
+        .context("load learner submission")?;
+        match submission_id {
+            Some(id) => submission_response_by_id(pool, tenant_id, id, true, false).await,
+            None => Ok(None),
+        }
+    }
+
+    /// Saves a text-only learner draft using self scope and optimistic concurrency.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn save_self_submission(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &SaveLearningSubmissionRequest,
+    ) -> Result<Option<LearningSubmissionResponse>> {
+        let Some(context) = self_submission_context(pool, tenant_id, assignment_id, scope).await?
+        else {
+            return Ok(None);
+        };
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning submission save")?;
+        require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let existing = sqlx::query_as::<_, (Uuid, String, i32)>(
+            "SELECT id,status,version FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(context.recipient_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock learner submission")?;
+        let (submission_id, event_type) = match existing {
+            None => {
+                if request.expected_version.is_some() {
+                    bail!("The learner submission changed; reload it before saving");
+                }
+                let id = sqlx::query_scalar::<_, Uuid>(
+                    "INSERT INTO learning_submissions (tenant_id,learning_assignment_id,assignment_recipient_id,draft_body,created_by,updated_by) VALUES ($1,$2,$3,$4,$5,$5) RETURNING id",
+                )
+                .bind(tenant_id)
+                .bind(assignment_id)
+                .bind(context.recipient_id)
+                .bind(&request.body)
+                .bind(actor_id)
+                .fetch_one(&mut *tx)
+                .await
+                .context("create learner submission")?;
+                (id, "learning_submission_draft_created")
+            }
+            Some((id, status, version)) => {
+                if request.expected_version != Some(version) {
+                    bail!("The learner submission changed; reload it before saving");
+                }
+                if !matches!(status.as_str(), "draft" | "revision_requested") {
+                    bail!("A submitted or graded attempt cannot be edited");
+                }
+                let changed = sqlx::query_scalar::<_, Uuid>(
+                    "UPDATE learning_submissions SET draft_body=$4,status='draft',version=version+1,updated_by=$5 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status IN ('draft','revision_requested') AND deleted_at IS NULL RETURNING id",
+                )
+                .bind(tenant_id)
+                .bind(id)
+                .bind(version)
+                .bind(&request.body)
+                .bind(actor_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .context("save learner submission")?;
+                if changed.is_none() {
+                    bail!("The learner submission changed; reload it before saving");
+                }
+                (id, "learning_submission_draft_saved")
+            }
+        };
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "submission",
+            submission_id,
+            Some(context.space_id),
+            event_type,
+            "learning.submissions.save",
+            json!({"assignment_id": assignment_id}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning submission save")?;
+        submission_response_by_id(pool, tenant_id, submission_id, true, false).await
+    }
+
+    /// Appends one immutable learner attempt and safely replays duplicate submits.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn submit_self_submission(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &SubmitLearningSubmissionRequest,
+    ) -> Result<Option<LearningSubmissionResponse>> {
+        let Some(context) = self_submission_context(pool, tenant_id, assignment_id, scope).await?
+        else {
+            return Ok(None);
+        };
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool.begin().await.context("start Learning submission")?;
+        let due_at = require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let submission = sqlx::query_as::<_, (Uuid, String, i32, Option<String>)>(
+            "SELECT id,status,version,draft_body FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(context.recipient_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock learner submission")?;
+        let Some((submission_id, status, version, draft_body)) = submission else {
+            bail!("Save a response before submitting this assignment");
+        };
+        let body = required(
+            "Submission response",
+            draft_body.as_deref().unwrap_or_default(),
+        )?;
+        let fingerprint = submission_fingerprint(submission_id, request.expected_version, body);
+        if let Some((stored_fingerprint, _)) = sqlx::query_as::<_, (String, Uuid)>(
+            "SELECT request_fingerprint,id FROM learning_submission_versions WHERE tenant_id=$1 AND learning_submission_id=$2 AND idempotency_key=$3",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(request.idempotency_key)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("check Learning submission replay")?
+        {
+            if stored_fingerprint != fingerprint {
+                bail!("The submission idempotency key was already used for different content");
+            }
+            tx.rollback().await.context("finish Learning submission replay")?;
+            return submission_response_by_id(pool, tenant_id, submission_id, true, false).await;
+        }
+        if status != "draft" || version != request.expected_version {
+            bail!("The learner submission changed or is not ready to submit");
+        }
+        let revision_number = sqlx::query_scalar::<_, i32>(
+            "SELECT COALESCE(MAX(revision_number),0)+1 FROM learning_submission_versions WHERE tenant_id=$1 AND learning_submission_id=$2",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_one(&mut *tx)
+        .await
+        .context("allocate Learning submission revision")?;
+        let late = Utc::now() > due_at;
+        let submission_version_id = sqlx::query_scalar::<_, Uuid>(
+            "INSERT INTO learning_submission_versions (tenant_id,learning_submission_id,revision_number,body_snapshot,submitted_by,late_snapshot,idempotency_key,request_fingerprint) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(revision_number)
+        .bind(body)
+        .bind(actor_id)
+        .bind(late)
+        .bind(request.idempotency_key)
+        .bind(&fingerprint)
+        .fetch_one(&mut *tx)
+        .await
+        .context("append Learning submission version")?;
+        sqlx::query(
+            "UPDATE learning_submissions SET status='submitted',current_submission_version_id=$4,first_submitted_at=COALESCE(first_submitted_at,NOW()),last_submitted_at=NOW(),version=version+1,updated_by=$5 WHERE tenant_id=$1 AND id=$2 AND version=$3",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(request.expected_version)
+        .bind(submission_version_id)
+        .bind(actor_id)
+        .execute(&mut *tx)
+        .await
+        .context("advance Learning submission")?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "submission",
+            submission_id,
+            Some(context.space_id),
+            if revision_number == 1 { "learning_submission_submitted" } else { "learning_submission_resubmitted" },
+            "learning.submissions.submit",
+            json!({"assignment_id": assignment_id, "submission_version_id": submission_version_id, "revision_number": revision_number, "late": late}),
+        )
+        .await?;
+        tx.commit().await.context("commit Learning submission")?;
+        submission_response_by_id(pool, tenant_id, submission_id, true, false).await
+    }
+
+    /// Lists learner submissions for an assigned teacher or campus manager.
+    pub async fn list_submissions(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+        query: &LearningSubmissionListQuery,
+    ) -> Result<(Vec<LearningSubmissionResponse>, i64)> {
+        let Some((_, space_id)) = assignment_owner(pool, tenant_id, assignment_id).await? else {
+            return Ok((Vec::new(), 0));
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let (page, per_page) = bounded_page(query.page, query.per_page);
+        let ids = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND deleted_at IS NULL AND ($3::TEXT IS NULL OR status=$3) ORDER BY updated_at DESC,id LIMIT $4 OFFSET $5",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(query.status.map(LearningSubmissionStatus::as_str))
+        .bind(per_page)
+        .bind((page - 1) * per_page)
+        .fetch_all(pool)
+        .await
+        .context("list Learning submissions")?;
+        let total = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND deleted_at IS NULL AND ($3::TEXT IS NULL OR status=$3)",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(query.status.map(LearningSubmissionStatus::as_str))
+        .fetch_one(pool)
+        .await
+        .context("count Learning submissions")?;
+        let mut submissions = Vec::with_capacity(ids.len());
+        for id in ids {
+            if let Some(submission) =
+                submission_response_by_id(pool, tenant_id, id, false, true).await?
+            {
+                submissions.push(submission);
+            }
+        }
+        Ok((submissions, total))
+    }
+
+    /// Reads one exact submission after self or assigned/campus authorization.
+    pub async fn get_submission(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        submission_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Option<LearningSubmissionResponse>> {
+        let visibility = submission_visibility(pool, tenant_id, submission_id, scope).await?;
+        if !visibility.allowed {
+            return Ok(None);
+        }
+        submission_response_by_id(
+            pool,
+            tenant_id,
+            submission_id,
+            visibility.include_draft_body,
+            visibility.include_draft_feedback,
+        )
+        .await
+    }
+
+    /// Creates or updates draft feedback for the current immutable submission version.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn update_feedback(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        submission_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &UpdateLearningFeedbackRequest,
+    ) -> Result<Option<LearningFeedbackResponse>> {
+        let Some((assignment_id, space_id)) =
+            submission_owner(pool, tenant_id, submission_id).await?
+        else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning feedback update")?;
+        let submission = sqlx::query_as::<_, (String, Option<Uuid>)>(
+            "SELECT status,current_submission_version_id FROM learning_submissions WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock Learning submission for feedback")?;
+        let Some((status, current_version_id)) = submission else {
+            return Ok(None);
+        };
+        if status != "submitted" || current_version_id != Some(request.submission_version_id) {
+            bail!("Feedback must target the current submitted attempt");
+        }
+        validate_review_scores(&mut tx, tenant_id, assignment_id, &request.scores).await?;
+        let existing = sqlx::query_as::<_, (Uuid, String, i32)>(
+            "SELECT id,status,version FROM learning_submission_reviews WHERE tenant_id=$1 AND submission_version_id=$2 FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(request.submission_version_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock Learning feedback")?;
+        let review_id = match existing {
+            None => {
+                if request.expected_review_version.is_some() {
+                    bail!("The feedback changed; reload it before saving");
+                }
+                sqlx::query_scalar::<_, Uuid>(
+                    "INSERT INTO learning_submission_reviews (tenant_id,submission_version_id,overall_feedback,reviewed_by,updated_by) VALUES ($1,$2,$3,$4,$4) RETURNING id",
+                )
+                .bind(tenant_id)
+                .bind(request.submission_version_id)
+                .bind(optional(request.overall_feedback.as_deref()))
+                .bind(actor_id)
+                .fetch_one(&mut *tx)
+                .await
+                .context("create Learning feedback")?
+            }
+            Some((id, review_status, version)) => {
+                if review_status != "draft" || request.expected_review_version != Some(version) {
+                    bail!("The feedback changed or was already released");
+                }
+                let changed = sqlx::query_scalar::<_, Uuid>(
+                    "UPDATE learning_submission_reviews SET overall_feedback=$4,version=version+1,updated_by=$5 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='draft' RETURNING id",
+                )
+                .bind(tenant_id)
+                .bind(id)
+                .bind(version)
+                .bind(optional(request.overall_feedback.as_deref()))
+                .bind(actor_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .context("update Learning feedback")?;
+                if changed.is_none() {
+                    bail!("The feedback changed; reload it before saving");
+                }
+                id
+            }
+        };
+        sqlx::query(
+            "DELETE FROM learning_submission_review_scores WHERE tenant_id=$1 AND review_id=$2",
+        )
+        .bind(tenant_id)
+        .bind(review_id)
+        .execute(&mut *tx)
+        .await
+        .context("replace Learning feedback scores")?;
+        for score in &request.scores {
+            sqlx::query(
+                "INSERT INTO learning_submission_review_scores (tenant_id,review_id,rubric_criterion_id,earned_score_hundredths,feedback) VALUES ($1,$2,$3,$4,$5)",
+            )
+            .bind(tenant_id)
+            .bind(review_id)
+            .bind(score.rubric_criterion_id)
+            .bind(score.earned_score_hundredths)
+            .bind(optional(score.feedback.as_deref()))
+            .execute(&mut *tx)
+            .await
+            .context("store Learning feedback score")?;
+        }
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "review",
+            review_id,
+            Some(space_id),
+            "learning_feedback_draft_saved",
+            "learning.feedback.update",
+            json!({"submission_id": submission_id, "submission_version_id": request.submission_version_id, "score_count": request.scores.len()}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning feedback update")?;
+        feedback_response_by_id(pool, tenant_id, review_id).await
+    }
+
+    /// Releases feedback once, moving the current submission to its reviewed state.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub async fn release_feedback(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        submission_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &ReleaseLearningFeedbackRequest,
+    ) -> Result<Option<LearningFeedbackResponse>> {
+        let Some((assignment_id, space_id)) =
+            submission_owner(pool, tenant_id, submission_id).await?
+        else {
+            return Ok(None);
+        };
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning feedback release")?;
+        let review = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                Uuid,
+                String,
+                i32,
+                Option<String>,
+                Option<Uuid>,
+                Option<String>,
+            ),
+        >(
+            r#"
+            SELECT review.id,review.submission_version_id,review.status,review.version,
+                   review.overall_feedback,review.release_idempotency_key,
+                   review.release_request_fingerprint
+              FROM learning_submission_reviews review
+              JOIN learning_submission_versions version
+                ON version.id=review.submission_version_id AND version.tenant_id=review.tenant_id
+             WHERE review.tenant_id=$1 AND version.learning_submission_id=$2
+             FOR UPDATE OF review
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock Learning feedback release")?;
+        let Some((
+            review_id,
+            submission_version_id,
+            status,
+            version,
+            overall_feedback,
+            replay_key,
+            replay_fingerprint,
+        )) = review
+        else {
+            bail!("Save feedback before releasing it");
+        };
+        let fingerprint = feedback_release_fingerprint(
+            review_id,
+            request.expected_review_version,
+            request.outcome,
+        );
+        if status == "released" {
+            if replay_key == Some(request.idempotency_key)
+                && replay_fingerprint.as_deref() == Some(fingerprint.as_str())
+            {
+                tx.rollback()
+                    .await
+                    .context("finish Learning feedback replay")?;
+                return feedback_response_by_id(pool, tenant_id, review_id).await;
+            }
+            bail!("Feedback was already released");
+        }
+        if version != request.expected_review_version {
+            bail!("The feedback changed; reload it before releasing");
+        }
+        let submission = sqlx::query_as::<_, (String, Option<Uuid>, i32)>(
+            "SELECT status,current_submission_version_id,version FROM learning_submissions WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock Learning submission review state")?;
+        let Some((submission_status, current_version_id, submission_version)) = submission else {
+            return Ok(None);
+        };
+        if submission_status != "submitted" || current_version_id != Some(submission_version_id) {
+            bail!("Feedback must target the current submitted attempt");
+        }
+        let total_score = match request.outcome {
+            LearningReviewOutcome::Graded => {
+                let (criteria, scored, earned, maximum) =
+                    sqlx::query_as::<_, (i64, i64, i64, i64)>(
+                        r#"
+                    SELECT COUNT(criterion.id),COUNT(score.id),
+                           COALESCE(SUM(score.earned_score_hundredths),0)::BIGINT,
+                           COALESCE(SUM(criterion.max_score_hundredths),0)::BIGINT
+                      FROM learning_assignment_rubric_criteria criterion
+                      LEFT JOIN learning_submission_review_scores score
+                        ON score.tenant_id=criterion.tenant_id
+                       AND score.rubric_criterion_id=criterion.id AND score.review_id=$3
+                     WHERE criterion.tenant_id=$1
+                       AND criterion.learning_assignment_id=$2 AND criterion.deleted_at IS NULL
+                    "#,
+                    )
+                    .bind(tenant_id)
+                    .bind(assignment_id)
+                    .bind(review_id)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .context("validate complete Learning rubric feedback")?;
+                if criteria == 0 || criteria != scored || earned > maximum {
+                    bail!(
+                        "Every rubric criterion must be scored within its maximum before grading"
+                    );
+                }
+                Some(i32::try_from(earned).context("Learning score exceeded its supported range")?)
+            }
+            LearningReviewOutcome::RevisionRequested => {
+                required(
+                    "Revision feedback",
+                    overall_feedback.as_deref().unwrap_or_default(),
+                )?;
+                None
+            }
+        };
+        sqlx::query(
+            "UPDATE learning_submission_reviews SET status='released',outcome=$4,total_score_hundredths=$5,released_by=$6,released_at=NOW(),release_idempotency_key=$7,release_request_fingerprint=$8,version=version+1,updated_by=$6 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='draft'",
+        )
+        .bind(tenant_id)
+        .bind(review_id)
+        .bind(request.expected_review_version)
+        .bind(request.outcome.as_str())
+        .bind(total_score)
+        .bind(actor_id)
+        .bind(request.idempotency_key)
+        .bind(&fingerprint)
+        .execute(&mut *tx)
+        .await
+        .context("release Learning feedback")?;
+        sqlx::query(
+            "UPDATE learning_submissions SET status=$4,graded_at=CASE WHEN $4='graded' THEN NOW() ELSE NULL END,version=version+1,updated_by=$5 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='submitted'",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(submission_version)
+        .bind(request.outcome.as_str())
+        .bind(actor_id)
+        .execute(&mut *tx)
+        .await
+        .context("apply Learning feedback outcome")?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "review",
+            review_id,
+            Some(space_id),
+            "learning_feedback_released",
+            "learning.feedback.release",
+            json!({"submission_id": submission_id, "submission_version_id": submission_version_id, "outcome": request.outcome.as_str(), "total_score_hundredths": total_score}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning feedback release")?;
+        feedback_response_by_id(pool, tenant_id, review_id).await
+    }
+
+    /// Returns the authenticated learner's derived progress in one space.
+    pub async fn self_progress(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        space_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Option<LearningProgressEntry>> {
+        let Some(space) = space_row(pool, tenant_id, space_id).await? else {
+            return Ok(None);
+        };
+        if !scope_allows_space(pool, tenant_id, &space, scope).await? {
+            return Ok(None);
+        }
+        let Some(account_id) = self_account(scope) else {
+            bail!("Learner self scope is required for personal Learning progress");
+        };
+        let Some(roster) = EnrolmentOps::active_roster_entry_for_account(
+            pool,
+            tenant_id,
+            account_id,
+            space.academic_year_id,
+            space.class_group_id,
+        )
+        .await?
+        else {
+            return Ok(None);
+        };
+        let mut rows = progress_rows(pool, tenant_id, space_id, Some(roster.learner_id)).await?;
+        match rows.pop() {
+            Some(row) => progress_response(pool, tenant_id, row).await.map(Some),
+            None => Ok(Some(empty_progress(roster))),
+        }
+    }
+
+    /// Returns derived progress for the assigned class roster or campus manager.
+    pub async fn list_progress(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        space_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Vec<LearningProgressEntry>> {
+        ensure_can_author_space(pool, tenant_id, space_id, scope).await?;
+        let rows = progress_rows(pool, tenant_id, space_id, None).await?;
+        let mut progress = Vec::with_capacity(rows.len());
+        for row in rows {
+            progress.push(progress_response(pool, tenant_id, row).await?);
+        }
+        Ok(progress)
+    }
 }
 
 #[derive(Debug)]
@@ -1364,6 +2547,541 @@ async fn resource_owner(
     ).bind(tenant_id).bind(resource_id).fetch_optional(pool).await.context("resolve Learning resource owner")
 }
 
+const ASSIGNMENT_SELECT: &str = r#"
+SELECT assignment.id,assignment.learning_unit_id,unit.learning_space_id,
+       assignment.position,assignment.title,assignment.instructions,assignment.due_at,
+       assignment.max_score_hundredths,assignment.status,assignment.version,
+       assignment.published_at,assignment.closed_at,assignment.close_reason,
+       assignment.created_at,assignment.updated_at,
+       (SELECT COUNT(*) FROM learning_assignment_recipients recipient
+         WHERE recipient.tenant_id=assignment.tenant_id AND recipient.learning_assignment_id=assignment.id)::BIGINT AS recipient_count,
+       (SELECT COUNT(*) FROM learning_submissions submission
+         WHERE submission.tenant_id=assignment.tenant_id AND submission.learning_assignment_id=assignment.id
+           AND submission.deleted_at IS NULL)::BIGINT AS submission_count
+  FROM learning_assignments assignment
+  JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id
+ WHERE assignment.tenant_id=$1 AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL
+"#;
+
+async fn assignment_row(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+) -> Result<Option<LearningAssignmentRow>> {
+    sqlx::query_as::<_, LearningAssignmentRow>(&format!("{ASSIGNMENT_SELECT} AND assignment.id=$2"))
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .fetch_optional(pool)
+        .await
+        .context("load Learning assignment")
+}
+
+async fn assignment_response_by_id(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+) -> Result<Option<LearningAssignmentResponse>> {
+    match assignment_row(pool, tenant_id, assignment_id).await? {
+        Some(row) => assignment_response(pool, tenant_id, row).await.map(Some),
+        None => Ok(None),
+    }
+}
+
+async fn assignment_response(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    row: LearningAssignmentRow,
+) -> Result<LearningAssignmentResponse> {
+    let rubric_rows = sqlx::query_as::<_, LearningRubricCriterionRow>(
+        "SELECT id,learning_assignment_id,position,title,description,max_score_hundredths,version FROM learning_assignment_rubric_criteria WHERE tenant_id=$1 AND learning_assignment_id=$2 AND deleted_at IS NULL ORDER BY position,created_at,id",
+    ).bind(tenant_id).bind(row.id).fetch_all(pool).await.context("load Learning rubric")?;
+    Ok(LearningAssignmentResponse {
+        id: row.id,
+        learning_unit_id: row.learning_unit_id,
+        learning_space_id: row.learning_space_id,
+        position: row.position,
+        title: row.title,
+        instructions: row.instructions,
+        due_at: row.due_at,
+        max_score_hundredths: row.max_score_hundredths,
+        status: parse_assignment_status(&row.status)?,
+        version: row.version,
+        recipient_count: row.recipient_count,
+        submission_count: row.submission_count,
+        published_at: row.published_at,
+        closed_at: row.closed_at,
+        close_reason: row.close_reason,
+        rubric: rubric_rows.into_iter().map(rubric_response).collect(),
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    })
+}
+
+fn rubric_response(row: LearningRubricCriterionRow) -> LearningRubricCriterionResponse {
+    LearningRubricCriterionResponse {
+        id: row.id,
+        learning_assignment_id: row.learning_assignment_id,
+        position: row.position,
+        title: row.title,
+        description: row.description,
+        max_score_hundredths: row.max_score_hundredths,
+        version: row.version,
+    }
+}
+
+async fn rubric_criterion(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    criterion_id: Uuid,
+) -> Result<Option<LearningRubricCriterionResponse>> {
+    sqlx::query_as::<_, LearningRubricCriterionRow>(
+        "SELECT id,learning_assignment_id,position,title,description,max_score_hundredths,version FROM learning_assignment_rubric_criteria WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL",
+    ).bind(tenant_id).bind(criterion_id).fetch_optional(pool).await
+     .context("load Learning rubric criterion").map(|row| row.map(rubric_response))
+}
+
+async fn assignment_owner(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+) -> Result<Option<(Uuid, Uuid)>> {
+    sqlx::query_as::<_, (Uuid, Uuid)>(
+        "SELECT assignment.learning_unit_id,unit.learning_space_id FROM learning_assignments assignment JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id WHERE assignment.tenant_id=$1 AND assignment.id=$2 AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL",
+    ).bind(tenant_id).bind(assignment_id).fetch_optional(pool).await.context("resolve Learning assignment owner")
+}
+
+async fn rubric_owner(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    criterion_id: Uuid,
+) -> Result<Option<(Uuid, Uuid)>> {
+    sqlx::query_as::<_, (Uuid, Uuid)>(
+        "SELECT criterion.learning_assignment_id,unit.learning_space_id FROM learning_assignment_rubric_criteria criterion JOIN learning_assignments assignment ON assignment.id=criterion.learning_assignment_id AND assignment.tenant_id=criterion.tenant_id JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id WHERE criterion.tenant_id=$1 AND criterion.id=$2 AND criterion.deleted_at IS NULL AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL",
+    ).bind(tenant_id).bind(criterion_id).fetch_optional(pool).await.context("resolve Learning rubric owner")
+}
+
+async fn require_active_assignment_parent(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    unit_id: Uuid,
+    space_id: Uuid,
+) -> Result<()> {
+    let state = sqlx::query_as::<_, (String, String)>(
+        "SELECT unit.status,space.status FROM learning_units unit JOIN learning_spaces space ON space.id=unit.learning_space_id AND space.tenant_id=unit.tenant_id WHERE unit.tenant_id=$1 AND unit.id=$2 AND space.id=$3 AND unit.deleted_at IS NULL AND space.deleted_at IS NULL FOR UPDATE OF unit,space",
+    ).bind(tenant_id).bind(unit_id).bind(space_id).fetch_optional(&mut **tx).await.context("lock Learning assignment parent")?;
+    match state {
+        Some((unit, space)) if unit != "withdrawn" && space != "archived" => Ok(()),
+        Some(_) => bail!("Assignments cannot be added to withdrawn or archived Learning content"),
+        None => bail!("The Learning assignment parent is unavailable"),
+    }
+}
+
+async fn require_draft_assignment(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+) -> Result<()> {
+    let status = sqlx::query_scalar::<_, String>(
+        "SELECT status FROM learning_assignments WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE",
+    ).bind(tenant_id).bind(assignment_id).fetch_optional(&mut **tx).await.context("lock draft Learning assignment")?;
+    match status.as_deref() {
+        Some("draft") => Ok(()),
+        Some(_) => bail!("A published Learning assignment is immutable"),
+        None => bail!("The Learning assignment is unavailable"),
+    }
+}
+
+async fn require_open_assignment(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+) -> Result<chrono::DateTime<Utc>> {
+    let state = sqlx::query_as::<_, (String, chrono::DateTime<Utc>)>(
+        "SELECT status,due_at FROM learning_assignments WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE",
+    ).bind(tenant_id).bind(assignment_id).fetch_optional(&mut **tx).await.context("lock open Learning assignment")?;
+    match state {
+        Some((status, due_at)) if status == "published" => Ok(due_at),
+        Some(_) => bail!("The Learning assignment is not open for submissions"),
+        None => bail!("The Learning assignment is unavailable"),
+    }
+}
+
+struct SelfSubmissionContext {
+    recipient_id: Uuid,
+    space_id: Uuid,
+}
+
+fn self_account(scope: LearningAccessScope) -> Option<Uuid> {
+    match scope {
+        LearningAccessScope::SelfFor(id) | LearningAccessScope::SelfAndAssigned(id) => Some(id),
+        LearningAccessScope::Campus | LearningAccessScope::AssignedTo(_) => None,
+    }
+}
+
+async fn self_submission_context(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+    scope: LearningAccessScope,
+) -> Result<Option<SelfSubmissionContext>> {
+    let Some(account_id) = self_account(scope) else {
+        bail!("Learner self scope is required for Learning participation")
+    };
+    let Some(assignment) = assignment_row(pool, tenant_id, assignment_id).await? else {
+        return Ok(None);
+    };
+    if assignment.status == "draft" {
+        return Ok(None);
+    }
+    let Some(space) = space_row(pool, tenant_id, assignment.learning_space_id).await? else {
+        return Ok(None);
+    };
+    if !scope_allows_space(pool, tenant_id, &space, scope).await? {
+        return Ok(None);
+    }
+    let Some(roster) = EnrolmentOps::active_roster_entry_for_account(
+        pool,
+        tenant_id,
+        account_id,
+        space.academic_year_id,
+        space.class_group_id,
+    )
+    .await?
+    else {
+        return Ok(None);
+    };
+    let recipient_id = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM learning_assignment_recipients WHERE tenant_id=$1 AND learning_assignment_id=$2 AND enrolment_id=$3 AND learner_id=$4",
+    ).bind(tenant_id).bind(assignment_id).bind(roster.enrolment_id).bind(roster.learner_id)
+     .fetch_optional(pool).await.context("resolve Learning assignment recipient")?;
+    Ok(recipient_id.map(|recipient_id| SelfSubmissionContext {
+        recipient_id,
+        space_id: assignment.learning_space_id,
+    }))
+}
+
+fn submission_fingerprint(submission_id: Uuid, expected_version: i32, body: &str) -> String {
+    let mut digest = Sha256::new();
+    digest.update(submission_id.as_bytes());
+    digest.update(expected_version.to_be_bytes());
+    digest.update(body.as_bytes());
+    format!("{:x}", digest.finalize())
+}
+
+fn feedback_release_fingerprint(
+    review_id: Uuid,
+    expected_version: i32,
+    outcome: LearningReviewOutcome,
+) -> String {
+    let mut digest = Sha256::new();
+    digest.update(review_id.as_bytes());
+    digest.update(expected_version.to_be_bytes());
+    digest.update(outcome.as_str().as_bytes());
+    format!("{:x}", digest.finalize())
+}
+
+async fn submission_owner(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    submission_id: Uuid,
+) -> Result<Option<(Uuid, Uuid)>> {
+    sqlx::query_as::<_, (Uuid, Uuid)>(
+        "SELECT submission.learning_assignment_id,unit.learning_space_id FROM learning_submissions submission JOIN learning_assignments assignment ON assignment.id=submission.learning_assignment_id AND assignment.tenant_id=submission.tenant_id JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id WHERE submission.tenant_id=$1 AND submission.id=$2 AND submission.deleted_at IS NULL AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL",
+    ).bind(tenant_id).bind(submission_id).fetch_optional(pool).await.context("resolve Learning submission owner")
+}
+
+struct SubmissionVisibility {
+    allowed: bool,
+    include_draft_body: bool,
+    include_draft_feedback: bool,
+}
+
+async fn submission_visibility(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    submission_id: Uuid,
+    scope: LearningAccessScope,
+) -> Result<SubmissionVisibility> {
+    let relation = sqlx::query_as::<_, (Uuid, Uuid, Uuid, Uuid, Uuid)>(
+        "SELECT space.teaching_assignment_id,space.academic_year_id,space.class_group_id,recipient.enrolment_id,recipient.learner_id FROM learning_submissions submission JOIN learning_assignment_recipients recipient ON recipient.id=submission.assignment_recipient_id AND recipient.tenant_id=submission.tenant_id JOIN learning_assignments assignment ON assignment.id=submission.learning_assignment_id AND assignment.tenant_id=submission.tenant_id JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id JOIN learning_spaces space ON space.id=unit.learning_space_id AND space.tenant_id=unit.tenant_id WHERE submission.tenant_id=$1 AND submission.id=$2 AND submission.deleted_at IS NULL AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL AND space.deleted_at IS NULL",
+    ).bind(tenant_id).bind(submission_id).fetch_optional(pool).await.context("authorize Learning submission")?;
+    let Some((teaching_assignment_id, academic_year_id, class_group_id, enrolment_id, learner_id)) =
+        relation
+    else {
+        return Ok(SubmissionVisibility {
+            allowed: false,
+            include_draft_body: false,
+            include_draft_feedback: false,
+        });
+    };
+    let is_self = |account_id| async move {
+        Ok::<bool, anyhow::Error>(
+            EnrolmentOps::active_roster_entry_for_account(
+                pool,
+                tenant_id,
+                account_id,
+                academic_year_id,
+                class_group_id,
+            )
+            .await?
+            .is_some_and(|entry| {
+                entry.enrolment_id == enrolment_id && entry.learner_id == learner_id
+            }),
+        )
+    };
+    match scope {
+        LearningAccessScope::Campus => Ok(SubmissionVisibility {
+            allowed: true,
+            include_draft_body: false,
+            include_draft_feedback: true,
+        }),
+        LearningAccessScope::AssignedTo(account_id) => Ok(SubmissionVisibility {
+            allowed: TeachingAssignmentOps::is_active_for_account(
+                pool,
+                tenant_id,
+                teaching_assignment_id,
+                account_id,
+            )
+            .await?,
+            include_draft_body: false,
+            include_draft_feedback: true,
+        }),
+        LearningAccessScope::SelfFor(account_id) => Ok(SubmissionVisibility {
+            allowed: is_self(account_id).await?,
+            include_draft_body: true,
+            include_draft_feedback: false,
+        }),
+        LearningAccessScope::SelfAndAssigned(account_id) => {
+            let assigned = TeachingAssignmentOps::is_active_for_account(
+                pool,
+                tenant_id,
+                teaching_assignment_id,
+                account_id,
+            )
+            .await?;
+            Ok(SubmissionVisibility {
+                allowed: assigned || is_self(account_id).await?,
+                include_draft_body: !assigned,
+                include_draft_feedback: assigned,
+            })
+        }
+    }
+}
+
+async fn submission_response_by_id(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    submission_id: Uuid,
+    include_draft_body: bool,
+    include_draft_feedback: bool,
+) -> Result<Option<LearningSubmissionResponse>> {
+    let row = sqlx::query_as::<_, LearningSubmissionRow>(
+        "SELECT submission.id,submission.learning_assignment_id,submission.assignment_recipient_id,recipient.learner_id,recipient.enrolment_id,submission.draft_body,submission.status,submission.version,submission.current_submission_version_id,submission.created_at,submission.updated_at FROM learning_submissions submission JOIN learning_assignment_recipients recipient ON recipient.id=submission.assignment_recipient_id AND recipient.tenant_id=submission.tenant_id WHERE submission.tenant_id=$1 AND submission.id=$2 AND submission.deleted_at IS NULL",
+    ).bind(tenant_id).bind(submission_id).fetch_optional(pool).await.context("load Learning submission")?;
+    let Some(row) = row else { return Ok(None) };
+    let identity =
+        EnrolmentOps::roster_references_by_enrolment_ids(pool, tenant_id, &[row.enrolment_id])
+            .await?
+            .into_iter()
+            .find(|entry| entry.learner_id == row.learner_id)
+            .ok_or_else(|| {
+                anyhow!("The SIS learner identity for this submission is unavailable")
+            })?;
+    let versions = sqlx::query_as::<_, LearningSubmissionVersionRow>(
+        "SELECT id,revision_number,body_snapshot,late_snapshot,submitted_at FROM learning_submission_versions WHERE tenant_id=$1 AND learning_submission_id=$2 ORDER BY revision_number",
+    ).bind(tenant_id).bind(submission_id).fetch_all(pool).await.context("load Learning submission versions")?
+     .into_iter().map(|version| LearningSubmissionVersionResponse { id: version.id, revision_number: version.revision_number,
+        body: version.body_snapshot, late: version.late_snapshot, submitted_at: version.submitted_at }).collect();
+    let feedback = match row.current_submission_version_id {
+        Some(version_id) => {
+            feedback_for_version(pool, tenant_id, version_id, include_draft_feedback).await?
+        }
+        None => None,
+    };
+    Ok(Some(LearningSubmissionResponse {
+        id: row.id,
+        learning_assignment_id: row.learning_assignment_id,
+        assignment_recipient_id: row.assignment_recipient_id,
+        learner_id: row.learner_id,
+        enrolment_id: row.enrolment_id,
+        learner_name: identity.display_name,
+        learner_number: identity.learner_number,
+        draft_body: visible_draft_body(row.draft_body, include_draft_body),
+        status: parse_submission_status(&row.status)?,
+        version: row.version,
+        current_submission_version_id: row.current_submission_version_id,
+        versions,
+        feedback,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }))
+}
+
+fn visible_draft_body(body: Option<String>, include: bool) -> Option<String> {
+    include.then_some(body).flatten()
+}
+
+async fn feedback_for_version(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    submission_version_id: Uuid,
+    include_draft: bool,
+) -> Result<Option<LearningFeedbackResponse>> {
+    let id = sqlx::query_scalar::<_, Uuid>(
+        "SELECT id FROM learning_submission_reviews WHERE tenant_id=$1 AND submission_version_id=$2 AND ($3 OR status='released')",
+    ).bind(tenant_id).bind(submission_version_id).bind(include_draft).fetch_optional(pool).await.context("load Learning feedback reference")?;
+    match id {
+        Some(id) => feedback_response_by_id(pool, tenant_id, id).await,
+        None => Ok(None),
+    }
+}
+
+async fn feedback_response_by_id(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    review_id: Uuid,
+) -> Result<Option<LearningFeedbackResponse>> {
+    let row = sqlx::query_as::<_, LearningFeedbackRow>(
+        "SELECT id,submission_version_id,status,outcome,overall_feedback,total_score_hundredths,version,released_at FROM learning_submission_reviews WHERE tenant_id=$1 AND id=$2",
+    ).bind(tenant_id).bind(review_id).fetch_optional(pool).await.context("load Learning feedback")?;
+    let Some(row) = row else { return Ok(None) };
+    let scores = sqlx::query_as::<_, LearningReviewScoreRow>(
+        "SELECT rubric_criterion_id,earned_score_hundredths,feedback FROM learning_submission_review_scores WHERE tenant_id=$1 AND review_id=$2 ORDER BY created_at,id",
+    ).bind(tenant_id).bind(review_id).fetch_all(pool).await.context("load Learning feedback scores")?
+     .into_iter().map(|score| LearningReviewScoreResponse { rubric_criterion_id: score.rubric_criterion_id,
+        earned_score_hundredths: score.earned_score_hundredths, feedback: score.feedback }).collect();
+    Ok(Some(LearningFeedbackResponse {
+        id: row.id,
+        submission_version_id: row.submission_version_id,
+        status: row.status,
+        outcome: row
+            .outcome
+            .as_deref()
+            .map(parse_review_outcome)
+            .transpose()?,
+        overall_feedback: row.overall_feedback,
+        total_score_hundredths: row.total_score_hundredths,
+        version: row.version,
+        scores,
+        released_at: row.released_at,
+    }))
+}
+
+async fn validate_review_scores(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    assignment_id: Uuid,
+    scores: &[crate::dtos::LearningRubricScoreInput],
+) -> Result<()> {
+    let mut seen = BTreeSet::new();
+    for score in scores {
+        if score.earned_score_hundredths < 0 {
+            bail!("Rubric scores cannot be negative");
+        }
+        if score
+            .feedback
+            .as_ref()
+            .is_some_and(|value| value.len() > 4000)
+        {
+            bail!("Rubric feedback must use no more than 4000 characters");
+        }
+        if !seen.insert(score.rubric_criterion_id) {
+            bail!("Each rubric criterion may be scored only once");
+        }
+        let maximum = sqlx::query_scalar::<_, i32>(
+            "SELECT max_score_hundredths FROM learning_assignment_rubric_criteria WHERE tenant_id=$1 AND learning_assignment_id=$2 AND id=$3 AND deleted_at IS NULL",
+        ).bind(tenant_id).bind(assignment_id).bind(score.rubric_criterion_id).fetch_optional(&mut **tx).await
+         .context("validate Learning rubric score")?.ok_or_else(|| anyhow!("A rubric criterion is not part of this assignment"))?;
+        if score.earned_score_hundredths > maximum {
+            bail!("A rubric score exceeds its criterion maximum");
+        }
+    }
+    Ok(())
+}
+
+async fn progress_rows(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    space_id: Uuid,
+    learner_id: Option<Uuid>,
+) -> Result<Vec<LearningProgressRow>> {
+    sqlx::query_as::<_, LearningProgressRow>(r#"
+        SELECT recipient.learner_id,recipient.enrolment_id,COUNT(*)::BIGINT AS total_assignments,
+               COUNT(*) FILTER (WHERE submission.id IS NULL)::BIGINT AS not_started,
+               COUNT(*) FILTER (WHERE submission.status='draft')::BIGINT AS drafts,
+               COUNT(*) FILTER (WHERE submission.status='submitted')::BIGINT AS awaiting_feedback,
+               COUNT(*) FILTER (WHERE submission.status='revision_requested')::BIGINT AS revision_requested,
+               COUNT(*) FILTER (WHERE submission.status='graded')::BIGINT AS graded,
+               COUNT(*) FILTER (WHERE assignment.due_at < NOW() AND (submission.id IS NULL OR submission.status IN ('draft','revision_requested')))::BIGINT AS overdue,
+               COALESCE(SUM(review.total_score_hundredths) FILTER (WHERE review.status='released' AND review.outcome='graded'),0)::BIGINT AS earned_score_hundredths,
+               COALESCE(SUM(assignment.max_score_hundredths) FILTER (WHERE review.status='released' AND review.outcome='graded'),0)::BIGINT AS possible_score_hundredths
+          FROM learning_assignment_recipients recipient
+          JOIN learning_assignments assignment ON assignment.id=recipient.learning_assignment_id AND assignment.tenant_id=recipient.tenant_id
+          JOIN learning_units unit ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id
+          LEFT JOIN learning_submissions submission ON submission.tenant_id=recipient.tenant_id AND submission.learning_assignment_id=assignment.id AND submission.assignment_recipient_id=recipient.id AND submission.deleted_at IS NULL
+          LEFT JOIN learning_submission_reviews review ON review.tenant_id=submission.tenant_id AND review.submission_version_id=submission.current_submission_version_id
+         WHERE recipient.tenant_id=$1 AND unit.learning_space_id=$2 AND assignment.status IN ('published','closed')
+           AND assignment.deleted_at IS NULL AND unit.deleted_at IS NULL AND ($3::UUID IS NULL OR recipient.learner_id=$3)
+         GROUP BY recipient.learner_id,recipient.enrolment_id ORDER BY recipient.learner_id,recipient.enrolment_id
+    "#).bind(tenant_id).bind(space_id).bind(learner_id).fetch_all(pool).await.context("calculate Learning progress")
+}
+
+async fn progress_response(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    row: LearningProgressRow,
+) -> Result<LearningProgressEntry> {
+    let identity =
+        EnrolmentOps::roster_references_by_enrolment_ids(pool, tenant_id, &[row.enrolment_id])
+            .await?
+            .into_iter()
+            .find(|entry| entry.learner_id == row.learner_id)
+            .ok_or_else(|| {
+                anyhow!("The SIS learner identity for this progress record is unavailable")
+            })?;
+    let completion_percent = if row.total_assignments == 0 {
+        0
+    } else {
+        i32::try_from((row.graded * 100) / row.total_assignments)
+            .context("Learning completion percentage exceeded its supported range")?
+    };
+    Ok(LearningProgressEntry {
+        learner_id: row.learner_id,
+        enrolment_id: row.enrolment_id,
+        learner_name: identity.display_name,
+        learner_number: identity.learner_number,
+        total_assignments: row.total_assignments,
+        not_started: row.not_started,
+        drafts: row.drafts,
+        awaiting_feedback: row.awaiting_feedback,
+        revision_requested: row.revision_requested,
+        graded: row.graded,
+        overdue: row.overdue,
+        completion_percent,
+        earned_score_hundredths: row.earned_score_hundredths,
+        possible_score_hundredths: row.possible_score_hundredths,
+    })
+}
+
+fn empty_progress(identity: ClassRosterEntry) -> LearningProgressEntry {
+    LearningProgressEntry {
+        learner_id: identity.learner_id,
+        enrolment_id: identity.enrolment_id,
+        learner_name: identity.display_name,
+        learner_number: identity.learner_number,
+        total_assignments: 0,
+        not_started: 0,
+        drafts: 0,
+        awaiting_feedback: 0,
+        revision_requested: 0,
+        graded: 0,
+        overdue: 0,
+        completion_percent: 0,
+        earned_score_hundredths: 0,
+        possible_score_hundredths: 0,
+    }
+}
+
 async fn require_draft_space(
     transaction: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
@@ -1454,6 +3172,33 @@ fn parse_resource_status(value: &str) -> Result<LearningResourceStatus> {
     }
 }
 
+fn parse_assignment_status(value: &str) -> Result<LearningAssignmentStatus> {
+    match value {
+        "draft" => Ok(LearningAssignmentStatus::Draft),
+        "published" => Ok(LearningAssignmentStatus::Published),
+        "closed" => Ok(LearningAssignmentStatus::Closed),
+        _ => bail!("Stored Learning assignment status is invalid"),
+    }
+}
+
+fn parse_submission_status(value: &str) -> Result<LearningSubmissionStatus> {
+    match value {
+        "draft" => Ok(LearningSubmissionStatus::Draft),
+        "submitted" => Ok(LearningSubmissionStatus::Submitted),
+        "revision_requested" => Ok(LearningSubmissionStatus::RevisionRequested),
+        "graded" => Ok(LearningSubmissionStatus::Graded),
+        _ => bail!("Stored Learning submission status is invalid"),
+    }
+}
+
+fn parse_review_outcome(value: &str) -> Result<LearningReviewOutcome> {
+    match value {
+        "graded" => Ok(LearningReviewOutcome::Graded),
+        "revision_requested" => Ok(LearningReviewOutcome::RevisionRequested),
+        _ => bail!("Stored Learning review outcome is invalid"),
+    }
+}
+
 fn person_actor_id(actor: AuditActor) -> Result<Uuid> {
     actor
         .user_id()
@@ -1504,6 +3249,12 @@ fn database_error(error: sqlx::Error, context: &str) -> anyhow::Error {
             Some("idx_learning_resources_position") => {
                 anyhow!("Another resource already uses this position")
             }
+            Some("idx_learning_assignments_position") => {
+                anyhow!("Another assignment already uses this position")
+            }
+            Some("idx_learning_rubric_position") => {
+                anyhow!("Another rubric criterion already uses this position")
+            }
             _ => anyhow!("{context}: {error}"),
         };
     }
@@ -1538,9 +3289,15 @@ const SPACE_BY_ID_SQL: &str = concat!(
 #[cfg(test)]
 mod tests {
     use super::{
-        bounded_page, like_query, parse_resource_status, parse_space_status, parse_unit_status,
+        bounded_page, feedback_release_fingerprint, like_query, parse_assignment_status,
+        parse_resource_status, parse_review_outcome, parse_space_status, parse_submission_status,
+        parse_unit_status, submission_fingerprint, visible_draft_body,
     };
-    use crate::{LearningResourceStatus, LearningSpaceStatus, LearningUnitStatus};
+    use crate::{
+        LearningAssignmentStatus, LearningResourceStatus, LearningReviewOutcome,
+        LearningSpaceStatus, LearningSubmissionStatus, LearningUnitStatus,
+    };
+    use uuid::Uuid;
 
     #[test]
     fn status_parsers_reject_unknown_database_values() {
@@ -1559,6 +3316,21 @@ mod tests {
         assert!(parse_space_status("open").is_err());
         assert!(parse_unit_status("archived").is_err());
         assert!(parse_resource_status("deleted").is_err());
+        assert_eq!(
+            parse_assignment_status("closed").ok(),
+            Some(LearningAssignmentStatus::Closed)
+        );
+        assert_eq!(
+            parse_submission_status("revision_requested").ok(),
+            Some(LearningSubmissionStatus::RevisionRequested)
+        );
+        assert_eq!(
+            parse_review_outcome("graded").ok(),
+            Some(LearningReviewOutcome::Graded)
+        );
+        assert!(parse_assignment_status("archived").is_err());
+        assert!(parse_submission_status("withdrawn").is_err());
+        assert!(parse_review_outcome("draft").is_err());
     }
 
     #[test]
@@ -1570,5 +3342,29 @@ mod tests {
             Some("%100\\%\\_ready%")
         );
         assert_eq!(like_query(Some("  ")), None);
+    }
+
+    #[test]
+    fn learner_draft_body_is_visible_only_to_self_hydration() {
+        let body = Some("work in progress".to_string());
+        assert_eq!(visible_draft_body(body.clone(), true), body);
+        assert_eq!(visible_draft_body(body, false), None);
+    }
+
+    #[test]
+    fn idempotency_fingerprints_are_deterministic_and_request_specific() {
+        let aggregate_id = Uuid::from_u128(1);
+        assert_eq!(
+            submission_fingerprint(aggregate_id, 2, "answer"),
+            submission_fingerprint(aggregate_id, 2, "answer")
+        );
+        assert_ne!(
+            submission_fingerprint(aggregate_id, 2, "answer"),
+            submission_fingerprint(aggregate_id, 3, "answer")
+        );
+        assert_ne!(
+            feedback_release_fingerprint(aggregate_id, 2, LearningReviewOutcome::Graded),
+            feedback_release_fingerprint(aggregate_id, 2, LearningReviewOutcome::RevisionRequested)
+        );
     }
 }
