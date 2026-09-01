@@ -60,6 +60,10 @@ import { Route as ModulesLibraryMembersRouteImport } from './routes/modules/libr
 import { Route as ModulesLibraryHoldsRouteImport } from './routes/modules/library/holds'
 import { Route as ModulesLibraryFinesRouteImport } from './routes/modules/library/fines'
 import { Route as ModulesLibraryCirculationRouteImport } from './routes/modules/library/circulation'
+import { Route as ModulesInternalAuditSettingsRouteImport } from './routes/modules/internal-audit/settings'
+import { Route as ModulesInternalAuditPlansRouteImport } from './routes/modules/internal-audit/plans'
+import { Route as ModulesInternalAuditFindingsRouteImport } from './routes/modules/internal-audit/findings'
+import { Route as ModulesInternalAuditEngagementsRouteImport } from './routes/modules/internal-audit/engagements'
 import { Route as ModulesHrPayrollPositionsRouteImport } from './routes/modules/hr-payroll/positions'
 import { Route as ModulesHrPayrollImportsRouteImport } from './routes/modules/hr-payroll/imports'
 import { Route as ModulesHrPayrollEmploymentRouteImport } from './routes/modules/hr-payroll/employment'
@@ -119,6 +123,7 @@ import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './route
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 import { Route as ModulesMessagingAnnouncementsAnnouncementIdRouteImport } from './routes/modules/messaging.announcements_.$announcementId'
+import { Route as ModulesInternalAuditEngagementsEngagementIdRouteImport } from './routes/modules/internal-audit/engagements/$engagementId'
 import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/modules/health/patients_.$patientId'
 import { Route as ModulesDocumentRegistryDocumentsDocumentIdRouteImport } from './routes/modules/document-registry/documents/$documentId'
 import { Route as ModulesAttendanceRegistersRegisterIdRouteImport } from './routes/modules/attendance/registers_.$registerId'
@@ -390,6 +395,30 @@ const ModulesLibraryCirculationRoute =
   ModulesLibraryCirculationRouteImport.update({
     id: '/library/circulation',
     path: '/library/circulation',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesInternalAuditSettingsRoute =
+  ModulesInternalAuditSettingsRouteImport.update({
+    id: '/internal-audit/settings',
+    path: '/internal-audit/settings',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesInternalAuditPlansRoute =
+  ModulesInternalAuditPlansRouteImport.update({
+    id: '/internal-audit/plans',
+    path: '/internal-audit/plans',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesInternalAuditFindingsRoute =
+  ModulesInternalAuditFindingsRouteImport.update({
+    id: '/internal-audit/findings',
+    path: '/internal-audit/findings',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesInternalAuditEngagementsRoute =
+  ModulesInternalAuditEngagementsRouteImport.update({
+    id: '/internal-audit/engagements',
+    path: '/internal-audit/engagements',
     getParentRoute: () => ModulesRoute,
   } as any)
 const ModulesHrPayrollPositionsRoute =
@@ -723,6 +752,12 @@ const ModulesMessagingAnnouncementsAnnouncementIdRoute =
     path: '/announcements/$announcementId',
     getParentRoute: () => ModulesMessagingRoute,
   } as any)
+const ModulesInternalAuditEngagementsEngagementIdRoute =
+  ModulesInternalAuditEngagementsEngagementIdRouteImport.update({
+    id: '/$engagementId',
+    path: '/$engagementId',
+    getParentRoute: () => ModulesInternalAuditEngagementsRoute,
+  } as any)
 const ModulesHealthPatientsPatientIdRoute =
   ModulesHealthPatientsPatientIdRouteImport.update({
     id: '/health/patients_/$patientId',
@@ -869,6 +904,10 @@ export interface FileRoutesByFullPath {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/internal-audit/engagements': typeof ModulesInternalAuditEngagementsRouteWithChildren
+  '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
+  '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
+  '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
   '/modules/library/fines': typeof ModulesLibraryFinesRoute
   '/modules/library/holds': typeof ModulesLibraryHoldsRoute
@@ -897,6 +936,7 @@ export interface FileRoutesByFullPath {
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
+  '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -990,6 +1030,10 @@ export interface FileRoutesByTo {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/internal-audit/engagements': typeof ModulesInternalAuditEngagementsRouteWithChildren
+  '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
+  '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
+  '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
   '/modules/library/fines': typeof ModulesLibraryFinesRoute
   '/modules/library/holds': typeof ModulesLibraryHoldsRoute
@@ -1018,6 +1062,7 @@ export interface FileRoutesByTo {
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
+  '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1113,6 +1158,10 @@ export interface FileRoutesById {
   '/modules/hr-payroll/employment': typeof ModulesHrPayrollEmploymentRoute
   '/modules/hr-payroll/imports': typeof ModulesHrPayrollImportsRoute
   '/modules/hr-payroll/positions': typeof ModulesHrPayrollPositionsRoute
+  '/modules/internal-audit/engagements': typeof ModulesInternalAuditEngagementsRouteWithChildren
+  '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
+  '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
+  '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
   '/modules/library/fines': typeof ModulesLibraryFinesRoute
   '/modules/library/holds': typeof ModulesLibraryHoldsRoute
@@ -1141,6 +1190,7 @@ export interface FileRoutesById {
   '/modules/attendance/registers_/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients_/$patientId': typeof ModulesHealthPatientsPatientIdRoute
+  '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
   '/modules/messaging/announcements_/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1237,6 +1287,10 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/internal-audit/engagements'
+    | '/modules/internal-audit/findings'
+    | '/modules/internal-audit/plans'
+    | '/modules/internal-audit/settings'
     | '/modules/library/circulation'
     | '/modules/library/fines'
     | '/modules/library/holds'
@@ -1265,6 +1319,7 @@ export interface FileRouteTypes {
     | '/modules/attendance/registers/$registerId'
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
+    | '/modules/internal-audit/engagements/$engagementId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1358,6 +1413,10 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/internal-audit/engagements'
+    | '/modules/internal-audit/findings'
+    | '/modules/internal-audit/plans'
+    | '/modules/internal-audit/settings'
     | '/modules/library/circulation'
     | '/modules/library/fines'
     | '/modules/library/holds'
@@ -1386,6 +1445,7 @@ export interface FileRouteTypes {
     | '/modules/attendance/registers/$registerId'
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
+    | '/modules/internal-audit/engagements/$engagementId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1480,6 +1540,10 @@ export interface FileRouteTypes {
     | '/modules/hr-payroll/employment'
     | '/modules/hr-payroll/imports'
     | '/modules/hr-payroll/positions'
+    | '/modules/internal-audit/engagements'
+    | '/modules/internal-audit/findings'
+    | '/modules/internal-audit/plans'
+    | '/modules/internal-audit/settings'
     | '/modules/library/circulation'
     | '/modules/library/fines'
     | '/modules/library/holds'
@@ -1508,6 +1572,7 @@ export interface FileRouteTypes {
     | '/modules/attendance/registers_/$registerId'
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients_/$patientId'
+    | '/modules/internal-audit/engagements/$engagementId'
     | '/modules/messaging/announcements_/$announcementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
@@ -1888,6 +1953,34 @@ declare module '@tanstack/react-router' {
       path: '/library/circulation'
       fullPath: '/modules/library/circulation'
       preLoaderRoute: typeof ModulesLibraryCirculationRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/internal-audit/settings': {
+      id: '/modules/internal-audit/settings'
+      path: '/internal-audit/settings'
+      fullPath: '/modules/internal-audit/settings'
+      preLoaderRoute: typeof ModulesInternalAuditSettingsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/internal-audit/plans': {
+      id: '/modules/internal-audit/plans'
+      path: '/internal-audit/plans'
+      fullPath: '/modules/internal-audit/plans'
+      preLoaderRoute: typeof ModulesInternalAuditPlansRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/internal-audit/findings': {
+      id: '/modules/internal-audit/findings'
+      path: '/internal-audit/findings'
+      fullPath: '/modules/internal-audit/findings'
+      preLoaderRoute: typeof ModulesInternalAuditFindingsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/internal-audit/engagements': {
+      id: '/modules/internal-audit/engagements'
+      path: '/internal-audit/engagements'
+      fullPath: '/modules/internal-audit/engagements'
+      preLoaderRoute: typeof ModulesInternalAuditEngagementsRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/hr-payroll/positions': {
@@ -2303,6 +2396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesMessagingAnnouncementsAnnouncementIdRouteImport
       parentRoute: typeof ModulesMessagingRoute
     }
+    '/modules/internal-audit/engagements/$engagementId': {
+      id: '/modules/internal-audit/engagements/$engagementId'
+      path: '/$engagementId'
+      fullPath: '/modules/internal-audit/engagements/$engagementId'
+      preLoaderRoute: typeof ModulesInternalAuditEngagementsEngagementIdRouteImport
+      parentRoute: typeof ModulesInternalAuditEngagementsRoute
+    }
     '/modules/health/patients_/$patientId': {
       id: '/modules/health/patients_/$patientId'
       path: '/health/patients/$patientId'
@@ -2487,6 +2587,21 @@ const ModulesAcademicsReportingRouteWithChildren =
     ModulesAcademicsReportingRouteChildren,
   )
 
+interface ModulesInternalAuditEngagementsRouteChildren {
+  ModulesInternalAuditEngagementsEngagementIdRoute: typeof ModulesInternalAuditEngagementsEngagementIdRoute
+}
+
+const ModulesInternalAuditEngagementsRouteChildren: ModulesInternalAuditEngagementsRouteChildren =
+  {
+    ModulesInternalAuditEngagementsEngagementIdRoute:
+      ModulesInternalAuditEngagementsEngagementIdRoute,
+  }
+
+const ModulesInternalAuditEngagementsRouteWithChildren =
+  ModulesInternalAuditEngagementsRoute._addFileChildren(
+    ModulesInternalAuditEngagementsRouteChildren,
+  )
+
 interface ModulesRouteChildren {
   ModulesModuleKeyRoute: typeof ModulesModuleKeyRoute
   ModulesMessagingRoute: typeof ModulesMessagingRouteWithChildren
@@ -2537,6 +2652,10 @@ interface ModulesRouteChildren {
   ModulesHrPayrollEmploymentRoute: typeof ModulesHrPayrollEmploymentRoute
   ModulesHrPayrollImportsRoute: typeof ModulesHrPayrollImportsRoute
   ModulesHrPayrollPositionsRoute: typeof ModulesHrPayrollPositionsRoute
+  ModulesInternalAuditEngagementsRoute: typeof ModulesInternalAuditEngagementsRouteWithChildren
+  ModulesInternalAuditFindingsRoute: typeof ModulesInternalAuditFindingsRoute
+  ModulesInternalAuditPlansRoute: typeof ModulesInternalAuditPlansRoute
+  ModulesInternalAuditSettingsRoute: typeof ModulesInternalAuditSettingsRoute
   ModulesLibraryCirculationRoute: typeof ModulesLibraryCirculationRoute
   ModulesLibraryFinesRoute: typeof ModulesLibraryFinesRoute
   ModulesLibraryHoldsRoute: typeof ModulesLibraryHoldsRoute
@@ -2620,6 +2739,11 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesHrPayrollEmploymentRoute: ModulesHrPayrollEmploymentRoute,
   ModulesHrPayrollImportsRoute: ModulesHrPayrollImportsRoute,
   ModulesHrPayrollPositionsRoute: ModulesHrPayrollPositionsRoute,
+  ModulesInternalAuditEngagementsRoute:
+    ModulesInternalAuditEngagementsRouteWithChildren,
+  ModulesInternalAuditFindingsRoute: ModulesInternalAuditFindingsRoute,
+  ModulesInternalAuditPlansRoute: ModulesInternalAuditPlansRoute,
+  ModulesInternalAuditSettingsRoute: ModulesInternalAuditSettingsRoute,
   ModulesLibraryCirculationRoute: ModulesLibraryCirculationRoute,
   ModulesLibraryFinesRoute: ModulesLibraryFinesRoute,
   ModulesLibraryHoldsRoute: ModulesLibraryHoldsRoute,

@@ -601,6 +601,7 @@ async fn reject_review(
     )
 }
 #[post("/disposition-reviews/{id}/execute")]
+#[allow(clippy::too_many_arguments)]
 async fn execute_review(
     pool: web::Data<PgPool>,
     storage: web::Data<DocumentStorage>,

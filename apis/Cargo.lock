@@ -1427,6 +1427,7 @@ dependencies = [
  "cp-health",
  "cp-hostel",
  "cp-hr-payroll",
+ "cp-internal-audit",
  "cp-library",
  "cp-messaging",
  "cp-procurement",
@@ -1952,6 +1953,23 @@ dependencies = [
  "serde",
  "sha2",
  "thiserror 2.0.16",
+]
+
+[[package]]
+name = "cp-internal-audit"
+version = "1.0.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "chrono",
+ "cp-audit",
+ "cp-common",
+ "cp-document-registry",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+ "validator",
 ]
 
 [[package]]

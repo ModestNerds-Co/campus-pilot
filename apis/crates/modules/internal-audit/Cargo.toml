@@ -1,0 +1,17 @@
+[package]
+name = "cp-internal-audit"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+cp-common = { path = "../../common" }
+cp-audit = { path = "../../platform/audit" }
+cp-document-registry = { path = "../document-registry" }
+actix-web = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+validator = { workspace = true }

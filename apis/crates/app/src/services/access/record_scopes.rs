@@ -81,6 +81,13 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("messaging.announcements", CAMPUS_SELF_ASSIGNED),
     definition("library.members", CAMPUS_SELF),
     definition("library.borrowing", CAMPUS_SELF),
+    definition("health.patients", CAMPUS_SELF_ASSIGNED),
+    definition("health.care", CAMPUS_SELF_ASSIGNED),
+    definition("hostel.occupancy", CAMPUS_SELF_ASSIGNED),
+    definition("hostel.pastoral", CAMPUS_SELF_ASSIGNED),
+    definition("document_registry.records", CAMPUS_ONLY),
+    definition("internal_audit.plans", CAMPUS_ONLY),
+    definition("internal_audit.records", CAMPUS_ASSIGNED),
 ];
 
 const fn definition(
@@ -288,7 +295,7 @@ mod tests {
 
     #[test]
     fn catalogue_keys_are_unique_and_parse_safe() {
-        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 29);
+        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 36);
         let mut keys = BTreeSet::new();
         for definition in RECORD_SCOPE_FAMILIES {
             assert!(keys.insert(definition.key()), "duplicate family key");
@@ -310,6 +317,12 @@ mod tests {
         assert!(RoleRecordScopeAssignment::parse("fees.billing", "self").is_ok());
         assert!(RoleRecordScopeAssignment::parse("timetabling.snapshots", "campus").is_ok());
         assert!(RoleRecordScopeAssignment::parse("timetabling.snapshots", "self").is_err());
+        assert!(RoleRecordScopeAssignment::parse("health.care", "self").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("hostel.pastoral", "assigned").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("document_registry.records", "campus").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("document_registry.records", "self").is_err());
+        assert!(RoleRecordScopeAssignment::parse("internal_audit.records", "assigned").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("internal_audit.plans", "assigned").is_err());
     }
 
     #[test]

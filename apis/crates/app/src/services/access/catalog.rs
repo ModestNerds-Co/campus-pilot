@@ -242,8 +242,8 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "/modules/internal-audit",
             "internal_audit",
             false,
-            "planned",
-            &["view", "create", "edit", "delete"],
+            "available",
+            &["view", "create", "edit", "delete", "issue", "manage"],
         ),
         module(
             "agent",
@@ -438,6 +438,7 @@ pub fn module_dependencies(module_key: &str) -> &'static [&'static str] {
         "timetabling" => &["academics", "hr_payroll"],
         "attendance" => &["academics", "sis"],
         "hostel" => &["sis"],
+        "internal_audit" => &["document_registry"],
         _ => &[],
     }
 }
@@ -723,6 +724,7 @@ mod tests {
             "library",
             "health",
             "hostel",
+            "internal_audit",
         ] {
             let module = coverage.entry(module_key).unwrap_or_else(|| unreachable!());
             assert!(module.stage_aligned(), "{module_key} stage is not aligned");
@@ -790,6 +792,12 @@ mod tests {
                 assert_eq!(module.exposed_operations(), 11);
                 assert_eq!(module.approval_required_operations(), 12);
                 assert_eq!(module.executable_capabilities(), 11);
+            } else if module_key == "internal_audit" {
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 26);
+                assert_eq!(module.exposed_operations(), 9);
+                assert_eq!(module.approval_required_operations(), 17);
+                assert_eq!(module.executable_capabilities(), 9);
             } else {
                 assert!(module.release_ready());
                 assert_eq!(module.executable_capabilities(), 4);

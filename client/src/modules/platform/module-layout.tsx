@@ -39,6 +39,7 @@ import {
   RadioTower,
   School,
   Settings2,
+  ShieldAlert,
   Clock3,
   ShoppingCart,
   Truck,
@@ -226,6 +227,12 @@ const documentRegistryNavigation: LocalNavItem[] = [
   { label: "Settings", path: "/modules/document-registry/settings", icon: Settings2 },
 ];
 
+const internalAuditNavigation: LocalNavItem[] = [
+  { label: "Audit plans", path: "/modules/internal-audit/plans", icon: ClipboardList },
+  { label: "Findings", path: "/modules/internal-audit/findings", icon: ShieldAlert },
+  { label: "Settings", path: "/modules/internal-audit/settings", icon: Settings2, permission: "internal_audit:manage" },
+];
+
 const messagingNavigation: LocalNavItem[] = [
   {
     label: "Inbox",
@@ -406,6 +413,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
                     ? hostelNavigation
                     : moduleKey === "document_registry"
                       ? documentRegistryNavigation
+                    : moduleKey === "internal_audit"
+                      ? internalAuditNavigation
                     : moduleKey === "messaging"
                     ? messagingNavigation
                     : moduleKey === "sis"
@@ -646,6 +655,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
                 ? "Residences"
               : moduleKey === "document_registry"
                 ? "Documents"
+              : moduleKey === "internal_audit"
+                ? "Engagements"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1097,6 +1108,12 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return <Link className={navClass(active)} to="/modules/document-registry/reviews"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/document-registry/settings")
     return <Link className={navClass(active)} to="/modules/document-registry/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/internal-audit/plans")
+    return <Link className={navClass(active)} to="/modules/internal-audit/plans"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/internal-audit/findings")
+    return <Link className={navClass(active)} to="/modules/internal-audit/findings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/internal-audit/settings")
+    return <Link className={navClass(active)} to="/modules/internal-audit/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/messaging/inbox")
     return (
       <Link className={navClass(active)} to="/modules/messaging/inbox">

@@ -19,6 +19,7 @@ mod gradebook;
 mod health;
 mod hostel;
 mod hr;
+mod internal_audit;
 mod library;
 mod messaging;
 mod origin;
@@ -117,6 +118,7 @@ use hr::{
     HrImportPreviewCapability, HrImportReadCapability, HrImportsListCapability,
     HrPositionReadCapability, HrPositionsListCapability,
 };
+use internal_audit::{InternalAuditReadCapability, InternalAuditReadKind};
 use library::{
     LibraryCopiesCapability, LibraryListCapability, LibraryListKind, LibraryReadCapability,
     LibraryReadKind, LibraryReferencesCapability, LibrarySettingsCapability,
@@ -666,6 +668,21 @@ pub fn build_capability_registry(
             .register(RegistryReadCapability::new(pool.clone(), kind))
             .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
     }
+    for kind in [
+        InternalAuditReadKind::NumberingPolicy,
+        InternalAuditReadKind::PlansList,
+        InternalAuditReadKind::PlanRead,
+        InternalAuditReadKind::AuditorCandidates,
+        InternalAuditReadKind::EngagementsList,
+        InternalAuditReadKind::EngagementRead,
+        InternalAuditReadKind::EvidenceList,
+        InternalAuditReadKind::FindingsList,
+        InternalAuditReadKind::FindingRead,
+    ] {
+        registry
+            .register(InternalAuditReadCapability::new(pool.clone(), kind))
+            .unwrap_or_else(|error| panic!("invalid {} capability: {error}", kind.operation_key()));
+    }
     registry
         .register(TimetableConfigurationCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Timetabling configuration capability: {error}"));
@@ -1093,6 +1110,15 @@ mod tests {
                 "hr_payroll.imports.read",
                 "hr_payroll.positions.list",
                 "hr_payroll.positions.read",
+                "internal_audit.auditor_candidates.list",
+                "internal_audit.engagements.list",
+                "internal_audit.engagements.read",
+                "internal_audit.evidence.list",
+                "internal_audit.findings.list",
+                "internal_audit.findings.read",
+                "internal_audit.numbering_policy.read",
+                "internal_audit.plans.list",
+                "internal_audit.plans.read",
                 "library.copies.list",
                 "library.copies.read",
                 "library.fines.list",

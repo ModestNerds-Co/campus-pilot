@@ -555,6 +555,22 @@ const EXACT_ROUTES: &[ExactRoute] = &[
         access: INTERNAL_AUDIT,
     },
     ExactRoute {
+        path: "/modules/internal-audit/plans",
+        access: INTERNAL_AUDIT,
+    },
+    ExactRoute {
+        path: "/modules/internal-audit/engagements",
+        access: INTERNAL_AUDIT,
+    },
+    ExactRoute {
+        path: "/modules/internal-audit/findings",
+        access: INTERNAL_AUDIT,
+    },
+    ExactRoute {
+        path: "/modules/internal-audit/settings",
+        access: INTERNAL_AUDIT,
+    },
+    ExactRoute {
         path: "/modules/agent",
         access: AGENT,
     },
@@ -565,6 +581,10 @@ const EXACT_ROUTES: &[ExactRoute] = &[
 ];
 
 const UUID_ROUTES: &[UuidRoute] = &[
+    UuidRoute {
+        prefix: "/modules/internal-audit/engagements/",
+        access: INTERNAL_AUDIT,
+    },
     UuidRoute {
         prefix: "/modules/document-registry/documents/",
         access: DOCUMENT_REGISTRY,

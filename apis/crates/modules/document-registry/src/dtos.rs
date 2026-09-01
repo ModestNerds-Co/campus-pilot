@@ -128,6 +128,17 @@ pub struct FileResponse {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Minimum metadata another module may snapshot when linking governed evidence.
+/// Private object keys, hashes, actor identities, and file bytes never cross this boundary.
+#[derive(Debug, Clone, Serialize)]
+pub struct EvidenceFileReference {
+    pub id: Uuid,
+    pub reference: String,
+    pub title: String,
+    pub sensitivity: String,
+    pub status: String,
+}
+
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateFileRequest {
     #[validate(length(min = 1, max = 240))]

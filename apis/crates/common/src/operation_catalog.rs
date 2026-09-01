@@ -3803,6 +3803,241 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Write,
             true,
         ),
+        // Internal Audit: plans, assigned engagements, governed evidence, and findings.
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/numbering-policy",
+            "internal_audit.numbering_policy.read",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/internal-audit/numbering-policy",
+            "internal_audit.numbering_policy.update",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/plans",
+            "internal_audit.plans.list",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/plans",
+            "internal_audit.plans.create",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/plans/{id}",
+            "internal_audit.plans.read",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/internal-audit/plans/{id}",
+            "internal_audit.plans.update",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/internal-audit/plans/{id}",
+            "internal_audit.plans.delete",
+            "internal_audit",
+            "internal_audit:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/plans/{id}/approve",
+            "internal_audit.plans.approve",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/plans/{id}/close",
+            "internal_audit.plans.close",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/auditor-candidates",
+            "internal_audit.auditor_candidates.list",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/engagements",
+            "internal_audit.engagements.list",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/engagements",
+            "internal_audit.engagements.create",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/engagements/{id}",
+            "internal_audit.engagements.read",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/internal-audit/engagements/{id}",
+            "internal_audit.engagements.update",
+            "internal_audit",
+            "internal_audit:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/internal-audit/engagements/{id}",
+            "internal_audit.engagements.delete",
+            "internal_audit",
+            "internal_audit:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/engagements/{id}/start",
+            "internal_audit.engagements.start",
+            "internal_audit",
+            "internal_audit:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/engagements/{id}/begin-reporting",
+            "internal_audit.engagements.begin_reporting",
+            "internal_audit",
+            "internal_audit:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/engagements/{id}/close",
+            "internal_audit.engagements.close",
+            "internal_audit",
+            "internal_audit:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/engagements/{id}/evidence",
+            "internal_audit.evidence.list",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/engagements/{id}/evidence",
+            "internal_audit.evidence.create",
+            "internal_audit",
+            "internal_audit:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/findings",
+            "internal_audit.findings.list",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/engagements/{id}/findings",
+            "internal_audit.findings.create",
+            "internal_audit",
+            "internal_audit:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/internal-audit/findings/{id}",
+            "internal_audit.findings.read",
+            "internal_audit",
+            "internal_audit:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/internal-audit/findings/{id}",
+            "internal_audit.findings.update",
+            "internal_audit",
+            "internal_audit:edit",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/internal-audit/findings/{id}",
+            "internal_audit.findings.delete",
+            "internal_audit",
+            "internal_audit:delete",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/internal-audit/findings/{id}/issue",
+            "internal_audit.findings.issue",
+            "internal_audit",
+            "internal_audit:issue",
+            OperationEffect::Write,
+            true,
+        ),
         // Health services: canonical patients, care, visits, medication, and follow-up.
         route(
             Method::GET,
@@ -4340,6 +4575,8 @@ fn route(
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("attendance.") {
         operation.requiring_modules(["academics".to_string(), "sis".to_string()])
+    } else if key.starts_with("internal_audit.") {
+        operation.requiring_modules(["document_registry".to_string()])
     } else if key.starts_with("hostel.") {
         operation.requiring_modules(["sis".to_string()])
     } else if key.starts_with("health.") {
@@ -4607,6 +4844,15 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "document_registry.retention_due.list"
         | "document_registry.disposition_reviews.list"
         | "document_registry.disposition_reviews.read" => AgentExposure::Exposed,
+        "internal_audit.numbering_policy.read"
+        | "internal_audit.plans.list"
+        | "internal_audit.plans.read"
+        | "internal_audit.auditor_candidates.list"
+        | "internal_audit.engagements.list"
+        | "internal_audit.engagements.read"
+        | "internal_audit.evidence.list"
+        | "internal_audit.findings.list"
+        | "internal_audit.findings.read" => AgentExposure::Exposed,
         "hostel.references.read"
         | "hostel.residences.list"
         | "hostel.residences.read"
@@ -4855,6 +5101,23 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "document_registry.disposition_reviews.approve"
         | "document_registry.disposition_reviews.reject"
         | "document_registry.disposition_reviews.execute" => AgentExposure::ApprovalRequired,
+        "internal_audit.numbering_policy.update"
+        | "internal_audit.plans.create"
+        | "internal_audit.plans.update"
+        | "internal_audit.plans.delete"
+        | "internal_audit.plans.approve"
+        | "internal_audit.plans.close"
+        | "internal_audit.engagements.create"
+        | "internal_audit.engagements.update"
+        | "internal_audit.engagements.delete"
+        | "internal_audit.engagements.start"
+        | "internal_audit.engagements.begin_reporting"
+        | "internal_audit.engagements.close"
+        | "internal_audit.evidence.create"
+        | "internal_audit.findings.create"
+        | "internal_audit.findings.update"
+        | "internal_audit.findings.delete"
+        | "internal_audit.findings.issue" => AgentExposure::ApprovalRequired,
         "hostel.residences.create"
         | "hostel.residences.update"
         | "hostel.rooms.create"
@@ -4975,6 +5238,10 @@ mod tests {
                     "document_registry".to_string(),
                     ModuleEntitlementState::Enabled,
                 ),
+                (
+                    "internal_audit".to_string(),
+                    ModuleEntitlementState::Enabled,
+                ),
                 ("finance".to_string(), ModuleEntitlementState::Enabled),
                 ("fees".to_string(), ModuleEntitlementState::Enabled),
                 ("procurement".to_string(), ModuleEntitlementState::Enabled),
@@ -5010,7 +5277,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 462);
+        assert_eq!(operation_catalog().len(), 488);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -5062,7 +5329,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [181, 249, 20, 12]);
+        assert_eq!(counts, [190, 266, 20, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

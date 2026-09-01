@@ -2,6 +2,7 @@
   "name": "campus-pilot",
   "version": "1.0.0",
   "description": "Campus Pilot",
+  "packageManager": "pnpm@11.22.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

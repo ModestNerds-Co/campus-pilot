@@ -135,6 +135,15 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "document_registry.retention_due.list",
     "document_registry.disposition_reviews.list",
     "document_registry.disposition_reviews.read",
+    "internal_audit.numbering_policy.read",
+    "internal_audit.plans.list",
+    "internal_audit.plans.read",
+    "internal_audit.auditor_candidates.list",
+    "internal_audit.engagements.list",
+    "internal_audit.engagements.read",
+    "internal_audit.evidence.list",
+    "internal_audit.findings.list",
+    "internal_audit.findings.read",
 ];
 
 /// Directly exposed operations deliberately withheld from initial discovery.
@@ -419,7 +428,12 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "document_registry.series.list"
         | "document_registry.files.list"
         | "document_registry.retention_due.list"
-        | "document_registry.disposition_reviews.list" => Some(OperationScopePolicy::Dataset),
+        | "document_registry.disposition_reviews.list"
+        | "internal_audit.numbering_policy.read"
+        | "internal_audit.plans.list"
+        | "internal_audit.auditor_candidates.list"
+        | "internal_audit.engagements.list"
+        | "internal_audit.findings.list" => Some(OperationScopePolicy::Dataset),
         "administration.ai_providers.connections.read"
         | "administration.ai_providers.models.list" => {
             Some(OperationScopePolicy::OneResource("ai_provider_connection"))
@@ -516,6 +530,15 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "document_registry.disposition_reviews.read" => Some(OperationScopePolicy::OneResource(
             "document_registry_disposition_review",
         )),
+        "internal_audit.plans.read" => {
+            Some(OperationScopePolicy::OneResource("internal_audit_plan"))
+        }
+        "internal_audit.engagements.read" | "internal_audit.evidence.list" => Some(
+            OperationScopePolicy::OneResource("internal_audit_engagement"),
+        ),
+        "internal_audit.findings.read" => {
+            Some(OperationScopePolicy::OneResource("internal_audit_finding"))
+        }
         "academics.terms.list" | "academics.classes.list" => {
             Some(OperationScopePolicy::DatasetOrResources {
                 allowed_kinds: &["academic_year"],
@@ -748,6 +771,15 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "document_registry_disposition_review" => Some(
             "SELECT EXISTS(SELECT 1 FROM document_registry_disposition_reviews WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "internal_audit_plan" => Some(
+            "SELECT EXISTS(SELECT 1 FROM internal_audit_plans WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "internal_audit_engagement" => Some(
+            "SELECT EXISTS(SELECT 1 FROM internal_audit_engagements WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "internal_audit_finding" => Some(
+            "SELECT EXISTS(SELECT 1 FROM internal_audit_findings WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         _ => None,
     }
 }
@@ -827,7 +859,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 113);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 122);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -847,7 +879,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 181);
+        assert_eq!(exposed.len(), 190);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed
@@ -1116,6 +1148,9 @@ mod tests {
             "department",
             "position",
             "vehicle",
+            "internal_audit_plan",
+            "internal_audit_engagement",
+            "internal_audit_finding",
         ] {
             let query = resource_existence_query(resource_kind)
                 .unwrap_or_else(|| panic!("missing query for {resource_kind}"));

@@ -12,15 +12,58 @@ use uuid::Uuid;
 
 use crate::{
     ActivityResponse, CloseFileRequest, CreateReviewRequest, CreateSeriesRequest, DocumentStorage,
-    ExecuteDestructionRequest, FileResponse, NewRegistryFile, NumberingPolicyResponse,
-    ReclassifyFileRequest, RegistryListQuery, ReviewDecisionRequest, ReviewResponse,
-    SeriesResponse, UpdateFileRequest, UpdateNumberingPolicyRequest, UpdateSeriesRequest,
+    EvidenceFileReference, ExecuteDestructionRequest, FileResponse, NewRegistryFile,
+    NumberingPolicyResponse, ReclassifyFileRequest, RegistryListQuery, ReviewDecisionRequest,
+    ReviewResponse, SeriesResponse, UpdateFileRequest, UpdateNumberingPolicyRequest,
+    UpdateSeriesRequest,
     models::{ActivityRow, FileRow, NumberingPolicyRow, ReviewRow, SeriesRow},
 };
 
 pub struct DocumentRegistryOps;
 
 impl DocumentRegistryOps {
+    /// Resolves the minimum current metadata required for a governed evidence link.
+    /// Destroyed files and restricted files outside the caller's authority are absent.
+    pub async fn evidence_reference<'e, E>(
+        executor: E,
+        tenant_id: Uuid,
+        file_id: Uuid,
+        can_view_restricted: bool,
+    ) -> Result<Option<EvidenceFileReference>>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+    {
+        sqlx::query_as::<_, (Uuid, String, String, String, String)>(
+            r#"
+            SELECT id, reference, title, sensitivity, status
+            FROM document_registry_files
+            WHERE tenant_id = $1
+              AND id = $2
+              AND deleted_at IS NULL
+              AND status <> 'destroyed'
+              AND ($3 OR sensitivity <> 'restricted')
+            FOR SHARE
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .bind(can_view_restricted)
+        .fetch_optional(executor)
+        .await
+        .context("Failed to resolve governed document evidence")
+        .map(|row| {
+            row.map(
+                |(id, reference, title, sensitivity, status)| EvidenceFileReference {
+                    id,
+                    reference,
+                    title,
+                    sensitivity,
+                    status,
+                },
+            )
+        })
+    }
+
     pub async fn numbering_policy(
         pool: &PgPool,
         tenant_id: Uuid,
@@ -38,7 +81,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &UpdateNumberingPolicyRequest,
     ) -> Result<Option<NumberingPolicyResponse>> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         let prefix = required("Number prefix", &request.prefix)?;
         let minimum = sqlx::query_scalar::<_, Option<i64>>(
             "SELECT MAX((regexp_match(reference, '([0-9]+)$'))[1]::BIGINT)+1 FROM document_registry_files WHERE tenant_id=$1",
@@ -129,7 +172,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &CreateSeriesRequest,
     ) -> Result<SeriesResponse> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         validate_series(
             &request.retention_trigger,
             request.retention_period_months,
@@ -190,7 +233,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &UpdateSeriesRequest,
     ) -> Result<Option<SeriesResponse>> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         validate_series(
             &request.retention_trigger,
             request.retention_period_months,
@@ -307,7 +350,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: NewRegistryFile,
     ) -> Result<FileResponse> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         let title = required("Document title", &request.title)?;
         validate_sensitivity(request.sensitivity.as_deref())?;
         let series = sqlx::query_as::<_, SeriesRow>(SERIES_BY_ID)
@@ -377,7 +420,7 @@ impl DocumentRegistryOps {
         request: &UpdateFileRequest,
     ) -> Result<Option<FileResponse>> {
         validate_sensitivity(Some(&request.sensitivity))?;
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         let mut tx = pool
             .begin()
             .await
@@ -419,7 +462,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &ReclassifyFileRequest,
     ) -> Result<Option<FileResponse>> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         validate_sensitivity(request.sensitivity.as_deref())?;
         let series = sqlx::query_as::<_, SeriesRow>(SERIES_BY_ID)
             .bind(tenant_id)
@@ -484,7 +527,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &CloseFileRequest,
     ) -> Result<Option<FileResponse>> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         let current = Self::get_file(pool, tenant_id, id, true).await?;
         let Some(current) = current else {
             return Ok(None);
@@ -620,7 +663,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &CreateReviewRequest,
     ) -> Result<ReviewResponse> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         if !["retain", "destroy"].contains(&request.recommendation.as_str()) {
             bail!("Choose retain or destroy");
         }
@@ -693,7 +736,7 @@ impl DocumentRegistryOps {
         request: &ReviewDecisionRequest,
         approve: bool,
     ) -> Result<Option<ReviewResponse>> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         let review = Self::get_review(pool, tenant_id, id, true).await?;
         let Some(review) = review else {
             return Ok(None);
@@ -753,7 +796,7 @@ impl DocumentRegistryOps {
         context: RequestContext,
         request: &ExecuteDestructionRequest,
     ) -> Result<Option<ReviewResponse>> {
-        let actor_id = person_actor_id(actor.clone())?;
+        let actor_id = person_actor_id(actor)?;
         let mut tx = pool
             .begin()
             .await
@@ -939,10 +982,10 @@ fn validate_choice(value: &str, allowed: &[&str], message: &str) -> Result<()> {
     Ok(())
 }
 fn validate_optional(value: Option<&str>, allowed: &[&str], label: &str) -> Result<()> {
-    if let Some(value) = value {
-        if !allowed.contains(&value) {
-            bail!("Choose a valid {label}")
-        }
+    if let Some(value) = value
+        && !allowed.contains(&value)
+    {
+        bail!("Choose a valid {label}")
     }
     Ok(())
 }
@@ -999,7 +1042,7 @@ async fn append_evidence(
     action: &str,
     metadata: Value,
 ) -> Result<()> {
-    let actor_id = person_actor_id(actor.clone())?;
+    let actor_id = person_actor_id(actor)?;
     sqlx::query("INSERT INTO document_registry_activity_events (tenant_id,aggregate_type,aggregate_id,file_id,event_type,actor_id,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)")
         .bind(tenant_id).bind(aggregate_type).bind(aggregate_id).bind(file_id).bind(event_type).bind(actor_id).bind(metadata.clone())
         .execute(&mut **tx).await.context("append Document Registry activity evidence")?;
