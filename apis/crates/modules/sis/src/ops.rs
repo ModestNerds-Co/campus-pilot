@@ -1184,6 +1184,56 @@ impl ApplicationOps {
 pub struct EnrolmentOps;
 
 impl EnrolmentOps {
+    /// Returns the active class identifiers attached directly to one learner
+    /// account in an academic year. Guardian links are deliberately excluded
+    /// from the initial learner E-learning scope.
+    pub async fn active_class_ids_for_account(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+        academic_year_id: Uuid,
+    ) -> Result<Vec<Uuid>> {
+        sqlx::query_scalar::<_, Uuid>(
+            r#"
+            SELECT DISTINCT enrolment.class_group_id
+              FROM enrolments AS enrolment
+              JOIN learners AS learner
+                ON learner.id = enrolment.learner_id
+               AND learner.tenant_id = enrolment.tenant_id
+               AND learner.deleted_at IS NULL
+             WHERE enrolment.tenant_id = $1
+               AND learner.account_id = $2
+               AND enrolment.academic_year_id = $3
+               AND enrolment.status = 'active'
+               AND enrolment.starts_on <= CURRENT_DATE
+               AND (enrolment.ends_on IS NULL OR enrolment.ends_on >= CURRENT_DATE)
+               AND enrolment.deleted_at IS NULL
+             ORDER BY enrolment.class_group_id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(account_id)
+        .bind(academic_year_id)
+        .fetch_all(pool)
+        .await
+        .context("Failed to resolve current learner classes")
+    }
+
+    /// Re-checks direct learner access to one current class placement.
+    pub async fn account_is_actively_enrolled(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        account_id: Uuid,
+        academic_year_id: Uuid,
+        class_group_id: Uuid,
+    ) -> Result<bool> {
+        Ok(
+            Self::active_class_ids_for_account(pool, tenant_id, account_id, academic_year_id)
+                .await?
+                .contains(&class_group_id),
+        )
+    }
+
     /// Resolves learners the authenticated account may view as self-service.
     ///
     /// A direct learner account and active guardian relationships contribute to

@@ -92,6 +92,7 @@ const moduleLabels: Record<string, string> = {
   sis: "People and admissions",
   academics: "Academics",
   attendance: "Attendance",
+  learning: "E-learning",
   timetabling: "Timetabling",
   messaging: "Communication",
   finance: "Finance",
@@ -204,6 +205,11 @@ const attendanceNavigation: LocalNavItem[] = [
     path: "/modules/attendance/registers",
     icon: CalendarCheck2,
   },
+];
+
+const learningNavigation: LocalNavItem[] = [
+  { label: "Spaces", path: "/modules/learning/spaces", icon: BookOpenCheck },
+  { label: "Settings", path: "/modules/learning/settings", icon: Settings2, permission: "learning:manage" },
 ];
 
 const libraryNavigation: LocalNavItem[] = [
@@ -420,6 +426,8 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
             ? academicsNavigation
             : moduleKey === "attendance"
               ? attendanceNavigation
+              : moduleKey === "learning"
+                ? learningNavigation
               : moduleKey === "library"
                 ? libraryNavigation
                 : moduleKey === "health"
@@ -675,6 +683,8 @@ const LocalOverviewLink: React.FC<{ active: boolean; moduleKey: string }> = ({
                 ? "Documents"
               : moduleKey === "internal_audit"
                 ? "Engagements"
+              : moduleKey === "learning"
+                ? "Spaces"
             : "Overview"}
     </span>
     {active ? <ChevronRight className="size-3.5" /> : null}
@@ -1030,6 +1040,10 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
         {active ? <ChevronRight className="size-3.5" /> : null}
       </Link>
     );
+  if (item.path === "/modules/learning/spaces")
+    return <Link className={navClass(active)} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/learning/settings")
+    return <Link className={navClass(active)} to="/modules/learning/settings"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/library/circulation")
     return (
       <Link className={navClass(active)} to="/modules/library/circulation">

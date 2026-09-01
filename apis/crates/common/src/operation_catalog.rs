@@ -11,20 +11,21 @@ use actix_web::http::Method;
 use crate::{AgentExposure, OperationEffect, ProductOperation};
 
 /// Bump this when operation requirements change in a non-additive way.
-pub const OPERATION_CATALOG_VERSION: u32 = 2;
+pub const OPERATION_CATALOG_VERSION: u32 = 3;
 
 /// Product-catalog identifier carried by signed entitlement leases.
 ///
 /// The control plane and campus runtime must agree on this exact value before
 /// lease claims can be accepted. Keep it aligned with
 /// [`OPERATION_CATALOG_VERSION`].
-pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/2";
+pub const PRODUCT_CATALOG_VERSION: &str = "campus-pilot/3";
 
 /// Product-catalog versions this campus binary can safely interpret.
 ///
 /// A catalog upgrade may temporarily list both versions during a coordinated
 /// rollout; the control plane still issues only [`PRODUCT_CATALOG_VERSION`].
-pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] = &[PRODUCT_CATALOG_VERSION];
+pub const SUPPORTED_PRODUCT_CATALOG_VERSIONS: &[&str] =
+    &["campus-pilot/2", PRODUCT_CATALOG_VERSION];
 
 /// Declares the authoritative access boundary for one routed operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -3269,6 +3270,187 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        // E-learning: class-linked spaces, ordered units, and governed resources.
+        route(
+            Method::GET,
+            "/api/1.0/learning/settings",
+            "learning.settings.read",
+            "learning",
+            "learning:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/settings",
+            "learning.settings.update",
+            "learning",
+            "learning:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/references",
+            "learning.references.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/resource-files",
+            "learning.resource_files.list",
+            "learning",
+            "learning:teach",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces",
+            "learning.spaces.list",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/spaces",
+            "learning.spaces.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}",
+            "learning.spaces.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/spaces/{id}",
+            "learning.spaces.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/spaces/{id}/publish",
+            "learning.spaces.publish",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/spaces/{id}/archive",
+            "learning.spaces.archive",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/spaces/{id}/units",
+            "learning.units.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/units/{id}",
+            "learning.units.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/units/{id}/publish",
+            "learning.units.publish",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/units/{id}/withdraw",
+            "learning.units.withdraw",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/units/{id}/resources",
+            "learning.resources.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/units/{id}/resources/upload",
+            "learning.resources.upload",
+            "learning",
+            "learning:teach",
+            OperationEffect::External,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/resources/{id}",
+            "learning.resources.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/resources/{id}/publish",
+            "learning.resources.publish",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/resources/{id}/withdraw",
+            "learning.resources.withdraw",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/resources/{id}/download",
+            "learning.resources.download",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
         // Communication: reviewed announcements and personal in-app inbox.
         route(
             Method::GET,
@@ -4575,6 +4757,13 @@ fn route(
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
     } else if key.starts_with("attendance.") {
         operation.requiring_modules(["academics".to_string(), "sis".to_string()])
+    } else if key.starts_with("learning.") {
+        operation.requiring_modules([
+            "academics".to_string(),
+            "document_registry".to_string(),
+            "hr_payroll".to_string(),
+            "sis".to_string(),
+        ])
     } else if key.starts_with("internal_audit.") {
         operation.requiring_modules(["document_registry".to_string()])
     } else if key.starts_with("hostel.") {
@@ -4806,6 +4995,11 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.references.read"
         | "attendance.registers.list"
         | "attendance.registers.read"
+        | "learning.settings.read"
+        | "learning.references.read"
+        | "learning.resource_files.list"
+        | "learning.spaces.list"
+        | "learning.spaces.read"
         | "messaging.references.read"
         | "messaging.announcements.list"
         | "messaging.announcements.read"
@@ -5052,6 +5246,19 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.registers.submit"
         | "attendance.registers.reopen"
         | "attendance.registers.delete"
+        | "learning.settings.update"
+        | "learning.spaces.create"
+        | "learning.spaces.update"
+        | "learning.spaces.publish"
+        | "learning.spaces.archive"
+        | "learning.units.create"
+        | "learning.units.update"
+        | "learning.units.publish"
+        | "learning.units.withdraw"
+        | "learning.resources.create"
+        | "learning.resources.update"
+        | "learning.resources.publish"
+        | "learning.resources.withdraw"
         | "messaging.announcements.create"
         | "messaging.announcements.update"
         | "messaging.announcements.submit"
@@ -5135,6 +5342,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         },
         "document_registry.files.download" => AgentExposure::HumanOnly {
             reason: "Private document bytes are never returned to an Agent provider.",
+        },
+        "learning.resources.upload" => AgentExposure::HumanOnly {
+            reason: "Private learning-resource bytes must be selected in a direct human workflow.",
+        },
+        "learning.resources.download" => AgentExposure::HumanOnly {
+            reason: "Private learning-resource bytes and signed URLs are never returned to an Agent provider.",
         },
         "administration.ai_providers.connections.create"
         | "administration.ai_providers.connections.data_approval.update"
@@ -5230,6 +5443,7 @@ mod tests {
                 ("fleet".to_string(), ModuleEntitlementState::Enabled),
                 ("timetabling".to_string(), ModuleEntitlementState::Enabled),
                 ("attendance".to_string(), ModuleEntitlementState::Enabled),
+                ("learning".to_string(), ModuleEntitlementState::Enabled),
                 ("messaging".to_string(), ModuleEntitlementState::Enabled),
                 ("library".to_string(), ModuleEntitlementState::Enabled),
                 ("hostel".to_string(), ModuleEntitlementState::Enabled),
@@ -5271,13 +5485,13 @@ mod tests {
 
     #[test]
     fn catalog_has_unique_stable_keys_and_route_identities() {
-        assert_eq!(OPERATION_CATALOG_VERSION, 2);
+        assert_eq!(OPERATION_CATALOG_VERSION, 3);
         assert_eq!(
             PRODUCT_CATALOG_VERSION,
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 488);
+        assert_eq!(operation_catalog().len(), 508);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -5329,7 +5543,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [190, 266, 20, 12]);
+        assert_eq!(counts, [195, 279, 22, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

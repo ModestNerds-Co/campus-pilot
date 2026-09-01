@@ -104,6 +104,11 @@ pub fn init(cfg: &mut ServiceConfig) {
                     .configure(cp_attendance::routes::routes),
             )
             .service(
+                scope("/learning")
+                    .wrap(AuthMiddleware)
+                    .configure(cp_learning::routes::routes),
+            )
+            .service(
                 scope("/messaging")
                     .wrap(AuthMiddleware)
                     .configure(cp_messaging::routes::routes),
@@ -335,6 +340,126 @@ mod route_wiring_tests {
                 "/api/1.0/sis/learner-numbering".to_string(),
                 "/api/1.0/sis/learner-numbering",
                 "sis.learner_numbering.update",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/settings".to_string(),
+                "/api/1.0/learning/settings",
+                "learning.settings.read",
+            ),
+            (
+                Method::PUT,
+                "/api/1.0/learning/settings".to_string(),
+                "/api/1.0/learning/settings",
+                "learning.settings.update",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/references".to_string(),
+                "/api/1.0/learning/references",
+                "learning.references.read",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/resource-files".to_string(),
+                "/api/1.0/learning/resource-files",
+                "learning.resource_files.list",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/spaces".to_string(),
+                "/api/1.0/learning/spaces",
+                "learning.spaces.list",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/spaces".to_string(),
+                "/api/1.0/learning/spaces",
+                "learning.spaces.create",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/learning/spaces/{record_id}"),
+                "/api/1.0/learning/spaces/{id}",
+                "learning.spaces.read",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/learning/spaces/{record_id}"),
+                "/api/1.0/learning/spaces/{id}",
+                "learning.spaces.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/spaces/{record_id}/publish"),
+                "/api/1.0/learning/spaces/{id}/publish",
+                "learning.spaces.publish",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/spaces/{record_id}/archive"),
+                "/api/1.0/learning/spaces/{id}/archive",
+                "learning.spaces.archive",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/spaces/{record_id}/units"),
+                "/api/1.0/learning/spaces/{id}/units",
+                "learning.units.create",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/learning/units/{record_id}"),
+                "/api/1.0/learning/units/{id}",
+                "learning.units.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/units/{record_id}/publish"),
+                "/api/1.0/learning/units/{id}/publish",
+                "learning.units.publish",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/units/{record_id}/withdraw"),
+                "/api/1.0/learning/units/{id}/withdraw",
+                "learning.units.withdraw",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/units/{record_id}/resources"),
+                "/api/1.0/learning/units/{id}/resources",
+                "learning.resources.create",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/units/{record_id}/resources/upload"),
+                "/api/1.0/learning/units/{id}/resources/upload",
+                "learning.resources.upload",
+            ),
+            (
+                Method::PUT,
+                format!("/api/1.0/learning/resources/{record_id}"),
+                "/api/1.0/learning/resources/{id}",
+                "learning.resources.update",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/resources/{record_id}/publish"),
+                "/api/1.0/learning/resources/{id}/publish",
+                "learning.resources.publish",
+            ),
+            (
+                Method::POST,
+                format!("/api/1.0/learning/resources/{record_id}/withdraw"),
+                "/api/1.0/learning/resources/{id}/withdraw",
+                "learning.resources.withdraw",
+            ),
+            (
+                Method::GET,
+                format!("/api/1.0/learning/resources/{record_id}/download"),
+                "/api/1.0/learning/resources/{id}/download",
+                "learning.resources.download",
             ),
             (
                 Method::GET,

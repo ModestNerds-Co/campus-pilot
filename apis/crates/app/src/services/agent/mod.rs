@@ -20,6 +20,7 @@ mod health;
 mod hostel;
 mod hr;
 mod internal_audit;
+mod learning;
 mod library;
 mod messaging;
 mod origin;
@@ -119,6 +120,10 @@ use hr::{
     HrPositionReadCapability, HrPositionsListCapability,
 };
 use internal_audit::{InternalAuditReadCapability, InternalAuditReadKind};
+use learning::{
+    LearningReferencesCapability, LearningResourceFilesCapability, LearningSettingsCapability,
+    LearningSpaceCapability, LearningSpacesCapability,
+};
 use library::{
     LibraryCopiesCapability, LibraryListCapability, LibraryListKind, LibraryReadCapability,
     LibraryReadKind, LibraryReferencesCapability, LibrarySettingsCapability,
@@ -342,6 +347,21 @@ pub fn build_capability_registry(
     registry
         .register(AttendanceRegisterReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Attendance register-read capability: {error}"));
+    registry
+        .register(LearningSettingsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning settings capability: {error}"));
+    registry
+        .register(LearningReferencesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning references capability: {error}"));
+    registry
+        .register(LearningResourceFilesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning resource-files capability: {error}"));
+    registry
+        .register(LearningSpacesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning spaces-list capability: {error}"));
+    registry
+        .register(LearningSpaceCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning space-read capability: {error}"));
     registry
         .register(CommunicationReferencesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Communication references capability: {error}"));
@@ -1119,6 +1139,11 @@ mod tests {
                 "internal_audit.numbering_policy.read",
                 "internal_audit.plans.list",
                 "internal_audit.plans.read",
+                "learning.references.read",
+                "learning.resource_files.list",
+                "learning.settings.read",
+                "learning.spaces.list",
+                "learning.spaces.read",
                 "library.copies.list",
                 "library.copies.read",
                 "library.fines.list",
@@ -1193,7 +1218,7 @@ mod tests {
 
         assert_eq!(
             result.content()["modules"].as_array().map(Vec::len),
-            Some(18)
+            Some(19)
         );
         assert!(result.content()["administration_permissions"].is_array());
     }

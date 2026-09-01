@@ -80,6 +80,11 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "attendance.references.read",
     "attendance.registers.list",
     "attendance.registers.read",
+    "learning.settings.read",
+    "learning.references.read",
+    "learning.resource_files.list",
+    "learning.spaces.list",
+    "learning.spaces.read",
     "messaging.references.read",
     "messaging.announcements.list",
     "messaging.announcements.read",
@@ -404,6 +409,10 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "assets_inventory.department_candidates.list"
         | "attendance.references.read"
         | "attendance.registers.list"
+        | "learning.settings.read"
+        | "learning.references.read"
+        | "learning.resource_files.list"
+        | "learning.spaces.list"
         | "messaging.references.read"
         | "messaging.announcements.list"
         | "messaging.inbox.list"
@@ -496,6 +505,7 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "attendance.registers.read" => {
             Some(OperationScopePolicy::OneResource("attendance_register"))
         }
+        "learning.spaces.read" => Some(OperationScopePolicy::OneResource("learning_space")),
         "messaging.announcements.read"
         | "messaging.announcements.audience_preview.read"
         | "messaging.deliveries.list" => Some(OperationScopePolicy::OneResource(
@@ -720,6 +730,9 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "attendance_register" => Some(
             "SELECT EXISTS(SELECT 1 FROM attendance_registers WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "learning_space" => Some(
+            "SELECT EXISTS(SELECT 1 FROM learning_spaces WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         "communication_announcement" => Some(
             "SELECT EXISTS(SELECT 1 FROM communication_announcements WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
@@ -859,7 +872,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 122);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 127);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -879,7 +892,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 190);
+        assert_eq!(exposed.len(), 195);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

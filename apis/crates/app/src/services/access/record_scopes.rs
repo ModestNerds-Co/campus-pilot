@@ -65,6 +65,7 @@ pub const RECORD_SCOPE_FAMILIES: &[RecordScopeFamilyDefinition] = &[
     definition("academics.assessment_components", CAMPUS_ASSIGNED),
     definition("academics.gradebook", CAMPUS_ASSIGNED),
     definition("academics.reporting", CAMPUS_SELF_ASSIGNED),
+    definition("learning.spaces", CAMPUS_SELF_ASSIGNED),
     definition("fees.billing", CAMPUS_SELF),
     definition("fees.learner_candidates", CAMPUS_ONLY),
     definition("fees.imports", CAMPUS_ONLY),
@@ -295,7 +296,7 @@ mod tests {
 
     #[test]
     fn catalogue_keys_are_unique_and_parse_safe() {
-        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 36);
+        assert_eq!(RECORD_SCOPE_FAMILIES.len(), 37);
         let mut keys = BTreeSet::new();
         for definition in RECORD_SCOPE_FAMILIES {
             assert!(keys.insert(definition.key()), "duplicate family key");
@@ -323,6 +324,8 @@ mod tests {
         assert!(RoleRecordScopeAssignment::parse("document_registry.records", "self").is_err());
         assert!(RoleRecordScopeAssignment::parse("internal_audit.records", "assigned").is_ok());
         assert!(RoleRecordScopeAssignment::parse("internal_audit.plans", "assigned").is_err());
+        assert!(RoleRecordScopeAssignment::parse("learning.spaces", "assigned").is_ok());
+        assert!(RoleRecordScopeAssignment::parse("learning.spaces", "self").is_ok());
     }
 
     #[test]

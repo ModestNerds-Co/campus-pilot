@@ -22,6 +22,55 @@ use crate::{
 pub struct DocumentRegistryOps;
 
 impl DocumentRegistryOps {
+    /// Lists bounded, non-restricted governed file references that another
+    /// authorised module may offer for linking. Private bytes, object keys,
+    /// hashes, and internal actors never cross this boundary.
+    pub async fn linkable_references(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        search: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<EvidenceFileReference>> {
+        let search = search
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| format!("%{}%", value.replace('%', "\\%").replace('_', "\\_")));
+        let limit = limit.clamp(1, 100);
+        sqlx::query_as::<_, (Uuid, String, String, String, String)>(
+            r#"
+            SELECT id, reference, title, sensitivity, status
+              FROM document_registry_files
+             WHERE tenant_id = $1
+               AND deleted_at IS NULL
+               AND status <> 'destroyed'
+               AND sensitivity <> 'restricted'
+               AND ($2::TEXT IS NULL OR reference ILIKE $2 ESCAPE '\\'
+                    OR title ILIKE $2 ESCAPE '\\')
+             ORDER BY updated_at DESC, reference
+             LIMIT $3
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(search.as_deref())
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+        .context("Failed to list governed file references")
+        .map(|rows| {
+            rows.into_iter()
+                .map(
+                    |(id, reference, title, sensitivity, status)| EvidenceFileReference {
+                        id,
+                        reference,
+                        title,
+                        sensitivity,
+                        status,
+                    },
+                )
+                .collect()
+        })
+    }
+
     /// Resolves the minimum current metadata required for a governed evidence link.
     /// Destroyed files and restricted files outside the caller's authority are absent.
     pub async fn evidence_reference<'e, E>(

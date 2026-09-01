@@ -28,7 +28,7 @@ export function moduleContextLabel(moduleKey: string) {
     procurement: "Procurement",
     sis: "People and admissions",
     timetabling: "Timetabling",
+    learning: "E-learning",
   };
   return labels[moduleKey] || moduleKey.replace(/[_-]/g, " ");
 }
-

@@ -43,6 +43,10 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
     icon: CalendarCheck2,
     highlights: ["Daily registers", "Learner marks", "Submission history"],
   },
+  learning: {
+    icon: BookOpen,
+    highlights: ["Class spaces", "Ordered units", "Governed resources"],
+  },
   timetabling: {
     icon: CalendarClock,
     highlights: ["Teaching constraints", "Conflict-aware generation", "Publishing and changes"],

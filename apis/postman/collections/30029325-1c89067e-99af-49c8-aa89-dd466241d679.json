@@ -6377,6 +6377,32 @@
       ]
     },
     {
+      "name": "E-learning",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Read Learning Settings", "request": { "method": "GET", "url": "{{base_url}}/learning/settings" } },
+        { "name": "Update Learning Settings", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"document_series_id\": \"{{learning_document_series_id}}\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/settings" } },
+        { "name": "Read Learning References", "request": { "method": "GET", "url": "{{base_url}}/learning/references" } },
+        { "name": "List Governed Resource Files", "request": { "method": "GET", "url": "{{base_url}}/learning/resource-files?limit=50" } },
+        { "name": "List Learning Spaces", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces?page=1&per_page=25" } },
+        { "name": "Create Learning Space", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"teaching_assignment_id\": \"{{teaching_assignment_id}}\",\n  \"academic_term_id\": \"{{academic_term_id}}\",\n  \"title\": \"Mathematics Term 1\",\n  \"summary\": \"Class learning space\"\n}" }, "url": "{{base_url}}/learning/spaces" } },
+        { "name": "Read Learning Space", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}" } },
+        { "name": "Update Learning Space", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Mathematics Term 1\",\n  \"summary\": \"Updated class learning space\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}" } },
+        { "name": "Publish Learning Space", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/publish" } },
+        { "name": "Archive Learning Space", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"reason\": \"Academic term closed\"\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/archive" } },
+        { "name": "Create Learning Unit", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Introduction\",\n  \"summary\": \"Course introduction\"\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/units" } },
+        { "name": "Update Learning Unit", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Introduction\",\n  \"summary\": \"Updated introduction\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}" } },
+        { "name": "Publish Learning Unit", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/publish" } },
+        { "name": "Withdraw Learning Unit", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"reason\": \"Superseded material\"\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/withdraw" } },
+        { "name": "Link Learning Resource", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"document_file_id\": \"{{learning_document_file_id}}\",\n  \"display_title\": \"Lesson notes\",\n  \"position\": 1\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/resources" } },
+        { "name": "Upload Learning Resource", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{"key":"file","type":"file","src":[]},{"key":"display_title","value":"Lesson notes","type":"text"},{"key":"position","value":"1","type":"text"},{"key":"description","value":"Class resource","type":"text"}] }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/resources/upload" } },
+        { "name": "Update Learning Resource", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"display_title\": \"Lesson notes\",\n  \"position\": 1,\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/resources/{{learning_resource_id}}" } },
+        { "name": "Publish Learning Resource", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/resources/{{learning_resource_id}}/publish" } },
+        { "name": "Withdraw Learning Resource", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": 1,\n  \"reason\": \"Superseded material\"\n}" }, "url": "{{base_url}}/learning/resources/{{learning_resource_id}}/withdraw" } },
+        { "name": "Download Learning Resource", "request": { "method": "GET", "url": "{{base_url}}/learning/resources/{{learning_resource_id}}/download" } }
+      ]
+    },
+    {
       "name": "Health Check",
       "request": {
         "method": "GET",
@@ -6646,6 +6672,31 @@
     },
     {
       "key": "health_follow_up_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_space_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_unit_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_resource_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_document_file_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_document_series_id",
       "value": "00000000-0000-0000-0000-000000000000",
       "type": "default"
     }

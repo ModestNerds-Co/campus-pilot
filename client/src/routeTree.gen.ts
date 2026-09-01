@@ -60,6 +60,8 @@ import { Route as ModulesLibraryMembersRouteImport } from './routes/modules/libr
 import { Route as ModulesLibraryHoldsRouteImport } from './routes/modules/library/holds'
 import { Route as ModulesLibraryFinesRouteImport } from './routes/modules/library/fines'
 import { Route as ModulesLibraryCirculationRouteImport } from './routes/modules/library/circulation'
+import { Route as ModulesLearningSpacesRouteImport } from './routes/modules/learning/spaces'
+import { Route as ModulesLearningSettingsRouteImport } from './routes/modules/learning/settings'
 import { Route as ModulesInternalAuditSettingsRouteImport } from './routes/modules/internal-audit/settings'
 import { Route as ModulesInternalAuditPlansRouteImport } from './routes/modules/internal-audit/plans'
 import { Route as ModulesInternalAuditFindingsRouteImport } from './routes/modules/internal-audit/findings'
@@ -123,6 +125,7 @@ import { Route as ModulesSisApplicationsApplicationIdRouteImport } from './route
 import { Route as ModulesProcurementRequisitionsRequisitionIdRouteImport } from './routes/modules/procurement/requisitions_.$requisitionId'
 import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } from './routes/modules/procurement/purchase-orders_.$purchaseOrderId'
 import { Route as ModulesMessagingAnnouncementsAnnouncementIdRouteImport } from './routes/modules/messaging.announcements_.$announcementId'
+import { Route as ModulesLearningSpacesSpaceIdRouteImport } from './routes/modules/learning/spaces_.$spaceId'
 import { Route as ModulesInternalAuditEngagementsEngagementIdRouteImport } from './routes/modules/internal-audit/engagements/$engagementId'
 import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/modules/health/patients_.$patientId'
 import { Route as ModulesDocumentRegistryDocumentsDocumentIdRouteImport } from './routes/modules/document-registry/documents/$documentId'
@@ -397,6 +400,16 @@ const ModulesLibraryCirculationRoute =
     path: '/library/circulation',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesLearningSpacesRoute = ModulesLearningSpacesRouteImport.update({
+  id: '/learning/spaces',
+  path: '/learning/spaces',
+  getParentRoute: () => ModulesRoute,
+} as any)
+const ModulesLearningSettingsRoute = ModulesLearningSettingsRouteImport.update({
+  id: '/learning/settings',
+  path: '/learning/settings',
+  getParentRoute: () => ModulesRoute,
+} as any)
 const ModulesInternalAuditSettingsRoute =
   ModulesInternalAuditSettingsRouteImport.update({
     id: '/internal-audit/settings',
@@ -752,6 +765,12 @@ const ModulesMessagingAnnouncementsAnnouncementIdRoute =
     path: '/announcements/$announcementId',
     getParentRoute: () => ModulesMessagingRoute,
   } as any)
+const ModulesLearningSpacesSpaceIdRoute =
+  ModulesLearningSpacesSpaceIdRouteImport.update({
+    id: '/learning/spaces_/$spaceId',
+    path: '/learning/spaces/$spaceId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesInternalAuditEngagementsEngagementIdRoute =
   ModulesInternalAuditEngagementsEngagementIdRouteImport.update({
     id: '/$engagementId',
@@ -908,6 +927,8 @@ export interface FileRoutesByFullPath {
   '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
   '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
   '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
+  '/modules/learning/settings': typeof ModulesLearningSettingsRoute
+  '/modules/learning/spaces': typeof ModulesLearningSpacesRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
   '/modules/library/fines': typeof ModulesLibraryFinesRoute
   '/modules/library/holds': typeof ModulesLibraryHoldsRoute
@@ -937,6 +958,7 @@ export interface FileRoutesByFullPath {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
+  '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1034,6 +1056,8 @@ export interface FileRoutesByTo {
   '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
   '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
   '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
+  '/modules/learning/settings': typeof ModulesLearningSettingsRoute
+  '/modules/learning/spaces': typeof ModulesLearningSpacesRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
   '/modules/library/fines': typeof ModulesLibraryFinesRoute
   '/modules/library/holds': typeof ModulesLibraryHoldsRoute
@@ -1063,6 +1087,7 @@ export interface FileRoutesByTo {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
+  '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1162,6 +1187,8 @@ export interface FileRoutesById {
   '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
   '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
   '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
+  '/modules/learning/settings': typeof ModulesLearningSettingsRoute
+  '/modules/learning/spaces': typeof ModulesLearningSpacesRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
   '/modules/library/fines': typeof ModulesLibraryFinesRoute
   '/modules/library/holds': typeof ModulesLibraryHoldsRoute
@@ -1191,6 +1218,7 @@ export interface FileRoutesById {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients_/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
+  '/modules/learning/spaces_/$spaceId': typeof ModulesLearningSpacesSpaceIdRoute
   '/modules/messaging/announcements_/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
   '/modules/procurement/purchase-orders_/$purchaseOrderId': typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   '/modules/procurement/requisitions_/$requisitionId': typeof ModulesProcurementRequisitionsRequisitionIdRoute
@@ -1291,6 +1319,8 @@ export interface FileRouteTypes {
     | '/modules/internal-audit/findings'
     | '/modules/internal-audit/plans'
     | '/modules/internal-audit/settings'
+    | '/modules/learning/settings'
+    | '/modules/learning/spaces'
     | '/modules/library/circulation'
     | '/modules/library/fines'
     | '/modules/library/holds'
@@ -1320,6 +1350,7 @@ export interface FileRouteTypes {
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
+    | '/modules/learning/spaces/$spaceId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1417,6 +1448,8 @@ export interface FileRouteTypes {
     | '/modules/internal-audit/findings'
     | '/modules/internal-audit/plans'
     | '/modules/internal-audit/settings'
+    | '/modules/learning/settings'
+    | '/modules/learning/spaces'
     | '/modules/library/circulation'
     | '/modules/library/fines'
     | '/modules/library/holds'
@@ -1446,6 +1479,7 @@ export interface FileRouteTypes {
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
+    | '/modules/learning/spaces/$spaceId'
     | '/modules/messaging/announcements/$announcementId'
     | '/modules/procurement/purchase-orders/$purchaseOrderId'
     | '/modules/procurement/requisitions/$requisitionId'
@@ -1544,6 +1578,8 @@ export interface FileRouteTypes {
     | '/modules/internal-audit/findings'
     | '/modules/internal-audit/plans'
     | '/modules/internal-audit/settings'
+    | '/modules/learning/settings'
+    | '/modules/learning/spaces'
     | '/modules/library/circulation'
     | '/modules/library/fines'
     | '/modules/library/holds'
@@ -1573,6 +1609,7 @@ export interface FileRouteTypes {
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients_/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
+    | '/modules/learning/spaces_/$spaceId'
     | '/modules/messaging/announcements_/$announcementId'
     | '/modules/procurement/purchase-orders_/$purchaseOrderId'
     | '/modules/procurement/requisitions_/$requisitionId'
@@ -1953,6 +1990,20 @@ declare module '@tanstack/react-router' {
       path: '/library/circulation'
       fullPath: '/modules/library/circulation'
       preLoaderRoute: typeof ModulesLibraryCirculationRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/learning/spaces': {
+      id: '/modules/learning/spaces'
+      path: '/learning/spaces'
+      fullPath: '/modules/learning/spaces'
+      preLoaderRoute: typeof ModulesLearningSpacesRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/learning/settings': {
+      id: '/modules/learning/settings'
+      path: '/learning/settings'
+      fullPath: '/modules/learning/settings'
+      preLoaderRoute: typeof ModulesLearningSettingsRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/internal-audit/settings': {
@@ -2396,6 +2447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesMessagingAnnouncementsAnnouncementIdRouteImport
       parentRoute: typeof ModulesMessagingRoute
     }
+    '/modules/learning/spaces_/$spaceId': {
+      id: '/modules/learning/spaces_/$spaceId'
+      path: '/learning/spaces/$spaceId'
+      fullPath: '/modules/learning/spaces/$spaceId'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/internal-audit/engagements/$engagementId': {
       id: '/modules/internal-audit/engagements/$engagementId'
       path: '/$engagementId'
@@ -2656,6 +2714,8 @@ interface ModulesRouteChildren {
   ModulesInternalAuditFindingsRoute: typeof ModulesInternalAuditFindingsRoute
   ModulesInternalAuditPlansRoute: typeof ModulesInternalAuditPlansRoute
   ModulesInternalAuditSettingsRoute: typeof ModulesInternalAuditSettingsRoute
+  ModulesLearningSettingsRoute: typeof ModulesLearningSettingsRoute
+  ModulesLearningSpacesRoute: typeof ModulesLearningSpacesRoute
   ModulesLibraryCirculationRoute: typeof ModulesLibraryCirculationRoute
   ModulesLibraryFinesRoute: typeof ModulesLibraryFinesRoute
   ModulesLibraryHoldsRoute: typeof ModulesLibraryHoldsRoute
@@ -2680,6 +2740,7 @@ interface ModulesRouteChildren {
   ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
   ModulesDocumentRegistryDocumentsDocumentIdRoute: typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   ModulesHealthPatientsPatientIdRoute: typeof ModulesHealthPatientsPatientIdRoute
+  ModulesLearningSpacesSpaceIdRoute: typeof ModulesLearningSpacesSpaceIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
   ModulesProcurementRequisitionsRequisitionIdRoute: typeof ModulesProcurementRequisitionsRequisitionIdRoute
   ModulesSisApplicationsApplicationIdRoute: typeof ModulesSisApplicationsApplicationIdRoute
@@ -2744,6 +2805,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesInternalAuditFindingsRoute: ModulesInternalAuditFindingsRoute,
   ModulesInternalAuditPlansRoute: ModulesInternalAuditPlansRoute,
   ModulesInternalAuditSettingsRoute: ModulesInternalAuditSettingsRoute,
+  ModulesLearningSettingsRoute: ModulesLearningSettingsRoute,
+  ModulesLearningSpacesRoute: ModulesLearningSpacesRoute,
   ModulesLibraryCirculationRoute: ModulesLibraryCirculationRoute,
   ModulesLibraryFinesRoute: ModulesLibraryFinesRoute,
   ModulesLibraryHoldsRoute: ModulesLibraryHoldsRoute,
@@ -2772,6 +2835,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesDocumentRegistryDocumentsDocumentIdRoute:
     ModulesDocumentRegistryDocumentsDocumentIdRoute,
   ModulesHealthPatientsPatientIdRoute: ModulesHealthPatientsPatientIdRoute,
+  ModulesLearningSpacesSpaceIdRoute: ModulesLearningSpacesSpaceIdRoute,
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute:
     ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute,
   ModulesProcurementRequisitionsRequisitionIdRoute:
