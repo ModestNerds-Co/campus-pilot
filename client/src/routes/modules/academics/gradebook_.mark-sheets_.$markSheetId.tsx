@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { ACADEMIC_TEACHING_PERMISSIONS } from "@/modules/academics/access";
 import { MarkSheetWorkspace } from "@/modules/gradebook";
 
-export const Route = createFileRoute("/modules/academics/gradebook/mark-sheets_/$markSheetId")({
+export const Route = createFileRoute("/modules/academics/gradebook_/mark-sheets_/$markSheetId")({
   component: MarkSheetRoute,
 });
 

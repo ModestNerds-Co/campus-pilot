@@ -114,8 +114,9 @@ use fleet::{
     FleetVehiclesListCapability,
 };
 use gradebook::{
-    GradebookMarkSheetReadCapability, GradebookMarkSheetsListCapability,
-    GradebookReferencesCapability,
+    GradebookMarkImportPreviewCapability, GradebookMarkImportReadCapability,
+    GradebookMarkImportsListCapability, GradebookMarkSheetReadCapability,
+    GradebookMarkSheetsListCapability, GradebookReferencesCapability,
 };
 use health::{
     HealthListCapability, HealthListKind, HealthReadCapability, HealthReadKind,
@@ -346,6 +347,17 @@ pub fn build_capability_registry(
     registry
         .register(GradebookMarkSheetReadCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Gradebook mark-sheet read capability: {error}"));
+    registry
+        .register(GradebookMarkImportsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Gradebook mark-imports list capability: {error}"));
+    registry
+        .register(GradebookMarkImportReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Gradebook mark-import read capability: {error}"));
+    registry
+        .register(GradebookMarkImportPreviewCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Gradebook mark-import preview capability: {error}")
+        });
     registry
         .register(ReportingReferencesCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid reporting references capability: {error}"));
@@ -1158,6 +1170,9 @@ mod tests {
                 "academics.classes.read",
                 "academics.grade_levels.list",
                 "academics.grade_levels.read",
+                "academics.gradebook.mark_imports.list",
+                "academics.gradebook.mark_imports.preview.read",
+                "academics.gradebook.mark_imports.read",
                 "academics.gradebook.mark_sheets.list",
                 "academics.gradebook.mark_sheets.read",
                 "academics.gradebook.references.read",

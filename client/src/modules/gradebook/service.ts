@@ -5,6 +5,11 @@ import { httpClient } from "@/lib/http-client";
 import type {
   ApiEnvelope,
   GradebookMarkInput,
+  GradebookMarkImportCommit,
+  GradebookMarkImportMapping,
+  GradebookMarkImportPreview,
+  GradebookMarkImportRecord,
+  GradebookMarkImportsResponse,
   GradebookReferenceData,
   GradebookSheet,
   GradebookSheetsResponse,
@@ -36,6 +41,16 @@ export const gradebookService = {
   publishMarkSheet: (id: string, expectedVersion: number) => request<GradebookSheet>(() => httpClient.post(`${BASE_URL}/mark-sheets/${id}/publish`, { expected_version: expectedVersion })),
   reopenMarkSheet: (id: string, expectedVersion: number, reason: string) => request<GradebookSheet>(() => httpClient.post(`${BASE_URL}/mark-sheets/${id}/reopen`, { expected_version: expectedVersion, reason })),
   deleteMarkSheet: (id: string, expectedVersion: number) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/mark-sheets/${id}`, { params: { expected_version: expectedVersion } })),
+  listMarkImports: (markSheetId: string, params?: { page?: number; per_page?: number }) => request<GradebookMarkImportsResponse>(() => httpClient.get(`${BASE_URL}/mark-sheets/${markSheetId}/imports`, { params })),
+  uploadMarkImport: (markSheetId: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<GradebookMarkImportRecord>(() => httpClient.post(`${BASE_URL}/mark-sheets/${markSheetId}/imports`, form));
+  },
+  readMarkImport: (markSheetId: string, importId: string) => request<GradebookMarkImportRecord>(() => httpClient.get(`${BASE_URL}/mark-sheets/${markSheetId}/imports/${importId}`)),
+  createMarkImportPreview: (markSheetId: string, importId: string, mapping: GradebookMarkImportMapping) => request<GradebookMarkImportPreview>(() => httpClient.put(`${BASE_URL}/mark-sheets/${markSheetId}/imports/${importId}/mapping`, mapping)),
+  readMarkImportPreview: (markSheetId: string, importId: string, params?: { page?: number; per_page?: number }) => request<GradebookMarkImportPreview>(() => httpClient.get(`${BASE_URL}/mark-sheets/${markSheetId}/imports/${importId}/preview`, { params })),
+  commitMarkImport: (markSheetId: string, importId: string, previewId: string) => request<GradebookMarkImportCommit>(() => httpClient.post(`${BASE_URL}/mark-sheets/${markSheetId}/imports/${importId}/commit`, { preview_id: previewId })),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

@@ -344,7 +344,8 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(submit_mark_sheet)
             .service(publish_mark_sheet)
             .service(reopen_mark_sheet)
-            .service(delete_mark_sheet),
+            .service(delete_mark_sheet)
+            .configure(crate::import_routes::routes),
     );
 }
 
@@ -352,7 +353,7 @@ fn tenant_id(tenant: web::ReqData<TenantId>) -> Uuid {
     tenant.into_inner().into_inner()
 }
 
-fn gradebook_access_scope(
+pub(crate) fn gradebook_access_scope(
     access: &AccessContext,
     grants: &RecordScopeGrants,
     actor: AuditActor,
@@ -371,7 +372,7 @@ fn gradebook_access_scope(
     }
 }
 
-async fn scope_mark_sheet(
+pub(crate) async fn scope_mark_sheet(
     pool: &PgPool,
     tenant_id: Uuid,
     mark_sheet_id: Uuid,

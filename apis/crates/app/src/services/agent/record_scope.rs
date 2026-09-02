@@ -223,6 +223,9 @@ pub const WITHHELD_RECORD_SCOPED_OPERATION_KEYS: &[&str] = &[
     "academics.gradebook.references.read",
     "academics.gradebook.mark_sheets.list",
     "academics.gradebook.mark_sheets.read",
+    "academics.gradebook.mark_imports.list",
+    "academics.gradebook.mark_imports.read",
+    "academics.gradebook.mark_imports.preview.read",
     "academics.reporting.references.read",
     "academics.reporting.grading_schemes.list",
     "academics.reporting.grading_schemes.read",
@@ -1015,7 +1018,7 @@ mod tests {
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
         assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 168);
-        assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
+        assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 71);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
             .iter()
@@ -1034,7 +1037,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 236);
+        assert_eq!(exposed.len(), 239);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

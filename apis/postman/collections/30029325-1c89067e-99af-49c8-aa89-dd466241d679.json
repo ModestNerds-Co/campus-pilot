@@ -4665,6 +4665,96 @@
             "method": "DELETE",
             "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}?expected_version=1"
           }
+        },
+        {
+          "name": "List Mark Imports",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/imports?page=1&per_page=25",
+            "description": "Lists bounded import metadata for one scoped mark sheet. Raw source bytes and unmapped columns are never returned."
+          }
+        },
+        {
+          "name": "Upload Mark Import",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "CSV or XLSX, maximum 5 MB and 5,000 data rows"
+                }
+              ]
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/imports",
+            "description": "Attaches a retained source to one existing draft mark sheet. It cannot create learners or academic structures."
+          }
+        },
+        {
+          "name": "Get Mark Import",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/imports/{{gradebook_mark_import_id}}"
+          }
+        },
+        {
+          "name": "Create Mark Import Preview",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"columns\": {\n    \"learner_number\": \"Learner Number\",\n    \"mark\": \"Mark\",\n    \"status\": \"Status\",\n    \"note\": \"Note\"\n  },\n  \"decimal_separator\": \"dot\",\n  \"expected_sheet_version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/imports/{{gradebook_mark_import_id}}/mapping",
+            "description": "Maps source headers and freezes the current sheet and mark versions into a normalized preview."
+          }
+        },
+        {
+          "name": "Get Mark Import Preview",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/imports/{{gradebook_mark_import_id}}/preview?page=1&per_page=100",
+            "description": "Returns normalized destination rows and validation issues only."
+          }
+        },
+        {
+          "name": "Commit Mark Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preview_id\": \"{{gradebook_mark_import_preview_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/academics/gradebook/mark-sheets/{{gradebook_mark_sheet_id}}/imports/{{gradebook_mark_import_id}}/commit",
+            "description": "Atomically updates ready roster marks only when the frozen sheet and mark versions still match."
+          }
         }
       ]
     },

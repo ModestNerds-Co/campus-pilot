@@ -1420,6 +1420,60 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         route(
+            Method::GET,
+            "/api/1.0/academics/gradebook/mark-sheets/{mark_sheet_id}/imports",
+            "academics.gradebook.mark_imports.list",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/gradebook/mark-sheets/{mark_sheet_id}/imports",
+            "academics.gradebook.mark_imports.upload",
+            "academics",
+            "academics:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/gradebook/mark-sheets/{mark_sheet_id}/imports/{import_id}",
+            "academics.gradebook.mark_imports.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/academics/gradebook/mark-sheets/{mark_sheet_id}/imports/{import_id}/mapping",
+            "academics.gradebook.mark_imports.preview.create",
+            "academics",
+            "academics:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/academics/gradebook/mark-sheets/{mark_sheet_id}/imports/{import_id}/preview",
+            "academics.gradebook.mark_imports.preview.read",
+            "academics",
+            "academics:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/academics/gradebook/mark-sheets/{mark_sheet_id}/imports/{import_id}/commit",
+            "academics.gradebook.mark_imports.commit",
+            "academics",
+            "academics:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
             Method::PUT,
             "/api/1.0/academics/gradebook/mark-sheets/{id}/marks",
             "academics.gradebook.mark_sheets.marks.update",
@@ -6107,6 +6161,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.gradebook.references.read"
         | "academics.gradebook.mark_sheets.list"
         | "academics.gradebook.mark_sheets.read"
+        | "academics.gradebook.mark_imports.list"
+        | "academics.gradebook.mark_imports.read"
+        | "academics.gradebook.mark_imports.preview.read"
         | "academics.reporting.references.read"
         | "academics.reporting.grading_schemes.list"
         | "academics.reporting.grading_schemes.read"
@@ -6357,6 +6414,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "academics.gradebook.mark_sheets.publish"
         | "academics.gradebook.mark_sheets.reopen"
         | "academics.gradebook.mark_sheets.delete"
+        | "academics.gradebook.mark_imports.upload"
+        | "academics.gradebook.mark_imports.preview.create"
+        | "academics.gradebook.mark_imports.commit"
         | "academics.reporting.grading_schemes.create"
         | "academics.reporting.grading_schemes.update"
         | "academics.reporting.grading_schemes.retire"
@@ -6834,7 +6894,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 638);
+        assert_eq!(operation_catalog().len(), 644);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6886,7 +6946,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [236, 360, 30, 12]);
+        assert_eq!(counts, [239, 363, 30, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -7464,6 +7524,48 @@ mod tests {
             RuntimeAccessChecks::default(),
         );
         assert!(allowed.allowed);
+
+        for (key, permission, exposure) in [
+            (
+                "academics.gradebook.mark_imports.list",
+                "academics:view",
+                AgentExposure::Exposed,
+            ),
+            (
+                "academics.gradebook.mark_imports.upload",
+                "academics:teach",
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                "academics.gradebook.mark_imports.read",
+                "academics:view",
+                AgentExposure::Exposed,
+            ),
+            (
+                "academics.gradebook.mark_imports.preview.create",
+                "academics:teach",
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                "academics.gradebook.mark_imports.preview.read",
+                "academics:view",
+                AgentExposure::Exposed,
+            ),
+            (
+                "academics.gradebook.mark_imports.commit",
+                "academics:teach",
+                AgentExposure::ApprovalRequired,
+            ),
+        ] {
+            let operation = operation(key);
+            assert_eq!(operation.permission(), permission, "{key}");
+            assert_eq!(operation.agent_exposure(), exposure, "{key}");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                vec!["hr_payroll", "sis"],
+                "{key}"
+            );
+        }
     }
 
     #[test]

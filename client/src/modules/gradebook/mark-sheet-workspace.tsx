@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, Loader2, RotateCcw, Save, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2, RotateCcw, Save, Send, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmDrawer } from "@/components/ui/confirm-drawer";
 import { Table, TableScroll, TableWrap, TBody, TD, TH, THead, TR } from "@/components/ui/data-table";
 import { DialogBody, DialogFooter, DialogHeader, DialogShell } from "@/components/ui/dialog";
@@ -84,6 +84,7 @@ export function MarkSheetWorkspace({ markSheetId }: { markSheetId: string }) {
   };
 
   usePageChrome("Mark sheet", sheet ? <div className="flex flex-wrap items-center gap-2">
+    {sheet.status === "draft" && editable ? <Link className={buttonVariants({ variant: "secondary" })} params={{ markSheetId: sheet.id }} to="/modules/academics/gradebook/mark-sheets/$markSheetId/imports"><FileSpreadsheet className="size-4" />Import marks</Link> : null}
     {sheet.status === "draft" && editable ? <Button disabled={!dirty || invalidScores || saving} onClick={() => void save()} variant="secondary"><Save className="size-4" />{saving ? "Saving…" : "Save"}</Button> : null}
     {sheet.status === "draft" && canEdit ? <Button disabled={dirty || !allMarked || saving} onClick={() => setAction("submit")}><CheckCircle2 className="size-4" />Submit</Button> : null}
     {sheet.status === "submitted" && canManage ? <Button onClick={() => setAction("publish")}><Send className="size-4" />Publish</Button> : null}

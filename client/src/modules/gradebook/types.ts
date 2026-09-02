@@ -100,6 +100,79 @@ export interface GradebookSheetsResponse {
   mark_sheets: GradebookSheetSummary[];
 }
 
+export type GradebookMarkImportStatus = "uploaded" | "preview_ready" | "committed";
+export type GradebookMarkImportDecimalSeparator = "dot" | "comma";
+
+export interface GradebookMarkImportRecord {
+  id: string;
+  mark_sheet_id: string;
+  file_name: string;
+  content_type: string;
+  source_format: "csv" | "xlsx";
+  source_size_bytes: number;
+  source_row_count: number;
+  source_headers: string[];
+  status: GradebookMarkImportStatus;
+  created_at: string;
+  latest_preview_id: string | null;
+  mapping_version: number | null;
+  ready_rows: number | null;
+  invalid_rows: number | null;
+  duplicate_rows: number | null;
+  updated_rows: number | null;
+  skipped_rows: number | null;
+  failed_rows: number | null;
+  committed_at: string | null;
+}
+
+export interface GradebookMarkImportMapping {
+  columns: Record<string, string>;
+  decimal_separator: GradebookMarkImportDecimalSeparator;
+  expected_sheet_version: number;
+}
+
+export interface GradebookMarkImportPreviewRow {
+  id: string;
+  row_number: number;
+  canonical_data: {
+    learner_number?: string | null;
+    learner_name?: string;
+    mark_status?: GradebookMarkStatus;
+    marks_awarded_hundredths?: number | null;
+    note?: string | null;
+  };
+  outcome: "ready" | "invalid" | "duplicate";
+  issues: string[];
+  duplicate_record_id: string | null;
+}
+
+export interface GradebookMarkImportPreview {
+  id: string;
+  import_id: string;
+  mapping_version: number;
+  mapping: GradebookMarkImportMapping;
+  ready_rows: number;
+  invalid_rows: number;
+  duplicate_rows: number;
+  created_at: string;
+  rows: GradebookMarkImportPreviewRow[];
+  total_rows: number;
+}
+
+export interface GradebookMarkImportCommit {
+  id: string;
+  import_id: string;
+  preview_id: string;
+  updated_rows: number;
+  skipped_rows: number;
+  failed_rows: number;
+  committed_at: string;
+}
+
+export interface GradebookMarkImportsResponse {
+  imports: GradebookMarkImportRecord[];
+}
+
 export interface PaginationMeta {
   current_page: number;
   per_page: number;

@@ -1916,13 +1916,16 @@ dependencies = [
 name = "cp-gradebook"
 version = "1.0.0"
 dependencies = [
+ "actix-multipart",
  "actix-web",
  "anyhow",
  "chrono",
  "cp-academics",
  "cp-audit",
  "cp-common",
+ "cp-imports",
  "cp-sis",
+ "futures-util",
  "log",
  "serde",
  "serde_json",
