@@ -11,6 +11,7 @@ export function ConfirmDrawer({
   onClose,
   onConfirm,
   open,
+  pendingLabel = "Deleting…",
   title,
 }: {
   cancelLabel?: string;
@@ -20,6 +21,7 @@ export function ConfirmDrawer({
   onClose: () => void;
   onConfirm: () => void;
   open: boolean;
+  pendingLabel?: string;
   title: string;
 }) {
   return (
@@ -39,7 +41,7 @@ export function ConfirmDrawer({
         </Button>
         <Button disabled={isPending} onClick={onConfirm} type="button" variant="destructive">
           {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-          {isPending ? "Deleting…" : confirmLabel}
+          {isPending ? pendingLabel : confirmLabel}
         </Button>
       </DialogFooter>
     </DialogShell>

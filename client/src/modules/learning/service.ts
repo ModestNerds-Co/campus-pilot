@@ -1,3 +1,5 @@
+/** Typed HTTP client for the E-learning module's governed operations. */
+
 import { AxiosError } from "axios";
 import { httpClient } from "@/lib/http-client";
 import type {
@@ -40,6 +42,7 @@ import type {
   LearningSubmissionListParams,
   LearningSubmissionsResponse,
   LearningUnit,
+  LearningUploadClassificationOptions,
   LearningReviewOutcome,
   UpdateLearningFeedbackPayload,
 } from "./types";
@@ -61,10 +64,19 @@ async function request<T>(
 
 export const learningService = {
   settings: () => request<LearningSettings>(() => httpClient.get(`${BASE}/settings`)),
-  updateSettings: (settings: LearningSettings, documentSeriesId: string | null) =>
+  uploadClassificationOptions: () =>
+    request<LearningUploadClassificationOptions>(() =>
+      httpClient.get(`${BASE}/settings/classifications`),
+    ),
+  updateSettings: (
+    settings: LearningSettings,
+    documentSeriesId: string | null,
+    learnerSubmissionSeriesId: string | null,
+  ) =>
     request<LearningSettings>(() =>
       httpClient.put(`${BASE}/settings`, {
         document_series_id: documentSeriesId,
+        learner_submission_series_id: learnerSubmissionSeriesId,
         expected_version: settings.version,
       }),
     ),
@@ -226,6 +238,39 @@ export const learningService = {
         body,
         expected_version: expectedVersion,
       }),
+    ),
+  uploadSubmissionFile: (
+    assignmentId: string,
+    file: File,
+    expectedVersion: number | null,
+  ) => {
+    const form = new FormData();
+    form.append("expected_submission_version", expectedVersion?.toString() ?? "");
+    form.append("file", file);
+    return request<LearningSubmission>(() =>
+      httpClient.post(`${BASE}/assignments/${assignmentId}/submission/files`, form),
+    );
+  },
+  removeSubmissionFile: (
+    assignmentId: string,
+    attachmentId: string,
+    expectedSubmissionVersion: number,
+    expectedAttachmentVersion: number,
+  ) =>
+    request<LearningSubmission>(() =>
+      httpClient.delete(
+        `${BASE}/assignments/${assignmentId}/submission/files/${attachmentId}`,
+        {
+          data: {
+            expected_submission_version: expectedSubmissionVersion,
+            expected_attachment_version: expectedAttachmentVersion,
+          },
+        },
+      ),
+    ),
+  downloadSubmissionFile: (attachmentId: string) =>
+    request<LearningDownload>(() =>
+      httpClient.get(`${BASE}/submission-files/${attachmentId}/download`),
     ),
   submitSubmission: (
     assignmentId: string,

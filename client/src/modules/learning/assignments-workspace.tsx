@@ -1,3 +1,5 @@
+/** Assignment list and teacher authoring drawer for one learning space. */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ClipboardCheck, Loader2, Plus } from "lucide-react";
@@ -15,7 +17,12 @@ import { useAuthStore } from "@/stores/auth-store";
 
 import { GuardedDrawer } from "./guarded-drawer";
 import { learningService, responseMessage } from "./service";
-import type { LearningAssignment, LearningAssignmentStatus, LearningSpace } from "./types";
+import type {
+  LearningAssignment,
+  LearningAssignmentStatus,
+  LearningSpace,
+  LearningSubmissionMethod,
+} from "./types";
 import { formatHundredths, formatLearningDateTime, LearningStatusBadge, parseHundredths } from "./ui";
 
 export interface LearningAssignmentsSearchState {
@@ -118,6 +125,7 @@ function CreateAssignmentDrawer({ assignmentCount, onClose, onCreated, open, uni
   const [instructions, setInstructions] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [maximum, setMaximum] = useState("");
+  const [submissionMethod, setSubmissionMethod] = useState<LearningSubmissionMethod>("text");
   const [saving, setSaving] = useState(false);
   const editorSessionRef = useRef(false);
 
@@ -125,10 +133,10 @@ function CreateAssignmentDrawer({ assignmentCount, onClose, onCreated, open, uni
     if (!open) { editorSessionRef.current = false; return; }
     if (editorSessionRef.current) return;
     editorSessionRef.current = true;
-    setUnitId(units[0]?.id ?? ""); setPosition(assignmentCount + 1); setTitle(""); setInstructions(""); setDueAt(""); setMaximum("");
+    setUnitId(units[0]?.id ?? ""); setPosition(assignmentCount + 1); setTitle(""); setInstructions(""); setDueAt(""); setMaximum(""); setSubmissionMethod("text");
   }, [assignmentCount, open, units]);
 
-  const dirty = Boolean(title || instructions || dueAt || maximum || (unitId && unitId !== units[0]?.id));
+  const dirty = Boolean(title || instructions || dueAt || maximum || submissionMethod !== "text" || (unitId && unitId !== units[0]?.id));
   const maximumHundredths = parseHundredths(maximum);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -141,6 +149,7 @@ function CreateAssignmentDrawer({ assignmentCount, onClose, onCreated, open, uni
         instructions: instructions.trim(),
         due_at: new Date(dueAt).toISOString(),
         max_score_hundredths: maximumHundredths,
+        submission_method: submissionMethod,
       });
       if (!response.success || !response.data) throw new Error(responseMessage(response, "Assignment could not be created"));
       toast.success("Assignment draft created"); onCreated(response.data);
@@ -154,6 +163,7 @@ function CreateAssignmentDrawer({ assignmentCount, onClose, onCreated, open, uni
       <div><Label htmlFor="assignment-unit">Unit</Label><Select className="mt-1.5" data-autofocus="true" id="assignment-unit" onChange={(event) => setUnitId(event.target.value)} required value={unitId}>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.position}. {unit.title}</option>)}</Select></div>
       <div><Label htmlFor="assignment-title">Title</Label><Input className="mt-1.5" id="assignment-title" maxLength={200} onChange={(event) => setTitle(event.target.value)} required value={title} /></div>
       <div><Label htmlFor="assignment-instructions">Instructions</Label><Textarea className="mt-1.5 min-h-40" id="assignment-instructions" maxLength={20000} onChange={(event) => setInstructions(event.target.value)} required value={instructions} /></div>
+      <div><Label htmlFor="assignment-submission-method">Accepted response</Label><Select className="mt-1.5" id="assignment-submission-method" onChange={(event) => setSubmissionMethod(event.target.value as LearningSubmissionMethod)} value={submissionMethod}><option value="text">Text</option><option value="file">File</option><option value="text_or_file">Text or file</option></Select><p className="mt-2 text-xs text-[var(--text-muted)]">File responses require a restricted learner-submission classification before publication.</p></div>
       <div className="grid gap-5 sm:grid-cols-2"><div><Label htmlFor="assignment-due">Due</Label><Input className="mt-1.5" id="assignment-due" onChange={(event) => setDueAt(event.target.value)} required type="datetime-local" value={dueAt} /></div><div><Label htmlFor="assignment-maximum">Maximum score</Label><Input className="mt-1.5" id="assignment-maximum" inputMode="decimal" min="0.01" onChange={(event) => setMaximum(event.target.value)} placeholder="100.00" required step="0.01" type="number" value={maximum} /></div></div>
       <div><Label htmlFor="assignment-position">Position</Label><Input className="mt-1.5" id="assignment-position" min={1} onChange={(event) => setPosition(Number(event.target.value))} required type="number" value={position} /></div>
     </DialogBody><DialogFooter><Button disabled={saving} onClick={requestClose} type="button" variant="secondary">Cancel</Button><Button disabled={saving || !unitId || !title.trim() || !instructions.trim() || !dueAt || maximumHundredths === null || maximumHundredths <= 0} type="submit">{saving ? <><Loader2 className="size-4 animate-spin" />Creating…</> : "Create assignment"}</Button></DialogFooter></form></>}

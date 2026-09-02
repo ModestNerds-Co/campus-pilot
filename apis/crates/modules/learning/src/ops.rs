@@ -7,12 +7,14 @@
 use std::collections::BTreeSet;
 
 use anyhow::{Context, Result, anyhow, bail};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use cp_academics::ops::{AcademicTermOps, AcademicYearOps, TeachingAssignmentOps};
 use cp_audit::{
     AuditActor, AuditOutcome, AuditTarget, NewAuditEvent, RequestContext, append as append_audit,
 };
-use cp_document_registry::{DocumentRegistryOps, EvidenceFileReference};
+use cp_document_registry::{
+    DocumentRegistryOps, EvidenceFileReference, FileResponse, RegistryListQuery,
+};
 use cp_sis::{models::ClassRosterEntry, ops::EnrolmentOps};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
@@ -28,19 +30,23 @@ use crate::dtos::{
     LearningResourceCreation, LearningResourceFileQuery, LearningResourceResponse,
     LearningResourceStatus, LearningReviewOutcome, LearningReviewScoreResponse,
     LearningRubricCriterionResponse, LearningSettingsResponse, LearningSpaceListQuery,
-    LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary, LearningSubmissionListQuery,
+    LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary,
+    LearningSubmissionFileResponse, LearningSubmissionListQuery, LearningSubmissionMethod,
     LearningSubmissionResponse, LearningSubmissionStatus, LearningSubmissionVersionResponse,
     LearningTermReference, LearningUnitResponse, LearningUnitStatus,
+    LearningUploadClassificationOption, LearningUploadClassificationOptionsResponse,
     ReasonedLearningTransitionRequest, ReleaseLearningFeedbackRequest,
-    SaveLearningSubmissionRequest, SubmitLearningSubmissionRequest,
-    UpdateLearningAssignmentRequest, UpdateLearningFeedbackRequest, UpdateLearningResourceRequest,
+    RemoveLearningSubmissionFileRequest, SaveLearningSubmissionRequest,
+    SubmitLearningSubmissionRequest, UpdateLearningAssignmentRequest,
+    UpdateLearningFeedbackRequest, UpdateLearningResourceRequest,
     UpdateLearningRubricCriterionRequest, UpdateLearningSettingsRequest,
     UpdateLearningSpaceRequest, UpdateLearningUnitRequest,
 };
 use crate::models::{
     LearningAssignmentRow, LearningFeedbackRow, LearningProgressRow, LearningResourceRow,
     LearningReviewScoreRow, LearningRubricCriterionRow, LearningSettingsRow, LearningSpaceRow,
-    LearningSubmissionRow, LearningSubmissionVersionRow, LearningUnitRow,
+    LearningSubmissionFileRow, LearningSubmissionRow, LearningSubmissionVersionRow,
+    LearningUnitRow,
 };
 
 const DEFAULT_PAGE: i64 = 1;
@@ -61,11 +67,23 @@ pub(crate) struct LearningResourceCreateCommand<'a> {
     pub creation: LearningResourceCreation,
 }
 
+/// Proof-bearing learner upload command constructed only after the route has
+/// scanned and closed the restricted Document Registry file.
+pub(crate) struct LearningSubmissionFileAttachCommand<'a> {
+    pub tenant_id: Uuid,
+    pub assignment_id: Uuid,
+    pub scope: LearningAccessScope,
+    pub actor: AuditActor,
+    pub request_context: RequestContext,
+    pub expected_submission_version: Option<i32>,
+    pub document: &'a FileResponse,
+}
+
 impl LearningOps {
     /// Loads the selected governed filing series, if configured.
     pub async fn settings(pool: &PgPool, tenant_id: Uuid) -> Result<LearningSettingsResponse> {
         let row = sqlx::query_as::<_, LearningSettingsRow>(
-            "SELECT document_series_id,version,updated_at FROM learning_settings WHERE tenant_id=$1 AND deleted_at IS NULL",
+            "SELECT document_series_id,learner_submission_series_id,version,updated_at FROM learning_settings WHERE tenant_id=$1 AND deleted_at IS NULL",
         )
         .bind(tenant_id)
         .fetch_one(pool)
@@ -77,11 +95,53 @@ impl LearningOps {
                 .map(|series| series.name),
             None => None,
         };
+        let learner_submission_series_name = match row.learner_submission_series_id {
+            Some(id) => DocumentRegistryOps::get_series(pool, tenant_id, id, true)
+                .await?
+                .map(|series| series.name),
+            None => None,
+        };
         Ok(LearningSettingsResponse {
             document_series_id: row.document_series_id,
             document_series_name,
+            learner_submission_series_id: row.learner_submission_series_id,
+            learner_submission_series_name,
             version: row.version,
             updated_at: row.updated_at,
+        })
+    }
+
+    /// Returns active filing-series options through the typed Document Registry
+    /// boundary so Learning managers need no unrelated registry permission.
+    pub async fn upload_classification_options(
+        pool: &PgPool,
+        tenant_id: Uuid,
+    ) -> Result<LearningUploadClassificationOptionsResponse> {
+        let query = RegistryListQuery {
+            page: Some(1),
+            per_page: Some(100),
+            search: None,
+            status: Some("active".to_string()),
+            sensitivity: None,
+            series_id: None,
+            file_id: None,
+        };
+        let (series, _) = DocumentRegistryOps::list_series(pool, tenant_id, &query, true).await?;
+        let options = series
+            .into_iter()
+            .map(|item| LearningUploadClassificationOption {
+                id: item.id,
+                code: item.code,
+                name: item.name,
+                default_sensitivity: item.default_sensitivity,
+            })
+            .collect::<Vec<_>>();
+        Ok(LearningUploadClassificationOptionsResponse {
+            resource_series: options.clone(),
+            learner_submission_series: options
+                .into_iter()
+                .filter(|item| item.default_sensitivity == "restricted")
+                .collect(),
         })
     }
 
@@ -101,6 +161,17 @@ impl LearningOps {
                 bail!("The selected document classification is inactive");
             }
         }
+        if let Some(series_id) = request.learner_submission_series_id {
+            let series = DocumentRegistryOps::get_series(pool, tenant_id, series_id, true)
+                .await?
+                .ok_or_else(|| anyhow!("The learner submission classification was not found"))?;
+            if series.status != "active" {
+                bail!("The learner submission classification is inactive");
+            }
+            if series.default_sensitivity != "restricted" {
+                bail!("Learner submission files require a restricted classification");
+            }
+        }
         let actor_id = person_actor_id(actor)?;
         let mut tx = pool
             .begin()
@@ -109,7 +180,8 @@ impl LearningOps {
         let changed = sqlx::query_scalar::<_, Uuid>(
             r#"
             UPDATE learning_settings
-               SET document_series_id=$3,version=version+1,updated_by=$4
+               SET document_series_id=$3,learner_submission_series_id=$4,
+                   version=version+1,updated_by=$5
              WHERE tenant_id=$1 AND version=$2 AND deleted_at IS NULL
              RETURNING tenant_id
             "#,
@@ -117,6 +189,7 @@ impl LearningOps {
         .bind(tenant_id)
         .bind(request.expected_version)
         .bind(request.document_series_id)
+        .bind(request.learner_submission_series_id)
         .bind(actor_id)
         .fetch_optional(&mut *tx)
         .await
@@ -134,7 +207,10 @@ impl LearningOps {
             None,
             "learning_settings_updated",
             "learning.settings.update",
-            json!({"document_series_id": request.document_series_id}),
+            json!({
+                "document_series_id": request.document_series_id,
+                "learner_submission_series_id": request.learner_submission_series_id
+            }),
         )
         .await?;
         tx.commit().await.context("commit Learning settings")?;
@@ -1083,7 +1159,7 @@ impl LearningOps {
             .context("start Learning assignment creation")?;
         require_active_assignment_parent(&mut tx, tenant_id, unit_id, space_id).await?;
         let assignment_id = sqlx::query_scalar::<_, Uuid>(
-            "INSERT INTO learning_assignments (tenant_id,learning_unit_id,position,title,instructions,due_at,max_score_hundredths,created_by,updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8) RETURNING id",
+            "INSERT INTO learning_assignments (tenant_id,learning_unit_id,position,title,instructions,due_at,max_score_hundredths,submission_method,created_by,updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING id",
         )
         .bind(tenant_id)
         .bind(unit_id)
@@ -1092,6 +1168,7 @@ impl LearningOps {
         .bind(required("Assignment instructions", &request.instructions)?)
         .bind(request.due_at)
         .bind(request.max_score_hundredths)
+        .bind(request.submission_method.as_str())
         .bind(actor_id)
         .fetch_one(&mut *tx)
         .await
@@ -1106,7 +1183,11 @@ impl LearningOps {
             Some(space_id),
             "learning_assignment_created",
             "learning.assignments.create",
-            json!({"unit_id": unit_id, "position": request.position}),
+            json!({
+                "unit_id": unit_id,
+                "position": request.position,
+                "submission_method": request.submission_method.as_str()
+            }),
         )
         .await?;
         tx.commit()
@@ -1139,7 +1220,7 @@ impl LearningOps {
             .await
             .context("start Learning assignment update")?;
         let changed = sqlx::query_scalar::<_, Uuid>(
-            "UPDATE learning_assignments SET position=$4,title=$5,instructions=$6,due_at=$7,max_score_hundredths=$8,version=version+1,updated_by=$9 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='draft' AND deleted_at IS NULL RETURNING id",
+            "UPDATE learning_assignments SET position=$4,title=$5,instructions=$6,due_at=$7,max_score_hundredths=$8,submission_method=$9,version=version+1,updated_by=$10 WHERE tenant_id=$1 AND id=$2 AND version=$3 AND status='draft' AND deleted_at IS NULL RETURNING id",
         )
         .bind(tenant_id)
         .bind(assignment_id)
@@ -1149,6 +1230,7 @@ impl LearningOps {
         .bind(required("Assignment instructions", &request.instructions)?)
         .bind(request.due_at)
         .bind(request.max_score_hundredths)
+        .bind(request.submission_method.as_str())
         .bind(actor_id)
         .fetch_optional(&mut *tx)
         .await
@@ -1166,7 +1248,11 @@ impl LearningOps {
             Some(space_id),
             "learning_assignment_updated",
             "learning.assignments.update",
-            json!({"position": request.position, "expected_version": request.expected_version}),
+            json!({
+                "position": request.position,
+                "submission_method": request.submission_method.as_str(),
+                "expected_version": request.expected_version
+            }),
         )
         .await?;
         tx.commit()
@@ -1363,10 +1449,11 @@ impl LearningOps {
             .begin()
             .await
             .context("start Learning assignment publication")?;
-        let state = sqlx::query_as::<_, (String, i32, String, String, Uuid, Uuid)>(
+        let state = sqlx::query_as::<_, (String, i32, String, String, Uuid, Uuid, String)>(
             r#"
             SELECT assignment.status,assignment.max_score_hundredths,
-                   unit.status,space.status,space.academic_year_id,space.class_group_id
+                   unit.status,space.status,space.academic_year_id,space.class_group_id,
+                   assignment.submission_method
               FROM learning_assignments assignment
               JOIN learning_units unit
                 ON unit.id=assignment.learning_unit_id AND unit.tenant_id=assignment.tenant_id
@@ -1383,8 +1470,15 @@ impl LearningOps {
         .fetch_optional(&mut *tx)
         .await
         .context("lock Learning assignment publication")?;
-        let Some((status, maximum, unit_status, space_status, academic_year_id, class_group_id)) =
-            state
+        let Some((
+            status,
+            maximum,
+            unit_status,
+            space_status,
+            academic_year_id,
+            class_group_id,
+            submission_method,
+        )) = state
         else {
             return Ok(None);
         };
@@ -1401,6 +1495,31 @@ impl LearningOps {
         .context("validate Learning assignment rubric")?;
         if criterion_count == 0 || rubric_total != i64::from(maximum) {
             bail!("The assignment rubric must contain criteria totalling the maximum score");
+        }
+        if parse_submission_method(&submission_method)?.accepts_files() {
+            let configured = sqlx::query_scalar::<_, bool>(
+                r#"
+                SELECT EXISTS (
+                    SELECT 1
+                      FROM learning_settings AS settings
+                      JOIN document_registry_series AS series
+                        ON series.id=settings.learner_submission_series_id
+                       AND series.tenant_id=settings.tenant_id
+                     WHERE settings.tenant_id=$1 AND settings.deleted_at IS NULL
+                       AND series.status='active' AND series.default_sensitivity='restricted'
+                       AND series.deleted_at IS NULL
+                )
+                "#,
+            )
+            .bind(tenant_id)
+            .fetch_one(&mut *tx)
+            .await
+            .context("validate learner submission retention classification")?;
+            if !configured {
+                bail!(
+                    "Choose an active restricted learner submission classification before publishing this assignment"
+                );
+            }
         }
         let roster = EnrolmentOps::class_roster_on(
             pool,
@@ -1448,7 +1567,11 @@ impl LearningOps {
             Some(space_id),
             "learning_assignment_published",
             "learning.assignments.publish",
-            json!({"recipient_count": roster.len(), "expected_version": expected_version}),
+            json!({
+                "recipient_count": roster.len(),
+                "submission_method": submission_method,
+                "expected_version": expected_version
+            }),
         )
         .await?;
         tx.commit()
@@ -1536,7 +1659,84 @@ impl LearningOps {
         }
     }
 
-    /// Saves a text-only learner draft using self scope and optimistic concurrency.
+    /// Returns the configured restricted retention classification only when
+    /// the authenticated learner may currently attach work to this assignment.
+    pub(crate) async fn submission_file_upload_series(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Option<Uuid>> {
+        let Some(context) = self_submission_context(pool, tenant_id, assignment_id, scope).await?
+        else {
+            return Ok(None);
+        };
+        let state = sqlx::query_as::<_, (String, String, Option<Uuid>)>(
+            r#"
+            SELECT assignment.status,assignment.submission_method,
+                   settings.learner_submission_series_id
+              FROM learning_assignments AS assignment
+              JOIN learning_settings AS settings
+                ON settings.tenant_id=assignment.tenant_id
+               AND settings.deleted_at IS NULL
+             WHERE assignment.tenant_id=$1 AND assignment.id=$2
+               AND assignment.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .fetch_optional(pool)
+        .await
+        .context("authorize Learning submission file upload")?;
+        let Some((status, method, series_id)) = state else {
+            return Ok(None);
+        };
+        if status != "published" || !parse_submission_method(&method)?.accepts_files() {
+            bail!("This assignment does not accept file submissions");
+        }
+        let draft_state = sqlx::query_as::<_, (String, i64)>(
+            r#"
+            SELECT submission.status,
+                   (SELECT COUNT(*) FROM learning_submission_attachments AS attachment
+                     WHERE attachment.tenant_id=submission.tenant_id
+                       AND attachment.learning_submission_id=submission.id
+                       AND attachment.status='active' AND attachment.deleted_at IS NULL)::BIGINT
+              FROM learning_submissions AS submission
+             WHERE submission.tenant_id=$1
+               AND submission.learning_assignment_id=$2
+               AND submission.assignment_recipient_id=$3
+               AND submission.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(context.recipient_id)
+        .fetch_optional(pool)
+        .await
+        .context("check Learning submission file capacity")?;
+        if let Some((draft_status, file_count)) = draft_state {
+            if !matches!(draft_status.as_str(), "draft" | "revision_requested") {
+                bail!("A submitted or graded attempt cannot change files");
+            }
+            if file_count >= 5 {
+                bail!("A Learning submission accepts at most five files");
+            }
+        }
+        let series_id = series_id.ok_or_else(|| {
+            anyhow!("Learner submission file retention is not configured for this campus")
+        })?;
+        let valid = DocumentRegistryOps::get_series(pool, tenant_id, series_id, true)
+            .await?
+            .is_some_and(|series| {
+                series.status == "active" && series.default_sensitivity == "restricted"
+            });
+        if !valid {
+            bail!("Learner submission file retention is not available");
+        }
+        Ok(Some(series_id))
+    }
+
+    /// Saves the text portion of a learner draft using self scope and optimistic concurrency.
     #[allow(
         clippy::too_many_arguments,
         reason = "actor and scope evidence stay explicit"
@@ -1559,7 +1759,13 @@ impl LearningOps {
             .begin()
             .await
             .context("start Learning submission save")?;
-        require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let open = require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        if !matches!(
+            open.submission_method,
+            LearningSubmissionMethod::Text | LearningSubmissionMethod::TextOrFile
+        ) {
+            bail!("This assignment does not accept text submissions");
+        }
         let existing = sqlx::query_as::<_, (Uuid, String, i32)>(
             "SELECT id,status,version FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL FOR UPDATE",
         )
@@ -1630,6 +1836,282 @@ impl LearningOps {
         submission_response_by_id(pool, tenant_id, submission_id, true, false).await
     }
 
+    /// Links one scanned, closed, restricted Document Registry file to the
+    /// authenticated learner's editable submission draft.
+    pub(crate) async fn attach_self_submission_file(
+        pool: &PgPool,
+        command: LearningSubmissionFileAttachCommand<'_>,
+    ) -> Result<Option<LearningSubmissionResponse>> {
+        let LearningSubmissionFileAttachCommand {
+            tenant_id,
+            assignment_id,
+            scope,
+            actor,
+            request_context,
+            expected_submission_version,
+            document,
+        } = command;
+        let Some(context) = self_submission_context(pool, tenant_id, assignment_id, scope).await?
+        else {
+            return Ok(None);
+        };
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning submission file attachment")?;
+        let open = require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        if !open.submission_method.accepts_files() {
+            bail!("This assignment does not accept file submissions");
+        }
+        let existing = sqlx::query_as::<_, (Uuid, String, i32)>(
+            "SELECT id,status,version FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(context.recipient_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock learner submission for file attachment")?;
+        let submission_id = match existing {
+            None => {
+                if expected_submission_version.is_some() {
+                    bail!("The learner submission changed; reload it before attaching a file");
+                }
+                sqlx::query_scalar::<_, Uuid>(
+                    "INSERT INTO learning_submissions (tenant_id,learning_assignment_id,assignment_recipient_id,draft_body,created_by,updated_by) VALUES ($1,$2,$3,NULL,$4,$4) RETURNING id",
+                )
+                .bind(tenant_id)
+                .bind(assignment_id)
+                .bind(context.recipient_id)
+                .bind(actor_id)
+                .fetch_one(&mut *tx)
+                .await
+                .context("create learner submission for file attachment")?
+            }
+            Some((id, status, version)) => {
+                if expected_submission_version != Some(version) {
+                    bail!("The learner submission changed; reload it before attaching a file");
+                }
+                if !matches!(status.as_str(), "draft" | "revision_requested") {
+                    bail!("A submitted or graded attempt cannot change files");
+                }
+                id
+            }
+        };
+        let position = sqlx::query_scalar::<_, i32>(
+            r#"
+            SELECT candidate
+              FROM GENERATE_SERIES(1,5) AS candidate
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM learning_submission_attachments AS attachment
+                  WHERE attachment.tenant_id=$1
+                    AND attachment.learning_submission_id=$2
+                    AND attachment.position=candidate
+                    AND attachment.status='active'
+                    AND attachment.deleted_at IS NULL
+             )
+             ORDER BY candidate
+             LIMIT 1
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("allocate Learning submission file position")?
+        .ok_or_else(|| anyhow!("A Learning submission accepts at most five files"))?;
+        let attachment_id = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            INSERT INTO learning_submission_attachments
+                (tenant_id,learning_submission_id,document_file_id,position,
+                 document_reference_snapshot,original_file_name_snapshot,
+                 media_type_snapshot,byte_size_snapshot,attached_by)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            RETURNING id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(document.id)
+        .bind(position)
+        .bind(&document.reference)
+        .bind(&document.original_file_name)
+        .bind(&document.media_type)
+        .bind(document.byte_size)
+        .bind(actor_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|error| database_error(error, "attach Learning submission file"))?;
+        sqlx::query(
+            "UPDATE learning_submissions SET status='draft',version=version+1,updated_by=$3 WHERE tenant_id=$1 AND id=$2",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(actor_id)
+        .execute(&mut *tx)
+        .await
+        .context("advance learner submission after file attachment")?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "submission",
+            submission_id,
+            Some(context.space_id),
+            "learning_submission_file_attached",
+            "learning.submission_files.upload",
+            json!({
+                "assignment_id": assignment_id,
+                "attachment_id": attachment_id,
+                "media_type": document.media_type,
+                "byte_size": document.byte_size
+            }),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning submission file attachment")?;
+        submission_response_by_id(pool, tenant_id, submission_id, true, false).await
+    }
+
+    /// Removes one file from the editable draft while retaining both its
+    /// Document Registry record and any prior immutable version snapshots.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "actor and scope evidence stay explicit"
+    )]
+    pub(crate) async fn remove_self_submission_file(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        assignment_id: Uuid,
+        attachment_id: Uuid,
+        scope: LearningAccessScope,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &RemoveLearningSubmissionFileRequest,
+    ) -> Result<Option<LearningSubmissionResponse>> {
+        let Some(context) = self_submission_context(pool, tenant_id, assignment_id, scope).await?
+        else {
+            return Ok(None);
+        };
+        let actor_id = person_actor_id(actor)?;
+        let mut tx = pool
+            .begin()
+            .await
+            .context("start Learning submission file removal")?;
+        require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let submission = sqlx::query_as::<_, (Uuid, String, i32)>(
+            "SELECT id,status,version FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL FOR UPDATE",
+        )
+        .bind(tenant_id)
+        .bind(assignment_id)
+        .bind(context.recipient_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("lock learner submission for file removal")?;
+        let Some((submission_id, status, version)) = submission else {
+            return Ok(None);
+        };
+        if version != request.expected_submission_version
+            || !matches!(status.as_str(), "draft" | "revision_requested")
+        {
+            bail!("The learner submission changed or cannot remove files");
+        }
+        let changed = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            UPDATE learning_submission_attachments
+               SET status='removed',removed_by=$5,removed_at=NOW(),
+                   version=version+1,updated_at=NOW()
+             WHERE tenant_id=$1 AND id=$2 AND learning_submission_id=$3
+               AND version=$4 AND status='active' AND deleted_at IS NULL
+             RETURNING id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(attachment_id)
+        .bind(submission_id)
+        .bind(request.expected_attachment_version)
+        .bind(actor_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .context("remove Learning submission file")?;
+        if changed.is_none() {
+            return Ok(None);
+        }
+        sqlx::query(
+            "UPDATE learning_submissions SET status='draft',version=version+1,updated_by=$4 WHERE tenant_id=$1 AND id=$2 AND version=$3",
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .bind(version)
+        .bind(actor_id)
+        .execute(&mut *tx)
+        .await
+        .context("advance learner submission after file removal")?;
+        append_evidence(
+            &mut tx,
+            tenant_id,
+            actor,
+            request_context,
+            "submission",
+            submission_id,
+            Some(context.space_id),
+            "learning_submission_file_removed",
+            "learning.submission_files.remove",
+            json!({"assignment_id": assignment_id, "attachment_id": attachment_id}),
+        )
+        .await?;
+        tx.commit()
+            .await
+            .context("commit Learning submission file removal")?;
+        submission_response_by_id(pool, tenant_id, submission_id, true, false).await
+    }
+
+    /// Resolves a restricted private object only after proving learner-self or
+    /// assigned/campus submission visibility. Draft-only files stay learner-private.
+    pub(crate) async fn authorized_submission_file_object_key(
+        pool: &PgPool,
+        tenant_id: Uuid,
+        attachment_id: Uuid,
+        scope: LearningAccessScope,
+    ) -> Result<Option<(Uuid, String)>> {
+        let attachment = sqlx::query_as::<_, (Uuid, Uuid, String, bool)>(
+            r#"
+            SELECT attachment.learning_submission_id,attachment.document_file_id,
+                   attachment.status,
+                   EXISTS (
+                       SELECT 1 FROM learning_submission_version_files AS version_file
+                        WHERE version_file.tenant_id=attachment.tenant_id
+                          AND version_file.attachment_id=attachment.id
+                          AND version_file.deleted_at IS NULL
+                   ) AS submitted
+              FROM learning_submission_attachments AS attachment
+             WHERE attachment.tenant_id=$1 AND attachment.id=$2
+               AND attachment.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(attachment_id)
+        .fetch_optional(pool)
+        .await
+        .context("resolve Learning submission file")?;
+        let Some((submission_id, document_file_id, status, submitted)) = attachment else {
+            return Ok(None);
+        };
+        let visibility = submission_visibility(pool, tenant_id, submission_id, scope).await?;
+        if !visibility.allowed
+            || !(submitted || visibility.include_draft_body && status == "active")
+        {
+            return Ok(None);
+        }
+        match DocumentRegistryOps::object_key(pool, tenant_id, document_file_id, true).await? {
+            Some(key) => Ok(Some((document_file_id, key))),
+            None => Ok(None),
+        }
+    }
+
     /// Appends one immutable learner attempt and safely replays duplicate submits.
     #[allow(
         clippy::too_many_arguments,
@@ -1650,7 +2132,7 @@ impl LearningOps {
         };
         let actor_id = person_actor_id(actor)?;
         let mut tx = pool.begin().await.context("start Learning submission")?;
-        let due_at = require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
+        let open = require_open_assignment(&mut tx, tenant_id, assignment_id).await?;
         let submission = sqlx::query_as::<_, (Uuid, String, i32, Option<String>)>(
             "SELECT id,status,version,draft_body FROM learning_submissions WHERE tenant_id=$1 AND learning_assignment_id=$2 AND assignment_recipient_id=$3 AND deleted_at IS NULL FOR UPDATE",
         )
@@ -1663,11 +2145,52 @@ impl LearningOps {
         let Some((submission_id, status, version, draft_body)) = submission else {
             bail!("Save a response before submitting this assignment");
         };
-        let body = required(
-            "Submission response",
-            draft_body.as_deref().unwrap_or_default(),
-        )?;
-        let fingerprint = submission_fingerprint(submission_id, request.expected_version, body);
+        let body = optional(draft_body.as_deref());
+        let attachments = sqlx::query_as::<_, LearningSubmissionFileRow>(
+            r#"
+            SELECT id,document_file_id,document_reference_snapshot,
+                   original_file_name_snapshot,media_type_snapshot,byte_size_snapshot,
+                   position,version,attached_at
+              FROM learning_submission_attachments
+             WHERE tenant_id=$1 AND learning_submission_id=$2
+               AND status='active' AND deleted_at IS NULL
+             ORDER BY position,id
+             FOR SHARE
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_all(&mut *tx)
+        .await
+        .context("lock Learning submission files")?;
+        match open.submission_method {
+            LearningSubmissionMethod::Text if body.is_none() => {
+                bail!("Write a response before submitting this assignment")
+            }
+            LearningSubmissionMethod::File if attachments.is_empty() => {
+                bail!("Attach at least one file before submitting this assignment")
+            }
+            LearningSubmissionMethod::TextOrFile if body.is_none() && attachments.is_empty() => {
+                bail!("Write a response or attach a file before submitting this assignment")
+            }
+            _ => {}
+        }
+        let attachment_fingerprint = attachments
+            .iter()
+            .map(|attachment| {
+                (
+                    attachment.id,
+                    attachment.document_file_id,
+                    attachment.position,
+                )
+            })
+            .collect::<Vec<_>>();
+        let fingerprint = submission_fingerprint(
+            submission_id,
+            request.expected_version,
+            body.as_deref(),
+            &attachment_fingerprint,
+        );
         if let Some((stored_fingerprint, _)) = sqlx::query_as::<_, (String, Uuid)>(
             "SELECT request_fingerprint,id FROM learning_submission_versions WHERE tenant_id=$1 AND learning_submission_id=$2 AND idempotency_key=$3",
         )
@@ -1695,14 +2218,14 @@ impl LearningOps {
         .fetch_one(&mut *tx)
         .await
         .context("allocate Learning submission revision")?;
-        let late = Utc::now() > due_at;
+        let late = Utc::now() > open.due_at;
         let submission_version_id = sqlx::query_scalar::<_, Uuid>(
             "INSERT INTO learning_submission_versions (tenant_id,learning_submission_id,revision_number,body_snapshot,submitted_by,late_snapshot,idempotency_key,request_fingerprint) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
         )
         .bind(tenant_id)
         .bind(submission_id)
         .bind(revision_number)
-        .bind(body)
+        .bind(body.as_deref())
         .bind(actor_id)
         .bind(late)
         .bind(request.idempotency_key)
@@ -1710,6 +2233,30 @@ impl LearningOps {
         .fetch_one(&mut *tx)
         .await
         .context("append Learning submission version")?;
+        for attachment in &attachments {
+            sqlx::query(
+                r#"
+                INSERT INTO learning_submission_version_files
+                    (tenant_id,learning_submission_id,submission_version_id,attachment_id,
+                     document_file_id,position,document_reference_snapshot,
+                     original_file_name_snapshot,media_type_snapshot,byte_size_snapshot)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(submission_id)
+            .bind(submission_version_id)
+            .bind(attachment.id)
+            .bind(attachment.document_file_id)
+            .bind(attachment.position)
+            .bind(&attachment.document_reference_snapshot)
+            .bind(&attachment.original_file_name_snapshot)
+            .bind(&attachment.media_type_snapshot)
+            .bind(attachment.byte_size_snapshot)
+            .execute(&mut *tx)
+            .await
+            .context("snapshot Learning submission file")?;
+        }
         sqlx::query(
             "UPDATE learning_submissions SET status='submitted',current_submission_version_id=$4,first_submitted_at=COALESCE(first_submitted_at,NOW()),last_submitted_at=NOW(),version=version+1,updated_by=$5 WHERE tenant_id=$1 AND id=$2 AND version=$3",
         )
@@ -1729,9 +2276,19 @@ impl LearningOps {
             "submission",
             submission_id,
             Some(context.space_id),
-            if revision_number == 1 { "learning_submission_submitted" } else { "learning_submission_resubmitted" },
+            if revision_number == 1 {
+                "learning_submission_submitted"
+            } else {
+                "learning_submission_resubmitted"
+            },
             "learning.submissions.submit",
-            json!({"assignment_id": assignment_id, "submission_version_id": submission_version_id, "revision_number": revision_number, "late": late}),
+            json!({
+                "assignment_id": assignment_id,
+                "submission_version_id": submission_version_id,
+                "revision_number": revision_number,
+                "late": late,
+                "file_count": attachments.len()
+            }),
         )
         .await?;
         tx.commit().await.context("commit Learning submission")?;
@@ -2550,7 +3107,8 @@ async fn resource_owner(
 const ASSIGNMENT_SELECT: &str = r#"
 SELECT assignment.id,assignment.learning_unit_id,unit.learning_space_id,
        assignment.position,assignment.title,assignment.instructions,assignment.due_at,
-       assignment.max_score_hundredths,assignment.status,assignment.version,
+       assignment.max_score_hundredths,assignment.submission_method,
+       assignment.status,assignment.version,
        assignment.published_at,assignment.closed_at,assignment.close_reason,
        assignment.created_at,assignment.updated_at,
        (SELECT COUNT(*) FROM learning_assignment_recipients recipient
@@ -2604,6 +3162,7 @@ async fn assignment_response(
         instructions: row.instructions,
         due_at: row.due_at,
         max_score_hundredths: row.max_score_hundredths,
+        submission_method: parse_submission_method(&row.submission_method)?,
         status: parse_assignment_status(&row.status)?,
         version: row.version,
         recipient_count: row.recipient_count,
@@ -2695,15 +3254,25 @@ async fn require_open_assignment(
     tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
     assignment_id: Uuid,
-) -> Result<chrono::DateTime<Utc>> {
-    let state = sqlx::query_as::<_, (String, chrono::DateTime<Utc>)>(
-        "SELECT status,due_at FROM learning_assignments WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE",
+) -> Result<OpenLearningAssignment> {
+    let state = sqlx::query_as::<_, (String, DateTime<Utc>, String)>(
+        "SELECT status,due_at,submission_method FROM learning_assignments WHERE tenant_id=$1 AND id=$2 AND deleted_at IS NULL FOR UPDATE",
     ).bind(tenant_id).bind(assignment_id).fetch_optional(&mut **tx).await.context("lock open Learning assignment")?;
     match state {
-        Some((status, due_at)) if status == "published" => Ok(due_at),
+        Some((status, due_at, submission_method)) if status == "published" => {
+            Ok(OpenLearningAssignment {
+                due_at,
+                submission_method: parse_submission_method(&submission_method)?,
+            })
+        }
         Some(_) => bail!("The Learning assignment is not open for submissions"),
         None => bail!("The Learning assignment is unavailable"),
     }
+}
+
+struct OpenLearningAssignment {
+    due_at: DateTime<Utc>,
+    submission_method: LearningSubmissionMethod,
 }
 
 struct SelfSubmissionContext {
@@ -2760,11 +3329,21 @@ async fn self_submission_context(
     }))
 }
 
-fn submission_fingerprint(submission_id: Uuid, expected_version: i32, body: &str) -> String {
+fn submission_fingerprint(
+    submission_id: Uuid,
+    expected_version: i32,
+    body: Option<&str>,
+    attachments: &[(Uuid, Uuid, i32)],
+) -> String {
     let mut digest = Sha256::new();
     digest.update(submission_id.as_bytes());
     digest.update(expected_version.to_be_bytes());
-    digest.update(body.as_bytes());
+    digest.update(body.unwrap_or_default().as_bytes());
+    for (attachment_id, document_file_id, position) in attachments {
+        digest.update(attachment_id.as_bytes());
+        digest.update(document_file_id.as_bytes());
+        digest.update(position.to_be_bytes());
+    }
     format!("{:x}", digest.finalize())
 }
 
@@ -2887,11 +3466,68 @@ async fn submission_response_by_id(
             .ok_or_else(|| {
                 anyhow!("The SIS learner identity for this submission is unavailable")
             })?;
-    let versions = sqlx::query_as::<_, LearningSubmissionVersionRow>(
+    let version_rows = sqlx::query_as::<_, LearningSubmissionVersionRow>(
         "SELECT id,revision_number,body_snapshot,late_snapshot,submitted_at FROM learning_submission_versions WHERE tenant_id=$1 AND learning_submission_id=$2 ORDER BY revision_number",
-    ).bind(tenant_id).bind(submission_id).fetch_all(pool).await.context("load Learning submission versions")?
-     .into_iter().map(|version| LearningSubmissionVersionResponse { id: version.id, revision_number: version.revision_number,
-        body: version.body_snapshot, late: version.late_snapshot, submitted_at: version.submitted_at }).collect();
+    ).bind(tenant_id).bind(submission_id).fetch_all(pool).await.context("load Learning submission versions")?;
+    let mut versions = Vec::with_capacity(version_rows.len());
+    for version in version_rows {
+        let files = sqlx::query_as::<_, LearningSubmissionFileRow>(
+            r#"
+            SELECT attachment.id,version_file.document_file_id,
+                   version_file.document_reference_snapshot,
+                   version_file.original_file_name_snapshot,
+                   version_file.media_type_snapshot,version_file.byte_size_snapshot,
+                   version_file.position,NULL::INTEGER AS version,attachment.attached_at
+              FROM learning_submission_version_files AS version_file
+              JOIN learning_submission_attachments AS attachment
+                ON attachment.id=version_file.attachment_id
+               AND attachment.tenant_id=version_file.tenant_id
+             WHERE version_file.tenant_id=$1
+               AND version_file.submission_version_id=$2
+               AND version_file.deleted_at IS NULL
+             ORDER BY version_file.position,version_file.id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(version.id)
+        .fetch_all(pool)
+        .await
+        .context("load immutable Learning submission files")?
+        .into_iter()
+        .map(submission_file_response)
+        .collect();
+        versions.push(LearningSubmissionVersionResponse {
+            id: version.id,
+            revision_number: version.revision_number,
+            body: version.body_snapshot,
+            files,
+            late: version.late_snapshot,
+            submitted_at: version.submitted_at,
+        });
+    }
+    let draft_files = if include_draft_body {
+        sqlx::query_as::<_, LearningSubmissionFileRow>(
+            r#"
+            SELECT id,document_file_id,document_reference_snapshot,
+                   original_file_name_snapshot,media_type_snapshot,byte_size_snapshot,
+                   position,version,attached_at
+              FROM learning_submission_attachments
+             WHERE tenant_id=$1 AND learning_submission_id=$2
+               AND status='active' AND deleted_at IS NULL
+             ORDER BY position,id
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(submission_id)
+        .fetch_all(pool)
+        .await
+        .context("load Learning submission draft files")?
+        .into_iter()
+        .map(submission_file_response)
+        .collect()
+    } else {
+        Vec::new()
+    };
     let feedback = match row.current_submission_version_id {
         Some(version_id) => {
             feedback_for_version(pool, tenant_id, version_id, include_draft_feedback).await?
@@ -2910,11 +3546,26 @@ async fn submission_response_by_id(
         status: parse_submission_status(&row.status)?,
         version: row.version,
         current_submission_version_id: row.current_submission_version_id,
+        draft_files,
         versions,
         feedback,
         created_at: row.created_at,
         updated_at: row.updated_at,
     }))
+}
+
+fn submission_file_response(row: LearningSubmissionFileRow) -> LearningSubmissionFileResponse {
+    LearningSubmissionFileResponse {
+        id: row.id,
+        document_file_id: row.document_file_id,
+        document_reference: row.document_reference_snapshot,
+        original_file_name: row.original_file_name_snapshot,
+        media_type: row.media_type_snapshot,
+        byte_size: row.byte_size_snapshot,
+        position: row.position,
+        version: row.version,
+        attached_at: row.attached_at,
+    }
 }
 
 fn visible_draft_body(body: Option<String>, include: bool) -> Option<String> {
@@ -3181,6 +3832,15 @@ fn parse_assignment_status(value: &str) -> Result<LearningAssignmentStatus> {
     }
 }
 
+fn parse_submission_method(value: &str) -> Result<LearningSubmissionMethod> {
+    match value {
+        "text" => Ok(LearningSubmissionMethod::Text),
+        "file" => Ok(LearningSubmissionMethod::File),
+        "text_or_file" => Ok(LearningSubmissionMethod::TextOrFile),
+        _ => bail!("Stored Learning submission method is invalid"),
+    }
+}
+
 fn parse_submission_status(value: &str) -> Result<LearningSubmissionStatus> {
     match value {
         "draft" => Ok(LearningSubmissionStatus::Draft),
@@ -3355,12 +4015,12 @@ mod tests {
     fn idempotency_fingerprints_are_deterministic_and_request_specific() {
         let aggregate_id = Uuid::from_u128(1);
         assert_eq!(
-            submission_fingerprint(aggregate_id, 2, "answer"),
-            submission_fingerprint(aggregate_id, 2, "answer")
+            submission_fingerprint(aggregate_id, 2, Some("answer"), &[]),
+            submission_fingerprint(aggregate_id, 2, Some("answer"), &[])
         );
         assert_ne!(
-            submission_fingerprint(aggregate_id, 2, "answer"),
-            submission_fingerprint(aggregate_id, 3, "answer")
+            submission_fingerprint(aggregate_id, 2, Some("answer"), &[]),
+            submission_fingerprint(aggregate_id, 3, Some("answer"), &[])
         );
         assert_ne!(
             feedback_release_fingerprint(aggregate_id, 2, LearningReviewOutcome::Graded),

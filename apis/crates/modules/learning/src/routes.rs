@@ -12,14 +12,16 @@ use cp_common::{
     AccessContext, ApiResponse, EffectiveRecordScope, PaginationMeta, RecordScopeFamilyKey,
     RecordScopeGrants, RequirePermission, TenantId, flatten_validation_errors,
 };
-use cp_document_registry::{DocumentRegistryOps, DocumentStorage, NewRegistryFile};
+use cp_document_registry::{
+    CloseFileRequest, DocumentRegistryOps, DocumentStorage, NewRegistryFile,
+};
 use futures_util::StreamExt as _;
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::ops::LearningResourceCreateCommand;
+use crate::ops::{LearningResourceCreateCommand, LearningSubmissionFileAttachCommand};
 use crate::{
     CreateLearningAssignmentRequest, CreateLearningQuizQuestionRequest, CreateLearningQuizRequest,
     CreateLearningResourceRequest, CreateLearningRubricCriterionRequest,
@@ -30,13 +32,14 @@ use crate::{
     LearningQuizzesPage, LearningResourceCreation, LearningResourceFileQuery,
     LearningResourceFilesResponse, LearningSpaceListQuery, LearningSpacesPage,
     LearningSubmissionListQuery, LearningSubmissionsPage, ReasonedLearningTransitionRequest,
-    ReleaseLearningFeedbackRequest, SaveLearningCompletionPolicyRequest,
-    SaveLearningQuizAttemptRequest, SaveLearningSubmissionRequest,
-    SubmitLearningQuizAttemptRequest, SubmitLearningSubmissionRequest,
-    UpdateLearningAssignmentRequest, UpdateLearningFeedbackRequest,
-    UpdateLearningQuizQuestionRequest, UpdateLearningQuizRequest, UpdateLearningResourceRequest,
-    UpdateLearningRubricCriterionRequest, UpdateLearningSettingsRequest,
-    UpdateLearningSpaceRequest, UpdateLearningUnitRequest, VersionedLearningRequest,
+    ReleaseLearningFeedbackRequest, RemoveLearningSubmissionFileRequest,
+    SaveLearningCompletionPolicyRequest, SaveLearningQuizAttemptRequest,
+    SaveLearningSubmissionRequest, SubmitLearningQuizAttemptRequest,
+    SubmitLearningSubmissionRequest, UpdateLearningAssignmentRequest,
+    UpdateLearningFeedbackRequest, UpdateLearningQuizQuestionRequest, UpdateLearningQuizRequest,
+    UpdateLearningResourceRequest, UpdateLearningRubricCriterionRequest,
+    UpdateLearningSettingsRequest, UpdateLearningSpaceRequest, UpdateLearningUnitRequest,
+    VersionedLearningRequest,
 };
 
 const MAX_RESOURCE_BYTES: usize = 15 * 1024 * 1024;
@@ -50,6 +53,14 @@ type LearningAuthority = (
 #[get("/settings")]
 async fn read_settings(pool: web::Data<PgPool>, tenant: web::ReqData<TenantId>) -> HttpResponse {
     value_or_error(LearningOps::settings(&pool, tenant_id(tenant)).await)
+}
+
+#[get("/settings/classifications")]
+async fn upload_classification_options(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+) -> HttpResponse {
+    value_or_error(LearningOps::upload_classification_options(&pool, tenant_id(tenant)).await)
 }
 
 #[put("/settings")]
@@ -986,6 +997,246 @@ async fn save_self_submission(
     )
 }
 
+#[post("/assignments/{id}/submission/files")]
+async fn upload_self_submission_file(
+    pool: web::Data<PgPool>,
+    storage: web::Data<DocumentStorage>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    mut payload: Multipart,
+) -> HttpResponse {
+    let tenant_id = tenant_id(tenant);
+    let assignment_id = path.into_inner();
+    let (actor, access, grants) = authority;
+    let actor_value = actor.into_inner();
+    let Some(scope) = access_scope(&access, &grants, actor_value) else {
+        return forbidden();
+    };
+    let series_id =
+        match LearningOps::submission_file_upload_series(&pool, tenant_id, assignment_id, scope)
+            .await
+        {
+            Ok(Some(series_id)) => series_id,
+            Ok(None) => return not_found(),
+            Err(error) => return operation_error(error),
+        };
+    let mut expected_submission_version = None;
+    let mut original_file_name = None;
+    let mut media_type = None;
+    let mut bytes = None;
+    while let Some(item) = payload.next().await {
+        let mut field = match item {
+            Ok(field) => field,
+            Err(_) => return bad_request("The submission file upload is malformed"),
+        };
+        let disposition = field.content_disposition();
+        let name = disposition
+            .and_then(|value| value.get_name())
+            .unwrap_or_default()
+            .to_string();
+        if name == "file" {
+            if bytes.is_some() {
+                return bad_request("Upload one submission file at a time");
+            }
+            original_file_name = disposition
+                .and_then(|value| value.get_filename())
+                .map(ToOwned::to_owned);
+            media_type = field.content_type().map(ToString::to_string);
+            bytes = match read_field(&mut field, MAX_RESOURCE_BYTES).await {
+                Ok(bytes) => Some(bytes),
+                Err(message) => return bad_request(message),
+            };
+            continue;
+        }
+        let raw = match read_field(&mut field, 64).await {
+            Ok(value) => value,
+            Err(message) => return bad_request(message),
+        };
+        let value = match String::from_utf8(raw) {
+            Ok(value) => value.trim().to_string(),
+            Err(_) => return bad_request("The submission file details are invalid"),
+        };
+        match name.as_str() {
+            "expected_submission_version" => {
+                expected_submission_version = if value.is_empty() {
+                    None
+                } else {
+                    match value.parse::<i32>().ok().filter(|version| *version > 0) {
+                        Some(version) => Some(version),
+                        None => return bad_request("The submission version is invalid"),
+                    }
+                }
+            }
+            _ => return bad_request("The submission file upload contains an unknown field"),
+        }
+    }
+    let Some(original_file_name) = original_file_name else {
+        return bad_request("Choose a PDF, JPEG, or PNG file");
+    };
+    let Some(media_type) = media_type else {
+        return bad_request("The submission file type is missing");
+    };
+    let Some(bytes) = bytes else {
+        return bad_request("Choose a PDF, JPEG, or PNG file");
+    };
+    let document = match DocumentRegistryOps::create_file(
+        &pool,
+        &storage,
+        tenant_id,
+        actor_value,
+        context.clone().into_inner(),
+        NewRegistryFile {
+            series_id,
+            title: "E-learning assignment submission".to_string(),
+            description: None,
+            document_date: None,
+            sensitivity: Some("restricted".to_string()),
+            original_file_name,
+            media_type,
+            bytes,
+        },
+    )
+    .await
+    {
+        Ok(document) => document,
+        Err(error) => return operation_error(error),
+    };
+    let document = match DocumentRegistryOps::close_file(
+        &pool,
+        tenant_id,
+        document.id,
+        true,
+        actor_value,
+        context.clone().into_inner(),
+        &CloseFileRequest {
+            reason: "Retained learner submission evidence".to_string(),
+            version: document.version,
+        },
+    )
+    .await
+    {
+        Ok(Some(document)) => document,
+        Ok(None) => {
+            return recoverable_upload_error(
+                &document.reference,
+                "The file could not be closed for retention",
+            );
+        }
+        Err(_) => {
+            return recoverable_upload_error(
+                &document.reference,
+                "The retained file could not be prepared for submission.",
+            );
+        }
+    };
+    match LearningOps::attach_self_submission_file(
+        &pool,
+        LearningSubmissionFileAttachCommand {
+            tenant_id,
+            assignment_id,
+            scope,
+            actor: actor_value,
+            request_context: context.into_inner(),
+            expected_submission_version,
+            document: &document,
+        },
+    )
+    .await
+    {
+        Ok(Some(submission)) => HttpResponse::Created().json(ApiResponse::from_status(
+            StatusCode::CREATED,
+            Some(submission),
+            None,
+        )),
+        Ok(None) => recoverable_upload_error(
+            &document.reference,
+            "The learner submission is no longer available",
+        ),
+        Err(_) => recoverable_upload_error(
+            &document.reference,
+            "The submission changed before the file was linked.",
+        ),
+    }
+}
+
+#[delete("/assignments/{assignment_id}/submission/files/{attachment_id}")]
+async fn remove_self_submission_file(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<(Uuid, Uuid)>,
+    body: web::Json<RemoveLearningSubmissionFileRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (assignment_id, attachment_id) = path.into_inner();
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::remove_self_submission_file(
+            &pool,
+            tenant_id(tenant),
+            assignment_id,
+            attachment_id,
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The learner submission file changed or cannot be removed",
+    )
+}
+
+#[get("/submission-files/{id}/download")]
+async fn download_submission_file(
+    pool: web::Data<PgPool>,
+    storage: web::Data<DocumentStorage>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let tenant_id = tenant_id(tenant);
+    let attachment_id = path.into_inner();
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    match LearningOps::authorized_submission_file_object_key(&pool, tenant_id, attachment_id, scope)
+        .await
+    {
+        Ok(Some((document_file_id, key))) => match storage.download_url(&key, 60).await {
+            Ok(url) => match DocumentRegistryOps::record_download_authorized(
+                &pool,
+                tenant_id,
+                document_file_id,
+                true,
+                actor.into_inner(),
+                context.into_inner(),
+                60,
+            )
+            .await
+            {
+                Ok(()) => ok(LearningDownloadResponse {
+                    url,
+                    expires_in_seconds: 60,
+                }),
+                Err(error) => operation_error(error),
+            },
+            Err(_) => internal_error(),
+        },
+        Ok(None) => not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
 #[post("/assignments/{id}/submission/submit")]
 async fn submit_self_submission(
     pool: web::Data<PgPool>,
@@ -1652,6 +1903,7 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
         web::scope("")
             .wrap(RequirePermission::new("learning"))
             .service(read_settings)
+            .service(upload_classification_options)
             .service(update_settings)
             .service(references)
             .service(resource_files)
@@ -1682,6 +1934,9 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(delete_rubric_criterion)
             .service(read_self_submission)
             .service(save_self_submission)
+            .service(upload_self_submission_file)
+            .service(remove_self_submission_file)
+            .service(download_submission_file)
             .service(submit_self_submission)
             .service(list_submissions)
             .service(read_submission)

@@ -76,6 +76,32 @@ pub enum LearningAssignmentStatus {
     Closed,
 }
 
+/// Response material accepted by one assignment. The method is fixed when the
+/// assignment is published so learners cannot lose a required input channel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningSubmissionMethod {
+    Text,
+    File,
+    TextOrFile,
+}
+
+impl LearningSubmissionMethod {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Text => "text",
+            Self::File => "file",
+            Self::TextOrFile => "text_or_file",
+        }
+    }
+
+    #[must_use]
+    pub const fn accepts_files(self) -> bool {
+        matches!(self, Self::File | Self::TextOrFile)
+    }
+}
+
 impl LearningAssignmentStatus {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -235,13 +261,30 @@ pub struct LearningQuizAttemptListQuery {
 pub struct LearningSettingsResponse {
     pub document_series_id: Option<Uuid>,
     pub document_series_name: Option<String>,
+    pub learner_submission_series_id: Option<Uuid>,
+    pub learner_submission_series_name: Option<String>,
     pub version: i32,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningUploadClassificationOption {
+    pub id: Uuid,
+    pub code: String,
+    pub name: String,
+    pub default_sensitivity: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningUploadClassificationOptionsResponse {
+    pub resource_series: Vec<LearningUploadClassificationOption>,
+    pub learner_submission_series: Vec<LearningUploadClassificationOption>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateLearningSettingsRequest {
     pub document_series_id: Option<Uuid>,
+    pub learner_submission_series_id: Option<Uuid>,
     #[validate(range(min = 1))]
     pub expected_version: i32,
 }
@@ -361,6 +404,7 @@ pub struct CreateLearningAssignmentRequest {
     pub due_at: DateTime<Utc>,
     #[validate(range(min = 1))]
     pub max_score_hundredths: i32,
+    pub submission_method: LearningSubmissionMethod,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -374,6 +418,7 @@ pub struct UpdateLearningAssignmentRequest {
     pub due_at: DateTime<Utc>,
     #[validate(range(min = 1))]
     pub max_score_hundredths: i32,
+    pub submission_method: LearningSubmissionMethod,
     #[validate(range(min = 1))]
     pub expected_version: i32,
 }
@@ -425,6 +470,14 @@ pub struct SubmitLearningSubmissionRequest {
     #[validate(range(min = 1))]
     pub expected_version: i32,
     pub idempotency_key: Uuid,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct RemoveLearningSubmissionFileRequest {
+    #[validate(range(min = 1))]
+    pub expected_submission_version: i32,
+    #[validate(range(min = 1))]
+    pub expected_attachment_version: i32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -581,6 +634,7 @@ pub struct LearningAssignmentResponse {
     pub instructions: String,
     pub due_at: DateTime<Utc>,
     pub max_score_hundredths: i32,
+    pub submission_method: LearningSubmissionMethod,
     pub status: LearningAssignmentStatus,
     pub version: i32,
     pub recipient_count: i64,
@@ -602,9 +656,25 @@ pub struct LearningAssignmentsPage {
 pub struct LearningSubmissionVersionResponse {
     pub id: Uuid,
     pub revision_number: i32,
-    pub body: String,
+    pub body: Option<String>,
+    pub files: Vec<LearningSubmissionFileResponse>,
     pub late: bool,
     pub submitted_at: DateTime<Utc>,
+}
+
+/// Safe attachment metadata. Bytes, object keys, hashes, and signed URLs are
+/// deliberately absent from every HTTP and Agent projection.
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningSubmissionFileResponse {
+    pub id: Uuid,
+    pub document_file_id: Uuid,
+    pub document_reference: String,
+    pub original_file_name: String,
+    pub media_type: String,
+    pub byte_size: i64,
+    pub position: i32,
+    pub version: Option<i32>,
+    pub attached_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -640,6 +710,7 @@ pub struct LearningSubmissionResponse {
     pub status: LearningSubmissionStatus,
     pub version: i32,
     pub current_submission_version_id: Option<Uuid>,
+    pub draft_files: Vec<LearningSubmissionFileResponse>,
     pub versions: Vec<LearningSubmissionVersionResponse>,
     pub feedback: Option<LearningFeedbackResponse>,
     pub created_at: DateTime<Utc>,

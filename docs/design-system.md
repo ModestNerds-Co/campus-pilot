@@ -35,7 +35,7 @@ The implementation source of truth is `client/src/styles/tokens.css`.
 - The launcher uses the same fixed-rail and contextual-header grammar as module shells. Its desktop rail holds campus identity, All modules, authorized shortcuts, task-group jump links, theme, account identity, and sign-out.
 - On mobile, the launcher rail becomes the shared off-canvas navigation pattern with a scrim, Escape support, focus containment, focus restoration, and background scroll lock. Keep this drawer short enough to avoid nested scrolling: task-group jump links remain desktop-only.
 - Operational modules own their local navigation and provide an “All modules” return path.
-- E-learning uses a full-page space and unit workspace. Space, unit, resource, upload, publication, withdrawal, archive, and settings workflows use the shared right-side drawer; published content is presented as read-only rather than with disabled editing forms.
+- E-learning uses full-page space, unit, assignment, learner-work, and review workspaces. Space, unit, resource, publication, withdrawal, archive, settings, assignment authoring, file removal, submission confirmation, and feedback-release workflows use the shared right-side drawer where secondary focus is needed; published content is presented as read-only rather than with disabled editing forms. Learner file upload remains inline in the learner-work page so a drawer never contains another scrolling file workflow.
 - Transport uses full-page route and run workspaces. Route, stop, rider, run, manifest, lifecycle, and confirmation actions use the shared right-side drawer; the manifest stays visible while one learner entry is being marked.
 - Access, licensing, role, and module semantics are defined in `docs/access-control.md`.
 

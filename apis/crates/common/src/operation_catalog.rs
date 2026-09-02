@@ -3667,6 +3667,15 @@ fn build_catalog() -> Vec<RoutedOperation> {
             true,
         ),
         route(
+            Method::GET,
+            "/api/1.0/learning/settings/classifications",
+            "learning.settings.classifications.list",
+            "learning",
+            "learning:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
             Method::PUT,
             "/api/1.0/learning/settings",
             "learning.settings.update",
@@ -3935,6 +3944,33 @@ fn build_catalog() -> Vec<RoutedOperation> {
             "learning",
             "learning:participate",
             OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/assignments/{id}/submission/files",
+            "learning.submission_files.upload",
+            "learning",
+            "learning:participate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/learning/assignments/{assignment_id}/submission/files/{attachment_id}",
+            "learning.submission_files.remove",
+            "learning",
+            "learning:participate",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/submission-files/{id}/download",
+            "learning.submission_files.download",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
             true,
         ),
         route(
@@ -6626,6 +6662,17 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         "learning.resources.download" => AgentExposure::HumanOnly {
             reason: "Private learning-resource bytes and signed URLs are never returned to an Agent provider.",
         },
+        "learning.settings.classifications.list" => AgentExposure::HumanOnly {
+            reason: "Document classification selection remains a direct human Learning configuration workflow.",
+        },
+        "learning.submission_files.upload" | "learning.submission_files.remove" => {
+            AgentExposure::HumanOnly {
+                reason: "Restricted learner submission evidence remains a direct human workflow.",
+            }
+        }
+        "learning.submission_files.download" => AgentExposure::HumanOnly {
+            reason: "Restricted learner submission bytes and signed URLs are never returned to an Agent provider.",
+        },
         "student_support.references.read" => AgentExposure::HumanOnly {
             reason: "Learner and restricted case-worker selection remains a direct human intake workflow.",
         },
@@ -6787,7 +6834,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 634);
+        assert_eq!(operation_catalog().len(), 638);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6839,8 +6886,50 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [236, 360, 26, 12]);
+        assert_eq!(counts, [236, 360, 30, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
+    }
+
+    #[test]
+    fn learning_private_file_and_classification_routes_remain_human_workflows() {
+        let cases = [
+            (
+                Method::GET,
+                "/api/1.0/learning/settings/classifications",
+                "learning.settings.classifications.list",
+                "learning:manage",
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/assignments/{id}/submission/files",
+                "learning.submission_files.upload",
+                "learning:participate",
+            ),
+            (
+                Method::DELETE,
+                "/api/1.0/learning/assignments/{assignment_id}/submission/files/{attachment_id}",
+                "learning.submission_files.remove",
+                "learning:participate",
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/submission-files/{id}/download",
+                "learning.submission_files.download",
+                "learning:view",
+            ),
+        ];
+
+        for (method, route_pattern, key, permission) in cases {
+            let operation = operation_for_route(&method, route_pattern)
+                .unwrap_or_else(|| panic!("missing route {method} {route_pattern}"));
+            assert_eq!(operation.key(), key);
+            assert_eq!(operation.permission(), permission);
+            assert_eq!(operation.agent_exposure().as_str(), "human_only");
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                vec!["academics", "document_registry", "hr_payroll", "sis"]
+            );
+        }
     }
 
     #[test]

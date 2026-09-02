@@ -7,6 +7,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, FromRow)]
 pub(crate) struct LearningSettingsRow {
     pub document_series_id: Option<Uuid>,
+    pub learner_submission_series_id: Option<Uuid>,
     pub version: i32,
     pub updated_at: DateTime<Utc>,
 }
@@ -74,6 +75,7 @@ pub(crate) struct LearningAssignmentRow {
     pub instructions: String,
     pub due_at: DateTime<Utc>,
     pub max_score_hundredths: i32,
+    pub submission_method: String,
     pub status: String,
     pub version: i32,
     pub published_at: Option<DateTime<Utc>>,
@@ -115,9 +117,22 @@ pub(crate) struct LearningSubmissionRow {
 pub(crate) struct LearningSubmissionVersionRow {
     pub id: Uuid,
     pub revision_number: i32,
-    pub body_snapshot: String,
+    pub body_snapshot: Option<String>,
     pub late_snapshot: bool,
     pub submitted_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub(crate) struct LearningSubmissionFileRow {
+    pub id: Uuid,
+    pub document_file_id: Uuid,
+    pub document_reference_snapshot: String,
+    pub original_file_name_snapshot: String,
+    pub media_type_snapshot: String,
+    pub byte_size_snapshot: i64,
+    pub position: i32,
+    pub version: Option<i32>,
+    pub attached_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, FromRow)]

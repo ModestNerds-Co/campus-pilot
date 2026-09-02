@@ -6589,11 +6589,12 @@
     },
     {
       "name": "E-learning",
-      "description": "Class-linked spaces, resources, assignments, quizzes, immutable learner attempts, feedback, progress, and derived completion. Teacher authoring is limited to assigned spaces; Student writes derive the authenticated learner and never accept a learner identifier. Learner quiz projections omit answer-key flags.",
+      "description": "Class-linked spaces, resources, assignments, quizzes, governed learner files, immutable learner attempts, feedback, progress, and derived completion. Teacher authoring is limited to assigned spaces; Student writes derive the authenticated learner and never accept a learner identifier. Learner quiz projections omit answer-key flags; private bytes and signed download links remain direct human workflows.",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
       "item": [
         { "name": "Read Learning Settings", "request": { "method": "GET", "url": "{{base_url}}/learning/settings" } },
-        { "name": "Update Learning Settings", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"document_series_id\": \"{{learning_document_series_id}}\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/settings" } },
+        { "name": "List Learning Upload Classifications", "request": { "method": "GET", "url": "{{base_url}}/learning/settings/classifications", "description": "Returns active teaching-resource options and the restricted subset eligible for learner submission retention. This is a direct human configuration picker." } },
+        { "name": "Update Learning Settings", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"document_series_id\": \"{{learning_document_series_id}}\",\n  \"learner_submission_series_id\": \"{{learning_submission_series_id}}\",\n  \"expected_version\": 1\n}" }, "url": "{{base_url}}/learning/settings" } },
         { "name": "Read Learning References", "request": { "method": "GET", "url": "{{base_url}}/learning/references" } },
         { "name": "List Governed Resource Files", "request": { "method": "GET", "url": "{{base_url}}/learning/resource-files?limit=50" } },
         { "name": "List Learning Spaces", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces?page=1&per_page=25" } },
@@ -6614,8 +6615,8 @@
         { "name": "Download Learning Resource", "request": { "method": "GET", "url": "{{base_url}}/learning/resources/{{learning_resource_id}}/download" } },
         { "name": "List Learning Assignments", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/assignments?page=1&per_page=25" } },
         { "name": "Read Learning Assignment", "request": { "method": "GET", "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}" } },
-        { "name": "Create Learning Assignment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Fractions practice\",\n  \"instructions\": \"Complete the written response.\",\n  \"due_at\": \"2026-09-30T14:00:00Z\",\n  \"max_score_hundredths\": 10000\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/assignments" } },
-        { "name": "Update Learning Assignment", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Fractions practice\",\n  \"instructions\": \"Complete the revised written response.\",\n  \"due_at\": \"2026-09-30T14:00:00Z\",\n  \"max_score_hundredths\": 10000,\n  \"expected_version\": {{learning_assignment_version}}\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}" } },
+        { "name": "Create Learning Assignment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Fractions practice\",\n  \"instructions\": \"Complete the written response.\",\n  \"due_at\": \"2026-09-30T14:00:00Z\",\n  \"max_score_hundredths\": 10000,\n  \"submission_method\": \"text_or_file\"\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/assignments" } },
+        { "name": "Update Learning Assignment", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Fractions practice\",\n  \"instructions\": \"Complete the revised written response.\",\n  \"due_at\": \"2026-09-30T14:00:00Z\",\n  \"max_score_hundredths\": 10000,\n  \"submission_method\": \"text_or_file\",\n  \"expected_version\": {{learning_assignment_version}}\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}" } },
         { "name": "Publish Learning Assignment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_assignment_version}}\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/publish" } },
         { "name": "Close Learning Assignment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_assignment_version}},\n  \"reason\": \"Submission period ended\"\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/close" } },
         { "name": "Create Rubric Criterion", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Method\",\n  \"description\": \"Shows a correct method.\",\n  \"max_score_hundredths\": 6000\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/rubric-criteria" } },
@@ -6623,6 +6624,9 @@
         { "name": "Delete Rubric Criterion", "request": { "method": "DELETE", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_rubric_version}}\n}" }, "url": "{{base_url}}/learning/rubric-criteria/{{learning_rubric_id}}" } },
         { "name": "Read My Learning Submission", "request": { "method": "GET", "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/submission" } },
         { "name": "Save My Learning Submission", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"body\": \"My written response.\",\n  \"expected_version\": {{learning_submission_version}}\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/submission" } },
+        { "name": "Upload My Learning Submission File", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{"key":"expected_submission_version","value":"{{learning_submission_version}}","type":"text"},{"key":"file","type":"file","src":[]}] }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/submission/files", "description": "Adds one PDF, JPEG, or PNG to the authenticated learner's editable draft. The retained file is restricted and the response exposes metadata only." } },
+        { "name": "Remove My Learning Submission File", "request": { "method": "DELETE", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_submission_version\": {{learning_submission_version}},\n  \"expected_attachment_version\": {{learning_submission_file_version}}\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/submission/files/{{learning_submission_file_id}}", "description": "Removes the file from the editable draft only. Immutable submitted versions remain unchanged." } },
+        { "name": "Download Learning Submission File", "request": { "method": "GET", "url": "{{base_url}}/learning/submission-files/{{learning_submission_file_id}}/download", "description": "Returns a 60-second private download URL after current learner-self, assigned-teacher, or campus scope is rechecked." } },
         { "name": "Submit My Learning Work", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_submission_version}},\n  \"idempotency_key\": \"{{learning_submission_idempotency_key}}\"\n}" }, "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/submission/submit" } },
         { "name": "List Assignment Submissions", "request": { "method": "GET", "url": "{{base_url}}/learning/assignments/{{learning_assignment_id}}/submissions?page=1&per_page=25" } },
         { "name": "Read Learning Submission", "request": { "method": "GET", "url": "{{base_url}}/learning/submissions/{{learning_submission_id}}" } },
@@ -7084,6 +7088,71 @@
     {
       "key": "learning_document_series_id",
       "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_series_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_assignment_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_assignment_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_rubric_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_rubric_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_version_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_idempotency_key",
+      "value": "00000000-0000-4000-8000-000000000004",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_file_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_submission_file_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_review_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_review_idempotency_key",
+      "value": "00000000-0000-4000-8000-000000000005",
       "type": "default"
     },
     {

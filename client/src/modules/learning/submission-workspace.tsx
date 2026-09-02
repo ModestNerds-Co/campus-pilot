@@ -1,6 +1,8 @@
+/** Assigned-teacher review workspace for immutable learner submission versions. */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, Loader2, Save, Send } from "lucide-react";
+import { CheckCircle2, Download, FileText, Loader2, Save, Send } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 import { clearLearningRecovery, purgeLearningRecoveryForOtherUsers, readLearningRecovery, writeLearningRecovery } from "./draft-recovery";
 import { learningService, responseMessage } from "./service";
-import type { LearningAssignment, LearningFeedback, LearningReviewOutcome, LearningSubmission } from "./types";
+import type { LearningAssignment, LearningFeedback, LearningReviewOutcome, LearningSubmission, LearningSubmissionFile } from "./types";
 import { formatHundredths, formatLearningDateTime, LearningState, LearningStatusBadge, parseHundredths } from "./ui";
 
 export function LearningSubmissionWorkspace({ onVersionChange, submissionId, versionId }: {
@@ -188,7 +190,7 @@ export function LearningSubmissionWorkspace({ onVersionChange, submissionId, ver
   return <div className="space-y-6">
     <Link className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]" params={{ assignmentId: assignment.id, spaceId: assignment.learning_space_id }} search={{ tab: "submissions", submission_page: 1, submission_status: "all" }} to="/modules/learning/spaces/$spaceId/assignments/$assignmentId">← {assignment.title}</Link>
     <section className="border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-xl font-semibold text-[var(--text-strong)]">{submission.learner_name}</h1><p className="mt-1 font-tabular text-sm text-[var(--text-muted)]">{submission.learner_number}</p></div><LearningStatusBadge status={submission.status} /></div><div className="mt-5 flex flex-wrap gap-2" aria-label="Submission versions">{submission.versions.map((version) => <Button key={version.id} onClick={() => onVersionChange(version.id)} size="sm" variant={version.id === selectedVersion.id ? "primary" : "secondary"}>Version {version.revision_number}</Button>)}</div></section>
-    <section className="border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-[var(--text-strong)]">Submitted work</h2><p className="text-xs text-[var(--text-muted)]">{formatLearningDateTime(selectedVersion.submitted_at)}{selectedVersion.late ? " · Late" : ""}</p></div><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-[var(--text-strong)]">{selectedVersion.body}</p></section>
+    <section className="border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-[var(--text-strong)]">Submitted work</h2><p className="text-xs text-[var(--text-muted)]">{formatLearningDateTime(selectedVersion.submitted_at)}{selectedVersion.late ? " · Late" : ""}</p></div>{selectedVersion.body ? <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-[var(--text-strong)]">{selectedVersion.body}</p> : null}{selectedVersion.files.length ? <div className="mt-5 divide-y divide-[var(--border)] border border-[var(--border)]">{selectedVersion.files.map((file) => <SubmissionFile file={file} key={file.id} />)}</div> : null}</section>
     {editable ? <section className="border border-[var(--border)] bg-[var(--surface)]"><header className="border-b border-[var(--border)] p-5 sm:p-6"><h2 className="text-lg font-semibold text-[var(--text-strong)]">Feedback draft</h2><p className="mt-1 text-sm text-[var(--text-muted)]">Score the current version and save before release.</p></header><div className="space-y-5 p-5 sm:p-6">{assignment.rubric.map((criterion) => <div className="grid gap-3 border-b border-[var(--border)] pb-5 sm:grid-cols-[1fr_160px]" key={criterion.id}><div><p className="font-medium text-[var(--text-strong)]">{criterion.title}</p>{criterion.description ? <p className="mt-1 text-sm text-[var(--text-muted)]">{criterion.description}</p> : null}</div><div><Label htmlFor={`score-${criterion.id}`}>Score / {formatHundredths(criterion.max_score_hundredths)}</Label><Input className="mt-1.5" id={`score-${criterion.id}`} min={0} onChange={(event) => { setScores((current) => ({ ...current, [criterion.id]: event.target.value })); setSaveState("idle"); }} step="0.01" type="number" value={scores[criterion.id] ?? ""} /></div></div>)}<div><Label htmlFor="overall-feedback">Overall feedback</Label><Textarea className="mt-1.5 min-h-40" id="overall-feedback" maxLength={10000} onChange={(event) => { setOverall(event.target.value); setSaveState("idle"); }} value={overall} /></div><div className="flex flex-wrap items-center justify-between gap-3"><p aria-live="polite" className="text-xs text-[var(--text-muted)]">{saveState === "saving" ? "Saving…" : saveState === "error" ? saveError : dirty ? "Unsaved changes" : selectedFeedback ? "Saved" : "Add feedback to begin"}</p><div className="flex flex-wrap gap-2"><Button disabled={!dirty || saveState === "saving"} onClick={() => void save()} variant="secondary"><Save className="size-4" />Save feedback</Button><Button disabled={dirty || !selectedFeedback || saveState === "saving"} onClick={() => setReleaseOutcome("revision_requested")} variant="secondary">Request revision</Button><Button disabled={dirty || !selectedFeedback || !completeScores || saveState === "saving"} onClick={() => setReleaseOutcome("graded")}><Send className="size-4" />Release grade</Button></div></div></div></section> : selectedFeedback?.status === "released" ? <ReleasedFeedback assignment={assignment} feedback={selectedFeedback} /> : <LearningState description={selectedVersion.id === submission.current_submission_version_id ? "Feedback has not been released." : "Only the current submitted version can be reviewed."} title="No feedback available" />}
     <DialogShell onClose={releasing ? () => undefined : () => setReleaseOutcome(null)} open={Boolean(releaseOutcome)}><DialogHeader onClose={releasing ? undefined : () => setReleaseOutcome(null)} title={releaseOutcome === "graded" ? "Release graded feedback?" : "Request a revision?"} /><DialogBody><div className="flex gap-4"><span className="flex size-10 shrink-0 items-center justify-center rounded-[9px] bg-[var(--badge-info-bg)] text-[var(--badge-info-text)]"><CheckCircle2 className="size-5" /></span><p className="text-sm leading-6 text-[var(--text-muted)]">{releaseOutcome === "graded" ? "The rubric score and feedback become visible to the learner and this attempt is marked graded." : "The feedback becomes visible and the learner can prepare a new immutable version. Overall feedback is required."}</p></div></DialogBody><DialogFooter><Button disabled={releasing} onClick={() => setReleaseOutcome(null)} variant="secondary">Cancel</Button><Button disabled={releasing || (releaseOutcome === "revision_requested" && !overall.trim())} onClick={() => void release()}>{releasing ? <><Loader2 className="size-4 animate-spin" />Releasing…</> : releaseOutcome === "graded" ? "Release feedback" : "Request revision"}</Button></DialogFooter></DialogShell>
   </div>;
@@ -199,3 +201,16 @@ function ReleasedFeedback({ assignment, feedback }: { assignment: LearningAssign
 }
 
 function reviewFingerprint(overall: string, scores: Record<string, string>) { return JSON.stringify({ overall, scores: Object.entries(scores).sort(([left], [right]) => left.localeCompare(right)) }); }
+
+function SubmissionFile({ file }: { file: LearningSubmissionFile }) {
+  const download = async () => {
+    try {
+      const response = await learningService.downloadSubmissionFile(file.id);
+      if (!response.success || !response.data) throw new Error(responseMessage(response, "The file could not be downloaded"));
+      window.open(response.data.url, "_blank", "noopener,noreferrer");
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "The file could not be downloaded");
+    }
+  };
+  return <div className="flex items-center gap-3 p-3"><FileText className="size-5 shrink-0 text-[var(--brand-strong)]"/><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-[var(--text-strong)]">{file.original_file_name}</p><p className="mt-0.5 text-xs text-[var(--text-muted)]">{file.document_reference}</p></div><Button aria-label={`Download ${file.original_file_name}`} onClick={() => void download()} size="icon-sm" variant="ghost"><Download className="size-4"/></Button></div>;
+}

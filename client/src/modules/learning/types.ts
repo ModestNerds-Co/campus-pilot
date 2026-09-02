@@ -1,7 +1,10 @@
+/** Shared E-learning API contracts for authoring, participation, and review. */
+
 export type LearningSpaceStatus = "draft" | "published" | "archived";
 export type LearningUnitStatus = "draft" | "published" | "withdrawn";
 export type LearningResourceStatus = "draft" | "published" | "withdrawn";
 export type LearningAssignmentStatus = "draft" | "published" | "closed";
+export type LearningSubmissionMethod = "text" | "file" | "text_or_file";
 export type LearningSubmissionStatus =
   | "draft"
   | "submitted"
@@ -38,8 +41,22 @@ export interface ApiEnvelope<T> {
 export interface LearningSettings {
   document_series_id: string | null;
   document_series_name: string | null;
+  learner_submission_series_id: string | null;
+  learner_submission_series_name: string | null;
   version: number;
   updated_at: string;
+}
+
+export interface LearningUploadClassificationOption {
+  id: string;
+  code: string;
+  name: string;
+  default_sensitivity: string;
+}
+
+export interface LearningUploadClassificationOptions {
+  resource_series: LearningUploadClassificationOption[];
+  learner_submission_series: LearningUploadClassificationOption[];
 }
 
 export interface LearningTermReference {
@@ -156,6 +173,7 @@ export interface LearningAssignment {
   instructions: string;
   due_at: string;
   max_score_hundredths: number;
+  submission_method: LearningSubmissionMethod;
   status: LearningAssignmentStatus;
   version: number;
   recipient_count: number;
@@ -171,9 +189,22 @@ export interface LearningAssignment {
 export interface LearningSubmissionVersion {
   id: string;
   revision_number: number;
-  body: string;
+  body: string | null;
+  files: LearningSubmissionFile[];
   late: boolean;
   submitted_at: string;
+}
+
+export interface LearningSubmissionFile {
+  id: string;
+  document_file_id: string;
+  document_reference: string;
+  original_file_name: string;
+  media_type: string;
+  byte_size: number;
+  position: number;
+  version: number | null;
+  attached_at: string;
 }
 
 export interface LearningReviewScore {
@@ -206,6 +237,7 @@ export interface LearningSubmission {
   status: LearningSubmissionStatus;
   version: number;
   current_submission_version_id: string | null;
+  draft_files: LearningSubmissionFile[];
   versions: LearningSubmissionVersion[];
   feedback: LearningFeedback | null;
   created_at: string;
@@ -456,6 +488,7 @@ export interface CreateLearningAssignment {
   instructions: string;
   due_at: string;
   max_score_hundredths: number;
+  submission_method: LearningSubmissionMethod;
 }
 
 export interface CreateLearningQuiz {
