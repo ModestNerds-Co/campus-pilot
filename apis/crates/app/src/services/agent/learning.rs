@@ -11,9 +11,11 @@ use cp_learning::{
     LearningAssignmentStatus, LearningCompletionPage, LearningCompletionPolicyResponse,
     LearningOps, LearningProgressEntry, LearningQuizAttemptListQuery, LearningQuizAttemptResponse,
     LearningQuizAttemptStatus, LearningQuizListQuery, LearningQuizResponse, LearningQuizStatus,
-    LearningReferenceData, LearningResourceFileQuery, LearningSettingsResponse,
-    LearningSpaceListQuery, LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary,
-    LearningSubmissionListQuery, LearningSubmissionResponse, LearningSubmissionStatus,
+    LearningReferenceData, LearningResourceFileQuery, LearningScoreTransferListQuery,
+    LearningScoreTransferResponse, LearningScoreTransferStatus, LearningScoreTransferSummary,
+    LearningSettingsResponse, LearningSpaceListQuery, LearningSpaceResponse, LearningSpaceStatus,
+    LearningSpaceSummary, LearningSubmissionListQuery, LearningSubmissionResponse,
+    LearningSubmissionStatus,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -1278,6 +1280,153 @@ impl Capability for LearningCompletionCapability {
                 .await
                 .map_err(|_| dependency_failure("E-learning completion could not be loaded."))?;
         Ok(LearningCompletionOutput { completion })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningScoreTransfersInput {
+    page: Option<i64>,
+    per_page: Option<i64>,
+    status: Option<LearningScoreTransferStatus>,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningScoreTransfersOutput {
+    score_transfers: Vec<LearningScoreTransferSummary>,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct LearningScoreTransfersCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningScoreTransfersCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.score_transfers.list",
+                "List E-learning score transfers",
+                "Returns reviewed score-transfer proposals visible through current teaching or campus scope.",
+                json!({
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+                    "status": { "type": ["string", "null"], "enum": ["pending", "applied", "rejected", null] }
+                }),
+                json!({ "score_transfers": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.score_transfers",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningScoreTransfersCapability {
+    type Input = LearningScoreTransfersInput;
+    type Output = LearningScoreTransfersOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, _input: &Self::Input) -> CapabilityScope {
+        CapabilityScope::TenantWide
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let page = input.page.unwrap_or(1).max(1);
+        let per_page = input.per_page.unwrap_or(25).clamp(1, 100);
+        let (score_transfers, total) = LearningOps::list_score_transfers(
+            &self.pool,
+            principal.tenant_id(),
+            scope,
+            &LearningScoreTransferListQuery {
+                page: Some(page),
+                per_page: Some(per_page),
+                status: input.status,
+            },
+        )
+        .await
+        .map_err(|_| dependency_failure("E-learning score transfers could not be loaded."))?;
+        Ok(LearningScoreTransfersOutput {
+            score_transfers,
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningScoreTransferInput {
+    proposal_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningScoreTransferOutput {
+    score_transfer: LearningScoreTransferResponse,
+}
+
+pub(super) struct LearningScoreTransferCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningScoreTransferCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.score_transfers.read",
+                "Read E-learning score transfer",
+                "Returns immutable source, target, learner-row, and human review evidence for one visible proposal.",
+                json!({ "proposal_id": { "type": "string", "format": "uuid" } }),
+                json!({ "score_transfer": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.score_transfers",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningScoreTransferCapability {
+    type Input = LearningScoreTransferInput;
+    type Output = LearningScoreTransferOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_score_transfer", input.proposal_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let score_transfer = LearningOps::get_score_transfer(
+            &self.pool,
+            principal.tenant_id(),
+            input.proposal_id,
+            scope,
+        )
+        .await
+        .map_err(|_| dependency_failure("The E-learning score transfer could not be loaded."))?
+        .ok_or_else(|| invalid_state("The E-learning score transfer is unavailable."))?;
+        Ok(LearningScoreTransferOutput { score_transfer })
     }
 }
 

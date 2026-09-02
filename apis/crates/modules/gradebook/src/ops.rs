@@ -38,9 +38,170 @@ pub enum GradebookAccessScope {
     AssignedTo(Uuid),
 }
 
+/// One exact, version-bound mark prepared by another owning module.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GradebookScoreTransferMark {
+    pub mark_id: Uuid,
+    pub learner_id: Uuid,
+    pub expected_mark_version: i32,
+    pub marks_awarded_hundredths: i64,
+}
+
+/// Typed cross-module command for applying reviewed Learning evidence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApplyGradebookScoreTransfer {
+    pub proposal_id: Uuid,
+    pub mark_sheet_id: Uuid,
+    pub expected_sheet_version: i32,
+    pub source_type: String,
+    pub marks: Vec<GradebookScoreTransferMark>,
+}
+
 pub struct GradebookOps;
 
 impl GradebookOps {
+    /// Applies a reviewed Learning proposal to unmarked rows in one draft sheet.
+    ///
+    /// The caller owns the proposal transaction. Gradebook locks and verifies
+    /// every destination row, writes the formal marks, and appends its own
+    /// lifecycle and audit evidence in that same transaction.
+    pub async fn apply_learning_score_transfer(
+        transaction: &mut Transaction<'_, Postgres>,
+        tenant_id: Uuid,
+        actor: AuditActor,
+        request_context: RequestContext,
+        request: &ApplyGradebookScoreTransfer,
+    ) -> Result<i32> {
+        let actor_id = person_actor_id(actor)?;
+        if request.marks.is_empty() {
+            bail!("A score transfer needs at least one ready learner mark");
+        }
+        let Some(sheet) = lock_sheet(transaction, tenant_id, request.mark_sheet_id).await? else {
+            bail!("The target mark sheet is unavailable");
+        };
+        ensure_draft(&sheet)?;
+        ensure_version(&sheet, request.expected_sheet_version)?;
+        let maximum_hundredths = sqlx::query_scalar::<_, i64>(
+            r#"
+            SELECT component.maximum_marks::BIGINT * 100
+              FROM assessment_components component
+             WHERE component.tenant_id = $1 AND component.id = $2
+               AND component.deleted_at IS NULL
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(sheet.assessment_component_id)
+        .fetch_optional(&mut **transaction)
+        .await
+        .context("Failed to load the score-transfer mark limit")?
+        .context("The score-transfer assessment component is unavailable")?;
+
+        let requested_ids = request
+            .marks
+            .iter()
+            .map(|mark| mark.mark_id)
+            .collect::<BTreeSet<_>>();
+        if requested_ids.len() != request.marks.len() {
+            bail!("The score transfer contains a duplicate target mark");
+        }
+        let current = sqlx::query_as::<_, MarkRow>(
+            r#"
+            SELECT id, enrolment_id, learner_id, mark_status,
+                   marks_awarded_hundredths, note, version, marked_at
+              FROM assessment_marks
+             WHERE tenant_id = $1 AND mark_sheet_id = $2
+               AND id = ANY($3) AND deleted_at IS NULL
+             FOR UPDATE
+            "#,
+        )
+        .bind(tenant_id)
+        .bind(request.mark_sheet_id)
+        .bind(requested_ids.iter().copied().collect::<Vec<_>>())
+        .fetch_all(&mut **transaction)
+        .await
+        .context("Failed to lock score-transfer target marks")?;
+        if current.len() != request.marks.len() {
+            bail!("The score-transfer target roster changed before review");
+        }
+        let current_by_id = current
+            .into_iter()
+            .map(|mark| (mark.id, mark))
+            .collect::<HashMap<_, _>>();
+        for proposed in &request.marks {
+            ensure_transfer_mark_range(proposed.marks_awarded_hundredths, maximum_hundredths)?;
+            let target = current_by_id
+                .get(&proposed.mark_id)
+                .context("A score-transfer target mark is unavailable")?;
+            if target.learner_id != proposed.learner_id
+                || target.version != proposed.expected_mark_version
+                || target.mark_status != "unmarked"
+            {
+                bail!("The score-transfer target changed before review");
+            }
+            let updated = sqlx::query(
+                r#"
+                UPDATE assessment_marks
+                   SET mark_status = 'scored', marks_awarded_hundredths = $4,
+                       note = $5, marked_by = $6, marked_at = NOW(),
+                       version = version + 1
+                 WHERE tenant_id = $1 AND mark_sheet_id = $2 AND id = $3
+                   AND version = $7 AND mark_status = 'unmarked'
+                   AND deleted_at IS NULL
+                "#,
+            )
+            .bind(tenant_id)
+            .bind(request.mark_sheet_id)
+            .bind(proposed.mark_id)
+            .bind(proposed.marks_awarded_hundredths)
+            .bind(format!(
+                "Transferred from E-learning {} proposal {}",
+                request.source_type, request.proposal_id
+            ))
+            .bind(actor_id)
+            .bind(proposed.expected_mark_version)
+            .execute(&mut **transaction)
+            .await
+            .context("Failed to apply a reviewed Learning score")?;
+            if updated.rows_affected() != 1 {
+                bail!("The score-transfer target changed before review");
+            }
+        }
+
+        let version =
+            increment_sheet_version(transaction, tenant_id, request.mark_sheet_id).await?;
+        let metadata = json!({
+            "learning_score_transfer_proposal_id": request.proposal_id,
+            "source_type": request.source_type,
+            "transferred_count": request.marks.len()
+        });
+        append_sheet_event(
+            transaction,
+            SheetEvent {
+                tenant_id,
+                mark_sheet_id: request.mark_sheet_id,
+                event_type: "marks_transferred",
+                from_status: Some("draft"),
+                to_status: "draft",
+                version,
+                actor_id,
+                reason: None,
+                metadata: metadata.clone(),
+            },
+        )
+        .await?;
+        append_sheet_audit(
+            transaction,
+            tenant_id,
+            actor,
+            request_context,
+            "academics.gradebook.mark_sheets.learning_transfer.apply",
+            request.mark_sheet_id,
+            metadata,
+        )
+        .await?;
+        Ok(version)
+    }
+
     /// Lists closed assessment-cycle classes whose active components all have
     /// published sheets. A reporting batch may only use these exact sources.
     pub async fn reporting_sources(
@@ -988,6 +1149,7 @@ async fn hydrate_summary(
         academic_term_name: reference.academic_term_name,
         academic_year_id: reference.academic_year_id,
         academic_year_name: reference.academic_year_name,
+        teaching_assignment_id: reference.teaching_assignment_id,
         class_group_id: reference.class_group_id,
         class_group_name: reference.class_group_name,
         subject_id: reference.subject_id,
@@ -1462,6 +1624,13 @@ fn trimmed_optional(value: Option<&str>) -> Option<String> {
         .map(str::to_string)
 }
 
+fn ensure_transfer_mark_range(value: i64, maximum_hundredths: i64) -> Result<()> {
+    if !(0..=maximum_hundredths).contains(&value) {
+        bail!("A transferred mark is outside the assessment maximum");
+    }
+    Ok(())
+}
+
 fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {
     (
         page.unwrap_or(DEFAULT_PAGE).clamp(1, MAX_PAGE),
@@ -1472,8 +1641,8 @@ fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {
 #[cfg(test)]
 mod tests {
     use super::{
-        GradebookMarkInput, GradebookMarkStatus, mark_counts, parse_marks, percentage_basis_points,
-        summary_select, weighted_score_basis_points,
+        GradebookMarkInput, GradebookMarkStatus, ensure_transfer_mark_range, mark_counts,
+        parse_marks, percentage_basis_points, summary_select, weighted_score_basis_points,
     };
     use uuid::Uuid;
 
@@ -1506,6 +1675,13 @@ mod tests {
             note: None,
         }];
         assert!(parse_marks(&values, 50).is_err());
+    }
+
+    #[test]
+    fn score_transfer_rechecks_the_gradebook_maximum() {
+        assert!(ensure_transfer_mark_range(5_000, 5_000).is_ok());
+        assert!(ensure_transfer_mark_range(-1, 5_000).is_err());
+        assert!(ensure_transfer_mark_range(5_001, 5_000).is_err());
     }
 
     #[test]

@@ -941,11 +941,11 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 8);
             } else if module_key == "learning" {
                 assert!(module.release_ready());
-                assert_eq!(module.routed_operations(), 61);
-                assert_eq!(module.exposed_operations(), 19);
-                assert_eq!(module.approval_required_operations(), 36);
+                assert_eq!(module.routed_operations(), 66);
+                assert_eq!(module.exposed_operations(), 21);
+                assert_eq!(module.approval_required_operations(), 39);
                 assert_eq!(module.human_only_operations(), 6);
-                assert_eq!(module.executable_capabilities(), 19);
+                assert_eq!(module.executable_capabilities(), 21);
                 assert!(module.missing_executable_capabilities().is_empty());
             } else if module_key == "student_support" {
                 assert!(module.release_ready());

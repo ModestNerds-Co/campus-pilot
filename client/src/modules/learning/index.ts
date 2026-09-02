@@ -9,3 +9,5 @@ export * from "./progress-workspace";
 export * from "./quizzes-workspace";
 export * from "./quiz-workspace";
 export * from "./completion-workspace";
+export * from "./score-transfers-workspace";
+export * from "./score-transfer-workspace";

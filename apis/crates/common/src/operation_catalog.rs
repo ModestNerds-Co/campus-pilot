@@ -4261,6 +4261,52 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Read,
             true,
         ),
+        // E-learning score transfers: teacher proposal, independent academic review.
+        route(
+            Method::GET,
+            "/api/1.0/learning/score-transfers",
+            "learning.score_transfers.list",
+            "learning",
+            "learning:teach",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/score-transfers",
+            "learning.score_transfers.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/score-transfers/{id}",
+            "learning.score_transfers.read",
+            "learning",
+            "learning:teach",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/score-transfers/{id}/apply",
+            "learning.score_transfers.apply",
+            "learning",
+            "learning:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/score-transfers/{id}/reject",
+            "learning.score_transfers.reject",
+            "learning",
+            "learning:manage",
+            OperationEffect::Write,
+            true,
+        ),
         // Communication: reviewed announcements and personal in-app inbox.
         route(
             Method::GET,
@@ -6275,6 +6321,8 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "learning.completion_policy.read"
         | "learning.completion.mine.read"
         | "learning.completion.list"
+        | "learning.score_transfers.list"
+        | "learning.score_transfers.read"
         | "messaging.references.read"
         | "messaging.announcements.list"
         | "messaging.announcements.read"
@@ -6601,6 +6649,9 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "learning.quiz_attempts.submit"
         | "learning.completion_policy.save"
         | "learning.completion_policy.publish"
+        | "learning.score_transfers.create"
+        | "learning.score_transfers.apply"
+        | "learning.score_transfers.reject"
         | "messaging.announcements.create"
         | "messaging.announcements.update"
         | "messaging.announcements.submit"
@@ -6894,7 +6945,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 644);
+        assert_eq!(operation_catalog().len(), 649);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6946,7 +6997,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [239, 363, 30, 12]);
+        assert_eq!(counts, [241, 366, 30, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -7157,6 +7208,66 @@ mod tests {
                 operation.required_modules().collect::<Vec<_>>(),
                 ["academics", "document_registry", "hr_payroll", "sis"],
                 "{key}"
+            );
+        }
+    }
+
+    #[test]
+    fn learning_score_transfers_keep_proposal_and_review_authority_separate() {
+        let cases = [
+            (
+                Method::GET,
+                "/api/1.0/learning/score-transfers",
+                "learning.score_transfers.list",
+                "learning:teach",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/score-transfers",
+                "learning.score_transfers.create",
+                "learning:teach",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::GET,
+                "/api/1.0/learning/score-transfers/{id}",
+                "learning.score_transfers.read",
+                "learning:teach",
+                OperationEffect::Read,
+                AgentExposure::Exposed,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/score-transfers/{id}/apply",
+                "learning.score_transfers.apply",
+                "learning:manage",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+            (
+                Method::POST,
+                "/api/1.0/learning/score-transfers/{id}/reject",
+                "learning.score_transfers.reject",
+                "learning:manage",
+                OperationEffect::Write,
+                AgentExposure::ApprovalRequired,
+            ),
+        ];
+
+        for (method, path, key, permission, effect, exposure) in cases {
+            let operation = routed_operation_for_route(&method, path)
+                .unwrap_or_else(|| panic!("missing route descriptor for {key}"))
+                .operation();
+            assert_eq!(operation.key(), key);
+            assert_eq!(operation.permission(), permission);
+            assert_eq!(operation.effect(), effect);
+            assert_eq!(operation.agent_exposure(), exposure);
+            assert_eq!(
+                operation.required_modules().collect::<Vec<_>>(),
+                ["academics", "document_registry", "hr_payroll", "sis"]
             );
         }
     }

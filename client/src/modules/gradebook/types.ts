@@ -48,6 +48,7 @@ export interface GradebookSheetSummary {
   academic_term_name: string;
   academic_year_id: string;
   academic_year_name: string;
+  teaching_assignment_id: string;
   class_group_id: string;
   class_group_name: string;
   subject_id: string;

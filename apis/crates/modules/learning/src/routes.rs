@@ -23,15 +23,17 @@ use validator::Validate;
 
 use crate::ops::{LearningResourceCreateCommand, LearningSubmissionFileAttachCommand};
 use crate::{
-    CreateLearningAssignmentRequest, CreateLearningQuizQuestionRequest, CreateLearningQuizRequest,
-    CreateLearningResourceRequest, CreateLearningRubricCriterionRequest,
+    ApplyLearningScoreTransferRequest, CreateLearningAssignmentRequest,
+    CreateLearningQuizQuestionRequest, CreateLearningQuizRequest, CreateLearningResourceRequest,
+    CreateLearningRubricCriterionRequest, CreateLearningScoreTransferRequest,
     CreateLearningSpaceRequest, CreateLearningUnitRequest, DeleteLearningQuizQuestionRequest,
     DeleteLearningRubricCriterionRequest, LearningAccessScope, LearningAssignmentListQuery,
     LearningAssignmentsPage, LearningDownloadResponse, LearningOps, LearningProgressPage,
     LearningQuizAttemptListQuery, LearningQuizAttemptsPage, LearningQuizListQuery,
     LearningQuizzesPage, LearningResourceCreation, LearningResourceFileQuery,
-    LearningResourceFilesResponse, LearningSpaceListQuery, LearningSpacesPage,
-    LearningSubmissionListQuery, LearningSubmissionsPage, ReasonedLearningTransitionRequest,
+    LearningResourceFilesResponse, LearningScoreTransferListQuery, LearningScoreTransfersPage,
+    LearningSpaceListQuery, LearningSpacesPage, LearningSubmissionListQuery,
+    LearningSubmissionsPage, ReasonedLearningTransitionRequest, RejectLearningScoreTransferRequest,
     ReleaseLearningFeedbackRequest, RemoveLearningSubmissionFileRequest,
     SaveLearningCompletionPolicyRequest, SaveLearningQuizAttemptRequest,
     SaveLearningSubmissionRequest, SubmitLearningQuizAttemptRequest,
@@ -1897,6 +1899,133 @@ async fn list_progress(
     }
 }
 
+#[get("/score-transfers")]
+async fn list_score_transfers(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    query: web::Query<LearningScoreTransferListQuery>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match LearningOps::list_score_transfers(&pool, tenant_id(tenant), scope, &query).await {
+        Ok((score_transfers, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(LearningScoreTransfersPage { score_transfers }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/score-transfers")]
+async fn create_score_transfer(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    body: web::Json<CreateLearningScoreTransferRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    created_or_error(
+        LearningOps::create_score_transfer(
+            &pool,
+            tenant_id(tenant),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[get("/score-transfers/{id}")]
+async fn read_score_transfer(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    optional_or_not_found(
+        LearningOps::get_score_transfer(&pool, tenant_id(tenant), path.into_inner(), scope).await,
+    )
+}
+
+#[post("/score-transfers/{id}/apply")]
+async fn apply_score_transfer(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ApplyLearningScoreTransferRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::apply_score_transfer(
+            &pool,
+            tenant_id(tenant),
+            scope,
+            path.into_inner(),
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The Learning score transfer changed or cannot be applied",
+    )
+}
+
+#[post("/score-transfers/{id}/reject")]
+async fn reject_score_transfer(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<RejectLearningScoreTransferRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::reject_score_transfer(
+            &pool,
+            tenant_id(tenant),
+            scope,
+            path.into_inner(),
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The Learning score transfer changed or cannot be rejected",
+    )
+}
+
 /// Registers every released Learning route beneath `/api/1.0/learning`.
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -1962,7 +2091,12 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(read_self_completion)
             .service(list_completion)
             .service(read_self_progress)
-            .service(list_progress),
+            .service(list_progress)
+            .service(list_score_transfers)
+            .service(create_score_transfer)
+            .service(read_score_transfer)
+            .service(apply_score_transfer)
+            .service(reject_score_transfer),
     );
 }
 

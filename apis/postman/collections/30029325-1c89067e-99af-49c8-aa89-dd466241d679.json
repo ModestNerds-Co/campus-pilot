@@ -6679,7 +6679,7 @@
     },
     {
       "name": "E-learning",
-      "description": "Class-linked spaces, resources, assignments, quizzes, governed learner files, immutable learner attempts, feedback, progress, and derived completion. Teacher authoring is limited to assigned spaces; Student writes derive the authenticated learner and never accept a learner identifier. Learner quiz projections omit answer-key flags; private bytes and signed download links remain direct human workflows.",
+      "description": "Class-linked spaces, resources, assignments, quizzes, governed learner files, immutable learner attempts, feedback, progress, derived completion, and reviewed score transfers into Gradebook. Teacher authoring is limited to assigned spaces; Student writes derive the authenticated learner and never accept a learner identifier. Learner quiz projections omit answer-key flags; private bytes and signed download links remain direct human workflows.",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
       "item": [
         { "name": "Read Learning Settings", "request": { "method": "GET", "url": "{{base_url}}/learning/settings" } },
@@ -6742,7 +6742,12 @@
         { "name": "Save Learning Completion Policy", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"requirements\": [\n    {\"requirement_type\": \"quiz\", \"source_id\": \"{{learning_quiz_id}}\", \"minimum_score_basis_points\": 6000}\n  ],\n  \"expected_version\": {{learning_completion_policy_version}}\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion-policy" } },
         { "name": "Publish Learning Completion Policy", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_completion_policy_version}}\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion-policy/publish" } },
         { "name": "Read My Learning Completion", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion/me" } },
-        { "name": "List Learning Completion", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion" } }
+        { "name": "List Learning Completion", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion" } },
+        { "name": "List Learning Score Transfers", "request": { "method": "GET", "url": "{{base_url}}/learning/score-transfers?page=1&per_page=25&status=pending", "description": "Returns immutable proposal summaries visible through assigned-teacher or campus scope." } },
+        { "name": "Prepare Learning Score Transfer", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"source_type\": \"assignment\",\n  \"source_id\": \"{{learning_assignment_id}}\",\n  \"target_mark_sheet_id\": \"{{gradebook_mark_sheet_id}}\",\n  \"idempotency_key\": \"{{learning_score_transfer_idempotency_key}}\"\n}" }, "url": "{{base_url}}/learning/score-transfers", "description": "Snapshots released Learning evidence and the unchanged draft Gradebook target. It does not write formal marks." } },
+        { "name": "Read Learning Score Transfer", "request": { "method": "GET", "url": "{{base_url}}/learning/score-transfers/{{learning_score_transfer_id}}" } },
+        { "name": "Apply Learning Score Transfer", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_score_transfer_version}}\n}" }, "url": "{{base_url}}/learning/score-transfers/{{learning_score_transfer_id}}/apply", "description": "Requires campus Learning management scope and a reviewer different from the proposer. Gradebook rechecks every target row in the same transaction." } },
+        { "name": "Reject Learning Score Transfer", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_score_transfer_version}},\n  \"reason\": \"Source and assessment do not represent the same activity\"\n}" }, "url": "{{base_url}}/learning/score-transfers/{{learning_score_transfer_id}}/reject" } }
       ]
     },
     {

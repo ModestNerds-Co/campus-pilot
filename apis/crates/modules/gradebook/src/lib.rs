@@ -22,4 +22,6 @@ pub use imports::{
     GradebookMarkImportMapping, GradebookMarkImportOps, GradebookMarkImportPreview,
     GradebookMarkImportRecord, MarkImportListQuery, MarkImportPreviewQuery, NewGradebookMarkImport,
 };
-pub use ops::{GradebookAccessScope, GradebookOps};
+pub use ops::{
+    ApplyGradebookScoreTransfer, GradebookAccessScope, GradebookOps, GradebookScoreTransferMark,
+};

@@ -7,6 +7,7 @@ edition = "2024"
 cp-common = { path = "../../common" }
 cp-audit = { path = "../../platform/audit" }
 cp-academics = { path = "../academics" }
+cp-gradebook = { path = "../gradebook" }
 cp-sis = { path = "../sis" }
 cp-document-registry = { path = "../document-registry" }
 

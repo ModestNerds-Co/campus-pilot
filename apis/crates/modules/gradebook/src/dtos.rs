@@ -165,6 +165,7 @@ pub struct GradebookSheetSummary {
     pub academic_term_name: String,
     pub academic_year_id: Uuid,
     pub academic_year_name: String,
+    pub teaching_assignment_id: Uuid,
     pub class_group_id: Uuid,
     pub class_group_name: String,
     pub subject_id: Uuid,

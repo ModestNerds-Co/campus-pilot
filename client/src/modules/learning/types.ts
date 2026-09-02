@@ -15,6 +15,8 @@ export type LearningQuizStatus = "draft" | "published" | "closed";
 export type LearningQuizAttemptStatus = "in_progress" | "submitted";
 export type LearningCompletionPolicyStatus = "draft" | "published" | "superseded";
 export type LearningCompletionRequirementType = "assignment" | "quiz";
+export type LearningScoreTransferSourceType = "assignment" | "quiz";
+export type LearningScoreTransferStatus = "pending" | "applied" | "rejected";
 export type LearningAssignmentTab =
   | "brief"
   | "work"
@@ -362,6 +364,55 @@ export interface LearningCompletionPage {
   progress: LearningCompletionEntry[];
 }
 
+export interface LearningScoreTransferRow {
+  id: string;
+  target_mark_id: string;
+  enrolment_id: string;
+  learner_id: string;
+  learner_number: string;
+  learner_name: string;
+  target_mark_version: number;
+  source_score_basis_points: number | null;
+  proposed_marks_hundredths: number | null;
+  outcome: "ready" | "missing_source" | "target_already_marked";
+}
+
+export interface LearningScoreTransferSummary {
+  id: string;
+  learning_space_id: string;
+  learning_space_title: string;
+  class_group_name: string;
+  subject_name: string;
+  source_type: LearningScoreTransferSourceType;
+  source_id: string;
+  source_title: string;
+  source_version: number;
+  target_mark_sheet_id: string;
+  target_mark_sheet_version: number;
+  target_assessment_name: string;
+  target_maximum_marks: number;
+  status: LearningScoreTransferStatus;
+  version: number;
+  ready_count: number;
+  missing_source_count: number;
+  target_already_marked_count: number;
+  proposed_by_id: string;
+  proposed_by_name: string;
+  proposed_at: string;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  review_reason: string | null;
+  applied_mark_sheet_version: number | null;
+}
+
+export interface LearningScoreTransfer extends LearningScoreTransferSummary {
+  rows: LearningScoreTransferRow[];
+}
+
+export interface LearningScoreTransfersResponse {
+  score_transfers: LearningScoreTransferSummary[];
+}
+
 export interface LearningSpacesResponse {
   spaces: LearningSpaceSummary[];
 }
@@ -416,6 +467,11 @@ export interface QuizzesSearch {
   page: number;
 }
 
+export interface ScoreTransfersSearch {
+  status: "all" | LearningScoreTransferStatus;
+  page: number;
+}
+
 export interface AssignmentDetailSearch {
   tab: LearningAssignmentTab;
   submission_status: "all" | LearningSubmissionStatus;
@@ -461,6 +517,12 @@ export interface LearningQuizAttemptListParams {
   page?: number;
   per_page?: number;
   status?: LearningQuizAttemptStatus;
+}
+
+export interface LearningScoreTransferListParams {
+  page?: number;
+  per_page?: number;
+  status?: LearningScoreTransferStatus;
 }
 
 export interface CreateLearningSpace {

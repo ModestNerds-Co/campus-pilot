@@ -8,6 +8,7 @@ pub mod dtos;
 mod models;
 pub mod ops;
 pub mod routes;
+mod score_transfer;
 
 pub use dtos::*;
 pub use ops::LearningOps;

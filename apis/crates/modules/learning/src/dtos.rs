@@ -205,6 +205,43 @@ impl LearningCompletionRequirementType {
     }
 }
 
+/// Immutable Learning evidence types eligible for a reviewed Gradebook transfer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningScoreTransferSourceType {
+    Assignment,
+    Quiz,
+}
+
+impl LearningScoreTransferSourceType {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Assignment => "assignment",
+            Self::Quiz => "quiz",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningScoreTransferStatus {
+    Pending,
+    Applied,
+    Rejected,
+}
+
+impl LearningScoreTransferStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Applied => "applied",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
 impl LearningReviewOutcome {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -255,6 +292,35 @@ pub struct LearningQuizAttemptListQuery {
     pub page: Option<i64>,
     pub per_page: Option<i64>,
     pub status: Option<LearningQuizAttemptStatus>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LearningScoreTransferListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub status: Option<LearningScoreTransferStatus>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateLearningScoreTransferRequest {
+    pub source_type: LearningScoreTransferSourceType,
+    pub source_id: Uuid,
+    pub target_mark_sheet_id: Uuid,
+    pub idempotency_key: Uuid,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ApplyLearningScoreTransferRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct RejectLearningScoreTransferRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 2000))]
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -947,6 +1013,61 @@ pub struct LearningResourceFilesResponse {
 pub struct LearningDownloadResponse {
     pub url: String,
     pub expires_in_seconds: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningScoreTransferRowResponse {
+    pub id: Uuid,
+    pub target_mark_id: Uuid,
+    pub enrolment_id: Uuid,
+    pub learner_id: Uuid,
+    pub learner_number: String,
+    pub learner_name: String,
+    pub target_mark_version: i32,
+    pub source_score_basis_points: Option<i32>,
+    pub proposed_marks_hundredths: Option<i64>,
+    pub outcome: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningScoreTransferSummary {
+    pub id: Uuid,
+    pub learning_space_id: Uuid,
+    pub learning_space_title: String,
+    pub class_group_name: String,
+    pub subject_name: String,
+    pub source_type: LearningScoreTransferSourceType,
+    pub source_id: Uuid,
+    pub source_title: String,
+    pub source_version: i32,
+    pub target_mark_sheet_id: Uuid,
+    pub target_mark_sheet_version: i32,
+    pub target_assessment_name: String,
+    pub target_maximum_marks: i32,
+    pub status: LearningScoreTransferStatus,
+    pub version: i32,
+    pub ready_count: i64,
+    pub missing_source_count: i64,
+    pub target_already_marked_count: i64,
+    pub proposed_by_id: Uuid,
+    pub proposed_by_name: String,
+    pub proposed_at: DateTime<Utc>,
+    pub reviewed_by_name: Option<String>,
+    pub reviewed_at: Option<DateTime<Utc>>,
+    pub review_reason: Option<String>,
+    pub applied_mark_sheet_version: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningScoreTransferResponse {
+    #[serde(flatten)]
+    pub summary: LearningScoreTransferSummary,
+    pub rows: Vec<LearningScoreTransferRowResponse>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LearningScoreTransfersPage {
+    pub score_transfers: Vec<LearningScoreTransferSummary>,
 }
 
 #[cfg(test)]

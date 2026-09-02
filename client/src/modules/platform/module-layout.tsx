@@ -244,7 +244,7 @@ function attendanceNavigation(
 }
 
 const learningNavigation: LocalNavItem[] = [
-  { label: "Spaces", path: "/modules/learning/spaces", icon: BookOpenCheck },
+  { label: "Score transfers", path: "/modules/learning/score-transfers", icon: ArrowLeftRight, permission: "learning:teach" },
   { label: "Settings", path: "/modules/learning/settings", icon: Settings2, permission: "learning:manage" },
 ];
 
@@ -1168,6 +1168,8 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
     return <Link className={navClass(active)} search={{ page: 1, date_from: "", date_to: "", class_group_id: "all", status: "all", mark: "all" }} to="/modules/attendance/exceptions"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/learning/spaces")
     return <Link className={navClass(active)} search={{ page: 1, q: "", status: "all" }} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/learning/score-transfers")
+    return <Link className={navClass(active)} search={{ page: 1, status: "all" }} to="/modules/learning/score-transfers"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/student-support/cases")
     return <Link className={navClass(active)} to="/modules/student-support/cases"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/transport/routes")

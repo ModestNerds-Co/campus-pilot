@@ -140,8 +140,9 @@ use learning::{
     LearningMineProgressCapability, LearningMineSubmissionCapability, LearningProgressCapability,
     LearningQuizAttemptCapability, LearningQuizAttemptsCapability, LearningQuizCapability,
     LearningQuizzesCapability, LearningReferencesCapability, LearningResourceFilesCapability,
-    LearningSettingsCapability, LearningSpaceCapability, LearningSpacesCapability,
-    LearningSubmissionCapability, LearningSubmissionsCapability,
+    LearningScoreTransferCapability, LearningScoreTransfersCapability, LearningSettingsCapability,
+    LearningSpaceCapability, LearningSpacesCapability, LearningSubmissionCapability,
+    LearningSubmissionsCapability,
 };
 use library::{
     LibraryCopiesCapability, LibraryListCapability, LibraryListKind, LibraryReadCapability,
@@ -461,6 +462,16 @@ pub fn build_capability_registry(
     registry
         .register(LearningCompletionCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid E-learning completion-list capability: {error}"));
+    registry
+        .register(LearningScoreTransfersCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid E-learning score-transfer list capability: {error}")
+        });
+    registry
+        .register(LearningScoreTransferCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid E-learning score-transfer read capability: {error}")
+        });
     registry
         .register(StudentSupportCasesListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Student Support cases-list capability: {error}"));
@@ -1335,6 +1346,8 @@ mod tests {
                 "learning.quizzes.read",
                 "learning.references.read",
                 "learning.resource_files.list",
+                "learning.score_transfers.list",
+                "learning.score_transfers.read",
                 "learning.settings.read",
                 "learning.spaces.list",
                 "learning.spaces.read",

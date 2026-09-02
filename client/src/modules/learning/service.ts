@@ -35,6 +35,10 @@ import type {
   LearningResource,
   LearningRubricCriterion,
   LearningSettings,
+  LearningScoreTransfer,
+  LearningScoreTransferListParams,
+  LearningScoreTransfersResponse,
+  LearningScoreTransferSourceType,
   LearningSpace,
   LearningSpaceListParams,
   LearningSpacesResponse,
@@ -409,6 +413,40 @@ export const learningService = {
   completion: (spaceId: string) =>
     request<LearningCompletionPage>(() =>
       httpClient.get(`${BASE}/spaces/${spaceId}/completion`),
+    ),
+  scoreTransfers: (params?: LearningScoreTransferListParams) =>
+    request<LearningScoreTransfersResponse>(() =>
+      httpClient.get(`${BASE}/score-transfers`, { params }),
+    ),
+  scoreTransfer: (proposalId: string) =>
+    request<LearningScoreTransfer>(() =>
+      httpClient.get(`${BASE}/score-transfers/${proposalId}`),
+    ),
+  createScoreTransfer: (
+    sourceType: LearningScoreTransferSourceType,
+    sourceId: string,
+    targetMarkSheetId: string,
+  ) =>
+    request<LearningScoreTransfer>(() =>
+      httpClient.post(`${BASE}/score-transfers`, {
+        source_type: sourceType,
+        source_id: sourceId,
+        target_mark_sheet_id: targetMarkSheetId,
+        idempotency_key: crypto.randomUUID(),
+      }),
+    ),
+  applyScoreTransfer: (proposal: LearningScoreTransfer) =>
+    request<LearningScoreTransfer>(() =>
+      httpClient.post(`${BASE}/score-transfers/${proposal.id}/apply`, {
+        expected_version: proposal.version,
+      }),
+    ),
+  rejectScoreTransfer: (proposal: LearningScoreTransfer, reason: string) =>
+    request<LearningScoreTransfer>(() =>
+      httpClient.post(`${BASE}/score-transfers/${proposal.id}/reject`, {
+        expected_version: proposal.version,
+        reason,
+      }),
     ),
 };
 

@@ -2031,6 +2031,7 @@ dependencies = [
  "cp-audit",
  "cp-common",
  "cp-document-registry",
+ "cp-gradebook",
  "cp-sis",
  "futures-util",
  "serde",

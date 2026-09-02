@@ -66,6 +66,7 @@ import { Route as ModulesLibraryFinesRouteImport } from './routes/modules/librar
 import { Route as ModulesLibraryCirculationRouteImport } from './routes/modules/library/circulation'
 import { Route as ModulesLearningSpacesRouteImport } from './routes/modules/learning/spaces'
 import { Route as ModulesLearningSettingsRouteImport } from './routes/modules/learning/settings'
+import { Route as ModulesLearningScoreTransfersRouteImport } from './routes/modules/learning/score-transfers'
 import { Route as ModulesInternalAuditSettingsRouteImport } from './routes/modules/internal-audit/settings'
 import { Route as ModulesInternalAuditPlansRouteImport } from './routes/modules/internal-audit/plans'
 import { Route as ModulesInternalAuditFindingsRouteImport } from './routes/modules/internal-audit/findings'
@@ -143,6 +144,7 @@ import { Route as ModulesProcurementPurchaseOrdersPurchaseOrderIdRouteImport } f
 import { Route as ModulesMessagingAnnouncementsAnnouncementIdRouteImport } from './routes/modules/messaging.announcements_.$announcementId'
 import { Route as ModulesLearningSubmissionsSubmissionIdRouteImport } from './routes/modules/learning/submissions_.$submissionId'
 import { Route as ModulesLearningSpacesSpaceIdRouteImport } from './routes/modules/learning/spaces_.$spaceId'
+import { Route as ModulesLearningScoreTransfersProposalIdRouteImport } from './routes/modules/learning/score-transfers_.$proposalId'
 import { Route as ModulesInternalAuditEngagementsEngagementIdRouteImport } from './routes/modules/internal-audit/engagements/$engagementId'
 import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/modules/health/patients_.$patientId'
 import { Route as ModulesDocumentRegistryDocumentsDocumentIdRouteImport } from './routes/modules/document-registry/documents/$documentId'
@@ -458,6 +460,12 @@ const ModulesLearningSettingsRoute = ModulesLearningSettingsRouteImport.update({
   path: '/learning/settings',
   getParentRoute: () => ModulesRoute,
 } as any)
+const ModulesLearningScoreTransfersRoute =
+  ModulesLearningScoreTransfersRouteImport.update({
+    id: '/learning/score-transfers',
+    path: '/learning/score-transfers',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesInternalAuditSettingsRoute =
   ModulesInternalAuditSettingsRouteImport.update({
     id: '/internal-audit/settings',
@@ -896,6 +904,12 @@ const ModulesLearningSpacesSpaceIdRoute =
     path: '/learning/spaces/$spaceId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesLearningScoreTransfersProposalIdRoute =
+  ModulesLearningScoreTransfersProposalIdRouteImport.update({
+    id: '/learning/score-transfers_/$proposalId',
+    path: '/learning/score-transfers/$proposalId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesInternalAuditEngagementsEngagementIdRoute =
   ModulesInternalAuditEngagementsEngagementIdRouteImport.update({
     id: '/$engagementId',
@@ -1121,6 +1135,7 @@ export interface FileRoutesByFullPath {
   '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
   '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
   '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
+  '/modules/learning/score-transfers': typeof ModulesLearningScoreTransfersRoute
   '/modules/learning/settings': typeof ModulesLearningSettingsRoute
   '/modules/learning/spaces': typeof ModulesLearningSpacesRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
@@ -1158,6 +1173,7 @@ export interface FileRoutesByFullPath {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
+  '/modules/learning/score-transfers/$proposalId': typeof ModulesLearningScoreTransfersProposalIdRoute
   '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRouteWithChildren
   '/modules/learning/submissions/$submissionId': typeof ModulesLearningSubmissionsSubmissionIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
@@ -1277,6 +1293,7 @@ export interface FileRoutesByTo {
   '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
   '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
   '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
+  '/modules/learning/score-transfers': typeof ModulesLearningScoreTransfersRoute
   '/modules/learning/settings': typeof ModulesLearningSettingsRoute
   '/modules/learning/spaces': typeof ModulesLearningSpacesRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
@@ -1314,6 +1331,7 @@ export interface FileRoutesByTo {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
+  '/modules/learning/score-transfers/$proposalId': typeof ModulesLearningScoreTransfersProposalIdRoute
   '/modules/learning/spaces/$spaceId': typeof ModulesLearningSpacesSpaceIdRouteWithChildren
   '/modules/learning/submissions/$submissionId': typeof ModulesLearningSubmissionsSubmissionIdRoute
   '/modules/messaging/announcements/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
@@ -1435,6 +1453,7 @@ export interface FileRoutesById {
   '/modules/internal-audit/findings': typeof ModulesInternalAuditFindingsRoute
   '/modules/internal-audit/plans': typeof ModulesInternalAuditPlansRoute
   '/modules/internal-audit/settings': typeof ModulesInternalAuditSettingsRoute
+  '/modules/learning/score-transfers': typeof ModulesLearningScoreTransfersRoute
   '/modules/learning/settings': typeof ModulesLearningSettingsRoute
   '/modules/learning/spaces': typeof ModulesLearningSpacesRoute
   '/modules/library/circulation': typeof ModulesLibraryCirculationRoute
@@ -1472,6 +1491,7 @@ export interface FileRoutesById {
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   '/modules/health/patients_/$patientId': typeof ModulesHealthPatientsPatientIdRoute
   '/modules/internal-audit/engagements/$engagementId': typeof ModulesInternalAuditEngagementsEngagementIdRoute
+  '/modules/learning/score-transfers_/$proposalId': typeof ModulesLearningScoreTransfersProposalIdRoute
   '/modules/learning/spaces_/$spaceId': typeof ModulesLearningSpacesSpaceIdRouteWithChildren
   '/modules/learning/submissions_/$submissionId': typeof ModulesLearningSubmissionsSubmissionIdRoute
   '/modules/messaging/announcements_/$announcementId': typeof ModulesMessagingAnnouncementsAnnouncementIdRoute
@@ -1594,6 +1614,7 @@ export interface FileRouteTypes {
     | '/modules/internal-audit/findings'
     | '/modules/internal-audit/plans'
     | '/modules/internal-audit/settings'
+    | '/modules/learning/score-transfers'
     | '/modules/learning/settings'
     | '/modules/learning/spaces'
     | '/modules/library/circulation'
@@ -1631,6 +1652,7 @@ export interface FileRouteTypes {
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
+    | '/modules/learning/score-transfers/$proposalId'
     | '/modules/learning/spaces/$spaceId'
     | '/modules/learning/submissions/$submissionId'
     | '/modules/messaging/announcements/$announcementId'
@@ -1750,6 +1772,7 @@ export interface FileRouteTypes {
     | '/modules/internal-audit/findings'
     | '/modules/internal-audit/plans'
     | '/modules/internal-audit/settings'
+    | '/modules/learning/score-transfers'
     | '/modules/learning/settings'
     | '/modules/learning/spaces'
     | '/modules/library/circulation'
@@ -1787,6 +1810,7 @@ export interface FileRouteTypes {
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
+    | '/modules/learning/score-transfers/$proposalId'
     | '/modules/learning/spaces/$spaceId'
     | '/modules/learning/submissions/$submissionId'
     | '/modules/messaging/announcements/$announcementId'
@@ -1907,6 +1931,7 @@ export interface FileRouteTypes {
     | '/modules/internal-audit/findings'
     | '/modules/internal-audit/plans'
     | '/modules/internal-audit/settings'
+    | '/modules/learning/score-transfers'
     | '/modules/learning/settings'
     | '/modules/learning/spaces'
     | '/modules/library/circulation'
@@ -1944,6 +1969,7 @@ export interface FileRouteTypes {
     | '/modules/document-registry/documents/$documentId'
     | '/modules/health/patients_/$patientId'
     | '/modules/internal-audit/engagements/$engagementId'
+    | '/modules/learning/score-transfers_/$proposalId'
     | '/modules/learning/spaces_/$spaceId'
     | '/modules/learning/submissions_/$submissionId'
     | '/modules/messaging/announcements_/$announcementId'
@@ -2379,6 +2405,13 @@ declare module '@tanstack/react-router' {
       path: '/learning/settings'
       fullPath: '/modules/learning/settings'
       preLoaderRoute: typeof ModulesLearningSettingsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/learning/score-transfers': {
+      id: '/modules/learning/score-transfers'
+      path: '/learning/score-transfers'
+      fullPath: '/modules/learning/score-transfers'
+      preLoaderRoute: typeof ModulesLearningScoreTransfersRouteImport
       parentRoute: typeof ModulesRoute
     }
     '/modules/internal-audit/settings': {
@@ -2920,6 +2953,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesLearningSpacesSpaceIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/learning/score-transfers_/$proposalId': {
+      id: '/modules/learning/score-transfers_/$proposalId'
+      path: '/learning/score-transfers/$proposalId'
+      fullPath: '/modules/learning/score-transfers/$proposalId'
+      preLoaderRoute: typeof ModulesLearningScoreTransfersProposalIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/internal-audit/engagements/$engagementId': {
       id: '/modules/internal-audit/engagements/$engagementId'
       path: '/$engagementId'
@@ -3277,6 +3317,7 @@ interface ModulesRouteChildren {
   ModulesInternalAuditFindingsRoute: typeof ModulesInternalAuditFindingsRoute
   ModulesInternalAuditPlansRoute: typeof ModulesInternalAuditPlansRoute
   ModulesInternalAuditSettingsRoute: typeof ModulesInternalAuditSettingsRoute
+  ModulesLearningScoreTransfersRoute: typeof ModulesLearningScoreTransfersRoute
   ModulesLearningSettingsRoute: typeof ModulesLearningSettingsRoute
   ModulesLearningSpacesRoute: typeof ModulesLearningSpacesRoute
   ModulesLibraryCirculationRoute: typeof ModulesLibraryCirculationRoute
@@ -3309,6 +3350,7 @@ interface ModulesRouteChildren {
   ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
   ModulesDocumentRegistryDocumentsDocumentIdRoute: typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
   ModulesHealthPatientsPatientIdRoute: typeof ModulesHealthPatientsPatientIdRoute
+  ModulesLearningScoreTransfersProposalIdRoute: typeof ModulesLearningScoreTransfersProposalIdRoute
   ModulesLearningSpacesSpaceIdRoute: typeof ModulesLearningSpacesSpaceIdRouteWithChildren
   ModulesLearningSubmissionsSubmissionIdRoute: typeof ModulesLearningSubmissionsSubmissionIdRoute
   ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute: typeof ModulesProcurementPurchaseOrdersPurchaseOrderIdRoute
@@ -3390,6 +3432,7 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesInternalAuditFindingsRoute: ModulesInternalAuditFindingsRoute,
   ModulesInternalAuditPlansRoute: ModulesInternalAuditPlansRoute,
   ModulesInternalAuditSettingsRoute: ModulesInternalAuditSettingsRoute,
+  ModulesLearningScoreTransfersRoute: ModulesLearningScoreTransfersRoute,
   ModulesLearningSettingsRoute: ModulesLearningSettingsRoute,
   ModulesLearningSpacesRoute: ModulesLearningSpacesRoute,
   ModulesLibraryCirculationRoute: ModulesLibraryCirculationRoute,
@@ -3428,6 +3471,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesDocumentRegistryDocumentsDocumentIdRoute:
     ModulesDocumentRegistryDocumentsDocumentIdRoute,
   ModulesHealthPatientsPatientIdRoute: ModulesHealthPatientsPatientIdRoute,
+  ModulesLearningScoreTransfersProposalIdRoute:
+    ModulesLearningScoreTransfersProposalIdRoute,
   ModulesLearningSpacesSpaceIdRoute:
     ModulesLearningSpacesSpaceIdRouteWithChildren,
   ModulesLearningSubmissionsSubmissionIdRoute:
