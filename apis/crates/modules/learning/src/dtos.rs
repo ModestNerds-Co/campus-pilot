@@ -117,6 +117,68 @@ pub enum LearningReviewOutcome {
     RevisionRequested,
 }
 
+/// Authoring and participation lifecycle for one class-linked quiz.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningQuizStatus {
+    Draft,
+    Published,
+    Closed,
+}
+
+impl LearningQuizStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Draft => "draft",
+            Self::Published => "published",
+            Self::Closed => "closed",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningQuizAttemptStatus {
+    InProgress,
+    Submitted,
+}
+
+impl LearningQuizAttemptStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::InProgress => "in_progress",
+            Self::Submitted => "submitted",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningCompletionPolicyStatus {
+    Draft,
+    Published,
+    Superseded,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LearningCompletionRequirementType {
+    Assignment,
+    Quiz,
+}
+
+impl LearningCompletionRequirementType {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Assignment => "assignment",
+            Self::Quiz => "quiz",
+        }
+    }
+}
+
 impl LearningReviewOutcome {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -153,6 +215,20 @@ pub struct LearningSubmissionListQuery {
     pub page: Option<i64>,
     pub per_page: Option<i64>,
     pub status: Option<LearningSubmissionStatus>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LearningQuizListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub status: Option<LearningQuizStatus>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LearningQuizAttemptListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub status: Option<LearningQuizAttemptStatus>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -376,6 +452,114 @@ pub struct ReleaseLearningFeedbackRequest {
     pub idempotency_key: Uuid,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateLearningQuizRequest {
+    #[validate(range(min = 1))]
+    pub position: i32,
+    #[validate(length(min = 1, max = 200))]
+    pub title: String,
+    #[validate(length(max = 10000))]
+    pub instructions: Option<String>,
+    pub opens_at: Option<DateTime<Utc>>,
+    pub closes_at: Option<DateTime<Utc>>,
+    #[validate(range(min = 1, max = 10))]
+    pub attempt_limit: i32,
+    #[validate(range(min = 0, max = 10000))]
+    pub pass_score_basis_points: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateLearningQuizRequest {
+    #[validate(range(min = 1))]
+    pub position: i32,
+    #[validate(length(min = 1, max = 200))]
+    pub title: String,
+    #[validate(length(max = 10000))]
+    pub instructions: Option<String>,
+    pub opens_at: Option<DateTime<Utc>>,
+    pub closes_at: Option<DateTime<Utc>>,
+    #[validate(range(min = 1, max = 10))]
+    pub attempt_limit: i32,
+    #[validate(range(min = 0, max = 10000))]
+    pub pass_score_basis_points: i32,
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+pub struct LearningQuizChoiceInput {
+    #[validate(length(min = 1, max = 1000))]
+    pub label: String,
+    pub is_correct: bool,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateLearningQuizQuestionRequest {
+    #[validate(range(min = 1))]
+    pub position: i32,
+    #[validate(length(min = 1, max = 4000))]
+    pub prompt: String,
+    #[validate(range(min = 1, max = 1000))]
+    pub points: i32,
+    #[validate(length(min = 2, max = 8))]
+    pub choices: Vec<LearningQuizChoiceInput>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateLearningQuizQuestionRequest {
+    #[validate(range(min = 1))]
+    pub position: i32,
+    #[validate(length(min = 1, max = 4000))]
+    pub prompt: String,
+    #[validate(range(min = 1, max = 1000))]
+    pub points: i32,
+    #[validate(length(min = 2, max = 8))]
+    pub choices: Vec<LearningQuizChoiceInput>,
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct DeleteLearningQuizQuestionRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LearningQuizAnswerInput {
+    pub question_id: Uuid,
+    pub selected_choice_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct SaveLearningQuizAttemptRequest {
+    pub answers: Vec<LearningQuizAnswerInput>,
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct SubmitLearningQuizAttemptRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    pub idempotency_key: Uuid,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LearningCompletionRequirementInput {
+    pub requirement_type: LearningCompletionRequirementType,
+    pub source_id: Uuid,
+    pub minimum_score_basis_points: i32,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct SaveLearningCompletionPolicyRequest {
+    #[validate(length(min = 1, max = 100))]
+    pub requirements: Vec<LearningCompletionRequirementInput>,
+    #[validate(range(min = 1))]
+    pub expected_version: Option<i32>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct LearningRubricCriterionResponse {
     pub id: Uuid,
@@ -491,6 +675,127 @@ pub struct LearningProgressPage {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct LearningQuizChoiceResponse {
+    pub id: Uuid,
+    pub position: i32,
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_correct: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningQuizQuestionResponse {
+    pub id: Uuid,
+    pub position: i32,
+    pub prompt: String,
+    pub points: i32,
+    pub version: i32,
+    pub choices: Vec<LearningQuizChoiceResponse>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningQuizResponse {
+    pub id: Uuid,
+    pub learning_unit_id: Uuid,
+    pub learning_space_id: Uuid,
+    pub position: i32,
+    pub title: String,
+    pub instructions: Option<String>,
+    pub opens_at: Option<DateTime<Utc>>,
+    pub closes_at: Option<DateTime<Utc>>,
+    pub attempt_limit: i32,
+    pub pass_score_basis_points: i32,
+    pub status: LearningQuizStatus,
+    pub version: i32,
+    pub recipient_count: i64,
+    pub submitted_attempt_count: i64,
+    pub my_attempt_count: i64,
+    pub questions: Vec<LearningQuizQuestionResponse>,
+    pub published_at: Option<DateTime<Utc>>,
+    pub closed_at: Option<DateTime<Utc>>,
+    pub close_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LearningQuizzesPage {
+    pub quizzes: Vec<LearningQuizResponse>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningQuizAttemptAnswerResponse {
+    pub question_id: Uuid,
+    pub selected_choice_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningQuizAttemptResponse {
+    pub id: Uuid,
+    pub learning_quiz_id: Uuid,
+    pub learner_id: Uuid,
+    pub enrolment_id: Uuid,
+    pub learner_name: String,
+    pub learner_number: String,
+    pub attempt_number: i32,
+    pub status: LearningQuizAttemptStatus,
+    pub version: i32,
+    pub answers: Vec<LearningQuizAttemptAnswerResponse>,
+    pub started_at: DateTime<Utc>,
+    pub submitted_at: Option<DateTime<Utc>>,
+    pub total_points: Option<i32>,
+    pub earned_points: Option<i32>,
+    pub score_basis_points: Option<i32>,
+    pub passed: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LearningQuizAttemptsPage {
+    pub attempts: Vec<LearningQuizAttemptResponse>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningCompletionRequirementResponse {
+    pub id: Uuid,
+    pub position: i32,
+    pub requirement_type: LearningCompletionRequirementType,
+    pub source_id: Uuid,
+    pub source_title: String,
+    pub minimum_score_basis_points: i32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningCompletionPolicyResponse {
+    pub id: Uuid,
+    pub learning_space_id: Uuid,
+    pub status: LearningCompletionPolicyStatus,
+    pub version: i32,
+    pub requirements: Vec<LearningCompletionRequirementResponse>,
+    pub recipient_count: i64,
+    pub published_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LearningCompletionEntry {
+    pub learner_id: Uuid,
+    pub enrolment_id: Uuid,
+    pub learner_name: String,
+    pub learner_number: String,
+    pub required_count: i64,
+    pub completed_count: i64,
+    pub completion_percent: i32,
+    pub complete: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LearningCompletionPage {
+    pub policy: Option<LearningCompletionPolicyResponse>,
+    pub progress: Vec<LearningCompletionEntry>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct LearningSpaceSummary {
     pub id: Uuid,
     pub teaching_assignment_id: Uuid,
@@ -571,4 +876,34 @@ pub struct LearningResourceFilesResponse {
 pub struct LearningDownloadResponse {
     pub url: String,
     pub expires_in_seconds: u64,
+}
+
+#[cfg(test)]
+mod quiz_projection_tests {
+    use serde_json::to_value;
+    use uuid::Uuid;
+
+    use super::LearningQuizChoiceResponse;
+
+    #[test]
+    fn learner_choice_projection_omits_the_answer_key_field() {
+        let learner = LearningQuizChoiceResponse {
+            id: Uuid::nil(),
+            position: 1,
+            label: "A learner-visible choice".to_string(),
+            is_correct: None,
+        };
+        let teacher = LearningQuizChoiceResponse {
+            is_correct: Some(true),
+            ..learner.clone()
+        };
+
+        let learner_json = to_value(learner).expect("learner choice should serialize");
+        let teacher_json = to_value(teacher).expect("teacher choice should serialize");
+        assert!(learner_json.get("is_correct").is_none());
+        assert_eq!(
+            teacher_json.get("is_correct"),
+            Some(&serde_json::json!(true))
+        );
+    }
 }

@@ -94,19 +94,19 @@ function CreateMarkSheetDrawer({ component, onClose, onCreated }: { component: G
     try {
       const response = await gradebookService.createMarkSheet(component.assessment_component_id, rosterOn);
       if (!response.success || !response.data) throw new Error(responseMessage(response, "Mark sheet could not be created"));
-      toast.success("Mark sheet created");
+      toast.success("Marking started");
       onCreated(response.data.id);
     } catch (saveError) {
-      toast.error(saveError instanceof Error ? saveError.message : "Mark sheet could not be created");
+      toast.error(saveError instanceof Error ? saveError.message : "Marking could not be started");
     } finally {
       setSaving(false);
     }
   };
 
-  return <DialogShell onClose={saving ? () => undefined : onClose} open><DialogHeader onClose={saving ? undefined : onClose} title="Start mark sheet" /><form onSubmit={submit}><DialogBody className="space-y-5">
+  return <DialogShell onClose={saving ? () => undefined : onClose} open><DialogHeader onClose={saving ? undefined : onClose} title="Start marking" /><form onSubmit={submit}><DialogBody className="space-y-5">
     <div><Label>Assessment</Label><p className="mt-2 font-medium text-[var(--text-strong)]">{component.assessment_component_name}</p><p className="mt-1 text-sm text-[var(--text-muted)]">{component.subject_name} · {component.class_group_name}</p></div>
     <div><Label htmlFor="gradebook-roster-date">Roster date</Label><Input className="mt-1.5" data-autofocus="true" disabled={Boolean(component.occurs_on)} id="gradebook-roster-date" max={component.academic_term_ends_on} min={component.academic_term_starts_on} onChange={(event) => setRosterOn(event.target.value)} required type="date" value={rosterOn} /><p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">Learners enrolled in this class on this date will be added to the mark sheet.</p></div>
-  </DialogBody><DialogFooter><Button disabled={saving} onClick={onClose} type="button" variant="secondary">Cancel</Button><Button disabled={saving || !rosterOn} type="submit">{saving ? <><Loader2 className="size-4 animate-spin" />Creating…</> : "Create mark sheet"}</Button></DialogFooter></form></DialogShell>;
+  </DialogBody><DialogFooter><Button disabled={saving} onClick={onClose} type="button" variant="secondary">Cancel</Button><Button disabled={saving || !rosterOn} type="submit">{saving ? <><Loader2 className="size-4 animate-spin" />Starting…</> : "Start marking"}</Button></DialogFooter></form></DialogShell>;
 }
 
 function statusTone(status: GradebookSheetStatus): "warning" | "info" | "success" { return status === "published" ? "success" : status === "submitted" ? "info" : "warning"; }

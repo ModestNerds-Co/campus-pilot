@@ -90,7 +90,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "learning",
             "E-learning",
             "People and learning",
-            "Learning spaces, units, assignments, submissions, feedback, and progress.",
+            "Learning spaces, assignments, quizzes, attempts, feedback, and completion.",
             "/modules/learning",
             "learning",
             false,
@@ -898,7 +898,7 @@ mod tests {
         .unwrap_or_else(|_| unreachable!());
 
         assert_eq!(coverage.entries().len(), module_catalog().len());
-        assert_eq!(coverage.missing_executable_capability_count(), 7);
+        assert_eq!(coverage.missing_executable_capability_count(), 0);
         for module_key in [
             "administration",
             "academics",
@@ -940,24 +940,13 @@ mod tests {
                 assert_eq!(module.approval_required_operations(), 11);
                 assert_eq!(module.executable_capabilities(), 8);
             } else if module_key == "learning" {
-                assert!(!module.release_ready());
-                assert_eq!(module.routed_operations(), 38);
-                assert_eq!(module.exposed_operations(), 12);
-                assert_eq!(module.approval_required_operations(), 24);
+                assert!(module.release_ready());
+                assert_eq!(module.routed_operations(), 57);
+                assert_eq!(module.exposed_operations(), 19);
+                assert_eq!(module.approval_required_operations(), 36);
                 assert_eq!(module.human_only_operations(), 2);
-                assert_eq!(module.executable_capabilities(), 5);
-                assert_eq!(
-                    module.missing_executable_capabilities(),
-                    [
-                        "learning.assignments.list",
-                        "learning.assignments.read",
-                        "learning.progress.list",
-                        "learning.progress.mine.read",
-                        "learning.submissions.list",
-                        "learning.submissions.mine.read",
-                        "learning.submissions.read",
-                    ]
-                );
+                assert_eq!(module.executable_capabilities(), 19);
+                assert!(module.missing_executable_capabilities().is_empty());
             } else if module_key == "student_support" {
                 assert!(module.release_ready());
                 assert_eq!(module.routed_operations(), 12);

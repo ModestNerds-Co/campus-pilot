@@ -97,6 +97,13 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "learning.submissions.read",
     "learning.progress.mine.read",
     "learning.progress.list",
+    "learning.quizzes.list",
+    "learning.quizzes.read",
+    "learning.quiz_attempts.list",
+    "learning.quiz_attempts.read",
+    "learning.completion_policy.read",
+    "learning.completion.mine.read",
+    "learning.completion.list",
     "student_support.actions.list",
     "student_support.cases.list",
     "student_support.cases.read",
@@ -562,7 +569,11 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "learning.spaces.read"
         | "learning.assignments.list"
         | "learning.progress.mine.read"
-        | "learning.progress.list" => Some(OperationScopePolicy::OneResource("learning_space")),
+        | "learning.progress.list"
+        | "learning.quizzes.list"
+        | "learning.completion_policy.read"
+        | "learning.completion.mine.read"
+        | "learning.completion.list" => Some(OperationScopePolicy::OneResource("learning_space")),
         "learning.assignments.read" => {
             Some(OperationScopePolicy::OneResource("learning_assignment"))
         }
@@ -571,6 +582,12 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         }
         "learning.submissions.read" => {
             Some(OperationScopePolicy::OneResource("learning_submission"))
+        }
+        "learning.quizzes.read" | "learning.quiz_attempts.list" => {
+            Some(OperationScopePolicy::OneResource("learning_quiz"))
+        }
+        "learning.quiz_attempts.read" => {
+            Some(OperationScopePolicy::OneResource("learning_quiz_attempt"))
         }
         "student_support.cases.read" | "student_support.actions.list" => {
             Some(OperationScopePolicy::OneResource("student_support_case"))
@@ -831,6 +848,12 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "learning_submission" => Some(
             "SELECT EXISTS(SELECT 1 FROM learning_submissions WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "learning_quiz" => Some(
+            "SELECT EXISTS(SELECT 1 FROM learning_quizzes WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "learning_quiz_attempt" => Some(
+            "SELECT EXISTS(SELECT 1 FROM learning_quiz_attempts WHERE tenant_id = $1 AND id = $2)",
+        ),
         "student_support_case" => Some(
             "SELECT EXISTS(SELECT 1 FROM student_support_cases WHERE tenant_id = $1 AND id = $2)",
         ),
@@ -991,7 +1014,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 161);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 168);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -1011,7 +1034,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 229);
+        assert_eq!(exposed.len(), 236);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed
@@ -1283,6 +1306,7 @@ mod tests {
             "learning_space",
             "learning_assignment",
             "learning_submission",
+            "learning_quiz",
             "internal_audit_plan",
             "internal_audit_engagement",
             "internal_audit_finding",
@@ -1293,6 +1317,10 @@ mod tests {
             assert!(query.contains("id = $2"));
             assert!(query.contains("deleted_at IS NULL"));
         }
+        let attempt_query = resource_existence_query("learning_quiz_attempt")
+            .unwrap_or_else(|| panic!("missing query for learning_quiz_attempt"));
+        assert!(attempt_query.contains("tenant_id = $1"));
+        assert!(attempt_query.contains("id = $2"));
         assert_eq!(resource_existence_query("unknown"), None);
     }
 }

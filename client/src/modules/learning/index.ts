@@ -6,3 +6,6 @@ export * from "./assignments-workspace";
 export * from "./assignment-workspace";
 export * from "./submission-workspace";
 export * from "./progress-workspace";
+export * from "./quizzes-workspace";
+export * from "./quiz-workspace";
+export * from "./completion-workspace";

@@ -10,13 +10,25 @@ import type {
   LearningAssignmentListParams,
   CreateLearningAssignment,
   CreateLearningRubricCriterion,
+  CreateLearningQuiz,
+  CreateLearningQuizQuestion,
   LearningAssignmentsResponse,
+  LearningCompletionPage,
+  LearningCompletionPolicy,
+  LearningCompletionRequirementInput,
   LearningDownload,
   LearningFeedback,
   LearningFilesResponse,
   LearningProgressEntry,
   LearningProgressResponse,
   LearningProgressListParams,
+  LearningQuiz,
+  LearningQuizAttempt,
+  LearningQuizAttemptListParams,
+  LearningQuizAttemptsResponse,
+  LearningQuizListParams,
+  LearningQuizQuestion,
+  LearningQuizzesResponse,
   LearningReferenceData,
   LearningResource,
   LearningRubricCriterion,
@@ -258,6 +270,100 @@ export const learningService = {
   progress: (spaceId: string, params?: LearningProgressListParams) =>
     request<LearningProgressResponse>(() =>
       httpClient.get(`${BASE}/spaces/${spaceId}/progress`, { params }),
+    ),
+  quizzes: (spaceId: string, params?: LearningQuizListParams) =>
+    request<LearningQuizzesResponse>(() =>
+      httpClient.get(`${BASE}/spaces/${spaceId}/quizzes`, { params }),
+    ),
+  quiz: (quizId: string) =>
+    request<LearningQuiz>(() => httpClient.get(`${BASE}/quizzes/${quizId}`)),
+  createQuiz: (unitId: string, payload: CreateLearningQuiz) =>
+    request<LearningQuiz>(() => httpClient.post(`${BASE}/units/${unitId}/quizzes`, payload)),
+  updateQuiz: (quiz: LearningQuiz, payload: CreateLearningQuiz) =>
+    request<LearningQuiz>(() =>
+      httpClient.put(`${BASE}/quizzes/${quiz.id}`, { ...payload, expected_version: quiz.version }),
+    ),
+  createQuizQuestion: (quizId: string, payload: CreateLearningQuizQuestion) =>
+    request<LearningQuizQuestion>(() =>
+      httpClient.post(`${BASE}/quizzes/${quizId}/questions`, payload),
+    ),
+  updateQuizQuestion: (question: LearningQuizQuestion, payload: CreateLearningQuizQuestion) =>
+    request<LearningQuizQuestion>(() =>
+      httpClient.put(`${BASE}/quiz-questions/${question.id}`, {
+        ...payload,
+        expected_version: question.version,
+      }),
+    ),
+  deleteQuizQuestion: (question: LearningQuizQuestion) =>
+    request<{ deleted: boolean }>(() =>
+      httpClient.delete(`${BASE}/quiz-questions/${question.id}`, {
+        data: { expected_version: question.version },
+      }),
+    ),
+  publishQuiz: (quiz: LearningQuiz) =>
+    request<LearningQuiz>(() =>
+      httpClient.post(`${BASE}/quizzes/${quiz.id}/publish`, { expected_version: quiz.version }),
+    ),
+  closeQuiz: (quiz: LearningQuiz, reason: string) =>
+    request<LearningQuiz>(() =>
+      httpClient.post(`${BASE}/quizzes/${quiz.id}/close`, {
+        expected_version: quiz.version,
+        reason,
+      }),
+    ),
+  startQuizAttempt: (quizId: string) =>
+    request<LearningQuizAttempt>(() => httpClient.post(`${BASE}/quizzes/${quizId}/attempts`)),
+  quizAttempts: (quizId: string, params?: LearningQuizAttemptListParams) =>
+    request<LearningQuizAttemptsResponse>(() =>
+      httpClient.get(`${BASE}/quizzes/${quizId}/attempts`, { params }),
+    ),
+  quizAttempt: (attemptId: string) =>
+    request<LearningQuizAttempt>(() => httpClient.get(`${BASE}/quiz-attempts/${attemptId}`)),
+  saveQuizAttempt: (
+    attempt: LearningQuizAttempt,
+    answers: Array<{ question_id: string; selected_choice_id: string }>,
+  ) =>
+    request<LearningQuizAttempt>(() =>
+      httpClient.put(`${BASE}/quiz-attempts/${attempt.id}`, {
+        answers,
+        expected_version: attempt.version,
+      }),
+    ),
+  submitQuizAttempt: (attempt: LearningQuizAttempt, idempotencyKey: string) =>
+    request<LearningQuizAttempt>(() =>
+      httpClient.post(`${BASE}/quiz-attempts/${attempt.id}/submit`, {
+        expected_version: attempt.version,
+        idempotency_key: idempotencyKey,
+      }),
+    ),
+  completionPolicy: (spaceId: string) =>
+    request<LearningCompletionPolicy>(() =>
+      httpClient.get(`${BASE}/spaces/${spaceId}/completion-policy`),
+    ),
+  saveCompletionPolicy: (
+    spaceId: string,
+    policy: LearningCompletionPolicy | null,
+    requirements: LearningCompletionRequirementInput[],
+  ) =>
+    request<LearningCompletionPolicy>(() =>
+      httpClient.put(`${BASE}/spaces/${spaceId}/completion-policy`, {
+        requirements,
+        expected_version: policy?.status === "draft" ? policy.version : null,
+      }),
+    ),
+  publishCompletionPolicy: (spaceId: string, policy: LearningCompletionPolicy) =>
+    request<LearningCompletionPolicy>(() =>
+      httpClient.post(`${BASE}/spaces/${spaceId}/completion-policy/publish`, {
+        expected_version: policy.version,
+      }),
+    ),
+  myCompletion: (spaceId: string) =>
+    request<LearningCompletionPage>(() =>
+      httpClient.get(`${BASE}/spaces/${spaceId}/completion/me`),
+    ),
+  completion: (spaceId: string) =>
+    request<LearningCompletionPage>(() =>
+      httpClient.get(`${BASE}/spaces/${spaceId}/completion`),
     ),
 };
 

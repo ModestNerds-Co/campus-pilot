@@ -153,12 +153,15 @@ import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './r
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
 import { Route as ModulesAcademicsClassesClassIdRouteImport } from './routes/modules/academics/classes_.$classId'
+import { Route as ModulesLearningSpacesSpaceIdQuizzesRouteImport } from './routes/modules/learning/spaces_.$spaceId.quizzes'
 import { Route as ModulesLearningSpacesSpaceIdProgressRouteImport } from './routes/modules/learning/spaces_.$spaceId.progress'
+import { Route as ModulesLearningSpacesSpaceIdCompletionRouteImport } from './routes/modules/learning/spaces_.$spaceId.completion'
 import { Route as ModulesLearningSpacesSpaceIdAssignmentsRouteImport } from './routes/modules/learning/spaces_.$spaceId.assignments'
 import { Route as ModulesAcademicsReportingTranscriptsLearnerIdRouteImport } from './routes/modules/academics/reporting.transcripts_.$learnerId'
 import { Route as ModulesAcademicsReportingReportBatchesReportBatchIdRouteImport } from './routes/modules/academics/reporting.report-batches_.$reportBatchId'
 import { Route as ModulesAcademicsGradebookMarkSheetsMarkSheetIdRouteImport } from './routes/modules/academics/gradebook.mark-sheets_.$markSheetId'
 import { Route as ModulesLearningSpacesSpaceIdUnitsUnitIdRouteImport } from './routes/modules/learning/spaces_.$spaceId.units_.$unitId'
+import { Route as ModulesLearningSpacesSpaceIdQuizzesQuizIdRouteImport } from './routes/modules/learning/spaces_.$spaceId.quizzes_.$quizId'
 import { Route as ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRouteImport } from './routes/modules/learning/spaces_.$spaceId.assignments_.$assignmentId'
 
 const StyleGuideRoute = StyleGuideRouteImport.update({
@@ -952,10 +955,22 @@ const ModulesAcademicsClassesClassIdRoute =
     path: '/academics/classes/$classId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesLearningSpacesSpaceIdQuizzesRoute =
+  ModulesLearningSpacesSpaceIdQuizzesRouteImport.update({
+    id: '/quizzes',
+    path: '/quizzes',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
+  } as any)
 const ModulesLearningSpacesSpaceIdProgressRoute =
   ModulesLearningSpacesSpaceIdProgressRouteImport.update({
     id: '/progress',
     path: '/progress',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
+  } as any)
+const ModulesLearningSpacesSpaceIdCompletionRoute =
+  ModulesLearningSpacesSpaceIdCompletionRouteImport.update({
+    id: '/completion',
+    path: '/completion',
     getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
   } as any)
 const ModulesLearningSpacesSpaceIdAssignmentsRoute =
@@ -986,6 +1001,12 @@ const ModulesLearningSpacesSpaceIdUnitsUnitIdRoute =
   ModulesLearningSpacesSpaceIdUnitsUnitIdRouteImport.update({
     id: '/units_/$unitId',
     path: '/units/$unitId',
+    getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
+  } as any)
+const ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute =
+  ModulesLearningSpacesSpaceIdQuizzesQuizIdRouteImport.update({
+    id: '/quizzes_/$quizId',
+    path: '/quizzes/$quizId',
     getParentRoute: () => ModulesLearningSpacesSpaceIdRoute,
   } as any)
 const ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute =
@@ -1144,8 +1165,11 @@ export interface FileRoutesByFullPath {
   '/modules/academics/reporting/report-batches/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
   '/modules/learning/spaces/$spaceId/assignments': typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  '/modules/learning/spaces/$spaceId/completion': typeof ModulesLearningSpacesSpaceIdCompletionRoute
   '/modules/learning/spaces/$spaceId/progress': typeof ModulesLearningSpacesSpaceIdProgressRoute
+  '/modules/learning/spaces/$spaceId/quizzes': typeof ModulesLearningSpacesSpaceIdQuizzesRoute
   '/modules/learning/spaces/$spaceId/assignments/$assignmentId': typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  '/modules/learning/spaces/$spaceId/quizzes/$quizId': typeof ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute
   '/modules/learning/spaces/$spaceId/units/$unitId': typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 export interface FileRoutesByTo {
@@ -1296,8 +1320,11 @@ export interface FileRoutesByTo {
   '/modules/academics/reporting/report-batches/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
   '/modules/learning/spaces/$spaceId/assignments': typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  '/modules/learning/spaces/$spaceId/completion': typeof ModulesLearningSpacesSpaceIdCompletionRoute
   '/modules/learning/spaces/$spaceId/progress': typeof ModulesLearningSpacesSpaceIdProgressRoute
+  '/modules/learning/spaces/$spaceId/quizzes': typeof ModulesLearningSpacesSpaceIdQuizzesRoute
   '/modules/learning/spaces/$spaceId/assignments/$assignmentId': typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  '/modules/learning/spaces/$spaceId/quizzes/$quizId': typeof ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute
   '/modules/learning/spaces/$spaceId/units/$unitId': typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 export interface FileRoutesById {
@@ -1450,8 +1477,11 @@ export interface FileRoutesById {
   '/modules/academics/reporting/report-batches_/$reportBatchId': typeof ModulesAcademicsReportingReportBatchesReportBatchIdRoute
   '/modules/academics/reporting/transcripts_/$learnerId': typeof ModulesAcademicsReportingTranscriptsLearnerIdRoute
   '/modules/learning/spaces_/$spaceId/assignments': typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  '/modules/learning/spaces_/$spaceId/completion': typeof ModulesLearningSpacesSpaceIdCompletionRoute
   '/modules/learning/spaces_/$spaceId/progress': typeof ModulesLearningSpacesSpaceIdProgressRoute
+  '/modules/learning/spaces_/$spaceId/quizzes': typeof ModulesLearningSpacesSpaceIdQuizzesRoute
   '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId': typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  '/modules/learning/spaces_/$spaceId/quizzes_/$quizId': typeof ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute
   '/modules/learning/spaces_/$spaceId/units_/$unitId': typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 export interface FileRouteTypes {
@@ -1605,8 +1635,11 @@ export interface FileRouteTypes {
     | '/modules/academics/reporting/report-batches/$reportBatchId'
     | '/modules/academics/reporting/transcripts/$learnerId'
     | '/modules/learning/spaces/$spaceId/assignments'
+    | '/modules/learning/spaces/$spaceId/completion'
     | '/modules/learning/spaces/$spaceId/progress'
+    | '/modules/learning/spaces/$spaceId/quizzes'
     | '/modules/learning/spaces/$spaceId/assignments/$assignmentId'
+    | '/modules/learning/spaces/$spaceId/quizzes/$quizId'
     | '/modules/learning/spaces/$spaceId/units/$unitId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1757,8 +1790,11 @@ export interface FileRouteTypes {
     | '/modules/academics/reporting/report-batches/$reportBatchId'
     | '/modules/academics/reporting/transcripts/$learnerId'
     | '/modules/learning/spaces/$spaceId/assignments'
+    | '/modules/learning/spaces/$spaceId/completion'
     | '/modules/learning/spaces/$spaceId/progress'
+    | '/modules/learning/spaces/$spaceId/quizzes'
     | '/modules/learning/spaces/$spaceId/assignments/$assignmentId'
+    | '/modules/learning/spaces/$spaceId/quizzes/$quizId'
     | '/modules/learning/spaces/$spaceId/units/$unitId'
   id:
     | '__root__'
@@ -1910,8 +1946,11 @@ export interface FileRouteTypes {
     | '/modules/academics/reporting/report-batches_/$reportBatchId'
     | '/modules/academics/reporting/transcripts_/$learnerId'
     | '/modules/learning/spaces_/$spaceId/assignments'
+    | '/modules/learning/spaces_/$spaceId/completion'
     | '/modules/learning/spaces_/$spaceId/progress'
+    | '/modules/learning/spaces_/$spaceId/quizzes'
     | '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId'
+    | '/modules/learning/spaces_/$spaceId/quizzes_/$quizId'
     | '/modules/learning/spaces_/$spaceId/units_/$unitId'
   fileRoutesById: FileRoutesById
 }
@@ -2938,11 +2977,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAcademicsClassesClassIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/learning/spaces_/$spaceId/quizzes': {
+      id: '/modules/learning/spaces_/$spaceId/quizzes'
+      path: '/quizzes'
+      fullPath: '/modules/learning/spaces/$spaceId/quizzes'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdQuizzesRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
+    }
     '/modules/learning/spaces_/$spaceId/progress': {
       id: '/modules/learning/spaces_/$spaceId/progress'
       path: '/progress'
       fullPath: '/modules/learning/spaces/$spaceId/progress'
       preLoaderRoute: typeof ModulesLearningSpacesSpaceIdProgressRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
+    }
+    '/modules/learning/spaces_/$spaceId/completion': {
+      id: '/modules/learning/spaces_/$spaceId/completion'
+      path: '/completion'
+      fullPath: '/modules/learning/spaces/$spaceId/completion'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdCompletionRouteImport
       parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
     }
     '/modules/learning/spaces_/$spaceId/assignments': {
@@ -2978,6 +3031,13 @@ declare module '@tanstack/react-router' {
       path: '/units/$unitId'
       fullPath: '/modules/learning/spaces/$spaceId/units/$unitId'
       preLoaderRoute: typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRouteImport
+      parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
+    }
+    '/modules/learning/spaces_/$spaceId/quizzes_/$quizId': {
+      id: '/modules/learning/spaces_/$spaceId/quizzes_/$quizId'
+      path: '/quizzes/$quizId'
+      fullPath: '/modules/learning/spaces/$spaceId/quizzes/$quizId'
+      preLoaderRoute: typeof ModulesLearningSpacesSpaceIdQuizzesQuizIdRouteImport
       parentRoute: typeof ModulesLearningSpacesSpaceIdRoute
     }
     '/modules/learning/spaces_/$spaceId/assignments_/$assignmentId': {
@@ -3118,8 +3178,11 @@ const ModulesInternalAuditEngagementsRouteWithChildren =
 
 interface ModulesLearningSpacesSpaceIdRouteChildren {
   ModulesLearningSpacesSpaceIdAssignmentsRoute: typeof ModulesLearningSpacesSpaceIdAssignmentsRoute
+  ModulesLearningSpacesSpaceIdCompletionRoute: typeof ModulesLearningSpacesSpaceIdCompletionRoute
   ModulesLearningSpacesSpaceIdProgressRoute: typeof ModulesLearningSpacesSpaceIdProgressRoute
+  ModulesLearningSpacesSpaceIdQuizzesRoute: typeof ModulesLearningSpacesSpaceIdQuizzesRoute
   ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute: typeof ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute
+  ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute: typeof ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute
   ModulesLearningSpacesSpaceIdUnitsUnitIdRoute: typeof ModulesLearningSpacesSpaceIdUnitsUnitIdRoute
 }
 
@@ -3127,10 +3190,16 @@ const ModulesLearningSpacesSpaceIdRouteChildren: ModulesLearningSpacesSpaceIdRou
   {
     ModulesLearningSpacesSpaceIdAssignmentsRoute:
       ModulesLearningSpacesSpaceIdAssignmentsRoute,
+    ModulesLearningSpacesSpaceIdCompletionRoute:
+      ModulesLearningSpacesSpaceIdCompletionRoute,
     ModulesLearningSpacesSpaceIdProgressRoute:
       ModulesLearningSpacesSpaceIdProgressRoute,
+    ModulesLearningSpacesSpaceIdQuizzesRoute:
+      ModulesLearningSpacesSpaceIdQuizzesRoute,
     ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute:
       ModulesLearningSpacesSpaceIdAssignmentsAssignmentIdRoute,
+    ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute:
+      ModulesLearningSpacesSpaceIdQuizzesQuizIdRoute,
     ModulesLearningSpacesSpaceIdUnitsUnitIdRoute:
       ModulesLearningSpacesSpaceIdUnitsUnitIdRoute,
   }

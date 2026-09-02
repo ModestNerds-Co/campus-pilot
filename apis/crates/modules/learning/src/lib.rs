@@ -3,6 +3,7 @@
 //! Academics, SIS, HR, and Document Registry retain their canonical records;
 //! Learning stores stable references and re-authorizes visibility on every use.
 
+mod assessment;
 pub mod dtos;
 mod models;
 pub mod ops;

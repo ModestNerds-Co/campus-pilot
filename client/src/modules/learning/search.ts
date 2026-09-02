@@ -4,6 +4,7 @@ import type {
   AssignmentDetailSearch,
   AssignmentsSearch,
   ProgressSearch,
+  QuizzesSearch,
   SpacesSearch,
   SubmissionSearch,
 } from "./types";
@@ -38,6 +39,11 @@ const progressSearchSchema = z.object({
   page,
 });
 
+const quizzesSearchSchema = z.object({
+  status: z.enum(["all", "draft", "published", "closed"]).catch("all"),
+  page,
+});
+
 export function parseSpacesSearch(search: Record<string, unknown>): SpacesSearch {
   return spacesSearchSchema.parse(search);
 }
@@ -58,4 +64,8 @@ export function parseSubmissionSearch(search: Record<string, unknown>): Submissi
 
 export function parseProgressSearch(search: Record<string, unknown>): ProgressSearch {
   return progressSearchSchema.parse(search);
+}
+
+export function parseQuizzesSearch(search: Record<string, unknown>): QuizzesSearch {
+  return quizzesSearchSchema.parse(search);
 }

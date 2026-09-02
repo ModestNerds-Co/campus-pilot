@@ -134,10 +134,13 @@ use hr::{
 };
 use internal_audit::{InternalAuditReadCapability, InternalAuditReadKind};
 use learning::{
-    LearningAssignmentCapability, LearningAssignmentsCapability, LearningMineProgressCapability,
-    LearningMineSubmissionCapability, LearningProgressCapability, LearningReferencesCapability,
-    LearningResourceFilesCapability, LearningSettingsCapability, LearningSpaceCapability,
-    LearningSpacesCapability, LearningSubmissionCapability, LearningSubmissionsCapability,
+    LearningAssignmentCapability, LearningAssignmentsCapability, LearningCompletionCapability,
+    LearningCompletionPolicyCapability, LearningMineCompletionCapability,
+    LearningMineProgressCapability, LearningMineSubmissionCapability, LearningProgressCapability,
+    LearningQuizAttemptCapability, LearningQuizAttemptsCapability, LearningQuizCapability,
+    LearningQuizzesCapability, LearningReferencesCapability, LearningResourceFilesCapability,
+    LearningSettingsCapability, LearningSpaceCapability, LearningSpacesCapability,
+    LearningSubmissionCapability, LearningSubmissionsCapability,
 };
 use library::{
     LibraryCopiesCapability, LibraryListCapability, LibraryListKind, LibraryReadCapability,
@@ -425,6 +428,27 @@ pub fn build_capability_registry(
     registry
         .register(LearningProgressCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid E-learning progress-list capability: {error}"));
+    registry
+        .register(LearningQuizzesCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning quizzes-list capability: {error}"));
+    registry
+        .register(LearningQuizCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning quiz-read capability: {error}"));
+    registry
+        .register(LearningQuizAttemptsCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning quiz-attempts capability: {error}"));
+    registry
+        .register(LearningQuizAttemptCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning quiz-attempt capability: {error}"));
+    registry
+        .register(LearningCompletionPolicyCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning completion-policy capability: {error}"));
+    registry
+        .register(LearningMineCompletionCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning own-completion capability: {error}"));
+    registry
+        .register(LearningCompletionCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid E-learning completion-list capability: {error}"));
     registry
         .register(StudentSupportCasesListCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Student Support cases-list capability: {error}"));
@@ -1285,8 +1309,15 @@ mod tests {
                 "internal_audit.plans.read",
                 "learning.assignments.list",
                 "learning.assignments.read",
+                "learning.completion.list",
+                "learning.completion.mine.read",
+                "learning.completion_policy.read",
                 "learning.progress.list",
                 "learning.progress.mine.read",
+                "learning.quiz_attempts.list",
+                "learning.quiz_attempts.read",
+                "learning.quizzes.list",
+                "learning.quizzes.read",
                 "learning.references.read",
                 "learning.resource_files.list",
                 "learning.settings.read",

@@ -2227,7 +2227,7 @@ async fn visibility(
     }
 }
 
-async fn scope_allows_space(
+pub(crate) async fn scope_allows_space(
     pool: &PgPool,
     tenant_id: Uuid,
     row: &LearningSpaceRow,
@@ -2344,7 +2344,7 @@ async fn published_only_for_space(
     }
 }
 
-async fn ensure_can_author_space(
+pub(crate) async fn ensure_can_author_space(
     pool: &PgPool,
     tenant_id: Uuid,
     space_id: Uuid,
@@ -2518,7 +2518,7 @@ async fn resource_response(
     }
 }
 
-async fn space_row(
+pub(crate) async fn space_row(
     pool: &PgPool,
     tenant_id: Uuid,
     space_id: Uuid,
@@ -3106,7 +3106,7 @@ async fn require_draft_space(
     clippy::too_many_arguments,
     reason = "domain and actor evidence are intentionally explicit"
 )]
-async fn append_evidence(
+pub(crate) async fn append_evidence(
     transaction: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
     actor: AuditActor,
@@ -3199,7 +3199,7 @@ fn parse_review_outcome(value: &str) -> Result<LearningReviewOutcome> {
     }
 }
 
-fn person_actor_id(actor: AuditActor) -> Result<Uuid> {
+pub(crate) fn person_actor_id(actor: AuditActor) -> Result<Uuid> {
     actor
         .user_id()
         .ok_or_else(|| anyhow!("Authenticated person actor is required"))

@@ -8,10 +8,12 @@ use cp_agent::{
 use cp_common::{EffectiveRecordScope, PaginationMeta, RecordScopeFamilyKey};
 use cp_learning::{
     LearningAccessScope, LearningAssignmentListQuery, LearningAssignmentResponse,
-    LearningAssignmentStatus, LearningOps, LearningProgressEntry, LearningReferenceData,
-    LearningResourceFileQuery, LearningSettingsResponse, LearningSpaceListQuery,
-    LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary, LearningSubmissionListQuery,
-    LearningSubmissionResponse, LearningSubmissionStatus,
+    LearningAssignmentStatus, LearningCompletionPage, LearningCompletionPolicyResponse,
+    LearningOps, LearningProgressEntry, LearningQuizAttemptListQuery, LearningQuizAttemptResponse,
+    LearningQuizAttemptStatus, LearningQuizListQuery, LearningQuizResponse, LearningQuizStatus,
+    LearningReferenceData, LearningResourceFileQuery, LearningSettingsResponse,
+    LearningSpaceListQuery, LearningSpaceResponse, LearningSpaceStatus, LearningSpaceSummary,
+    LearningSubmissionListQuery, LearningSubmissionResponse, LearningSubmissionStatus,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -827,6 +829,455 @@ impl Capability for LearningProgressCapability {
                 .await
                 .map_err(|_| dependency_failure("E-learning progress could not be loaded."))?;
         Ok(LearningProgressOutput { progress })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningQuizzesInput {
+    space_id: Uuid,
+    status: Option<LearningQuizStatus>,
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningQuizzesOutput {
+    quizzes: Vec<LearningQuizResponse>,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct LearningQuizzesCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningQuizzesCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.quizzes.list",
+                "List E-learning quizzes",
+                "Returns quizzes in one visible Learning space. Answer keys are included only in assigned teacher or campus scope.",
+                json!({
+                    "space_id": { "type": "string", "format": "uuid" },
+                    "status": { "type": ["string", "null"], "enum": ["draft", "published", "closed", null] },
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+                }),
+                json!({ "quizzes": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.quizzes",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningQuizzesCapability {
+    type Input = LearningQuizzesInput;
+    type Output = LearningQuizzesOutput;
+
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let page = input.page.unwrap_or(1).max(1);
+        let per_page = input.per_page.unwrap_or(25).clamp(1, 100);
+        let (quizzes, total) = LearningOps::list_quizzes(
+            &self.pool,
+            principal.tenant_id(),
+            input.space_id,
+            scope,
+            &LearningQuizListQuery {
+                page: Some(page),
+                per_page: Some(per_page),
+                status: input.status,
+            },
+        )
+        .await
+        .map_err(|_| dependency_failure("E-learning quizzes could not be loaded."))?;
+        Ok(LearningQuizzesOutput {
+            quizzes,
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningQuizInput {
+    quiz_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningQuizOutput {
+    quiz: LearningQuizResponse,
+}
+
+pub(super) struct LearningQuizCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningQuizCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.quizzes.read",
+                "Read an E-learning quiz",
+                "Returns one visible quiz. Learner scope never receives correct-answer flags.",
+                json!({ "quiz_id": { "type": "string", "format": "uuid" } }),
+                json!({ "quiz": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.quizzes",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningQuizCapability {
+    type Input = LearningQuizInput;
+    type Output = LearningQuizOutput;
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_quiz", input.quiz_id)
+    }
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let quiz = LearningOps::get_quiz(&self.pool, principal.tenant_id(), input.quiz_id, scope)
+            .await
+            .map_err(|_| dependency_failure("The E-learning quiz could not be loaded."))?
+            .ok_or_else(|| invalid_state("The E-learning quiz is unavailable."))?;
+        Ok(LearningQuizOutput { quiz })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningQuizAttemptsInput {
+    quiz_id: Uuid,
+    status: Option<LearningQuizAttemptStatus>,
+    page: Option<i64>,
+    per_page: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningQuizAttemptsOutput {
+    attempts: Vec<LearningQuizAttemptResponse>,
+    pagination: PaginationMeta,
+}
+
+pub(super) struct LearningQuizAttemptsCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningQuizAttemptsCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.quiz_attempts.list",
+                "List E-learning quiz attempts",
+                "Returns attempts within current learner-self, assigned-teacher, or campus scope.",
+                json!({
+                    "quiz_id": { "type": "string", "format": "uuid" },
+                    "status": { "type": ["string", "null"], "enum": ["in_progress", "submitted", null] },
+                    "page": { "type": ["integer", "null"], "minimum": 1 },
+                    "per_page": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 }
+                }),
+                json!({ "attempts": { "type": "array" }, "pagination": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.quiz_attempts",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningQuizAttemptsCapability {
+    type Input = LearningQuizAttemptsInput;
+    type Output = LearningQuizAttemptsOutput;
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_quiz", input.quiz_id)
+    }
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let page = input.page.unwrap_or(1).max(1);
+        let per_page = input.per_page.unwrap_or(25).clamp(1, 100);
+        let (attempts, total) = LearningOps::list_quiz_attempts(
+            &self.pool,
+            principal.tenant_id(),
+            input.quiz_id,
+            scope,
+            &LearningQuizAttemptListQuery {
+                page: Some(page),
+                per_page: Some(per_page),
+                status: input.status,
+            },
+        )
+        .await
+        .map_err(|_| dependency_failure("E-learning quiz attempts could not be loaded."))?;
+        Ok(LearningQuizAttemptsOutput {
+            attempts,
+            pagination: PaginationMeta::new(page as u32, per_page as u32, total),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningQuizAttemptInput {
+    attempt_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningQuizAttemptOutput {
+    attempt: LearningQuizAttemptResponse,
+}
+
+pub(super) struct LearningQuizAttemptCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningQuizAttemptCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.quiz_attempts.read",
+                "Read an E-learning quiz attempt",
+                "Returns one immutable or in-progress attempt through current record scope.",
+                json!({ "attempt_id": { "type": "string", "format": "uuid" } }),
+                json!({ "attempt": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.quiz_attempts",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningQuizAttemptCapability {
+    type Input = LearningQuizAttemptInput;
+    type Output = LearningQuizAttemptOutput;
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_quiz_attempt", input.attempt_id)
+    }
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let attempt = LearningOps::get_quiz_attempt(
+            &self.pool,
+            principal.tenant_id(),
+            input.attempt_id,
+            scope,
+        )
+        .await
+        .map_err(|_| dependency_failure("The E-learning quiz attempt could not be loaded."))?
+        .ok_or_else(|| invalid_state("The E-learning quiz attempt is unavailable."))?;
+        Ok(LearningQuizAttemptOutput { attempt })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LearningCompletionInput {
+    space_id: Uuid,
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningCompletionPolicyOutput {
+    policy: LearningCompletionPolicyResponse,
+}
+
+pub(super) struct LearningCompletionPolicyCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningCompletionPolicyCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.completion_policy.read",
+                "Read an E-learning completion policy",
+                "Returns the editable draft for assigned staff, otherwise the current published completion policy.",
+                json!({ "space_id": { "type": "string", "format": "uuid" } }),
+                json!({ "policy": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.completion",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningCompletionPolicyCapability {
+    type Input = LearningCompletionInput;
+    type Output = LearningCompletionPolicyOutput;
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let policy = LearningOps::completion_policy(
+            &self.pool,
+            principal.tenant_id(),
+            input.space_id,
+            scope,
+        )
+        .await
+        .map_err(|_| dependency_failure("The E-learning completion policy could not be loaded."))?
+        .ok_or_else(|| invalid_state("No E-learning completion policy is available."))?;
+        Ok(LearningCompletionPolicyOutput { policy })
+    }
+}
+
+#[derive(Serialize)]
+pub(super) struct LearningCompletionOutput {
+    completion: LearningCompletionPage,
+}
+
+pub(super) struct LearningMineCompletionCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningMineCompletionCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.completion.mine.read",
+                "Read my E-learning completion",
+                "Returns derived completion for the authenticated learner against the published policy.",
+                json!({ "space_id": { "type": "string", "format": "uuid" } }),
+                json!({ "completion": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.completion",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningMineCompletionCapability {
+    type Input = LearningCompletionInput;
+    type Output = LearningCompletionOutput;
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let completion =
+            LearningOps::self_completion(&self.pool, principal.tenant_id(), input.space_id, scope)
+                .await
+                .map_err(|_| {
+                    dependency_failure("Learner E-learning completion could not be loaded.")
+                })?;
+        Ok(LearningCompletionOutput { completion })
+    }
+}
+
+pub(super) struct LearningCompletionCapability {
+    pool: PgPool,
+    descriptor: CapabilityDescriptor,
+}
+
+impl LearningCompletionCapability {
+    pub(super) fn new(pool: PgPool) -> Self {
+        Self {
+            pool,
+            descriptor: read_descriptor(
+                "learning.completion.list",
+                "List E-learning completion",
+                "Returns derived completion for the frozen class roster in assigned or campus scope.",
+                json!({ "space_id": { "type": "string", "format": "uuid" } }),
+                json!({ "completion": { "type": "object" } }),
+                DataSensitivity::Sensitive,
+                "learning.completion",
+            ),
+        }
+    }
+}
+
+#[async_trait]
+impl Capability for LearningCompletionCapability {
+    type Input = LearningCompletionInput;
+    type Output = LearningCompletionOutput;
+    fn descriptor(&self) -> &CapabilityDescriptor {
+        &self.descriptor
+    }
+    fn scope(&self, input: &Self::Input) -> CapabilityScope {
+        resource_scope("learning_space", input.space_id)
+    }
+    async fn execute(
+        &self,
+        context: AuthorizedCapabilityContext,
+        input: Self::Input,
+    ) -> Result<Self::Output, CapabilityExecutionError> {
+        let principal = context.principal();
+        let scope = current_scope(&self.pool, principal.tenant_id(), principal.user_id()).await?;
+        let completion =
+            LearningOps::list_completion(&self.pool, principal.tenant_id(), input.space_id, scope)
+                .await
+                .map_err(|_| dependency_failure("E-learning completion could not be loaded."))?;
+        Ok(LearningCompletionOutput { completion })
     }
 }
 

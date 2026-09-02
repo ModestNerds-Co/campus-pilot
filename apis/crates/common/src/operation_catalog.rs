@@ -4000,6 +4000,177 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Read,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/quizzes",
+            "learning.quizzes.list",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/units/{id}/quizzes",
+            "learning.quizzes.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/quizzes/{id}",
+            "learning.quizzes.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/quizzes/{id}",
+            "learning.quizzes.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/quizzes/{id}/questions",
+            "learning.quiz_questions.create",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/quiz-questions/{id}",
+            "learning.quiz_questions.update",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::DELETE,
+            "/api/1.0/learning/quiz-questions/{id}",
+            "learning.quiz_questions.delete",
+            "learning",
+            "learning:teach",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/quizzes/{id}/publish",
+            "learning.quizzes.publish",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/quizzes/{id}/close",
+            "learning.quizzes.close",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/quizzes/{id}/attempts",
+            "learning.quiz_attempts.start",
+            "learning",
+            "learning:participate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/quizzes/{id}/attempts",
+            "learning.quiz_attempts.list",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/quiz-attempts/{id}",
+            "learning.quiz_attempts.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/quiz-attempts/{id}",
+            "learning.quiz_attempts.save",
+            "learning",
+            "learning:participate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/quiz-attempts/{id}/submit",
+            "learning.quiz_attempts.submit",
+            "learning",
+            "learning:participate",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/completion-policy",
+            "learning.completion_policy.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::PUT,
+            "/api/1.0/learning/spaces/{id}/completion-policy",
+            "learning.completion_policy.save",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/learning/spaces/{id}/completion-policy/publish",
+            "learning.completion_policy.publish",
+            "learning",
+            "learning:teach",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/completion/me",
+            "learning.completion.mine.read",
+            "learning",
+            "learning:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/learning/spaces/{id}/completion",
+            "learning.completion.list",
+            "learning",
+            "learning:teach",
+            OperationEffect::Read,
+            true,
+        ),
         // Communication: reviewed announcements and personal in-app inbox.
         route(
             Method::GET,
@@ -6004,6 +6175,13 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "learning.submissions.read"
         | "learning.progress.mine.read"
         | "learning.progress.list"
+        | "learning.quizzes.list"
+        | "learning.quizzes.read"
+        | "learning.quiz_attempts.list"
+        | "learning.quiz_attempts.read"
+        | "learning.completion_policy.read"
+        | "learning.completion.mine.read"
+        | "learning.completion.list"
         | "messaging.references.read"
         | "messaging.announcements.list"
         | "messaging.announcements.read"
@@ -6315,6 +6493,18 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "learning.submissions.submit"
         | "learning.feedback.update"
         | "learning.feedback.release"
+        | "learning.quizzes.create"
+        | "learning.quizzes.update"
+        | "learning.quiz_questions.create"
+        | "learning.quiz_questions.update"
+        | "learning.quiz_questions.delete"
+        | "learning.quizzes.publish"
+        | "learning.quizzes.close"
+        | "learning.quiz_attempts.start"
+        | "learning.quiz_attempts.save"
+        | "learning.quiz_attempts.submit"
+        | "learning.completion_policy.save"
+        | "learning.completion_policy.publish"
         | "messaging.announcements.create"
         | "messaging.announcements.update"
         | "messaging.announcements.submit"
@@ -6597,7 +6787,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 615);
+        assert_eq!(operation_catalog().len(), 634);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6649,7 +6839,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [229, 348, 26, 12]);
+        assert_eq!(counts, [236, 360, 26, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 

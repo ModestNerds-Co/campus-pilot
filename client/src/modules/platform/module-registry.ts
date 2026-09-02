@@ -52,7 +52,7 @@ export const moduleVisuals: Record<string, ModuleVisual> = {
   },
   learning: {
     icon: BookOpen,
-    highlights: ["Class spaces", "Ordered units", "Governed resources"],
+    highlights: ["Class spaces", "Assignments and quizzes", "Completion evidence"],
   },
   student_support: {
     icon: HeartHandshake,

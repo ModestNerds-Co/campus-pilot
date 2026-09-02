@@ -8,6 +8,10 @@ export type LearningSubmissionStatus =
   | "revision_requested"
   | "graded";
 export type LearningReviewOutcome = "graded" | "revision_requested";
+export type LearningQuizStatus = "draft" | "published" | "closed";
+export type LearningQuizAttemptStatus = "in_progress" | "submitted";
+export type LearningCompletionPolicyStatus = "draft" | "published" | "superseded";
+export type LearningCompletionRequirementType = "assignment" | "quiz";
 export type LearningAssignmentTab =
   | "brief"
   | "work"
@@ -225,6 +229,107 @@ export interface LearningProgressEntry {
   possible_score_hundredths: number;
 }
 
+export interface LearningQuizChoice {
+  id: string;
+  position: number;
+  label: string;
+  is_correct?: boolean;
+}
+
+export interface LearningQuizQuestion {
+  id: string;
+  position: number;
+  prompt: string;
+  points: number;
+  version: number;
+  choices: LearningQuizChoice[];
+}
+
+export interface LearningQuiz {
+  id: string;
+  learning_unit_id: string;
+  learning_space_id: string;
+  position: number;
+  title: string;
+  instructions: string | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  attempt_limit: number;
+  pass_score_basis_points: number;
+  status: LearningQuizStatus;
+  version: number;
+  recipient_count: number;
+  submitted_attempt_count: number;
+  my_attempt_count: number;
+  questions: LearningQuizQuestion[];
+  published_at: string | null;
+  closed_at: string | null;
+  close_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningQuizAttemptAnswer {
+  question_id: string;
+  selected_choice_id: string;
+}
+
+export interface LearningQuizAttempt {
+  id: string;
+  learning_quiz_id: string;
+  learner_id: string;
+  enrolment_id: string;
+  learner_name: string;
+  learner_number: string;
+  attempt_number: number;
+  status: LearningQuizAttemptStatus;
+  version: number;
+  answers: LearningQuizAttemptAnswer[];
+  started_at: string;
+  submitted_at: string | null;
+  total_points: number | null;
+  earned_points: number | null;
+  score_basis_points: number | null;
+  passed: boolean | null;
+}
+
+export interface LearningCompletionRequirement {
+  id: string;
+  position: number;
+  requirement_type: LearningCompletionRequirementType;
+  source_id: string;
+  source_title: string;
+  minimum_score_basis_points: number;
+}
+
+export interface LearningCompletionPolicy {
+  id: string;
+  learning_space_id: string;
+  status: LearningCompletionPolicyStatus;
+  version: number;
+  requirements: LearningCompletionRequirement[];
+  recipient_count: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningCompletionEntry {
+  learner_id: string;
+  enrolment_id: string;
+  learner_name: string;
+  learner_number: string;
+  required_count: number;
+  completed_count: number;
+  completion_percent: number;
+  complete: boolean;
+}
+
+export interface LearningCompletionPage {
+  policy: LearningCompletionPolicy | null;
+  progress: LearningCompletionEntry[];
+}
+
 export interface LearningSpacesResponse {
   spaces: LearningSpaceSummary[];
 }
@@ -239,6 +344,14 @@ export interface LearningSubmissionsResponse {
 
 export interface LearningProgressResponse {
   progress: LearningProgressEntry[];
+}
+
+export interface LearningQuizzesResponse {
+  quizzes: LearningQuiz[];
+}
+
+export interface LearningQuizAttemptsResponse {
+  attempts: LearningQuizAttempt[];
 }
 
 export interface LearningFilesResponse {
@@ -263,6 +376,11 @@ export interface AssignmentsSearch {
 
 export interface ProgressSearch {
   q: string;
+  page: number;
+}
+
+export interface QuizzesSearch {
+  status: "all" | LearningQuizStatus;
   page: number;
 }
 
@@ -301,6 +419,18 @@ export interface LearningProgressListParams {
   search?: string;
 }
 
+export interface LearningQuizListParams {
+  page?: number;
+  per_page?: number;
+  status?: LearningQuizStatus;
+}
+
+export interface LearningQuizAttemptListParams {
+  page?: number;
+  per_page?: number;
+  status?: LearningQuizAttemptStatus;
+}
+
 export interface CreateLearningSpace {
   teaching_assignment_id: string;
   academic_term_id: string;
@@ -326,6 +456,34 @@ export interface CreateLearningAssignment {
   instructions: string;
   due_at: string;
   max_score_hundredths: number;
+}
+
+export interface CreateLearningQuiz {
+  position: number;
+  title: string;
+  instructions: string | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  attempt_limit: number;
+  pass_score_basis_points: number;
+}
+
+export interface LearningQuizChoiceInput {
+  label: string;
+  is_correct: boolean;
+}
+
+export interface CreateLearningQuizQuestion {
+  position: number;
+  prompt: string;
+  points: number;
+  choices: LearningQuizChoiceInput[];
+}
+
+export interface LearningCompletionRequirementInput {
+  requirement_type: LearningCompletionRequirementType;
+  source_id: string;
+  minimum_score_basis_points: number;
 }
 
 export interface CreateLearningRubricCriterion {

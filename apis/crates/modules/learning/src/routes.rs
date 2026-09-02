@@ -21,15 +21,20 @@ use validator::Validate;
 
 use crate::ops::LearningResourceCreateCommand;
 use crate::{
-    CreateLearningAssignmentRequest, CreateLearningResourceRequest,
-    CreateLearningRubricCriterionRequest, CreateLearningSpaceRequest, CreateLearningUnitRequest,
+    CreateLearningAssignmentRequest, CreateLearningQuizQuestionRequest, CreateLearningQuizRequest,
+    CreateLearningResourceRequest, CreateLearningRubricCriterionRequest,
+    CreateLearningSpaceRequest, CreateLearningUnitRequest, DeleteLearningQuizQuestionRequest,
     DeleteLearningRubricCriterionRequest, LearningAccessScope, LearningAssignmentListQuery,
     LearningAssignmentsPage, LearningDownloadResponse, LearningOps, LearningProgressPage,
-    LearningResourceCreation, LearningResourceFileQuery, LearningResourceFilesResponse,
-    LearningSpaceListQuery, LearningSpacesPage, LearningSubmissionListQuery,
-    LearningSubmissionsPage, ReasonedLearningTransitionRequest, ReleaseLearningFeedbackRequest,
-    SaveLearningSubmissionRequest, SubmitLearningSubmissionRequest,
-    UpdateLearningAssignmentRequest, UpdateLearningFeedbackRequest, UpdateLearningResourceRequest,
+    LearningQuizAttemptListQuery, LearningQuizAttemptsPage, LearningQuizListQuery,
+    LearningQuizzesPage, LearningResourceCreation, LearningResourceFileQuery,
+    LearningResourceFilesResponse, LearningSpaceListQuery, LearningSpacesPage,
+    LearningSubmissionListQuery, LearningSubmissionsPage, ReasonedLearningTransitionRequest,
+    ReleaseLearningFeedbackRequest, SaveLearningCompletionPolicyRequest,
+    SaveLearningQuizAttemptRequest, SaveLearningSubmissionRequest,
+    SubmitLearningQuizAttemptRequest, SubmitLearningSubmissionRequest,
+    UpdateLearningAssignmentRequest, UpdateLearningFeedbackRequest,
+    UpdateLearningQuizQuestionRequest, UpdateLearningQuizRequest, UpdateLearningResourceRequest,
     UpdateLearningRubricCriterionRequest, UpdateLearningSettingsRequest,
     UpdateLearningSpaceRequest, UpdateLearningUnitRequest, VersionedLearningRequest,
 };
@@ -1114,6 +1119,502 @@ async fn release_feedback(
     )
 }
 
+#[get("/spaces/{id}/quizzes")]
+async fn list_quizzes(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+    query: web::Query<LearningQuizListQuery>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match LearningOps::list_quizzes(&pool, tenant_id(tenant), path.into_inner(), scope, &query)
+        .await
+    {
+        Ok((quizzes, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(LearningQuizzesPage { quizzes }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/units/{id}/quizzes")]
+async fn create_quiz(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CreateLearningQuizRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_created_or_not_found(
+        LearningOps::create_quiz(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[get("/quizzes/{id}")]
+async fn read_quiz(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    optional_or_not_found(
+        LearningOps::get_quiz(&pool, tenant_id(tenant), path.into_inner(), scope).await,
+    )
+}
+
+#[put("/quizzes/{id}")]
+async fn update_quiz(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateLearningQuizRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::update_quiz(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The Learning quiz changed or is no longer a draft",
+    )
+}
+
+#[post("/quizzes/{id}/questions")]
+async fn create_quiz_question(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CreateLearningQuizQuestionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_created_or_not_found(
+        LearningOps::create_quiz_question(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[put("/quiz-questions/{id}")]
+async fn update_quiz_question(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<UpdateLearningQuizQuestionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::update_quiz_question(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The quiz question changed or is no longer editable",
+    )
+}
+
+#[delete("/quiz-questions/{id}")]
+async fn delete_quiz_question(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<DeleteLearningQuizQuestionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    match LearningOps::delete_quiz_question(
+        &pool,
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+        actor.into_inner(),
+        context.into_inner(),
+        &body,
+    )
+    .await
+    {
+        Ok(true) => HttpResponse::NoContent().finish(),
+        Ok(false) => conflict("The quiz question changed or is no longer editable"),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/quizzes/{id}/publish")]
+async fn publish_quiz(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<VersionedLearningRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::publish_quiz(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            body.expected_version,
+        )
+        .await,
+        "The Learning quiz changed or cannot be published",
+    )
+}
+
+#[post("/quizzes/{id}/close")]
+async fn close_quiz(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ReasonedLearningTransitionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::close_quiz(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The Learning quiz changed or cannot be closed",
+    )
+}
+
+#[post("/quizzes/{id}/attempts")]
+async fn start_quiz_attempt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_created_or_not_found(
+        LearningOps::start_quiz_attempt(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+        )
+        .await,
+    )
+}
+
+#[get("/quizzes/{id}/attempts")]
+async fn list_quiz_attempts(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+    query: web::Query<LearningQuizAttemptListQuery>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match LearningOps::list_quiz_attempts(
+        &pool,
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+        &query,
+    )
+    .await
+    {
+        Ok((attempts, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(LearningQuizAttemptsPage { attempts }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/quiz-attempts/{id}")]
+async fn read_quiz_attempt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    optional_or_not_found(
+        LearningOps::get_quiz_attempt(&pool, tenant_id(tenant), path.into_inner(), scope).await,
+    )
+}
+
+#[put("/quiz-attempts/{id}")]
+async fn save_quiz_attempt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<SaveLearningQuizAttemptRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::save_quiz_attempt(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The Learning quiz attempt changed or is unavailable",
+    )
+}
+
+#[post("/quiz-attempts/{id}/submit")]
+async fn submit_quiz_attempt(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<SubmitLearningQuizAttemptRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::submit_quiz_attempt(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+        "The Learning quiz attempt changed or cannot be submitted",
+    )
+}
+
+#[get("/spaces/{id}/completion-policy")]
+async fn read_completion_policy(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    optional_or_not_found(
+        LearningOps::completion_policy(&pool, tenant_id(tenant), path.into_inner(), scope).await,
+    )
+}
+
+#[put("/spaces/{id}/completion-policy")]
+async fn save_completion_policy(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<SaveLearningCompletionPolicyRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    value_or_error(
+        LearningOps::save_completion_policy(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            &body,
+        )
+        .await,
+    )
+}
+
+#[post("/spaces/{id}/completion-policy/publish")]
+async fn publish_completion_policy(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<VersionedLearningRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let Some(scope) = access_scope(&access, &grants, actor.clone().into_inner()) else {
+        return forbidden();
+    };
+    optional_or_conflict(
+        LearningOps::publish_completion_policy(
+            &pool,
+            tenant_id(tenant),
+            path.into_inner(),
+            scope,
+            actor.into_inner(),
+            context.into_inner(),
+            body.expected_version,
+        )
+        .await,
+        "The Learning completion policy changed or cannot be published",
+    )
+}
+
+#[get("/spaces/{id}/completion/me")]
+async fn read_self_completion(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    value_or_error(
+        LearningOps::self_completion(&pool, tenant_id(tenant), path.into_inner(), scope).await,
+    )
+}
+
+#[get("/spaces/{id}/completion")]
+async fn list_completion(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: LearningAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = route_scope(authority) else {
+        return forbidden();
+    };
+    value_or_error(
+        LearningOps::list_completion(&pool, tenant_id(tenant), path.into_inner(), scope).await,
+    )
+}
+
 #[get("/spaces/{id}/progress/me")]
 async fn read_self_progress(
     pool: web::Data<PgPool>,
@@ -1186,6 +1687,25 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(read_submission)
             .service(update_feedback)
             .service(release_feedback)
+            .service(list_quizzes)
+            .service(create_quiz)
+            .service(read_quiz)
+            .service(update_quiz)
+            .service(create_quiz_question)
+            .service(update_quiz_question)
+            .service(delete_quiz_question)
+            .service(publish_quiz)
+            .service(close_quiz)
+            .service(start_quiz_attempt)
+            .service(list_quiz_attempts)
+            .service(read_quiz_attempt)
+            .service(save_quiz_attempt)
+            .service(submit_quiz_attempt)
+            .service(read_completion_policy)
+            .service(save_completion_policy)
+            .service(publish_completion_policy)
+            .service(read_self_completion)
+            .service(list_completion)
             .service(read_self_progress)
             .service(list_progress),
     );

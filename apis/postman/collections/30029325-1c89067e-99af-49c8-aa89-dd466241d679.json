@@ -6589,6 +6589,7 @@
     },
     {
       "name": "E-learning",
+      "description": "Class-linked spaces, resources, assignments, quizzes, immutable learner attempts, feedback, progress, and derived completion. Teacher authoring is limited to assigned spaces; Student writes derive the authenticated learner and never accept a learner identifier. Learner quiz projections omit answer-key flags.",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
       "item": [
         { "name": "Read Learning Settings", "request": { "method": "GET", "url": "{{base_url}}/learning/settings" } },
@@ -6628,7 +6629,26 @@
         { "name": "Save Learning Feedback", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"submission_version_id\": \"{{learning_submission_version_id}}\",\n  \"overall_feedback\": \"Clear method and explanation.\",\n  \"scores\": [{\n    \"rubric_criterion_id\": \"{{learning_rubric_id}}\",\n    \"earned_score_hundredths\": 5500,\n    \"feedback\": \"Good method.\"\n  }],\n  \"expected_review_version\": {{learning_review_version}}\n}" }, "url": "{{base_url}}/learning/submissions/{{learning_submission_id}}/feedback" } },
         { "name": "Release Learning Feedback", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"outcome\": \"graded\",\n  \"expected_review_version\": {{learning_review_version}},\n  \"idempotency_key\": \"{{learning_review_idempotency_key}}\"\n}" }, "url": "{{base_url}}/learning/submissions/{{learning_submission_id}}/feedback/release" } },
         { "name": "Read My Learning Progress", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/progress/me" } },
-        { "name": "List Learning Progress", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/progress" } }
+        { "name": "List Learning Progress", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/progress" } },
+        { "name": "List Learning Quizzes", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/quizzes?page=1&per_page=25" } },
+        { "name": "Create Learning Quiz", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Fractions check\",\n  \"instructions\": \"Choose the best answer for each question.\",\n  \"opens_at\": null,\n  \"closes_at\": null,\n  \"attempt_limit\": 2,\n  \"pass_score_basis_points\": 6000\n}" }, "url": "{{base_url}}/learning/units/{{learning_unit_id}}/quizzes" } },
+        { "name": "Read Learning Quiz", "request": { "method": "GET", "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}" } },
+        { "name": "Update Learning Quiz", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"title\": \"Fractions check\",\n  \"instructions\": \"Choose the best answer for each question.\",\n  \"opens_at\": null,\n  \"closes_at\": null,\n  \"attempt_limit\": 2,\n  \"pass_score_basis_points\": 6000,\n  \"expected_version\": {{learning_quiz_version}}\n}" }, "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}" } },
+        { "name": "Create Learning Quiz Question", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"prompt\": \"Which fraction is equal to one half?\",\n  \"points\": 1,\n  \"choices\": [\n    {\"label\": \"2/4\", \"is_correct\": true},\n    {\"label\": \"1/3\", \"is_correct\": false}\n  ]\n}" }, "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}/questions" } },
+        { "name": "Update Learning Quiz Question", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"position\": 1,\n  \"prompt\": \"Which fraction is equal to one half?\",\n  \"points\": 1,\n  \"choices\": [\n    {\"label\": \"2/4\", \"is_correct\": true},\n    {\"label\": \"1/3\", \"is_correct\": false}\n  ],\n  \"expected_version\": {{learning_quiz_question_version}}\n}" }, "url": "{{base_url}}/learning/quiz-questions/{{learning_quiz_question_id}}" } },
+        { "name": "Delete Learning Quiz Question", "request": { "method": "DELETE", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_quiz_question_version}}\n}" }, "url": "{{base_url}}/learning/quiz-questions/{{learning_quiz_question_id}}" } },
+        { "name": "Publish Learning Quiz", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_quiz_version}}\n}" }, "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}/publish" } },
+        { "name": "Close Learning Quiz", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_quiz_version}},\n  \"reason\": \"Assessment window ended\"\n}" }, "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}/close" } },
+        { "name": "Start My Learning Quiz Attempt", "request": { "method": "POST", "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}/attempts" } },
+        { "name": "List Learning Quiz Attempts", "request": { "method": "GET", "url": "{{base_url}}/learning/quizzes/{{learning_quiz_id}}/attempts?page=1&per_page=25" } },
+        { "name": "Read Learning Quiz Attempt", "request": { "method": "GET", "url": "{{base_url}}/learning/quiz-attempts/{{learning_quiz_attempt_id}}" } },
+        { "name": "Save My Learning Quiz Attempt", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"answers\": [\n    {\"question_id\": \"{{learning_quiz_question_id}}\", \"selected_choice_id\": \"{{learning_quiz_choice_id}}\"}\n  ],\n  \"expected_version\": {{learning_quiz_attempt_version}}\n}" }, "url": "{{base_url}}/learning/quiz-attempts/{{learning_quiz_attempt_id}}" } },
+        { "name": "Submit My Learning Quiz Attempt", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_quiz_attempt_version}},\n  \"idempotency_key\": \"{{learning_quiz_attempt_idempotency_key}}\"\n}" }, "url": "{{base_url}}/learning/quiz-attempts/{{learning_quiz_attempt_id}}/submit" } },
+        { "name": "Read Learning Completion Policy", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion-policy" } },
+        { "name": "Save Learning Completion Policy", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"requirements\": [\n    {\"requirement_type\": \"quiz\", \"source_id\": \"{{learning_quiz_id}}\", \"minimum_score_basis_points\": 6000}\n  ],\n  \"expected_version\": {{learning_completion_policy_version}}\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion-policy" } },
+        { "name": "Publish Learning Completion Policy", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\n  \"expected_version\": {{learning_completion_policy_version}}\n}" }, "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion-policy/publish" } },
+        { "name": "Read My Learning Completion", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion/me" } },
+        { "name": "List Learning Completion", "request": { "method": "GET", "url": "{{base_url}}/learning/spaces/{{learning_space_id}}/completion" } }
       ]
     },
     {
@@ -7064,6 +7084,51 @@
     {
       "key": "learning_document_series_id",
       "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_question_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_question_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_choice_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_attempt_id",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_attempt_version",
+      "value": "1",
+      "type": "default"
+    },
+    {
+      "key": "learning_quiz_attempt_idempotency_key",
+      "value": "00000000-0000-4000-8000-000000000003",
+      "type": "default"
+    },
+    {
+      "key": "learning_completion_policy_version",
+      "value": "1",
       "type": "default"
     },
     {
