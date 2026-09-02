@@ -268,3 +268,202 @@ pub struct LearnerAttendanceHistoryResponse {
     pub excused_count: i64,
     pub entries: Vec<LearnerAttendanceHistoryEntry>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AttendanceLessonSessionStatus {
+    Scheduled,
+    Open,
+    Completed,
+    Cancelled,
+}
+
+impl AttendanceLessonSessionStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Scheduled => "scheduled",
+            Self::Open => "open",
+            Self::Completed => "completed",
+            Self::Cancelled => "cancelled",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AttendanceLessonSessionListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+    pub class_group_id: Option<Uuid>,
+    pub status: Option<AttendanceLessonSessionStatus>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct SyncAttendanceLessonSessionsRequest {
+    pub date_from: NaiveDate,
+    pub date_to: NaiveDate,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct OpenAttendanceLessonSessionRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 200))]
+    pub idempotency_key: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CancelAttendanceLessonSessionRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 1000))]
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AttendanceLessonSessionSummary {
+    pub id: Uuid,
+    pub academic_term_id: Uuid,
+    pub academic_term_name: String,
+    pub class_group_id: Uuid,
+    pub class_group_name: String,
+    pub teaching_assignment_id: Uuid,
+    pub subject_id: Uuid,
+    pub subject_name: String,
+    pub teacher_name: String,
+    pub timetable_run_id: Uuid,
+    pub session_date: NaiveDate,
+    pub day_key: String,
+    pub period_key: String,
+    pub status: String,
+    pub version: i32,
+    pub register_id: Option<Uuid>,
+    pub cancellation_reason: Option<String>,
+    pub opened_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub cancelled_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedAttendanceLessonSessionsResponse {
+    pub sessions: Vec<AttendanceLessonSessionSummary>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SyncAttendanceLessonSessionsResponse {
+    pub timetable_run_id: Uuid,
+    pub date_from: NaiveDate,
+    pub date_to: NaiveDate,
+    pub created_count: u64,
+    pub existing_count: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AttendanceExceptionStatus {
+    Open,
+    Acknowledged,
+    Resolved,
+}
+
+impl AttendanceExceptionStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Acknowledged => "acknowledged",
+            Self::Resolved => "resolved",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AttendanceExceptionMark {
+    Absent,
+    Late,
+    Excused,
+}
+
+impl AttendanceExceptionMark {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Absent => "absent",
+            Self::Late => "late",
+            Self::Excused => "excused",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AttendanceExceptionListQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub date_from: Option<NaiveDate>,
+    pub date_to: Option<NaiveDate>,
+    pub class_group_id: Option<Uuid>,
+    pub status: Option<AttendanceExceptionStatus>,
+    pub mark: Option<AttendanceExceptionMark>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct AcknowledgeAttendanceExceptionRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 1000))]
+    pub note: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ResolveAttendanceExceptionRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 2000))]
+    pub resolution: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ReopenAttendanceExceptionRequest {
+    #[validate(range(min = 1))]
+    pub expected_version: i32,
+    #[validate(length(min = 1, max = 1000))]
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AttendanceExceptionResponse {
+    pub id: Uuid,
+    pub register_id: Uuid,
+    pub enrolment_id: Uuid,
+    pub learner_id: Uuid,
+    pub learner_number: String,
+    pub learner_name: String,
+    pub class_group_id: Uuid,
+    pub class_group_name: String,
+    pub source_register_version: i32,
+    pub attendance_date: NaiveDate,
+    pub period: String,
+    pub mark: String,
+    pub minutes_late: Option<i32>,
+    pub attendance_note: Option<String>,
+    pub source_submitted_at: DateTime<Utc>,
+    pub status: String,
+    pub version: i32,
+    pub acknowledged_at: Option<DateTime<Utc>>,
+    pub acknowledgement_note: Option<String>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub resolution: Option<String>,
+    pub reopened_at: Option<DateTime<Utc>>,
+    pub reopen_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedAttendanceExceptionsResponse {
+    pub exceptions: Vec<AttendanceExceptionResponse>,
+}

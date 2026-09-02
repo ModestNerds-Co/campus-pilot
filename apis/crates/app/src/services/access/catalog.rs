@@ -79,7 +79,7 @@ pub fn module_catalog() -> Vec<ModuleDefinition> {
             "attendance",
             "Attendance",
             "People and learning",
-            "Prepare, submit, and review daily learner attendance registers.",
+            "Record daily and timetable-linked attendance; manage submitted exceptions.",
             "/modules/attendance",
             "attendance",
             false,
@@ -935,10 +935,10 @@ mod tests {
                 assert_eq!(module.executable_capabilities(), 28);
             } else if module_key == "attendance" {
                 assert!(module.release_ready());
-                assert_eq!(module.routed_operations(), 9);
-                assert_eq!(module.exposed_operations(), 4);
-                assert_eq!(module.approval_required_operations(), 5);
-                assert_eq!(module.executable_capabilities(), 4);
+                assert_eq!(module.routed_operations(), 19);
+                assert_eq!(module.exposed_operations(), 8);
+                assert_eq!(module.approval_required_operations(), 11);
+                assert_eq!(module.executable_capabilities(), 8);
             } else if module_key == "learning" {
                 assert!(!module.release_ready());
                 assert_eq!(module.routed_operations(), 38);

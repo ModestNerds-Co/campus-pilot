@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle2, CircleDashed } from "lucide-react";
 import { ProtectedRoute } from "@/components/protected-route";
 import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
+import { attendanceAccessProfile } from "@/modules/attendance/access";
 import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
 import {
   SIS_ADMINISTRATION_PERMISSIONS,
@@ -68,7 +69,7 @@ export const ModuleWorkspace: React.FC<{ moduleKey: string }> = ({
     <ProtectedRoute
       requiredModule={module.key}
       requiredPermission={`${module.permission_namespace}:view`}
-      requiredRecordScope={module.key === "document_registry" ? "document_registry.records" : undefined}
+      requiredRecordScope={module.key === "document_registry" ? "document_registry.records" : module.key === "attendance" ? "attendance.registers" : undefined}
       requiredRecordScopeKind={module.key === "document_registry" ? "campus" : undefined}
     >
       {module.key === "timetabling" ? (
@@ -109,6 +110,7 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
 }) => {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const enabledModules = useAuthStore((state) => state.user?.modules ?? []);
+  const recordScopes = useAuthStore((state) => state.user?.record_scopes);
   const visual = moduleVisuals[module.key] ?? defaultModuleVisual;
   const Icon = visual.icon;
   usePageChrome("Overview");
@@ -327,6 +329,10 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
   }
 
   if (module.key === "attendance") {
+    const attendanceAccess = attendanceAccessProfile(
+      permissions,
+      recordScopes,
+    );
     return (
       <div className="space-y-8">
         <ModuleIntroduction module={module} />
@@ -356,6 +362,22 @@ const ModuleFoundation: React.FC<{ module: ModuleDefinition }> = ({
                 completed attendance.
               </span>
             </Link>
+            {enabledModules.includes("timetabling") ? <Link
+              className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]"
+              search={{ page: 1, date_from: "", date_to: "", class_group_id: "all", status: "all" }}
+              to="/modules/attendance/lesson-sessions"
+            >
+              <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">Lesson sessions</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+              <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">Open assigned lesson registers from the published timetable.</span>
+            </Link> : null}
+            {attendanceAccess.canManage ? <Link
+              className="group border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-hover)]"
+              search={{ page: 1, date_from: "", date_to: "", class_group_id: "all", status: "all", mark: "all" }}
+              to="/modules/attendance/exceptions"
+            >
+              <span className="flex items-center justify-between gap-4"><span className="font-semibold text-[var(--text-strong)]">Absence follow-up</span><ArrowRight className="size-4 text-[var(--text-subtle)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--brand-strong)]" /></span>
+              <span className="mt-2 block text-sm leading-5 text-[var(--text-muted)]">Review exceptions created from submitted registers.</span>
+            </Link> : null}
           </div>
         </section>
       </div>

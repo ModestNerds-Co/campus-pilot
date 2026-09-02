@@ -13,17 +13,19 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { attendanceService, responseMessage } from "./service";
+import { attendanceAccessProfile } from "./access";
+import { formatAttendancePeriod, formatAttendanceValue } from "./format";
 import type { AttendanceMark, AttendanceMarkInput, AttendanceMarkStatus, AttendanceRegister } from "./types";
 
 type RegisterAction = "submit" | "reopen" | "delete" | null;
 
 export function AttendanceRegisterWorkspace({ registerId }: { registerId: string }) {
   const navigate = useNavigate();
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canEdit = permissions.includes("*") || permissions.includes("attendance:edit");
-  const canSubmit = permissions.includes("*") || permissions.includes("attendance:submit");
-  const canManage = permissions.includes("*") || permissions.includes("attendance:manage");
-  const canDelete = permissions.includes("*") || permissions.includes("attendance:delete");
+  const user = useAuthStore((state) => state.user);
+  const { canEdit, canSubmit, canManage, canDelete } = attendanceAccessProfile(
+    user?.permissions ?? [],
+    user?.record_scopes,
+  );
   const [register, setRegister] = useState<AttendanceRegister | null>(null);
   const [marks, setMarks] = useState<AttendanceMark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,8 +96,8 @@ export function AttendanceRegisterWorkspace({ registerId }: { registerId: string
 
       <section className="border border-[var(--border)] bg-[var(--surface)]">
         <div className="flex flex-col gap-4 border-b border-[var(--border)] p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-strong)]">{displayValue(register.period)}</p><h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-strong)]">{register.class_group_name}</h1><p className="mt-2 text-sm text-[var(--text-muted)]">{formatDate(register.attendance_date)} · {register.academic_term_name}</p></div>
-          <Badge tone={register.status === "submitted" ? "success" : "warning"}>{displayValue(register.status)}</Badge>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-strong)]">{formatAttendancePeriod(register.period)}</p><h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-strong)]">{register.class_group_name}</h1><p className="mt-2 text-sm text-[var(--text-muted)]">{formatDate(register.attendance_date)} · {register.academic_term_name}</p></div>
+          <Badge tone={register.status === "submitted" ? "success" : "warning"}>{formatAttendanceValue(register.status)}</Badge>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5">
           <Fact label="Learners" value={String(marks.length)} />
@@ -185,5 +187,4 @@ function markFingerprint(marks: AttendanceMark[]) { return JSON.stringify(marks.
 function countMarks(marks: AttendanceMark[]) { return marks.reduce((counts, mark) => ({ ...counts, [mark.mark]: counts[mark.mark] + 1 }), { unmarked: 0, present: 0, absent: 0, late: 0, excused: 0 } as Record<AttendanceMarkStatus, number>); }
 function Fact({ label, value }: { label: string; value: string }) { return <div className="border-b border-r border-[var(--border)] p-4 last:border-r-0 md:border-b-0"><p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--text-subtle)]">{label}</p><p className="mt-2 font-tabular text-lg font-semibold text-[var(--text-strong)]">{value}</p></div>; }
 function Unavailable({ description, onRetry, title }: { description: string; onRetry?: () => void; title: string }) { return <div className="border border-[var(--border)] bg-[var(--surface)] p-8 text-center"><h1 className="text-lg font-semibold text-[var(--text-strong)]">{title}</h1><p className="mx-auto mt-2 max-w-lg text-sm text-[var(--text-muted)]">{description}</p>{onRetry ? <Button className="mt-5" onClick={onRetry} variant="secondary">Retry</Button> : <Link className="mt-5 inline-flex text-sm font-semibold text-[var(--brand-strong)] hover:underline" to="/modules/attendance/registers">Back to registers</Link>}</div>; }
-function displayValue(value: string) { return value.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase()); }
 function formatDate(value: string) { return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)); }

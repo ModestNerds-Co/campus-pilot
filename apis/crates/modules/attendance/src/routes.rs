@@ -16,9 +16,14 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::dtos::{
-    AttendanceAccessScope, CreateAttendanceRegisterRequest, DeleteAttendanceRegisterQuery,
-    LearnerAttendanceHistoryQuery, PaginatedAttendanceRegistersResponse,
-    ReopenAttendanceRegisterRequest, SubmitAttendanceRegisterRequest, UpdateAttendanceMarksRequest,
+    AcknowledgeAttendanceExceptionRequest, AttendanceAccessScope, AttendanceExceptionListQuery,
+    AttendanceLessonSessionListQuery, CancelAttendanceLessonSessionRequest,
+    CreateAttendanceRegisterRequest, DeleteAttendanceRegisterQuery, LearnerAttendanceHistoryQuery,
+    OpenAttendanceLessonSessionRequest, PaginatedAttendanceExceptionsResponse,
+    PaginatedAttendanceLessonSessionsResponse, PaginatedAttendanceRegistersResponse,
+    ReopenAttendanceExceptionRequest, ReopenAttendanceRegisterRequest,
+    ResolveAttendanceExceptionRequest, SubmitAttendanceRegisterRequest,
+    SyncAttendanceLessonSessionsRequest, UpdateAttendanceMarksRequest,
 };
 use crate::{AttendanceOps, AttendanceRegisterListQuery};
 
@@ -285,6 +290,296 @@ async fn delete_register(
     }
 }
 
+#[get("/lesson-sessions")]
+async fn list_lesson_sessions(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    query: web::Query<AttendanceLessonSessionListQuery>,
+) -> HttpResponse {
+    let Some(scope) = attendance_scope(authority) else {
+        return forbidden();
+    };
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match AttendanceOps::list_lesson_sessions(pool.get_ref(), tenant_id(tenant), &query.0, scope)
+        .await
+    {
+        Ok((sessions, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(PaginatedAttendanceLessonSessionsResponse { sessions }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/lesson-sessions/{id}")]
+async fn read_lesson_session(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope) = attendance_scope(authority) else {
+        return forbidden();
+    };
+    match AttendanceOps::get_lesson_session(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        scope,
+    )
+    .await
+    {
+        Ok(Some(session)) => ok(session),
+        Ok(None) => lesson_session_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/lesson-sessions/sync")]
+async fn sync_lesson_sessions(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    request_context: web::ReqData<RequestContext>,
+    body: web::Json<SyncAttendanceLessonSessionsRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let actor = actor.into_inner();
+    let Some(scope @ AttendanceAccessScope::Campus) = access_scope(&access, &grants, actor) else {
+        return forbidden();
+    };
+    match AttendanceOps::sync_lesson_sessions(
+        pool.get_ref(),
+        tenant_id(tenant),
+        actor,
+        request_context.into_inner(),
+        &body.0,
+        scope,
+    )
+    .await
+    {
+        Ok(result) => ok(result),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/lesson-sessions/{id}/open")]
+async fn open_lesson_session(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<OpenAttendanceLessonSessionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let actor = actor.into_inner();
+    let Some(scope) = access_scope(&access, &grants, actor) else {
+        return forbidden();
+    };
+    match AttendanceOps::open_lesson_session(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor,
+        request_context.into_inner(),
+        &body.0,
+        scope,
+    )
+    .await
+    {
+        Ok(Some(session)) => ok(session),
+        Ok(None) => lesson_session_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/lesson-sessions/{id}/cancel")]
+async fn cancel_lesson_session(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<CancelAttendanceLessonSessionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let actor = actor.into_inner();
+    let Some(scope @ AttendanceAccessScope::Campus) = access_scope(&access, &grants, actor) else {
+        return forbidden();
+    };
+    match AttendanceOps::cancel_lesson_session(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor,
+        request_context.into_inner(),
+        &body.0,
+        scope,
+    )
+    .await
+    {
+        Ok(Some(session)) => ok(session),
+        Ok(None) => lesson_session_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/exceptions")]
+async fn list_exceptions(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    query: web::Query<AttendanceExceptionListQuery>,
+) -> HttpResponse {
+    let Some(scope @ AttendanceAccessScope::Campus) = attendance_scope(authority) else {
+        return forbidden();
+    };
+    let (page, per_page) = bounded_page(query.page, query.per_page);
+    match AttendanceOps::list_exceptions(pool.get_ref(), tenant_id(tenant), &query.0, scope).await {
+        Ok((exceptions, total)) => HttpResponse::Ok().json(ApiResponse::with_pagination(
+            StatusCode::OK,
+            Some(PaginatedAttendanceExceptionsResponse { exceptions }),
+            PaginationMeta::new(page as u32, per_page as u32, total),
+            None,
+        )),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[get("/exceptions/{id}")]
+async fn read_exception(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    path: web::Path<Uuid>,
+) -> HttpResponse {
+    let Some(scope @ AttendanceAccessScope::Campus) = attendance_scope(authority) else {
+        return forbidden();
+    };
+    match AttendanceOps::get_exception(pool.get_ref(), tenant_id(tenant), path.into_inner(), scope)
+        .await
+    {
+        Ok(Some(exception)) => ok(exception),
+        Ok(None) => exception_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/exceptions/{id}/acknowledge")]
+async fn acknowledge_exception(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<AcknowledgeAttendanceExceptionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let actor = actor.into_inner();
+    let Some(scope @ AttendanceAccessScope::Campus) = access_scope(&access, &grants, actor) else {
+        return forbidden();
+    };
+    match AttendanceOps::acknowledge_exception(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor,
+        request_context.into_inner(),
+        &body.0,
+        scope,
+    )
+    .await
+    {
+        Ok(Some(exception)) => ok(exception),
+        Ok(None) => exception_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/exceptions/{id}/resolve")]
+async fn resolve_exception(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ResolveAttendanceExceptionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let actor = actor.into_inner();
+    let Some(scope @ AttendanceAccessScope::Campus) = access_scope(&access, &grants, actor) else {
+        return forbidden();
+    };
+    match AttendanceOps::resolve_exception(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor,
+        request_context.into_inner(),
+        &body.0,
+        scope,
+    )
+    .await
+    {
+        Ok(Some(exception)) => ok(exception),
+        Ok(None) => exception_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
+#[post("/exceptions/{id}/reopen")]
+async fn reopen_exception(
+    pool: web::Data<PgPool>,
+    tenant: web::ReqData<TenantId>,
+    authority: AttendanceAuthority,
+    request_context: web::ReqData<RequestContext>,
+    path: web::Path<Uuid>,
+    body: web::Json<ReopenAttendanceExceptionRequest>,
+) -> HttpResponse {
+    if let Some(response) = validation_response(&body.0) {
+        return response;
+    }
+    let (actor, access, grants) = authority;
+    let actor = actor.into_inner();
+    let Some(scope @ AttendanceAccessScope::Campus) = access_scope(&access, &grants, actor) else {
+        return forbidden();
+    };
+    match AttendanceOps::reopen_exception(
+        pool.get_ref(),
+        tenant_id(tenant),
+        path.into_inner(),
+        actor,
+        request_context.into_inner(),
+        &body.0,
+        scope,
+    )
+    .await
+    {
+        Ok(Some(exception)) => ok(exception),
+        Ok(None) => exception_not_found(),
+        Err(error) => operation_error(error),
+    }
+}
+
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("")
@@ -297,7 +592,17 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
             .service(update_marks)
             .service(submit_register)
             .service(reopen_register)
-            .service(delete_register),
+            .service(delete_register)
+            .service(list_lesson_sessions)
+            .service(sync_lesson_sessions)
+            .service(read_lesson_session)
+            .service(open_lesson_session)
+            .service(cancel_lesson_session)
+            .service(list_exceptions)
+            .service(read_exception)
+            .service(acknowledge_exception)
+            .service(resolve_exception)
+            .service(reopen_exception),
     );
 }
 
@@ -307,13 +612,10 @@ fn attendance_scope(authority: AttendanceAuthority) -> Option<AttendanceAccessSc
 }
 
 fn access_scope(
-    access: &AccessContext,
+    _access: &AccessContext,
     grants: &RecordScopeGrants,
     actor: AuditActor,
 ) -> Option<AttendanceAccessScope> {
-    if access.has_permission("*") {
-        return Some(AttendanceAccessScope::Campus);
-    }
     let family = RecordScopeFamilyKey::parse("attendance.registers").ok()?;
     match grants.effective_scope(&family) {
         Some(EffectiveRecordScope::Campus) => Some(AttendanceAccessScope::Campus),
@@ -345,6 +647,22 @@ fn learner_not_found() -> HttpResponse {
         StatusCode::NOT_FOUND,
         None::<()>,
         Some(vec!["Learner attendance history not found".to_string()]),
+    ))
+}
+
+fn lesson_session_not_found() -> HttpResponse {
+    HttpResponse::NotFound().json(ApiResponse::from_status(
+        StatusCode::NOT_FOUND,
+        None::<()>,
+        Some(vec!["Attendance lesson session not found".to_string()]),
+    ))
+}
+
+fn exception_not_found() -> HttpResponse {
+    HttpResponse::NotFound().json(ApiResponse::from_status(
+        StatusCode::NOT_FOUND,
+        None::<()>,
+        Some(vec!["Attendance exception not found".to_string()]),
     ))
 }
 
@@ -411,4 +729,72 @@ fn bounded_page(page: Option<i64>, per_page: Option<i64>) -> (i64, i64) {
         page.unwrap_or(1).clamp(1, 1_000_000),
         per_page.unwrap_or(25).clamp(1, 100),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use cp_audit::AuditActor;
+    use cp_common::{
+        AccessContext, EntitlementSnapshot, LeaseLifecycle, ModuleEntitlementState,
+        RecordScopeFamilyKey, RecordScopeGrant, RecordScopeGrants, RecordScopeKind,
+    };
+    use uuid::Uuid;
+
+    use super::access_scope;
+    use crate::AttendanceAccessScope;
+
+    fn access(permissions: &[&str]) -> AccessContext {
+        AccessContext {
+            role_keys: Vec::new(),
+            permissions: permissions
+                .iter()
+                .map(|value| (*value).to_string())
+                .collect(),
+            enabled_modules: vec!["attendance".to_string()],
+            entitlements: EntitlementSnapshot::new(
+                LeaseLifecycle::Active,
+                [("attendance".to_string(), ModuleEntitlementState::Enabled)],
+                [],
+            )
+            .unwrap_or_else(|_| unreachable!()),
+        }
+    }
+
+    fn grants(kind: RecordScopeKind) -> RecordScopeGrants {
+        RecordScopeGrants::from_grants([RecordScopeGrant::new(
+            RecordScopeFamilyKey::parse("attendance.registers").unwrap_or_else(|_| unreachable!()),
+            kind,
+        )])
+    }
+
+    #[test]
+    fn wildcard_permission_never_creates_attendance_record_scope() {
+        let actor = AuditActor::person(Uuid::new_v4());
+        assert_eq!(
+            access_scope(&access(&["*"]), &RecordScopeGrants::empty(), actor),
+            None
+        );
+    }
+
+    #[test]
+    fn assigned_and_campus_grants_keep_distinct_visibility() {
+        let user_id = Uuid::new_v4();
+        let actor = AuditActor::person(user_id);
+        assert_eq!(
+            access_scope(
+                &access(&["attendance:view"]),
+                &grants(RecordScopeKind::Assigned),
+                actor,
+            ),
+            Some(AttendanceAccessScope::AssignedTo(user_id))
+        );
+        assert_eq!(
+            access_scope(
+                &access(&["attendance:view"]),
+                &grants(RecordScopeKind::Campus),
+                actor,
+            ),
+            Some(AttendanceAccessScope::Campus)
+        );
+    }
 }

@@ -8,6 +8,7 @@ cp-common = { path = "../../common" }
 cp-audit = { path = "../../platform/audit" }
 cp-academics = { path = "../academics" }
 cp-sis = { path = "../sis" }
+cp-timetabling = { path = "../timetabling" }
 
 actix-web = { workspace = true }
 anyhow = { workspace = true }

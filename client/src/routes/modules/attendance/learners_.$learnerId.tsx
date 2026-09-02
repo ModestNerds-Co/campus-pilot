@@ -11,5 +11,5 @@ export const Route = createFileRoute("/modules/attendance/learners_/$learnerId")
 
 function LearnerAttendanceHistoryRoute() {
   const { learnerId } = Route.useParams();
-  return <ProtectedRoute requiredModule="attendance" requiredPermission="attendance:view"><LearnerAttendanceHistoryWorkspace learnerId={learnerId} /></ProtectedRoute>;
+  return <ProtectedRoute requiredModule="attendance" requiredPermission="attendance:view" requiredRecordScope="attendance.registers"><LearnerAttendanceHistoryWorkspace learnerId={learnerId} /></ProtectedRoute>;
 }

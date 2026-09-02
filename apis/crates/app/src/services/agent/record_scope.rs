@@ -81,6 +81,10 @@ pub const INITIAL_WORKER_OPERATION_KEYS: &[&str] = &[
     "attendance.learners.history.read",
     "attendance.registers.list",
     "attendance.registers.read",
+    "attendance.lesson_sessions.list",
+    "attendance.lesson_sessions.read",
+    "attendance.exceptions.list",
+    "attendance.exceptions.read",
     "learning.settings.read",
     "learning.references.read",
     "learning.resource_files.list",
@@ -439,6 +443,8 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         | "assets_inventory.department_candidates.list"
         | "attendance.references.read"
         | "attendance.registers.list"
+        | "attendance.lesson_sessions.list"
+        | "attendance.exceptions.list"
         | "learning.settings.read"
         | "learning.references.read"
         | "learning.resource_files.list"
@@ -546,6 +552,12 @@ fn operation_scope_policy(operation_key: &str) -> Option<OperationScopePolicy> {
         "attendance.learners.history.read" => Some(OperationScopePolicy::OneResource("learner")),
         "attendance.registers.read" => {
             Some(OperationScopePolicy::OneResource("attendance_register"))
+        }
+        "attendance.lesson_sessions.read" => Some(OperationScopePolicy::OneResource(
+            "attendance_lesson_session",
+        )),
+        "attendance.exceptions.read" => {
+            Some(OperationScopePolicy::OneResource("attendance_exception"))
         }
         "learning.spaces.read"
         | "learning.assignments.list"
@@ -804,6 +816,12 @@ fn resource_existence_query(resource_kind: &str) -> Option<&'static str> {
         "attendance_register" => Some(
             "SELECT EXISTS(SELECT 1 FROM attendance_registers WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
+        "attendance_lesson_session" => Some(
+            "SELECT EXISTS(SELECT 1 FROM attendance_lesson_sessions WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
+        "attendance_exception" => Some(
+            "SELECT EXISTS(SELECT 1 FROM attendance_exceptions WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
+        ),
         "learning_space" => Some(
             "SELECT EXISTS(SELECT 1 FROM learning_spaces WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL)",
         ),
@@ -973,7 +991,7 @@ mod tests {
 
     #[test]
     fn discovery_partition_covers_every_directly_exposed_operation_once() {
-        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 157);
+        assert_eq!(INITIAL_WORKER_OPERATION_KEYS.len(), 161);
         assert_eq!(WITHHELD_RECORD_SCOPED_OPERATION_KEYS.len(), 68);
 
         let initial = INITIAL_WORKER_OPERATION_KEYS
@@ -993,7 +1011,7 @@ mod tests {
             .filter(|entry| entry.operation().agent_exposure() == AgentExposure::Exposed)
             .map(|entry| entry.operation().key())
             .collect::<BTreeSet<_>>();
-        assert_eq!(exposed.len(), 225);
+        assert_eq!(exposed.len(), 229);
         assert_eq!(
             initial.union(&withheld).copied().collect::<BTreeSet<_>>(),
             exposed

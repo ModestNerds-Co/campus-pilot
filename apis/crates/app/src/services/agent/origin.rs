@@ -115,6 +115,14 @@ const ADMINISTRATION_AGENT_AUDIT: OriginAccess = OriginAccess {
 const SIS: OriginAccess = OriginAccess::module("sis", "sis:view");
 const ACADEMICS: OriginAccess = OriginAccess::module("academics", "academics:view");
 const ATTENDANCE: OriginAccess = OriginAccess::module("attendance", "attendance:view");
+const ATTENDANCE_LESSON_SESSIONS: OriginAccess = OriginAccess {
+    module_key: "attendance",
+    required_module: "attendance",
+    additional_module: Some("timetabling"),
+    required_permission: Some("attendance:view"),
+    additional_permission: None,
+};
+const ATTENDANCE_MANAGE: OriginAccess = OriginAccess::module("attendance", "attendance:manage");
 const LEARNING: OriginAccess = OriginAccess::module("learning", "learning:view");
 const STUDENT_SUPPORT: OriginAccess =
     OriginAccess::module("student_support", "student_support:view");
@@ -339,6 +347,14 @@ const EXACT_ROUTES: &[ExactRoute] = &[
     ExactRoute {
         path: "/modules/attendance/registers",
         access: ATTENDANCE,
+    },
+    ExactRoute {
+        path: "/modules/attendance/lesson-sessions",
+        access: ATTENDANCE_LESSON_SESSIONS,
+    },
+    ExactRoute {
+        path: "/modules/attendance/exceptions",
+        access: ATTENDANCE_MANAGE,
     },
     ExactRoute {
         path: "/modules/learning",
@@ -680,6 +696,10 @@ const UUID_ROUTES: &[UuidRoute] = &[
         access: ATTENDANCE,
     },
     UuidRoute {
+        prefix: "/modules/attendance/exceptions/",
+        access: ATTENDANCE_MANAGE,
+    },
+    UuidRoute {
         prefix: "/modules/learning/spaces/",
         access: LEARNING,
     },
@@ -884,6 +904,14 @@ mod tests {
             ("/admin/agent/providers".to_owned(), "administration"),
             ("/modules/fleet/vehicles".to_owned(), "fleet"),
             ("/modules/fees/imports".to_owned(), "fees"),
+            (
+                "/modules/attendance/lesson-sessions".to_owned(),
+                "attendance",
+            ),
+            (
+                format!("/modules/attendance/exceptions/{identifier}"),
+                "attendance",
+            ),
             (format!("/modules/sis/learners/{identifier}"), "sis"),
             (format!("/modules/health/patients/{identifier}"), "health"),
             (
@@ -1011,6 +1039,42 @@ mod tests {
                 ),
             ),
             Err(OriginAttestationError::AccessDenied)
+        );
+    }
+
+    #[test]
+    fn attendance_origins_preserve_lesson_dependencies_and_manager_actions() {
+        assert!(
+            AttestedAgentOrigin::parse(
+                "attendance",
+                "/modules/attendance/lesson-sessions",
+                &access(&["attendance:view"], &["attendance", "timetabling"]),
+            )
+            .is_ok()
+        );
+        assert_eq!(
+            AttestedAgentOrigin::parse(
+                "attendance",
+                "/modules/attendance/lesson-sessions",
+                &access(&["attendance:view"], &["attendance"]),
+            ),
+            Err(OriginAttestationError::AccessDenied)
+        );
+        assert_eq!(
+            AttestedAgentOrigin::parse(
+                "attendance",
+                "/modules/attendance/exceptions",
+                &access(&["attendance:view"], &["attendance"]),
+            ),
+            Err(OriginAttestationError::AccessDenied)
+        );
+        assert!(
+            AttestedAgentOrigin::parse(
+                "attendance",
+                "/modules/attendance/exceptions",
+                &access(&["attendance:manage"], &["attendance"]),
+            )
+            .is_ok()
         );
     }
 

@@ -1,6 +1,6 @@
 // Campus Pilot Attendance transport contracts.
 
-export type AttendancePeriod = "full_day" | "morning" | "afternoon";
+export type AttendancePeriod = "full_day" | "morning" | "afternoon" | `lesson:${string}`;
 export type AttendanceMarkStatus = "unmarked" | "present" | "absent" | "late" | "excused";
 export type AttendanceRegisterStatus = "draft" | "submitted";
 
@@ -139,4 +139,113 @@ export interface LearnerAttendanceHistoryParams {
   per_page?: number;
   date_from?: string;
   date_to?: string;
+}
+
+export type AttendanceLessonSessionStatus = "scheduled" | "open" | "completed" | "cancelled";
+
+export interface AttendanceLessonSession {
+  id: string;
+  academic_term_id: string;
+  academic_term_name: string;
+  class_group_id: string;
+  class_group_name: string;
+  teaching_assignment_id: string;
+  subject_id: string;
+  subject_name: string;
+  teacher_name: string;
+  timetable_run_id: string;
+  session_date: string;
+  day_key: string;
+  period_key: string;
+  status: AttendanceLessonSessionStatus;
+  version: number;
+  register_id: string | null;
+  cancellation_reason: string | null;
+  opened_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+}
+
+export interface AttendanceLessonSessionListParams {
+  page?: number;
+  per_page?: number;
+  date_from?: string;
+  date_to?: string;
+  class_group_id?: string;
+  status?: AttendanceLessonSessionStatus;
+}
+
+export interface AttendanceLessonSessionsResponse {
+  sessions: AttendanceLessonSession[];
+}
+
+export interface SyncAttendanceLessonSessionsResponse {
+  timetable_run_id: string;
+  date_from: string;
+  date_to: string;
+  created_count: number;
+  existing_count: number;
+}
+
+export type AttendanceExceptionStatus = "open" | "acknowledged" | "resolved";
+export type AttendanceExceptionMark = "absent" | "late" | "excused";
+
+export interface AttendanceException {
+  id: string;
+  register_id: string;
+  enrolment_id: string;
+  learner_id: string;
+  learner_number: string;
+  learner_name: string;
+  class_group_id: string;
+  class_group_name: string;
+  source_register_version: number;
+  attendance_date: string;
+  period: string;
+  mark: AttendanceExceptionMark;
+  minutes_late: number | null;
+  attendance_note: string | null;
+  source_submitted_at: string;
+  status: AttendanceExceptionStatus;
+  version: number;
+  acknowledged_at: string | null;
+  acknowledgement_note: string | null;
+  resolved_at: string | null;
+  resolution: string | null;
+  reopened_at: string | null;
+  reopen_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttendanceExceptionListParams {
+  page?: number;
+  per_page?: number;
+  date_from?: string;
+  date_to?: string;
+  class_group_id?: string;
+  status?: AttendanceExceptionStatus;
+  mark?: AttendanceExceptionMark;
+}
+
+export interface AttendanceExceptionsResponse {
+  exceptions: AttendanceException[];
+}
+
+export interface AttendanceLessonSessionsSearch {
+  page: number;
+  date_from: string;
+  date_to: string;
+  class_group_id: string;
+  status: "all" | AttendanceLessonSessionStatus;
+}
+
+export interface AttendanceExceptionsSearch {
+  page: number;
+  date_from: string;
+  date_to: string;
+  class_group_id: string;
+  status: "all" | AttendanceExceptionStatus;
+  mark: "all" | AttendanceExceptionMark;
 }

@@ -88,7 +88,9 @@ use assets_inventory::{
     StockRequestsListCapability,
 };
 use attendance::{
-    AttendanceLearnerHistoryCapability, AttendanceReferencesCapability,
+    AttendanceExceptionReadCapability, AttendanceExceptionsListCapability,
+    AttendanceLearnerHistoryCapability, AttendanceLessonSessionReadCapability,
+    AttendanceLessonSessionsListCapability, AttendanceReferencesCapability,
     AttendanceRegisterReadCapability, AttendanceRegistersListCapability,
 };
 use document_registry::{RegistryReadCapability, RegistryReadKind};
@@ -371,6 +373,22 @@ pub fn build_capability_registry(
     registry
         .register(AttendanceLearnerHistoryCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid Attendance learner-history capability: {error}"));
+    registry
+        .register(AttendanceLessonSessionsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Attendance lesson-sessions list capability: {error}")
+        });
+    registry
+        .register(AttendanceLessonSessionReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| {
+            panic!("invalid Attendance lesson-session read capability: {error}")
+        });
+    registry
+        .register(AttendanceExceptionsListCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Attendance exceptions list capability: {error}"));
+    registry
+        .register(AttendanceExceptionReadCapability::new(pool.clone()))
+        .unwrap_or_else(|error| panic!("invalid Attendance exception read capability: {error}"));
     registry
         .register(LearningSettingsCapability::new(pool.clone()))
         .unwrap_or_else(|error| panic!("invalid E-learning settings capability: {error}"));
@@ -1169,7 +1187,11 @@ mod tests {
                 "assets_inventory.stock_requests.read",
                 "assets_inventory.stores.list",
                 "assets_inventory.stores.read",
+                "attendance.exceptions.list",
+                "attendance.exceptions.read",
                 "attendance.learners.history.read",
+                "attendance.lesson_sessions.list",
+                "attendance.lesson_sessions.read",
                 "attendance.references.read",
                 "attendance.registers.list",
                 "attendance.registers.read",

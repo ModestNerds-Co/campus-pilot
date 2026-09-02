@@ -10,5 +10,5 @@ export const Route = createFileRoute("/modules/attendance/registers_/$registerId
 
 function AttendanceRegisterRoute() {
   const { registerId } = Route.useParams();
-  return <ProtectedRoute requiredModule="attendance" requiredPermission="attendance:view"><AttendanceRegisterWorkspace registerId={registerId} /></ProtectedRoute>;
+  return <ProtectedRoute requiredModule="attendance" requiredPermission="attendance:view" requiredRecordScope="attendance.registers"><AttendanceRegisterWorkspace registerId={registerId} /></ProtectedRoute>;
 }

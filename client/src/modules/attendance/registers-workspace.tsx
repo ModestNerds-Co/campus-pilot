@@ -15,6 +15,8 @@ import { usePageChrome } from "@/modules/admin/layouts/page-chrome";
 import { useAuthStore } from "@/stores/auth-store";
 
 import { attendanceService, responseMessage } from "./service";
+import { attendanceAccessProfile } from "./access";
+import { formatAttendancePeriod, formatAttendanceValue } from "./format";
 import type {
   AttendancePeriod, AttendanceReferenceData, AttendanceRegisterStatus,
   AttendanceRegisterSummary,
@@ -22,8 +24,8 @@ import type {
 
 export function AttendanceRegistersWorkspace() {
   const navigate = useNavigate();
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canCreate = permissions.includes("*") || permissions.includes("attendance:create");
+  const user = useAuthStore((state) => state.user);
+  const { canCreate } = attendanceAccessProfile(user?.permissions ?? [], user?.record_scopes);
   const [registers, setRegisters] = useState<AttendanceRegisterSummary[]>([]);
   const [references, setReferences] = useState<AttendanceReferenceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,8 +98,8 @@ export function AttendanceRegistersWorkspace() {
           {registers.map((register) => <TR key={register.id}>
             <TD><Link className="font-medium text-[var(--text-strong)] hover:text-[var(--brand-strong)] hover:underline" params={{ registerId: register.id }} to="/modules/attendance/registers/$registerId">{formatDate(register.attendance_date)}</Link><p className="mt-1 text-xs text-[var(--text-muted)]">{register.academic_term_name}</p></TD>
             <TD><span className="font-medium text-[var(--text-strong)]">{register.class_group_name}</span></TD>
-            <TD className="text-[var(--text-muted)]">{displayValue(register.period)}</TD>
-            <TD><Badge tone={register.status === "submitted" ? "success" : "warning"}>{displayValue(register.status)}</Badge></TD>
+            <TD className="text-[var(--text-muted)]">{formatAttendancePeriod(register.period)}</TD>
+            <TD><Badge tone={register.status === "submitted" ? "success" : "warning"}>{formatAttendanceValue(register.status)}</Badge></TD>
             <TD className="font-tabular text-[var(--text-muted)]">{register.learner_count - register.unmarked_count} / {register.learner_count}</TD>
             <TD className="font-tabular text-[var(--text-muted)]">{register.absent_count + register.late_count + register.excused_count}</TD>
           </TR>)}
@@ -156,5 +158,4 @@ function CreateRegisterDrawer({ onClose, onCreated, open, references }: { onClos
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function clampDate(value: string, minimum?: string, maximum?: string) { return minimum && value < minimum ? minimum : maximum && value > maximum ? maximum : value; }
-function displayValue(value: string) { return value.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase()); }
 function formatDate(value: string) { return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)); }

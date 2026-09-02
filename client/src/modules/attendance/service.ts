@@ -6,6 +6,12 @@ import { httpClient } from "@/lib/http-client";
 
 import type {
   ApiEnvelope,
+  AttendanceException,
+  AttendanceExceptionListParams,
+  AttendanceExceptionsResponse,
+  AttendanceLessonSession,
+  AttendanceLessonSessionListParams,
+  AttendanceLessonSessionsResponse,
   AttendanceMarkInput,
   AttendanceReferenceData,
   AttendanceRegister,
@@ -14,6 +20,7 @@ import type {
   AttendanceRegistersResponse,
   LearnerAttendanceHistory,
   LearnerAttendanceHistoryParams,
+  SyncAttendanceLessonSessionsResponse,
 } from "./types";
 
 const BASE_URL = "/api/1.0/attendance";
@@ -37,6 +44,16 @@ export const attendanceService = {
   submitRegister: (id: string, expectedVersion: number) => request<AttendanceRegister>(() => httpClient.post(`${BASE_URL}/registers/${id}/submit`, { expected_version: expectedVersion })),
   reopenRegister: (id: string, expectedVersion: number, reason: string) => request<AttendanceRegister>(() => httpClient.post(`${BASE_URL}/registers/${id}/reopen`, { expected_version: expectedVersion, reason })),
   deleteRegister: (id: string, expectedVersion: number) => request<{ deleted: boolean }>(() => httpClient.delete(`${BASE_URL}/registers/${id}`, { params: { expected_version: expectedVersion } })),
+  listLessonSessions: (params?: AttendanceLessonSessionListParams) => request<AttendanceLessonSessionsResponse>(() => httpClient.get(`${BASE_URL}/lesson-sessions`, { params })),
+  readLessonSession: (id: string) => request<AttendanceLessonSession>(() => httpClient.get(`${BASE_URL}/lesson-sessions/${id}`)),
+  syncLessonSessions: (dateFrom: string, dateTo: string) => request<SyncAttendanceLessonSessionsResponse>(() => httpClient.post(`${BASE_URL}/lesson-sessions/sync`, { date_from: dateFrom, date_to: dateTo })),
+  openLessonSession: (id: string, expectedVersion: number) => request<AttendanceLessonSession>(() => httpClient.post(`${BASE_URL}/lesson-sessions/${id}/open`, { expected_version: expectedVersion, idempotency_key: crypto.randomUUID() })),
+  cancelLessonSession: (id: string, expectedVersion: number, reason: string) => request<AttendanceLessonSession>(() => httpClient.post(`${BASE_URL}/lesson-sessions/${id}/cancel`, { expected_version: expectedVersion, reason })),
+  listExceptions: (params?: AttendanceExceptionListParams) => request<AttendanceExceptionsResponse>(() => httpClient.get(`${BASE_URL}/exceptions`, { params })),
+  readException: (id: string) => request<AttendanceException>(() => httpClient.get(`${BASE_URL}/exceptions/${id}`)),
+  acknowledgeException: (id: string, expectedVersion: number, note: string) => request<AttendanceException>(() => httpClient.post(`${BASE_URL}/exceptions/${id}/acknowledge`, { expected_version: expectedVersion, note })),
+  resolveException: (id: string, expectedVersion: number, resolution: string) => request<AttendanceException>(() => httpClient.post(`${BASE_URL}/exceptions/${id}/resolve`, { expected_version: expectedVersion, resolution })),
+  reopenException: (id: string, expectedVersion: number, reason: string) => request<AttendanceException>(() => httpClient.post(`${BASE_URL}/exceptions/${id}/reopen`, { expected_version: expectedVersion, reason })),
 };
 
 export function responseMessage(response: Pick<ApiEnvelope<unknown>, "issues" | "message">, fallback: string) {

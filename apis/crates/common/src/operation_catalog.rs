@@ -3285,6 +3285,96 @@ fn build_catalog() -> Vec<RoutedOperation> {
             OperationEffect::Destructive,
             true,
         ),
+        route(
+            Method::GET,
+            "/api/1.0/attendance/lesson-sessions",
+            "attendance.lesson_sessions.list",
+            "attendance",
+            "attendance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/lesson-sessions/sync",
+            "attendance.lesson_sessions.sync",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/attendance/lesson-sessions/{id}",
+            "attendance.lesson_sessions.read",
+            "attendance",
+            "attendance:view",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/lesson-sessions/{id}/open",
+            "attendance.lesson_sessions.open",
+            "attendance",
+            "attendance:create",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/lesson-sessions/{id}/cancel",
+            "attendance.lesson_sessions.cancel",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Destructive,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/attendance/exceptions",
+            "attendance.exceptions.list",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::GET,
+            "/api/1.0/attendance/exceptions/{id}",
+            "attendance.exceptions.read",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Read,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/exceptions/{id}/acknowledge",
+            "attendance.exceptions.acknowledge",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/exceptions/{id}/resolve",
+            "attendance.exceptions.resolve",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Write,
+            true,
+        ),
+        route(
+            Method::POST,
+            "/api/1.0/attendance/exceptions/{id}/reopen",
+            "attendance.exceptions.reopen",
+            "attendance",
+            "attendance:manage",
+            OperationEffect::Write,
+            true,
+        ),
         // Student Support: restricted learner cases and active case teams.
         route(
             Method::GET,
@@ -5637,6 +5727,12 @@ fn route(
         operation.requiring_modules(["hr_payroll".to_string()])
     } else if key.starts_with("timetabling.") {
         operation.requiring_modules(["academics".to_string(), "hr_payroll".to_string()])
+    } else if key.starts_with("attendance.lesson_sessions.") {
+        operation.requiring_modules([
+            "academics".to_string(),
+            "sis".to_string(),
+            "timetabling".to_string(),
+        ])
     } else if key.starts_with("attendance.") {
         operation.requiring_modules(["academics".to_string(), "sis".to_string()])
     } else if key.starts_with("learning.") {
@@ -5884,6 +5980,10 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.registers.list"
         | "attendance.registers.read"
         | "attendance.learners.history.read"
+        | "attendance.lesson_sessions.list"
+        | "attendance.lesson_sessions.read"
+        | "attendance.exceptions.list"
+        | "attendance.exceptions.read"
         | "student_support.cases.list"
         | "student_support.cases.read"
         | "student_support.actions.list"
@@ -6164,6 +6264,12 @@ fn agent_exposure_for(key: &'static str) -> AgentExposure {
         | "attendance.registers.submit"
         | "attendance.registers.reopen"
         | "attendance.registers.delete"
+        | "attendance.lesson_sessions.sync"
+        | "attendance.lesson_sessions.open"
+        | "attendance.lesson_sessions.cancel"
+        | "attendance.exceptions.acknowledge"
+        | "attendance.exceptions.resolve"
+        | "attendance.exceptions.reopen"
         | "student_support.cases.create"
         | "student_support.cases.update"
         | "student_support.actions.create"
@@ -6491,7 +6597,7 @@ mod tests {
             format!("campus-pilot/{OPERATION_CATALOG_VERSION}")
         );
         assert!(SUPPORTED_PRODUCT_CATALOG_VERSIONS.contains(&PRODUCT_CATALOG_VERSION));
-        assert_eq!(operation_catalog().len(), 605);
+        assert_eq!(operation_catalog().len(), 615);
 
         let mut keys = BTreeSet::new();
         let mut routes = BTreeSet::new();
@@ -6543,7 +6649,7 @@ mod tests {
             }
         }
 
-        assert_eq!(counts, [225, 342, 26, 12]);
+        assert_eq!(counts, [229, 348, 26, 12]);
         assert_eq!(counts.iter().sum::<u32>(), operation_catalog().len() as u32);
     }
 
@@ -6900,6 +7006,53 @@ mod tests {
             "facilities.work_orders.inspect",
             &facilities_manager
         ));
+    }
+
+    #[test]
+    fn attendance_keeps_assigned_teaching_separate_from_campus_administration() {
+        let teacher = [
+            "attendance:view",
+            "attendance:create",
+            "attendance:edit",
+            "attendance:submit",
+        ];
+
+        for key in [
+            "attendance.registers.list",
+            "attendance.registers.create",
+            "attendance.registers.marks.update",
+            "attendance.registers.submit",
+            "attendance.lesson_sessions.list",
+            "attendance.lesson_sessions.open",
+        ] {
+            assert!(allowed(key, &teacher), "Teacher should be allowed: {key}");
+        }
+        for key in [
+            "attendance.registers.reopen",
+            "attendance.registers.delete",
+            "attendance.lesson_sessions.sync",
+            "attendance.lesson_sessions.cancel",
+            "attendance.exceptions.list",
+            "attendance.exceptions.read",
+            "attendance.exceptions.acknowledge",
+            "attendance.exceptions.resolve",
+            "attendance.exceptions.reopen",
+        ] {
+            assert!(!allowed(key, &teacher), "Teacher must be denied: {key}");
+        }
+
+        assert_eq!(
+            operation("attendance.registers.list")
+                .required_modules()
+                .collect::<Vec<_>>(),
+            vec!["academics", "sis"]
+        );
+        assert_eq!(
+            operation("attendance.lesson_sessions.list")
+                .required_modules()
+                .collect::<Vec<_>>(),
+            vec!["academics", "sis", "timetabling"]
+        );
     }
 
     #[test]

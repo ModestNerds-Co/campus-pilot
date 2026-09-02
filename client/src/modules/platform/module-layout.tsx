@@ -61,6 +61,7 @@ import { bootstrapService } from "@/modules/configs";
 import type { SchoolConfiguration } from "@/modules/configs/types";
 import { AgentWidget } from "@/modules/agent";
 import { ACADEMIC_ADMINISTRATION_PERMISSIONS } from "@/modules/academics/access";
+import { attendanceAccessProfile } from "@/modules/attendance/access";
 import { HR_ADMINISTRATION_PERMISSIONS } from "@/modules/hr-payroll/access";
 import { libraryAccessProfile } from "@/modules/library/access";
 import { hostelAccessProfile } from "@/modules/hostel/access";
@@ -230,13 +231,17 @@ const academicsNavigation: LocalNavItem[] = [
   { label: "Reports", path: "/modules/academics/reporting", icon: BarChart3 },
 ];
 
-const attendanceNavigation: LocalNavItem[] = [
-  {
-    label: "Registers",
-    path: "/modules/attendance/registers",
-    icon: CalendarCheck2,
-  },
-];
+function attendanceNavigation(
+  permissions: readonly string[],
+  recordScopes: Record<string, string> | undefined,
+): LocalNavItem[] {
+  const access = attendanceAccessProfile(permissions, recordScopes);
+  return [
+    { label: "Registers", path: "/modules/attendance/registers", icon: CalendarCheck2 },
+    { label: "Lesson sessions", path: "/modules/attendance/lesson-sessions", icon: CalendarClock, requiredModule: "timetabling" },
+    ...(access.canManage ? [{ label: "Absence follow-up", path: "/modules/attendance/exceptions", icon: ShieldAlert }] : []),
+  ];
+}
 
 const learningNavigation: LocalNavItem[] = [
   { label: "Spaces", path: "/modules/learning/spaces", icon: BookOpenCheck },
@@ -511,7 +516,7 @@ const ModuleLayoutShell: React.FC<ModuleLayoutProps> = ({ children }) => {
           : moduleKey === "academics"
             ? academicsNavigation
             : moduleKey === "attendance"
-              ? attendanceNavigation
+              ? attendanceNavigation(user?.permissions ?? [], user?.record_scopes)
               : moduleKey === "learning"
                 ? learningNavigation
               : moduleKey === "student_support"
@@ -1157,6 +1162,10 @@ const LocalLink: React.FC<{ active: boolean; item: LocalNavItem }> = ({
         {active ? <ChevronRight className="size-3.5" /> : null}
       </Link>
     );
+  if (item.path === "/modules/attendance/lesson-sessions")
+    return <Link className={navClass(active)} search={{ page: 1, date_from: "", date_to: "", class_group_id: "all", status: "all" }} to="/modules/attendance/lesson-sessions"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
+  if (item.path === "/modules/attendance/exceptions")
+    return <Link className={navClass(active)} search={{ page: 1, date_from: "", date_to: "", class_group_id: "all", status: "all", mark: "all" }} to="/modules/attendance/exceptions"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/learning/spaces")
     return <Link className={navClass(active)} search={{ page: 1, q: "", status: "all" }} to="/modules/learning/spaces"><Icon className="size-[17px]"/><span className="flex-1">{item.label}</span>{active?<ChevronRight className="size-3.5"/>:null}</Link>;
   if (item.path === "/modules/student-support/cases")

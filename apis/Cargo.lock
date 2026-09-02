@@ -1783,6 +1783,7 @@ dependencies = [
  "cp-audit",
  "cp-common",
  "cp-sis",
+ "cp-timetabling",
  "serde",
  "serde_json",
  "sha2",

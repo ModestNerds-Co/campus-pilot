@@ -595,6 +595,21 @@ impl AttendanceOps {
         .execute(&mut *transaction)
         .await
         .context("Failed to preserve submitted attendance marks")?;
+        crate::exceptions::refresh_exceptions_for_submission(
+            &mut transaction,
+            tenant_id,
+            register_id,
+            version,
+            actor_id,
+        )
+        .await?;
+        crate::lesson_sessions::complete_session_for_register(
+            &mut transaction,
+            tenant_id,
+            register_id,
+            actor_id,
+        )
+        .await?;
         append_register_event(
             &mut transaction,
             RegisterEvent {
@@ -669,6 +684,14 @@ impl AttendanceOps {
         .fetch_one(&mut *transaction)
         .await
         .context("Failed to reopen attendance register")?;
+        crate::lesson_sessions::reopen_session_for_register(
+            &mut transaction,
+            tenant_id,
+            register_id,
+            actor_id,
+            reason,
+        )
+        .await?;
         append_register_event(
             &mut transaction,
             RegisterEvent {
@@ -723,6 +746,13 @@ impl AttendanceOps {
         }
         ensure_draft(&register)?;
         ensure_version(&register, expected_version)?;
+        crate::lesson_sessions::detach_deleted_register_session(
+            &mut transaction,
+            tenant_id,
+            register_id,
+            actor_id,
+        )
+        .await?;
         append_register_event(
             &mut transaction,
             RegisterEvent {

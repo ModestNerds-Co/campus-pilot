@@ -4910,7 +4910,7 @@
     },
     {
       "name": "Attendance",
-      "description": "Dated class registers built from Academics classes and date-effective SIS enrolments.",
+      "description": "Daily and timetable-linked learner attendance, with assigned-teacher capture and campus-managed exception follow-up.",
       "auth": {
         "type": "bearer",
         "bearer": [
@@ -5054,6 +5054,177 @@
             "method": "DELETE",
             "url": "{{base_url}}/attendance/registers/{{attendance_register_id}}?expected_version=1",
             "description": "Soft-deletes a draft register. Submitted registers must not be deleted."
+          }
+        },
+        {
+          "name": "List Attendance Lesson Sessions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/lesson-sessions?page=1&per_page=25&status=scheduled",
+            "description": "Lists timetable-linked lesson sessions in the caller's campus or exact active teaching-assignment scope."
+          }
+        },
+        {
+          "name": "Sync Attendance Lesson Sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date_from\": \"2026-09-01\",\n  \"date_to\": \"2026-09-07\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/lesson-sessions/sync",
+            "description": "Campus-only materialisation of lesson sessions from the current published timetable. The range is limited to 31 days."
+          }
+        },
+        {
+          "name": "Get Attendance Lesson Session",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/lesson-sessions/{{attendance_lesson_session_id}}"
+          }
+        },
+        {
+          "name": "Open Attendance Lesson Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"idempotency_key\": \"00000000-0000-4000-8000-000000000001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/lesson-sessions/{{attendance_lesson_session_id}}/open",
+            "description": "Creates the frozen lesson register roster. Assigned teachers can open only their own active teaching assignments."
+          }
+        },
+        {
+          "name": "Cancel Attendance Lesson Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"reason\": \"Lesson did not take place\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/lesson-sessions/{{attendance_lesson_session_id}}/cancel",
+            "description": "Campus-only cancellation of a scheduled lesson session."
+          }
+        },
+        {
+          "name": "List Attendance Exceptions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/exceptions?page=1&per_page=25&status=open",
+            "description": "Campus-only follow-up queue created from submitted absent, late, or excused marks."
+          }
+        },
+        {
+          "name": "Get Attendance Exception",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/attendance/exceptions/{{attendance_exception_id}}"
+          }
+        },
+        {
+          "name": "Acknowledge Attendance Exception",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 1,\n  \"note\": \"Guardian contact is being checked\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/exceptions/{{attendance_exception_id}}/acknowledge"
+          }
+        },
+        {
+          "name": "Resolve Attendance Exception",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 2,\n  \"resolution\": \"Absence was reviewed and supporting information was recorded\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/exceptions/{{attendance_exception_id}}/resolve"
+          }
+        },
+        {
+          "name": "Reopen Attendance Exception",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expected_version\": 3,\n  \"reason\": \"Additional follow-up is required\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/attendance/exceptions/{{attendance_exception_id}}/reopen"
           }
         }
       ]

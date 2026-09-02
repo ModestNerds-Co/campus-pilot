@@ -104,6 +104,8 @@ import { Route as ModulesDocumentRegistryRetentionRouteImport } from './routes/m
 import { Route as ModulesDocumentRegistryLegalHoldsRouteImport } from './routes/modules/document-registry/legal-holds'
 import { Route as ModulesDocumentRegistryClassificationsRouteImport } from './routes/modules/document-registry/classifications'
 import { Route as ModulesAttendanceRegistersRouteImport } from './routes/modules/attendance/registers'
+import { Route as ModulesAttendanceLessonSessionsRouteImport } from './routes/modules/attendance/lesson-sessions'
+import { Route as ModulesAttendanceExceptionsRouteImport } from './routes/modules/attendance/exceptions'
 import { Route as ModulesAssetsInventoryStoresRouteImport } from './routes/modules/assets-inventory/stores'
 import { Route as ModulesAssetsInventoryStockRouteImport } from './routes/modules/assets-inventory/stock'
 import { Route as ModulesAssetsInventoryRequestsRouteImport } from './routes/modules/assets-inventory/requests'
@@ -146,6 +148,7 @@ import { Route as ModulesHealthPatientsPatientIdRouteImport } from './routes/mod
 import { Route as ModulesDocumentRegistryDocumentsDocumentIdRouteImport } from './routes/modules/document-registry/documents/$documentId'
 import { Route as ModulesAttendanceRegistersRegisterIdRouteImport } from './routes/modules/attendance/registers_.$registerId'
 import { Route as ModulesAttendanceLearnersLearnerIdRouteImport } from './routes/modules/attendance/learners_.$learnerId'
+import { Route as ModulesAttendanceExceptionsExceptionIdRouteImport } from './routes/modules/attendance/exceptions_.$exceptionId'
 import { Route as ModulesAssetsInventoryRequestsRequestIdRouteImport } from './routes/modules/assets-inventory/requests_.$requestId'
 import { Route as ModulesAssetsInventoryMovementsMovementIdRouteImport } from './routes/modules/assets-inventory/movements_.$movementId'
 import { Route as ModulesAgentSessionsSessionIdRouteImport } from './routes/modules/agent/sessions.$sessionId'
@@ -666,6 +669,18 @@ const ModulesAttendanceRegistersRoute =
     path: '/attendance/registers',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAttendanceLessonSessionsRoute =
+  ModulesAttendanceLessonSessionsRouteImport.update({
+    id: '/attendance/lesson-sessions',
+    path: '/attendance/lesson-sessions',
+    getParentRoute: () => ModulesRoute,
+  } as any)
+const ModulesAttendanceExceptionsRoute =
+  ModulesAttendanceExceptionsRouteImport.update({
+    id: '/attendance/exceptions',
+    path: '/attendance/exceptions',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryStoresRoute =
   ModulesAssetsInventoryStoresRouteImport.update({
     id: '/assets-inventory/stores',
@@ -907,6 +922,12 @@ const ModulesAttendanceLearnersLearnerIdRoute =
     path: '/attendance/learners/$learnerId',
     getParentRoute: () => ModulesRoute,
   } as any)
+const ModulesAttendanceExceptionsExceptionIdRoute =
+  ModulesAttendanceExceptionsExceptionIdRouteImport.update({
+    id: '/attendance/exceptions_/$exceptionId',
+    path: '/attendance/exceptions/$exceptionId',
+    getParentRoute: () => ModulesRoute,
+  } as any)
 const ModulesAssetsInventoryRequestsRequestIdRoute =
   ModulesAssetsInventoryRequestsRequestIdRouteImport.update({
     id: '/assets-inventory/requests_/$requestId',
@@ -1032,6 +1053,8 @@ export interface FileRoutesByFullPath {
   '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
+  '/modules/attendance/exceptions': typeof ModulesAttendanceExceptionsRoute
+  '/modules/attendance/lesson-sessions': typeof ModulesAttendanceLessonSessionsRoute
   '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/document-registry/classifications': typeof ModulesDocumentRegistryClassificationsRoute
   '/modules/document-registry/legal-holds': typeof ModulesDocumentRegistryLegalHoldsRoute
@@ -1101,6 +1124,7 @@ export interface FileRoutesByFullPath {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/exceptions/$exceptionId': typeof ModulesAttendanceExceptionsExceptionIdRoute
   '/modules/attendance/learners/$learnerId': typeof ModulesAttendanceLearnersLearnerIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
@@ -1181,6 +1205,8 @@ export interface FileRoutesByTo {
   '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
+  '/modules/attendance/exceptions': typeof ModulesAttendanceExceptionsRoute
+  '/modules/attendance/lesson-sessions': typeof ModulesAttendanceLessonSessionsRoute
   '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/document-registry/classifications': typeof ModulesDocumentRegistryClassificationsRoute
   '/modules/document-registry/legal-holds': typeof ModulesDocumentRegistryLegalHoldsRoute
@@ -1250,6 +1276,7 @@ export interface FileRoutesByTo {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/exceptions/$exceptionId': typeof ModulesAttendanceExceptionsExceptionIdRoute
   '/modules/attendance/learners/$learnerId': typeof ModulesAttendanceLearnersLearnerIdRoute
   '/modules/attendance/registers/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
@@ -1332,6 +1359,8 @@ export interface FileRoutesById {
   '/modules/assets-inventory/requests': typeof ModulesAssetsInventoryRequestsRoute
   '/modules/assets-inventory/stock': typeof ModulesAssetsInventoryStockRoute
   '/modules/assets-inventory/stores': typeof ModulesAssetsInventoryStoresRoute
+  '/modules/attendance/exceptions': typeof ModulesAttendanceExceptionsRoute
+  '/modules/attendance/lesson-sessions': typeof ModulesAttendanceLessonSessionsRoute
   '/modules/attendance/registers': typeof ModulesAttendanceRegistersRoute
   '/modules/document-registry/classifications': typeof ModulesDocumentRegistryClassificationsRoute
   '/modules/document-registry/legal-holds': typeof ModulesDocumentRegistryLegalHoldsRoute
@@ -1401,6 +1430,7 @@ export interface FileRoutesById {
   '/modules/agent/sessions/$sessionId': typeof ModulesAgentSessionsSessionIdRoute
   '/modules/assets-inventory/movements_/$movementId': typeof ModulesAssetsInventoryMovementsMovementIdRoute
   '/modules/assets-inventory/requests_/$requestId': typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  '/modules/attendance/exceptions_/$exceptionId': typeof ModulesAttendanceExceptionsExceptionIdRoute
   '/modules/attendance/learners_/$learnerId': typeof ModulesAttendanceLearnersLearnerIdRoute
   '/modules/attendance/registers_/$registerId': typeof ModulesAttendanceRegistersRegisterIdRoute
   '/modules/document-registry/documents/$documentId': typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
@@ -1484,6 +1514,8 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
+    | '/modules/attendance/exceptions'
+    | '/modules/attendance/lesson-sessions'
     | '/modules/attendance/registers'
     | '/modules/document-registry/classifications'
     | '/modules/document-registry/legal-holds'
@@ -1553,6 +1585,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
+    | '/modules/attendance/exceptions/$exceptionId'
     | '/modules/attendance/learners/$learnerId'
     | '/modules/attendance/registers/$registerId'
     | '/modules/document-registry/documents/$documentId'
@@ -1633,6 +1666,8 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
+    | '/modules/attendance/exceptions'
+    | '/modules/attendance/lesson-sessions'
     | '/modules/attendance/registers'
     | '/modules/document-registry/classifications'
     | '/modules/document-registry/legal-holds'
@@ -1702,6 +1737,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements/$movementId'
     | '/modules/assets-inventory/requests/$requestId'
+    | '/modules/attendance/exceptions/$exceptionId'
     | '/modules/attendance/learners/$learnerId'
     | '/modules/attendance/registers/$registerId'
     | '/modules/document-registry/documents/$documentId'
@@ -1783,6 +1819,8 @@ export interface FileRouteTypes {
     | '/modules/assets-inventory/requests'
     | '/modules/assets-inventory/stock'
     | '/modules/assets-inventory/stores'
+    | '/modules/attendance/exceptions'
+    | '/modules/attendance/lesson-sessions'
     | '/modules/attendance/registers'
     | '/modules/document-registry/classifications'
     | '/modules/document-registry/legal-holds'
@@ -1852,6 +1890,7 @@ export interface FileRouteTypes {
     | '/modules/agent/sessions/$sessionId'
     | '/modules/assets-inventory/movements_/$movementId'
     | '/modules/assets-inventory/requests_/$requestId'
+    | '/modules/attendance/exceptions_/$exceptionId'
     | '/modules/attendance/learners_/$learnerId'
     | '/modules/attendance/registers_/$registerId'
     | '/modules/document-registry/documents/$documentId'
@@ -2556,6 +2595,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAttendanceRegistersRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/attendance/lesson-sessions': {
+      id: '/modules/attendance/lesson-sessions'
+      path: '/attendance/lesson-sessions'
+      fullPath: '/modules/attendance/lesson-sessions'
+      preLoaderRoute: typeof ModulesAttendanceLessonSessionsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
+    '/modules/attendance/exceptions': {
+      id: '/modules/attendance/exceptions'
+      path: '/attendance/exceptions'
+      fullPath: '/modules/attendance/exceptions'
+      preLoaderRoute: typeof ModulesAttendanceExceptionsRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/stores': {
       id: '/modules/assets-inventory/stores'
       path: '/assets-inventory/stores'
@@ -2850,6 +2903,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulesAttendanceLearnersLearnerIdRouteImport
       parentRoute: typeof ModulesRoute
     }
+    '/modules/attendance/exceptions_/$exceptionId': {
+      id: '/modules/attendance/exceptions_/$exceptionId'
+      path: '/attendance/exceptions/$exceptionId'
+      fullPath: '/modules/attendance/exceptions/$exceptionId'
+      preLoaderRoute: typeof ModulesAttendanceExceptionsExceptionIdRouteImport
+      parentRoute: typeof ModulesRoute
+    }
     '/modules/assets-inventory/requests_/$requestId': {
       id: '/modules/assets-inventory/requests_/$requestId'
       path: '/assets-inventory/requests/$requestId'
@@ -3103,6 +3163,8 @@ interface ModulesRouteChildren {
   ModulesAssetsInventoryRequestsRoute: typeof ModulesAssetsInventoryRequestsRoute
   ModulesAssetsInventoryStockRoute: typeof ModulesAssetsInventoryStockRoute
   ModulesAssetsInventoryStoresRoute: typeof ModulesAssetsInventoryStoresRoute
+  ModulesAttendanceExceptionsRoute: typeof ModulesAttendanceExceptionsRoute
+  ModulesAttendanceLessonSessionsRoute: typeof ModulesAttendanceLessonSessionsRoute
   ModulesAttendanceRegistersRoute: typeof ModulesAttendanceRegistersRoute
   ModulesDocumentRegistryClassificationsRoute: typeof ModulesDocumentRegistryClassificationsRoute
   ModulesDocumentRegistryLegalHoldsRoute: typeof ModulesDocumentRegistryLegalHoldsRoute
@@ -3168,6 +3230,7 @@ interface ModulesRouteChildren {
   ModulesAgentSessionsSessionIdRoute: typeof ModulesAgentSessionsSessionIdRoute
   ModulesAssetsInventoryMovementsMovementIdRoute: typeof ModulesAssetsInventoryMovementsMovementIdRoute
   ModulesAssetsInventoryRequestsRequestIdRoute: typeof ModulesAssetsInventoryRequestsRequestIdRoute
+  ModulesAttendanceExceptionsExceptionIdRoute: typeof ModulesAttendanceExceptionsExceptionIdRoute
   ModulesAttendanceLearnersLearnerIdRoute: typeof ModulesAttendanceLearnersLearnerIdRoute
   ModulesAttendanceRegistersRegisterIdRoute: typeof ModulesAttendanceRegistersRegisterIdRoute
   ModulesDocumentRegistryDocumentsDocumentIdRoute: typeof ModulesDocumentRegistryDocumentsDocumentIdRoute
@@ -3208,6 +3271,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
   ModulesAssetsInventoryRequestsRoute: ModulesAssetsInventoryRequestsRoute,
   ModulesAssetsInventoryStockRoute: ModulesAssetsInventoryStockRoute,
   ModulesAssetsInventoryStoresRoute: ModulesAssetsInventoryStoresRoute,
+  ModulesAttendanceExceptionsRoute: ModulesAttendanceExceptionsRoute,
+  ModulesAttendanceLessonSessionsRoute: ModulesAttendanceLessonSessionsRoute,
   ModulesAttendanceRegistersRoute: ModulesAttendanceRegistersRoute,
   ModulesDocumentRegistryClassificationsRoute:
     ModulesDocumentRegistryClassificationsRoute,
@@ -3278,6 +3343,8 @@ const ModulesRouteChildren: ModulesRouteChildren = {
     ModulesAssetsInventoryMovementsMovementIdRoute,
   ModulesAssetsInventoryRequestsRequestIdRoute:
     ModulesAssetsInventoryRequestsRequestIdRoute,
+  ModulesAttendanceExceptionsExceptionIdRoute:
+    ModulesAttendanceExceptionsExceptionIdRoute,
   ModulesAttendanceLearnersLearnerIdRoute:
     ModulesAttendanceLearnersLearnerIdRoute,
   ModulesAttendanceRegistersRegisterIdRoute:
